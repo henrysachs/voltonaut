@@ -1,0 +1,15 @@
+{
+  "name": "@voltonaut/rules",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@voltonaut/engine": "workspace:*"
+  }
+}

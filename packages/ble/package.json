@@ -1,0 +1,16 @@
+{
+  "name": "@voltonaut/ble",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sim": "./src/sim/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@voltonaut/shared": "workspace:*"
+  }
+}

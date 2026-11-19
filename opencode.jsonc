@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/kimi-k3.1-pro",
+  "policies": [
+    { "action": "provider.use", "resource": "*", "effect": "deny" },
+    { "action": "provider.use", "resource": "opencode-go", "effect": "allow" }
+  ],
+  "agents": {
+    "poteto-agent": {
+      "model": "opencode-go/kimi-k3.1-pro"
+    },
+    "comment-sicko": {
+      "model": "opencode-go/kimi-k3.1-pro"
+    }
+  }
+}

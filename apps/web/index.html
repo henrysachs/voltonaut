@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voltonaut</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="hud" aria-label="Ride HUD">
+      <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
+      <dl class="hud__values">
+        <div class="hud__value">
+          <dt>Power</dt>
+          <dd id="hud-powerW" data-testid="hud-power">0 W</dd>
+        </div>
+        <div class="hud__value">
+          <dt>Cadence</dt>
+          <dd id="hud-cadenceRpm" data-testid="hud-cadence">0 rpm</dd>
+        </div>
+        <div class="hud__value">
+          <dt>Heart rate</dt>
+          <dd id="hud-heartRateBpm" data-testid="hud-heart-rate">0 bpm</dd>
+        </div>
+        <div class="hud__value">
+          <dt>Gear</dt>
+          <dd id="hud-gear" data-testid="hud-gear">1</dd>
+        </div>
+      </dl>
+      <p class="hud__hint">Sim mode: use ArrowUp and ArrowDown to shift.</p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

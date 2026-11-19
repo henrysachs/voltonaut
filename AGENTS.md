@@ -80,7 +80,7 @@ mise run assets         # Asset-Pipeline
 - [ ] Doku aktuell; Review durch zweiten Agenten bestanden.
 
 ## 7. Hosting & Deploy
-Web: Cloudflare Pages (`wrangler pages deploy` aus CI nach grünem `check`, Preview pro PR). API: Hetzner-VPS (systemd + Caddy), Deploy erst aktiv, wenn Henry SSH-Key/Subdomain liefert (ADR-009). Agenten deployen nie manuell und fassen keine Secrets an.
+Web: Cloudflare Pages (`wrangler pages deploy` aus CI nach grünem `check`, Preview pro PR). API: Hetzner-VPS (systemd + Caddy), Deploy erst aktiv, wenn Henry SSH-Key/Subdomain liefert (ADR-009). Henry hat am 2026-11-19 Serverwartung und die Verwaltung dedizierter Deploy-Secrets für Agenten freigegeben. Agenten dürfen den Server nach einem read-only Befund warten und ausschließlich dafür erzeugte Deploy-Zugänge über die GitHub CLI hinterlegen. Private Schlüssel nie ausgeben oder committen. CI nutzt nur einen eingeschränkten Deploy-User und das Environment `production` mit manueller Freigabe. Produktive Deploys und das Löschen bestehender Serverdaten brauchen weiterhin eine gesonderte Freigabe.
 
 ## 8. Sprache & Stil
-Doku Deutsch; Code, Identifier, Kommentare, Commits Englisch (Conventional Commits: `feat(engine): …`). Formatierung macht Oxfmt – nicht manuell diskutieren.
+Doku Deutsch; Code, Identifier, Kommentare, Commits Englisch (Conventional Commits: `feat(engine): …`). Formatierung macht Oxfmt – nicht manuell diskutieren. OpenCode-Sessions und alle Subagenten verwenden in diesem Projekt ausschließlich den Provider `opencode-go`; `opencode.jsonc` erzwingt das per Policy.

@@ -1,0 +1,15 @@
+.audit/**
+AGENTS.md
+opencode.jsonc
+node_modules/**
+**/dist/**
+**/coverage/**
+**/test-results/**
+**/playwright-report/**
+**/.stryker-tmp/**
+reports/**
+tools/oxlint/anti-slop/**
+fixtures/**
+apps/server/drizzle/**
+pnpm-lock.yaml
+decisions.tsv

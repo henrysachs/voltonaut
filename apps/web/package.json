@@ -1,0 +1,23 @@
+{
+  "name": "@voltonaut/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "@voltonaut/ble": "workspace:*",
+    "@voltonaut/engine": "workspace:*",
+    "@voltonaut/rules": "workspace:*",
+    "@voltonaut/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "26.6.6",
+    "vite": "8.3.8"
+  }
+}
