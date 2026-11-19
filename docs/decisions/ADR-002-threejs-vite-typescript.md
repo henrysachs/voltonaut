@@ -1,4 +1,4 @@
-# ADR-002 – three.js + Vite + TypeScript, statisch auf GitHub Pages
+# ADR-002 – three.js + Vite + TypeScript, statisch gehostet
 
 **Status:** Angenommen (2026-11-19)
 
@@ -9,7 +9,7 @@ Henry will ein echtes 3D-Spiel mit animiertem Fahrer, im Browser (Web Bluetooth,
 - **three.js** als 3D-Engine (direkt, ohne React-Three-Fiber).
 - **Vite** als Build/Dev-Server (schnelles HMR, `localhost` = secure context für Web Bluetooth, Multi-Page-Entry für `debug/ble.html`).
 - **TypeScript strict** für alle Module; Protokoll-Parser und Engine als reine, testbare Funktionen.
-- Hosting des Clients als statische Seite auf **GitHub Pages** (HTTPS gratis, Deploy per Actions).
+- Hosting des Clients als statische Seite (HTTPS). Anbieter: **Cloudflare Pages** – siehe ADR-009 (ursprünglich GitHub Pages geplant, am 2026-11-19 geändert).
 
 ## Konsequenzen
 - + Riesiges Ökosystem, viele Beispiele (Agenten kennen three.js gut), volle Kontrolle über Render-Loop und Performance.

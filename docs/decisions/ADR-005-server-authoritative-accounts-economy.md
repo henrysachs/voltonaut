@@ -8,7 +8,7 @@ Henry will Accounts auf dem eigenen Server, auf denen freigeschaltete Räder, La
 ## Entscheidung
 1. **Server ist autoritativ** für: Account, Rider-Profil, Inventar, Volts-Ledger, XP/Level, Badges, PBs, Fahrt-Zusammenfassungen.
 2. **Client ist offline-first:** IndexedDB-Cache dieser Daten + **Outbox** für abgeschlossene Fahrten (idempotent per `rideId`-UUID). Fahren geht immer; Vergabe von XP/Volts wird erst nach Server-Bestätigung „echt".
-3. **Vergabe nur serverseitig:** Der Server berechnet XP, Volts, Badges und PBs aus den hochgeladenen 1-Hz-Samples neu (gemeinsamer Code in `shared/`) und führt **Plausibilitätsprüfungen** durch (`08-backend.md`). Client-Angaben sind nur Vorschau.
+3. **Vergabe nur serverseitig:** Der Server berechnet XP, Volts, Badges und PBs aus den hochgeladenen 1-Hz-Samples neu (gemeinsamer Code in `packages/engine` und `packages/rules`) und führt **Plausibilitätsprüfungen** durch (`08-backend.md`). Client-Angaben sind nur Vorschau.
 4. **Käufe nur online** als atomare DB-Transaktion; Volts als Ledger (nie überschreiben).
 5. **Gastmodus:** ohne Account fahrbar; lokale Fahrten können innerhalb 30 Tagen nach Registrierung nachgereicht werden.
 6. Auth v1: E-Mail-Magic-Link + Bearer-Session-Token; Passkeys als v2.
