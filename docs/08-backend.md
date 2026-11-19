@@ -17,12 +17,12 @@ Server auf Henrys **vorhandenem Hetzner-VPS** (ADR-004). Er ist **autoritativ** 
 | Auth v2 | **Passkeys** (`@simplewebauthn/server`) zusätzlich | |
 | Rate-Limits | `@nestjs/throttler` | besonders `/auth/*` |
 | Health | `GET /healthz` (eigener `HealthModule`, optional `@nestjs/terminus`) | ab E0 |
-| Reverse Proxy | **Caddy** (automatisches TLS) oder vorhandener nginx ❓ | `https://`/`wss://` |
-| Prozess | **systemd**-Unit | Neustart, journald-Logs |
+| Reverse Proxy | vorhandener **Traefik v3** (Container `financensor-traefik-1` auf Henrys Hetzner-VPS) | `https://`/`wss://` über Traefik-Labels; Netzwerk- und Certresolver-Namen beim Deploy aus der Financensor-Compose ablesen (**TODO**) |
+| Prozess | **Docker Compose** (eigenes Projekt), Image z. B. `ghcr.io/henrysachs/voltonaut-server` | Neustart und Logs über Compose; SQLite auf named Volume oder Bind-Mount; Litestream als Sidecar |
 | Tests | Vitest + `@nestjs/testing` (`Test.createTestingModule`, `overrideProvider`) + Supertest; echte WS-Verbindungen; SQLite in-memory; **`unplugin-swc`** für Decorator-Metadaten in Vitest | esbuild emittiert keine `design:paramtypes` → ohne SWC funktioniert Nest-DI in Tests nicht |
 
-**Domains, CORS, Token:** Empfohlen: Henrys Domain liegt bei Cloudflare DNS → Web unter `voltonaut.<domain>` (Cloudflare Pages Custom Domain), API unter `api.voltonaut.<domain>` (A-Record auf den Hetzner-VPS). Web und API sind dann **verschiedene Origins** (CORS nötig: `Access-Control-Allow-Origin` exakt auf Web-Origin, Preview-Origins `*.voltonaut.pages.dev` nur gegen Staging), aber **dieselbe Site** (gleiche registrierbare Domain) → Cookies mit `SameSite=Lax` würden funktionieren. Entscheidung v1: **Bearer-Token** (funktioniert auch für `*.pages.dev`-Previews und ohne eigene Domain, keine CSRF-Fläche); Wechsel auf httpOnly-Cookie `SameSite=Strict` + CSRF-Schutz möglich, sobald beide unter Henrys Domain laufen (P7). Ohne eigene Domain (Web auf `*.pages.dev`) wären Cookies Third-Party → dann nur Bearer.
-Optional: API-Subdomain über Cloudflare-Proxy (orange Wolke) – WebSockets werden unterstützt; TLS zwischen Cloudflare und VPS dann per Origin-Zertifikat, Caddy bleibt Reverse Proxy.
+**Domains, CORS, Token (festgelegt 19.11.2026, Zone `stammkneipe.dev`):** Web unter `voltonaut.stammkneipe.dev` (Cloudflare Pages, Custom Domain), API/WebSocket unter `voltonaut-api.stammkneipe.dev` (A-Record auf Henrys Hetzner-VPS). Beide Hosts liegen bewusst **eine Ebene** unter der Apex, weil das kostenlose Cloudflare Universal SSL nur eine Ebene unter der Apex abdeckt. Web und API sind **verschiedene Origins** (CORS nötig: `Access-Control-Allow-Origin` exakt auf `https://voltonaut.stammkneipe.dev`, Preview-Origins `*.voltonaut.pages.dev` nur gegen Staging, dazu `http://localhost:5173`), aber **dieselbe Site** (registrierbare Domain `stammkneipe.dev`) → Cookies mit `SameSite=Lax` würden funktionieren. Entscheidung v1: **Bearer-Token** (funktioniert auch für `*.pages.dev`-Previews, keine CSRF-Fläche); Wechsel auf httpOnly-Cookie `SameSite=Strict` + CSRF-Schutz später möglich (P7).
+API-DNS: A-Record auf den VPS, Proxy über Cloudflare (orange Wolke) ist für WebSockets in Ordnung. Wenn proxied, muss der SSL-Modus **Full (strict)** sein; Origin-TLS kommt vom vorhandenen Traefik (Certresolver, ADR-004).
 
 ## Login-Mails (Magic Link, E5)
 | Option | Status (geprüft 2026-11-19) | Kosten / Limits | Einschätzung |
@@ -126,35 +126,22 @@ type ServerMsg =
 ```
 Client interpoliert Remote-Fahrer ~250 ms in der Vergangenheit; Positionen nur als Distanz entlang der Route. Limits: 50 Fahrer/Raum, 10 Nachrichten/s, 1 KB/Nachricht.
 
-## Deployment auf den Hetzner-VPS (in E0 dokumentiert; echtes Deploy = optionale Aufgabe, sobald SSH-Deploy-Key + Subdomain vorliegen)
-1. CI (`deploy-server.yml`, nur nach grünem `mise run check` auf `main`): `pnpm --filter @voltonaut/server build` → `pnpm --filter @voltonaut/server deploy --prod out/` (eigenständiges Verzeichnis mit Produktions-Dependencies).
-2. `rsync` nach `/opt/voltonaut/releases/<git-sha>/`, Symlink `/opt/voltonaut/current` umsetzen, `systemctl restart voltonaut-server`, danach `curl -f https://api.<domain>/healthz`; bei Fehler Symlink zurück (Rollback).
-3. systemd-Unit (Skizze):
-```ini
-[Unit]
-Description=Voltonaut API
-After=network-online.target
-[Service]
-ExecStart=/usr/bin/node /opt/voltonaut/current/dist/main.js
-Environment=NODE_ENV=production PORT=3000 DATABASE_PATH=/var/lib/voltonaut/voltonaut.db
-EnvironmentFile=/etc/voltonaut/server.env
-User=voltonaut
-StateDirectory=voltonaut
-Restart=on-failure
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-PrivateTmp=true
-[Install]
-WantedBy=multi-user.target
-```
-4. Caddy: `api.<domain> { reverse_proxy 127.0.0.1:3000 }` (WebSocket-Upgrade funktioniert automatisch).
-5. Node auf dem VPS: über mise mit derselben gepinnten Version (oder systemweites Paket gleicher Version) ❓.
-6. Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST` als GitHub-Secrets (Environment `production` mit manueller Freigabe), Mail-API-Keys nur in `/etc/voltonaut/server.env`. Henry liefert Key + Subdomain später; bis dahin läuft der Server nur lokal und in CI, der Deploy-Workflow existiert, ist aber deaktiviert (`if: vars.SERVER_DEPLOY_ENABLED == 'true'`).
+## Deployment auf den Hetzner-VPS (in E0 dokumentiert; echtes Deploy = optionale Aufgabe E0-opt)
+
+Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB frei. Auf dem VPS läuft bereits Financensor (Docker Compose); `financensor-traefik-1` (`traefik:v3.6`) belegt Ports 80/443. Deshalb kein Caddy und kein systemd – der Server kommt als Container hinter diesen Traefik (ADR-004). SSH-Zugang ist vorhanden; offen bleiben der DNS-A-Record für `voltonaut-api.stammkneipe.dev` und das CI-Deploy-Secret.
+
+1. CI (`deploy-server.yml`, nur nach grünem `mise run check` auf `main`): Image aus `apps/server` bauen und nach `ghcr.io/henrysachs/voltonaut-server` pushen (Tag = Git-SHA, auf `main` zusätzlich `latest`).
+2. Per SSH auf Henrys Hetzner-VPS das Compose-Projekt aktualisieren (`docker compose pull && docker compose up -d`), danach `curl -f https://voltonaut-api.stammkneipe.dev/healthz`; bei Fehler auf das vorherige Image-Tag zurück (Rollback).
+3. Compose-Skizze (im Repo unter `deploy/`; **TODO:** exakte Traefik-Netzwerk- und Certresolver-Namen beim Deploy aus der Financensor-Compose auf dem VPS ablesen und eintragen):
+   - Dienst `server`: Image `ghcr.io/henrysachs/voltonaut-server`, SQLite-Datei auf named Volume oder Bind-Mount, Env-Datei für Secrets, Traefik-Labels mit Host-Rule `voltonaut-api.stammkneipe.dev` und TLS über den vorhandenen Certresolver, Mitglied im Traefik-Netz.
+   - Dienst `litestream`: Sidecar, teilt das SQLite-Volume, repliziert nach S3-kompatiblem Ziel / Hetzner Storage Box.
+   - Kein eigener Proxy, keine Bindung an Port 80/443.
+4. Node läuft im Image (dieselbe per mise gepinnte Version), nicht als Host-Paket. Caddy-Config und systemd-Unit entfallen.
+5. Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST` als GitHub-Secrets (Environment `production` mit manueller Freigabe), Mail-API-Keys und Litestream-Zugang nur in der Env-Datei bzw. als Docker-Secrets auf dem VPS – nie im Repo. Bis DNS-Record und CI-Secret stehen, läuft der Server nur lokal und in CI; der Deploy-Workflow existiert, ist aber deaktiviert (`if: vars.SERVER_DEPLOY_ENABLED == 'true'`).
 
 ## Betrieb & Sicherheit
-- CORS: nur Web-Origin (`https://voltonaut.<domain>` bzw. `https://voltonaut.pages.dev`) + `http://localhost:5173`; `*.pages.dev`-Previews nur gegen Staging. Rate-Limits pro IP und Account (`@nestjs/throttler`), besonders auf `/auth/*`.
+- CORS: nur Web-Origin (`https://voltonaut.stammkneipe.dev` bzw. `https://voltonaut.pages.dev`) + `http://localhost:5173`; `*.pages.dev`-Previews nur gegen Staging. Rate-Limits pro IP und Account (`@nestjs/throttler`), besonders auf `/auth/*`.
 - Tokens nur gehasht speichern (SHA-256); Magic Links 15 min gültig, einmalig.
 - Secrets (Mail-API-Keys, Deploy-SSH-Key, Cloudflare-Token) nie im Repo; Deploy-Workflow erst nach Henrys Freigabe.
 - Datenschutz: E-Mail + Fahrtdaten = personenbezogen → Export/Löschung von Anfang an, Datenschutzhinweis im Client.
-- Monitoring: `/healthz`, journald-Logs, einfacher Uptime-Check.
+- Monitoring: `/healthz`, Container-Logs, einfacher Uptime-Check.

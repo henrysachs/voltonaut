@@ -220,7 +220,7 @@ Ehrlich: dependency-cruiser prüft **Importe**, nicht **Schreibzugriffe**. „Nu
 
 ## 8. CI & Branch-Schutz
 `.github/workflows/check.yml`: Trigger `pull_request` + `push` auf `main`; Schritte: Checkout (`fetch-depth: 0` für Diff-Check) → `jdx/mise-action` (installiert gepinnte Tools) → `mise run install` → **`mise run check`**. Nichts anderes; wer lokal grün hat, hat in CI grün. Einzige Ergänzung: Job `mutation` (`mise run check:mutation`) auf PRs mit Änderungen in `packages/engine`/`packages/rules` und nächtlich – dann ebenfalls Required (`10-testing.md` §9).
-Weitere Workflows: `deploy-web.yml` (nach grünem `check` auf `main`: `mise run build` → `wrangler pages deploy apps/web/dist --project-name voltonaut`; PRs → Preview-Deploy; Secrets `CLOUDFLARE_API_TOKEN` (nur Pages: Edit) und `CLOUDFLARE_ACCOUNT_ID` liefert Henry später – bis dahin übersprungen), `deploy-server.yml` (SSH-Deploy, nur wenn `vars.SERVER_DEPLOY_ENABLED` gesetzt, ADR-009). `wrangler` als exakt gepinnte devDependency.
+Weitere Workflows: `deploy-web.yml` (nach grünem `check` auf `main`: `mise run build` → `wrangler pages deploy apps/web/dist --project-name voltonaut`; PRs → Preview-Deploy; Secrets `CLOUDFLARE_API_TOKEN` (nur Pages: Edit) und `CLOUDFLARE_ACCOUNT_ID` liefert Henry später – bis dahin übersprungen), `deploy-server.yml` (SSH-Deploy des Docker-Compose-Stacks hinter Traefik, nur wenn `vars.SERVER_DEPLOY_ENABLED` gesetzt, ADR-004/009). `wrangler` als exakt gepinnte devDependency.
 Empfohlener Branch-Schutz für `main` (Ruleset):
 - PR Pflicht, kein direkter Push, kein Force-Push, kein Löschen.
 - Required Status Check: `check` (strict: Branch muss aktuell sein).
