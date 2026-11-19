@@ -4,7 +4,7 @@
 | State | Besitzer | Wer liest | Wie wird geändert |
 |---|---|---|---|
 | Verbindungsstatus, Rohdaten der Geräte | `devices/` (je Adapter) | engine, ui | nur Adapter selbst |
-| `RideState` (Position, Tempo, Gang, Zeit, Summen) | `engine/` | world, avatar, game, ui (als `RideSnapshot`) | nur `engine.tick()` und Engine-Intents |
+| `RideState` (Position, Tempo, Gang, Zeit, Summen, Bots, Drafting, Pickups) | `packages/engine` (nur `internal/`) | world, avatar, game, ui (als `RideSnapshot`) | nur `engine.tick()` und Engine-Intents |
 | `Route` / `ElevationProfile` | `world/` (Laden/Erzeugen) | engine (Steigung), world (Mesh), game (Segmente) | unveränderlich nach Laden |
 | `AvatarConfig` | `avatar/` | ui (Garage), game (Unlock-Prüfung) | Intent `avatar.setConfig` |
 | `RiderProfile` (Gewicht, Größe, FTP, Kettenblatt …) | Server `accounts/`, Client-Cache in `sync/` | engine (zu Fahrtbeginn), avatar (Größe), ui | Intent `profile.update` → `sync/` → `PUT /v1/me/profile` |
@@ -13,7 +13,7 @@
 | Outbox (unhochgeladene Fahrten) | `sync/` | ui (Status) | sync |
 | UI-Zustand (offene Panels) | `ui/` | – | ui |
 
-Kommunikation: **typisierter Event-Bus** (`shared/bus.ts`) für diskrete Ereignisse + **Snapshot-Pull** pro Frame für kontinuierliche Werte (Render-Loop holt `engine.snapshot()`).
+Kommunikation: **typisierter Event-Bus** (`packages/shared/src/bus.ts`) für diskrete Ereignisse + **Snapshot-Pull** pro Frame für kontinuierliche Werte (Render-Loop holt `engine.snapshot()`).
 
 ## Datenfluss
 ```mermaid
@@ -55,7 +55,7 @@ flowchart LR
 
 ## Kerntypen (Design-Skizzen, keine Implementierung)
 ```ts
-// shared/units.ts – nur Aliase zur Lesbarkeit
+// packages/shared/src/units.ts – nur Aliase zur Lesbarkeit
 type Watts = number; type Rpm = number; type Mps = number; type Meters = number;
 type Seconds = number; type Pct = number; type Bpm = number; type Kg = number;
 
@@ -143,7 +143,7 @@ interface AvatarConfig {
   bike: { frameId: string; frameColor: string; wheelsId: string; barTapeColor?: string };
 }
 
-// shared/api – Server-autoritativ, Client cached
+// packages/shared/src/api – Zod-Schemas; Server-autoritativ, Client cached
 interface RiderProfile { displayName: string; massKg: number; heightCm: number; ftpW?: number; maxHrBpm?: number;
   bike: { massKg: number; chainringTeeth: number; cogTeeth: number; wheelCircM: number }; gearPreset: string; units: 'metric' | 'imperial' }
 interface Inventory { items: ReadonlyArray<{ itemId: string; source: 'default' | 'level' | 'badge' | 'shop' | 'distance'; acquiredAt: string }> }
@@ -157,22 +157,29 @@ interface Progression {
 }
 ```
 
-## Ordnerstruktur (Ziel)
+## Repo-Layout (pnpm workspaces, ADR-006)
 ```
-index.html            Spiel
-debug/ble.html        Sniffer/Debug-Seite (eigener Vite-Entry)
-src/
-  main.ts             Composition Root: verdrahtet Module, kein Logik-Code
-  shared/  devices/{ftms,hrs,cps,zwift-controller,keyboard}/  sim/
-  engine/{physics,gears,ride,trainer-control}/
-  world/{routes,terrain,scenery,camera}/  avatar/{models,anim,customize}/
-  game/{xp,volts,badges,segments,pickups}/  sync/{cache,outbox,api-client}/  net/
-  ui/{hud,connect,garage,shop,profile,summary,login}/
-server/src/{auth,accounts,inventory,economy,progression,rides,live,catalog}/  server/migrations/
-public/assets/        GLB/Texturen + LICENSES.md
-fixtures/ble/         aufgezeichnete Sniffer-Exporte (JSON) als Test-Fixtures
-docs/
+apps/
+  web/            @voltonaut/web
+    src/main.ts           Composition Root (nur Verdrahtung)
+    src/world/            RenderSystems: environment, terrain, scenery, crowd, pickups, effects, camera, post (ADR-008)
+    src/avatar/           Fahrer-/Rad-Modelle, Animation, Customizing
+    src/game/             vorläufige XP/Volts, Segment-HUD-Logik
+    src/ui/               HUD, connect, garage, shop, profile, summary, login
+    src/sync/             Cache + Outbox + API-Client (ab E5)
+    src/net/              Live-Gruppenfahrt-Client (ab E9)
+    debug/ble.html        Sniffer
+    e2e/                  Playwright (E2E, visuell, Perf)
+    public/assets/        komprimierte GLB/KTX2 + LICENSES.md
+  server/         @voltonaut/server   NestJS-Module (08-backend.md), drizzle/ Migrationen
+packages/
+  shared/         Typen, Einheiten, Zod-Schemas (api, ws, ride-upload), Event-Bus-Typen
+  engine/         src/{physics,gears,ride,bots,drafting,segments,trainer}/ + src/internal/ (mutierbarer RideState)
+  rules/          src/{xp,economy,badges,catalog,levels}/ + data/*.json
+  ble/            src/{ftms,hrs,cps,zwift-play,keyboard,sim,replay}/
+tools/oxlint/anti-slop/   scripts/   assets-src/   fixtures/{ble,rides,api}/   docs/
 ```
+Zuordnung der früheren Kurznamen: `devices/` → `packages/ble`, `sim/` → `packages/ble/src/sim`, `engine/` → `packages/engine`, `shared/` → `packages/shared`, Spielregeln → `packages/rules`, `server/` → `apps/server`.
 
 ## Backend & Sync
 ```mermaid
@@ -185,7 +192,7 @@ flowchart LR
   end
   SY -- REST /v1 Bearer --> API
   NET -- WSS /v1/live --> LIVE
-  subgraph Server[Hetzner-VPS: Node + Fastify]
+  subgraph Server[Hetzner-VPS: NestJS + Drizzle]
     API[auth · accounts · inventory · economy · rides · progression · catalog]
     LIVE[live/ Räume In-Memory]
     API --> DB[(SQLite WAL)]
@@ -193,9 +200,12 @@ flowchart LR
   end
 ```
 - `sync/` (Client) besitzt den lokalen Spiegel von `/v1/me` und die Outbox; alle anderen Client-Module lesen daraus. Ohne Server/Account: Gastmodus, nur Cache + Outbox.
-- `net/` liest `RideSnapshot` (sendet eigene Distanz 2–4 Hz) und besitzt `RemoteRider[]`; world/avatar rendern Remote-Fahrer nur daraus. Engine bleibt unberührt (kein Windschatten v1).
-- `shared/` enthält Code, den Client **und** Server nutzen: Physik, Level-Tabelle, Badge-Prädikate, Item-Katalog, API-Typen (TypeBox). So rechnet der Server Fahrten mit derselben Logik nach.
+- `net/` liest `RideSnapshot` (sendet eigene Distanz 2–4 Hz) und besitzt `RemoteRider[]`; world/avatar rendern Remote-Fahrer nur daraus. Für Windschatten hinter Remote-Fahrern reicht `net/` deren Distanz/Versatz als Engine-Input weiter (v2).
+- `packages/engine`, `packages/rules`, `packages/shared` enthalten Code, den Client **und** Server nutzen: Physik, Gänge, Bots/Drafting, Level-Tabelle, Badge-Prädikate, Item-Katalog, Zod-API-Schemas. So rechnet der Server Fahrten mit derselben Logik nach. So rechnet der Server Fahrten mit derselben Logik nach.
 - Details: `08-backend.md`, ADR-004, ADR-005.
+
+## Engine-Erweiterungen für das Spiel
+`RideState` enthält neben dem eigenen Fahrer: `bots: BotState[]` (deterministisch per Seed), `draft: { leaderId?: string; cdaFactor: number }`, `pickups: { collected: string[] }`, `powerUp?: { id; untilS }`, `lateralM` (Spur). Render-Systeme bekommen daraus `RiderView[]`.
 
 ## Composition Root
 `main.ts` erzeugt in dieser Reihenfolge: Bus → `sync/` (Cache laden, Session prüfen; offline ok) → Adapter (echt oder `sim/` bei `?sim=1`) → Route laden → Engine (RiderProfile aus Cache) → Game → World/Avatar (three.js) → UI → optional `net/`. Nur hier wird entschieden, ob Sim- oder Echtgeräte laufen; alle anderen Module merken keinen Unterschied.

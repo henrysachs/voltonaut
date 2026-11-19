@@ -1,80 +1,86 @@
 # AGENTS.md – Orientierung für Coding-Agenten
 
-Du arbeitest an **Voltonaut**, einem browserbasierten 3D-Indoor-Cycling-Spiel (Zwift-Ersatz). Lies diese Datei zuerst, dann die für deine Aufgabe relevante Datei unter `docs/`.
+Du arbeitest an **Voltonaut**, einem browserbasierten 3D-Indoor-Cycling-Spiel (Zwift-Ersatz) mit eigenem Backend. Dieses Repo ist ein **enges Konstrukt**: Leitplanken werden maschinell durchgesetzt. Lies diese Datei zuerst, dann die für deine Aufgabe relevanten Dateien unter `docs/`.
+
+## 0. Die drei harten Regeln
+1. **Vor dem Abschluss jeder Aufgabe: `mise run check` muss grün sein** (Format, Oxlint + anti-slop, Typecheck, dependency-cruiser, guard, Tests). Ändert dein PR `packages/engine` oder `packages/rules`: zusätzlich `mise run check:mutation`. Rot = nicht fertig.
+2. **Leitplanken nie lockern:** keine Änderung an `oxlint.config.ts`, `tools/oxlint/**` (anti-slop), `tsconfig*.json`, `.dependency-cruiser.cjs`, `.oxfmtrc.json`, `mise.toml`, `scripts/guard.mjs`, `.github/**`, Golden-Dateien, Screenshot-Baselines oder BLE-Fixtures, um Fehler „wegzumachen". Kein Deaktivieren/Abschwächen einer Regel (auch keiner anti-slop-Regel), keine `@ts-ignore`/`@ts-nocheck`, kein `oxlint-disable` ohne Begründung. Änderungen an Leitplanken nur mit ADR + Henrys Freigabe (CODEOWNERS).
+3. **Keine neue Abhängigkeit ohne ADR** (und Eintrag in `docs/dependencies.md`).
 
 ## 1. Wo steht was
-- Produktziel: `docs/00-vision.md`
-- Architektur, Kerntypen, Datenfluss: `docs/01-architecture.md` ← **Pflichtlektüre**
-- Bluetooth-Protokolle: `docs/02-bluetooth.md` (Abschnitte mit **UNVERIFIZIERT** sind Hypothesen)
-- Physik & Gänge: `docs/03-engine-physics.md`
-- 3D-Welt: `docs/04-world-3d.md`, Avatar: `docs/05-avatar-customization.md`
-- Gamification & Volts-Ökonomie: `docs/06-gamification.md`
-- Backend (Stack, API, Accounts, Anti-Cheat, Sync, Gruppenfahrten): `docs/08-backend.md`
-- Was als Nächstes dran ist: `docs/07-roadmap.md` (Etappen mit Checkboxen)
-- Warum etwas so ist: `docs/decisions/ADR-*.md`
-- Ungeklärtes: `docs/open-questions.md`
+| Thema | Datei |
+|---|---|
+| Ziel, Nicht-Ziele | `docs/00-vision.md` |
+| Architektur, Kerntypen, Ownership ← **Pflichtlektüre** | `docs/01-architecture.md` |
+| Bluetooth (FTMS, HR, Zwift Play; ⚠️ = unverifiziert) | `docs/02-bluetooth.md` |
+| Physik, Gänge, Rider-Profil, Windschatten | `docs/03-engine-physics.md` |
+| 3D-Spiel: Welt, Licht, Wetter, Bots, Kameras, Effekte, Audio, Assets, Budget | `docs/04-world-3d.md` |
+| Avatar & Customizing | `docs/05-avatar-customization.md` |
+| Gamification & Volts ⚡ | `docs/06-gamification.md` |
+| Etappen mit Abnahmekriterien | `docs/07-roadmap.md` |
+| Backend (NestJS, Drizzle, API, Anti-Cheat, Deploy) | `docs/08-backend.md` |
+| Tooling & Leitplanken (mise, Oxlint/anti-slop, TS, depcruise, CI) | `docs/09-tooling.md` |
+| Verifikation (Replay, Golden, Property, E2E, Visual, Mutation, Perf) | `docs/10-testing.md` |
+| Entscheidungen | `docs/decisions/ADR-*.md` |
+| Offenes | `docs/open-questions.md` |
+| Aufgaben-Specs, Vorlage, Review-Checkliste | `docs/specs/` |
+| Abhängigkeits-Register | `docs/dependencies.md` |
 
-## 2. Stack
-Client: Vite + TypeScript (`strict: true`), three.js, Vitest, Playwright für Smoke-Tests im Sim-Modus; statisch auf GitHub Pages. Server (ab E5, `server/`): Node.js 22 + Fastify + TypeBox + `@fastify/websocket` + SQLite (Kysely) auf Henrys Hetzner-VPS – autoritativ für Accounts, Inventar, XP und Volts (ADR-004, ADR-005, `docs/08-backend.md`). E0–E4 und Solo/Gast/Sim-Modus laufen **immer ohne Server**. Zielbrowser: Chrome/Edge Desktop.
-
-## 3. Modulgrenzen (hart)
+## 2. Repo-Layout (pnpm workspaces, ADR-006)
 ```
-src/
-  devices/   Adapter pro Gerät → einheitliche DeviceEvents. Kennt kein three.js, keinen RideState.
-  engine/    EINZIGER Besitzer von RideState. Physik, Gangmodell, Trainer-Kommandos.
-  world/     3D-Strecke, Terrain, Höhenprofil (Route ist reine Daten + Mesh-Erzeugung).
-  avatar/    Fahrer- und Radmodell, Customizing, Animation. Liest RideState.
-  game/      XP, Level, Unlocks, Badges, Segmente, Persistenz. Liest RideState, besitzt Progression.
-  ui/        HUD, Verbinden-Dialoge, Garage. Liest Snapshots, sendet Intents.
-  sim/       Fake-Geräte für Entwicklung/Tests ohne Hardware.
-  shared/    Reine Typen, Einheiten-Helfer, Event-Bus. Keine Abhängigkeiten nach außen.
-  sync/      (ab E5) Besitzt lokalen Cache von /v1/me (Profil, Inventar, Progression, Volts) + Outbox für Fahrt-Uploads.
-  net/       (ab E8) Live-Gruppenfahrt-Client: WebSocket, sendet eigene Distanz, besitzt RemoteRider-Snapshots.
-server/      (ab E5) Fastify-Server (auth, accounts, inventory, economy, progression, rides, live, catalog). Importiert nur shared/.
+apps/web        @voltonaut/web     Vite + three.js Client: world/ avatar/ game/ ui/ sync/ net/ main.ts, debug/ble.html
+apps/server     @voltonaut/server  NestJS: health, database, auth, accounts, inventory, economy, progression, rides, live, catalog
+packages/shared @voltonaut/shared  Typen, Einheiten, Zod-Schemas (API/WS/Upload) – kein DOM, kein Node
+packages/engine @voltonaut/engine  Physik, Gänge, RideState + tick, Bots, Drafting, Trainer-Mapping – kein DOM, kein Node, kein three
+packages/rules  @voltonaut/rules   XP/Level, Volts-Formel, Badges, Katalog – kein DOM, kein Node
+packages/ble    @voltonaut/ble     Web-Bluetooth-Adapter, Byte-Parser, Sim-Geräte, ReplayTransport – kein Node, kein engine
+tools/oxlint/anti-slop/            vendorte Lint-Regeln (nicht anfassen)
+fixtures/{ble,rides,api}/          Testdaten (geschützt)
 ```
-Erlaubte Importe (Richtung →): `devices → shared`, `sim → devices, shared`, `engine → shared, world (nur Route-Daten)`, `avatar/world/game/ui → engine (nur lesend über RideSnapshot), shared`. **Verboten:** `devices` importiert `engine`; irgendein Modul außer `engine` schreibt `RideState`; `engine` importiert three.js. Durchgesetzt per ESLint `import/no-restricted-paths` (ab E0).
+Durchgesetzt von **dependency-cruiser** (`docs/09-tooling.md` §6): Apps importieren sich nicht; Pakete nie aus Apps; mutierbarer `RideState` nur in `packages/engine/src/internal/**`; `three` nur in `apps/web/src/{world,avatar}` und `ui/garage`; keine Zyklen. **Modulübergreifende PRs sind erlaubt** – Grenzen sichert depcruise, nicht der PR-Zuschnitt.
 
-## 4. Goldene Regeln
-1. **Ein Besitzer pro State.** `RideState` → engine. Verbindliche Progression, Inventar, Volts, RiderProfile → **Server**; Client-Spiegel → `sync/`; vorläufige Live-Belohnungen → game. `AvatarConfig` → avatar (gespeichert über sync). Geräteverbindungsstatus → devices. Andere lesen Snapshots oder senden Intents.
-2. **Einheiten im Namen:** `powerW`, `cadenceRpm`, `speedMps`, `gradePct`, `distanceM`, `massKg`. Intern SI (m, s, kg, W); km/h nur in der UI.
-3. **Bluetooth-Bytes nur in `devices/`.** Außerhalb existieren nur typisierte `DeviceEvent`s und `TrainerCommand`s.
-4. **Unverifizierte Protokolldetails** werden im Code mit `// UNVERIFIED: siehe docs/02-bluetooth.md#…` markiert, bis sie an echter Hardware bestätigt und die Doku aktualisiert ist.
-5. **Sim-Modus muss immer funktionieren.** Jede Funktion, die Hardware braucht, hat ein Fake-Gerät in `sim/`.
-6. **Determinismus:** Engine-Tick ist eine reine Funktion `(state, inputs, dtS) → state`. Keine `Date.now()`-Aufrufe in der Physik; Zeit kommt als Parameter.
-7. **Keine Assets ohne Lizenz.** Jede Datei unter `public/assets/` hat einen Eintrag in `public/assets/LICENSES.md` (Quelle, Autor, Lizenz).
-8. **Belohnungen nie im Client festschreiben.** XP/Volts/Badges/PBs berechnet der Server aus Fahrt-Samples mit Code aus `shared/`; Client zeigt nur Vorschau.
-9. Code, den Client und Server brauchen (Physik, Level-Tabelle, Badge-Prädikate, Katalog, API-Typen), gehört nach `shared/` – keine Duplikate.
-10. Keine neuen Laufzeitabhängigkeiten ohne kurze Begründung im PR (Bundle-Größe zählt).
+## 3. Architekturregeln
+1. **Ein Besitzer pro State.** `RideState` → engine (nur über `tick`/Intents). Verbindliche Progression, Inventar, Volts, RiderProfile → Server; Client-Spiegel → `sync/`; vorläufige Live-Belohnungen → `game/`; `RemoteRider[]` → `net/`. Render-Systeme lesen nur Snapshots (ADR-008).
+2. **Einheiten im Namen** (`powerW`, `cadenceRpm`, `speedMps`, `gradePct`, `distanceM`, `massKg`); intern SI.
+3. **Bytes und Rohdaten nur an Grenzen:** BLE-Bytes nur in `packages/ble`, HTTP/WS-Payloads nur via Zod-Schemas aus `packages/shared`. Danach nur konkrete Typen (anti-slop erzwingt das: kein `unknown`/`Record<string, unknown>` in Verträgen, `as` nur mit `// SAFETY:`).
+4. **Determinismus:** Engine-Tick `(state, inputs, dtS) → state`, Zufall nur über Seed, keine `Date.now()` in Engine/Rules.
+5. **Belohnungen berechnet der Server** mit denselben Paketen (`engine`, `rules`); der Client zeigt Vorschau.
+6. **Sim-Modus muss immer funktionieren**; jede Hardware-Funktion hat ein Sim-Gerät. Tests nutzen Sim-/Replay-Geräte oder DI-Fakes – **kein `vi.mock`** (anti-slop `no-module-mocking`).
+7. **UNVERIFIZIERTE Protokolldetails** im Code mit `// UNVERIFIED: docs/02-bluetooth.md#…` markieren, bis eine Hardware-Fixture sie bestätigt.
+8. **Assets nur mit Lizenz** (`apps/web/public/assets/LICENSES.md`), über `mise run assets` (glTF + KTX2 + meshopt).
 
-## 5. Lokal starten (ab E0)
+## 4. Befehle (alle über mise)
 ```bash
-npm install
-npm run dev            # echte Geräte, http://localhost:5173 (localhost = secure context)
-# Sim-Modus: http://localhost:5173/?sim=1   (Fake-Trainer, Fake-Puls, Fake-Controller per Tastatur ↑/↓)
-npm run dev -- --host  # NICHT für Bluetooth geeignet (kein secure context über LAN-IP)
-npm test               # Vitest
-npm run test:e2e       # Playwright im Sim-Modus
-npm run lint && npm run typecheck
-npm run server:dev     # ab E5: lokaler API-/WS-Server (SQLite-Datei unter ./data), Client nutzt VITE_API_URL=http://localhost:8787
+mise install            # gepinnte Node/pnpm-Versionen
+mise run install        # pnpm install --frozen-lockfile
+mise run dev            # Web (http://localhost:5173) + Server (http://localhost:3000)
+#   Sim-Modus: http://localhost:5173/?sim=1   (Fake-Trainer/HR/Play; Tastatur ↑/↓ schaltet)
+#   Web Bluetooth nur über localhost/HTTPS – nicht über LAN-IP
+mise run fix            # oxlint --fix → oxfmt → oxlint
+mise run check          # DAS Gate (lokal = CI)
+mise run check:mutation # Stryker auf engine/rules
+mise run test:e2e       # Playwright im Sim-Modus (Teil von check)
+mise run perf           # manueller fps-Report auf echter Hardware
+mise run assets         # Asset-Pipeline
 ```
-Sniffer/Debug-Seite: `/debug/ble.html` (siehe `docs/02-bluetooth.md` §5).
 
-## 6. Definition of Done (pro PR)
-- [ ] `npm run lint`, `npm run typecheck`, `npm test` grün; CI grün.
-- [ ] Feature im Sim-Modus bedienbar und (wenn sinnvoll) per Playwright-Smoke-Test abgedeckt.
-- [ ] Neue Logik in `engine/`, `game/`, `devices/*/parse*` hat Unit-Tests (Parser mit echten oder dokumentierten Byte-Beispielen).
-- [ ] Modulgrenzen eingehalten (Lint-Regel), keine `any` ohne Kommentar.
-- [ ] Relevante Doku aktualisiert (Roadmap-Checkbox abgehakt, Protokollwissen in `02-bluetooth.md`, neue Entscheidungen als ADR).
-- [ ] Hardwareabhängiges als „getestet an echter Hardware: ja/nein" im PR vermerkt.
+## 5. Arbeitsablauf pro Aufgabe
+1. **Spec anlegen/lesen:** `docs/specs/<Etappe>-<nr>-<slug>.md` aus `_template.md`, Abnahmekriterien aus `docs/07-roadmap.md` übernehmen und präzisieren, Testplan nach `docs/10-testing.md`.
+2. Umsetzen – Tests zuerst für Parser/Physik/Regeln (Fixtures, Golden, Properties).
+3. `mise run check` grün (+ Mutation falls betroffen).
+4. PR mit: Spec-Link, abgehakte Kriterien, „an echter Hardware getestet: ja/nein", Doku-Updates (Roadmap-Checkbox, `02-bluetooth.md`-Befunde, ADRs).
+5. **Ein zweiter Agent reviewt** gegen Spec + `docs/specs/_review-checklist.md`. Merge nur nach Review, grünem CI und – bei geschützten Dateien – Henrys Freigabe.
 
-## 7. Tests – Erwartungen
-- **Unit (Vitest):** Physik (bekannte Werte: z. B. 200 W, 0 %, 75 kg → ~ 33–35 km/h), Gangmodell, FTMS-Encoder/Decoder (Byte-genau), Zwift-Play-Decoder (`0x07`/`0x23`) gegen aufgezeichnete Fixtures aus `fixtures/ble/*.json`, XP/Level-Formeln, Segment-Erkennung.
-- **Integration:** Engine + Sim-Geräte 60 s simuliert → plausible Distanz, keine NaN.
-- **E2E (Playwright, Sim):** App lädt, Sim-Geräte verbinden, Fahrer bewegt sich, Schalten ändert Gang-Anzeige.
-- Hardware-Tests sind manuell; Ergebnisse als Fixture (Sniffer-Export) einchecken.
+## 6. Definition of Done
+- [ ] `mise run check` grün; CI grün (inkl. `mutation`, falls Kernpfade geändert).
+- [ ] Alle Abnahmekriterien der Spec erfüllt und durch Tests belegt.
+- [ ] Im Sim-Modus bedienbar; E2E/visuelle Tests ergänzt, wenn UI/3D betroffen.
+- [ ] Coverage-Schwellen der Kernpakete gehalten (`docs/10-testing.md` §9).
+- [ ] Keine gelockerten Regeln, keine neuen Abhängigkeiten ohne ADR.
+- [ ] Doku aktuell; Review durch zweiten Agenten bestanden.
 
-## 8. Arbeitsweise
-- Arbeite etappenweise nach `docs/07-roadmap.md`; kleine PRs, eine Checkbox-Gruppe pro PR.
-- Commit-Stil: Conventional Commits (`feat(engine): …`, `fix(devices): …`, `docs: …`).
-- Wenn eine Doku-Annahme falsch ist: Doku im selben PR korrigieren, nicht stillschweigend abweichen.
-- Sprache: Doku Deutsch, Code/Identifier/Kommentare Englisch.
+## 7. Hosting & Deploy
+Web: Cloudflare Pages (`wrangler pages deploy` aus CI nach grünem `check`, Preview pro PR). API: Hetzner-VPS (systemd + Caddy), Deploy erst aktiv, wenn Henry SSH-Key/Subdomain liefert (ADR-009). Agenten deployen nie manuell und fassen keine Secrets an.
+
+## 8. Sprache & Stil
+Doku Deutsch; Code, Identifier, Kommentare, Commits Englisch (Conventional Commits: `feat(engine): …`). Formatierung macht Oxfmt – nicht manuell diskutieren.
