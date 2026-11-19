@@ -3,7 +3,7 @@
 Legende: ✅ = Standard/Spezifikation, in mehreren Quellen bestätigt · ⚠️ **UNVERIFIZIERT** = aus öffentlichem Reverse Engineering, an Henrys Hardware noch nicht getestet · ❓ = unbekannt.
 
 ## 1. Web-Bluetooth-Rahmenbedingungen ✅
-- Nur Chrome/Edge (Desktop). Secure context nötig: `https://` (GitHub Pages) oder `http://localhost`. LAN-IP über HTTP geht **nicht**.
+- Nur Chrome/Edge (Desktop). Secure context nötig: `https://` (Cloudflare Pages) oder `http://localhost`. LAN-IP über HTTP geht **nicht**.
 - `navigator.bluetooth.requestDevice()` braucht eine Nutzergeste (Klick) und zeigt einen Auswahldialog. **Alle** Services, auf die später zugegriffen wird, müssen in `filters[].services` oder `optionalServices` stehen – sonst `SecurityError`.
 - Wiederverbinden ohne Dialog: `navigator.bluetooth.getDevices()` + `device.watchAdvertisements()`. In Chrome ggf. hinter `chrome://flags/#enable-web-bluetooth-new-permissions-backend` – ❓ Stand für Henrys Chrome-Version prüfen.
 - Linux-Chrome braucht teils `chrome://flags/#enable-experimental-web-platform-features`. ❓ Henrys Laptop-OS.

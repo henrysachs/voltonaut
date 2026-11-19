@@ -42,6 +42,9 @@ type UnlockRule =
   | { kind: 'shop'; priceVolts: number; minLevel?: number };
 ```
 
+### Power-ups (optional, später)
+Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magnet, `04-world-3d.md` §7). Aktivierung per Play-Power-up-Taste; physikrelevant → im Ride-Upload protokolliert, serverseitig nachgerechnet; Segmentzeiten mit Power-up werden getrennt markiert. Kosten nichts, bringen keine Volts.
+
 ## XP & Level
 - XP pro Fahrt: **20 XP/km** + **2 XP/Hm** + **1 XP/Minute** + Boni (Segment-PB 50, Badge 100–500, erste Fahrt des Tages 25).
 - XP nur bei `powerW > 30` und `cadence > 20`; Sim-Modus vergibt keine XP.

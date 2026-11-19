@@ -103,11 +103,17 @@ Glättung: Trainer-Grade nur senden bei Änderung ≥ 0,1 % oder Gangwechsel; St
 
 Ohne Kadenz (`cadence = 0`): letzten Grade halten.
 
+## 4a. Windschatten, Bots, Power-ups (Engine-seitig)
+- **Drafting:** `cdaEff = cda × draftFactor(gapM, lateralM)`; Startwerte ⚠️: Faktor 0,70 bei 0,5–2 m direkt dahinter, linear auf 1,0 bis 10 m, seitlicher Versatz > 0,8 m halbiert den Effekt; in Gruppen hinten bis 0,60. Wirkt auf virtuelles Tempo **und** auf die Trainer-Kraft (Strategie A: Luftanteil `0.5·ρ·cdaEff·v²` im Zielkraft-Term).
+- **Bots:** gleiche Physik, Leistungs-Controller pro Persönlichkeit (Ziel-W/kg ± Rauschen per Seed, Attacke am Berg, Sprint), laterale Spurwahl (Überholen). Deterministisch → Golden-Tests.
+- **Power-ups (optional):** temporäre Modifikatoren (`cdaFactor`, `massFactor`, `draftBonus`) mit Dauer; jede Aktivierung als Event im Ride-Log, damit der Server identisch nachrechnet.
+
 ## 5. Trainer-Kontroll-Lebenszyklus
 `connect → enable indications 0x2AD9 + notify 0x2AD2/0x2ADA → read 0x2ACC → 0x00 Request Control → 0x07 Start → loop(0x11 …)`. Bei Status `0xFF` (Control Permission Lost) oder Response `0x05`: Status `reconnecting`, nach 2 s erneut `0x00`. Nie `0x01 Reset` im Normalbetrieb.
 
-## 6. Tests
+## 6. Tests (Details: `10-testing.md`)
 - Physik: stationäre Geschwindigkeiten (Tabelle oben), Energieerhaltung bergab ohne Leistung (v steigt plausibel, Terminalgeschwindigkeit).
 - Gangmodell: Grenzen (1/24), Mehrfachshift, Persistenz des letzten Gangs.
 - Strategie A: Monotonie (höherer Gang ⇒ höherer `gradeEff`), Clamping, Encoder-Bytes.
 - Sim-Trainer (`sim/`) implementiert das Trainer-Modell inverse: liefert Watt aus Kadenz × Widerstand, damit der ganze Regelkreis im Sim-Modus geschlossen ist.
+- Golden-Fahrten (`fixtures/rides/`) und Property-Tests (mehr Watt ⇒ nie langsamer, höherer Gang ⇒ nie leichter, Drafting ⇒ nie langsamer) laut `10-testing.md`.
