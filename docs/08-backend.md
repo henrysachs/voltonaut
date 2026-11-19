@@ -136,6 +136,7 @@ Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB 
    - Dienst `server`: Image `ghcr.io/henrysachs/voltonaut-server`, SQLite-Datei auf named Volume oder Bind-Mount, Env-Datei für Secrets, Traefik-Labels mit Host-Rule `voltonaut-api.stammkneipe.dev` und TLS über den vorhandenen Certresolver, Mitglied im Traefik-Netz.
    - Dienst `litestream`: Sidecar, teilt das SQLite-Volume, repliziert nach S3-kompatiblem Ziel / Hetzner Storage Box.
    - Kein eigener Proxy, keine Bindung an Port 80/443.
+   - Zusätzlich Mitglied im Observability-/Prometheus-Netz der Financensor-Compose (Name **TODO** beim Deploy). OTLP-Traces an Alloy bzw. Tempo; `/metrics` auf einem internen Port (üblich 9464) ohne Traefik-Label (ADR-010, `11-observability.md`).
 4. Node läuft im Image (dieselbe per mise gepinnte Version), nicht als Host-Paket. Caddy-Config und systemd-Unit entfallen.
 5. Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST` als GitHub-Secrets (Environment `production` mit manueller Freigabe), Mail-API-Keys und Litestream-Zugang nur in der Env-Datei bzw. als Docker-Secrets auf dem VPS – nie im Repo. Bis DNS-Record und CI-Secret stehen, läuft der Server nur lokal und in CI; der Deploy-Workflow existiert, ist aber deaktiviert (`if: vars.SERVER_DEPLOY_ENABLED == 'true'`).
 
@@ -144,4 +145,4 @@ Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB 
 - Tokens nur gehasht speichern (SHA-256); Magic Links 15 min gültig, einmalig.
 - Secrets (Mail-API-Keys, Deploy-SSH-Key, Cloudflare-Token) nie im Repo; Deploy-Workflow erst nach Henrys Freigabe.
 - Datenschutz: E-Mail + Fahrtdaten = personenbezogen → Export/Löschung von Anfang an, Datenschutzhinweis im Client.
-- Monitoring: `/healthz`, Container-Logs, einfacher Uptime-Check.
+- Monitoring: `/healthz` öffentlich; strukturierte Logs, interne `/metrics` und OTel-Traces laut `11-observability.md` (ADR-010). `/metrics` nie über Traefik.

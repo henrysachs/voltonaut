@@ -20,4 +20,8 @@ Jede direkte Abhängigkeit braucht einen Eintrag (geprüft von `scripts/guard.mj
 | unplugin-swc, @swc/core, @nestjs/testing, supertest | apps/server (dev) | Server-Tests | 004, 007 |
 | @gltf-transform/cli | root (dev) | Asset-Pipeline | 008 |
 | wrangler | root (dev) | Cloudflare-Pages-Deploy | 009 |
+| @opentelemetry/sdk-node, @opentelemetry/api, @opentelemetry/auto-instrumentations-node | apps/server | Traces + Metriken, Auto-Instrumentation (E0-opt; lokal No-Op) | 010 |
+| @opentelemetry/exporter-trace-otlp-http | apps/server | OTLP-Export zu Alloy/Tempo | 010 |
+| @opentelemetry/exporter-prometheus | apps/server | `/metrics` für Prometheus-Scrape (internes Docker-Netz) | 010 |
+| nestjs-pino, pino, pino-http | apps/server | Strukturierte JSON-Logs nach stdout, trace_id/span_id | 010 |
 Später (eigenes ADR nötig): `@simplewebauthn/server` (Passkeys), Mail-SDK (falls nicht per fetch/SMTP), `idb`.

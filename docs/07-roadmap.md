@@ -24,6 +24,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
 - [ ] Server-Gerüst läuft lokal (`mise run dev:server`) und in CI (Health-Test, Image-Build); Dockerfile, Compose-Datei mit Traefik-Labels und Litestream-Sidecar sowie Deploy-Skript liegen dokumentiert im Repo (`deploy/`)
 - [ ] *(Optional, sobald der DNS-A-Record für `voltonaut-api.stammkneipe.dev` liegt)* **E0-opt – VPS-Deploy:** SSH-Zugang ist seit 19.11.2026 vorhanden. Image nach `ghcr.io/henrysachs/voltonaut-server`, Compose-Projekt tritt dem vorhandenen Traefik-Netz bei (Host-Rule, TLS über Traefiks Certresolver; Netzwerk-/Certresolver-Namen beim Deploy aus der Financensor-Compose, **TODO**), Rollback auf vorheriges Image-Tag, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://voltonaut-api.stammkneipe.dev/healthz` → 200 nach Deploy aus CI
+- [ ] *(Teil von E0-opt, nicht von E0 – E0 selbst bleibt unverändert)* **Observability-Grund verdrahten** (ADR-010, `11-observability.md`): strukturierte JSON-Logs (pino) nach stdout mit `trace_id`/`span_id`; OTel-Traces per OTLP an Alloy/Tempo; `/metrics` (OTel Prometheus Exporter) nur intern im Docker-Netz, nicht über Traefik; No-Op in Dev/Tests. OTLP-Endpunkte und Observability-Netzname beim Deploy aus der Financensor-Compose eintragen (**TODO**). Grafana-Dashboards und Alarme unter `ops/grafana/` sind spätere Liefergegenstände nach dem ersten Deploy.
 - [ ] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
 **Abnahme:** Frischer Clone: `mise install && mise run install && mise run check` grün; `?sim=1` zeigt laufende Werte, Pfeiltasten ändern den Gang; PR mit absichtlich verbotenem Import, `@ts-ignore` oder gelockerter Regel wird von CI abgelehnt; nach Setzen der Cloudflare-Secrets ist `https://voltonaut.stammkneipe.dev` (bzw. `https://voltonaut.pages.dev`) erreichbar und jeder PR bekommt eine Preview-URL; Server-Health-Test grün in CI.
 
@@ -84,6 +85,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] `rides/`: Upload (idempotent), Plausibilitätsprüfung Stufe 1–4 (`08-backend.md`), Fahrthistorie
 - [ ] Client `sync/`: Cache, Outbox mit Retry, Gastmodus, Status-Anzeige „offline / synchronisiert"
 - [ ] `@nestjs/throttler`, Daten-Export/Löschung; VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
+- [ ] Domänen-Metriken (ADR-010): Magic-Link-Mails sent/failed, Fahrt-Uploads accepted/flagged/rejected, SQLite- und Litestream-Gesundheit (Backup-Lag)
 - [ ] Tests: `@nestjs/testing` + Supertest, Golden-Fahrten auch gegen `POST /v1/rides`, Plausibilitäts-Fixtures (echte Fahrt ok, manipulierte Fahrt flagged)
 **Abnahme:** Henry meldet sich am Laptop an, fährt eine Stunde, Fahrt erscheint in der Server-Historie; Fahrt offline gefahren wird später automatisch hochgeladen; Sim-Fahrt bringt keine Belohnung.
 
@@ -91,6 +93,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 **Ziel:** Jede Fahrt bringt verbindlichen Fortschritt – mit Spielgefühl.
 - [ ] `progression/`: XP/Level serverseitig aus akzeptierten Fahrten; Level-Up-Effekt im Client
 - [ ] `economy/`: Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ"
+- [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
 - [ ] Segmente (1 Sprint, 1 KOM) mit Banner-Torbögen, Countdown-Flaggen, Live-Delta, PB-Konfetti; PBs serverseitig
@@ -127,6 +130,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] Client `net/`: Join, 2–4 Hz State, Interpolation, Reconnect; Contract-Tests der WS-Schemas
 - [ ] Remote-Fahrer als `RiderView` (Name-Tag, Avatar aus Server); Windschatten hinter Freunden (v2, Latenz prüfen)
 - [ ] `mise run sim:crowd` (Fake-Clients für Lasttest)
+- [ ] Domänen-Metriken: aktive Fahrten, offene WebSocket-Verbindungen, Gruppenfahrt-Räume
 **Abnahme:** Zwei Accounts sehen sich flüssig auf derselben Strecke; Server übersteht Client-Abbrüche; 30 Fake-Clients ohne Ruckeln.
 
 ## E10 – Mehr Spiel: Inhalte & Extras
@@ -138,3 +142,4 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] Passkeys als zweite Login-Methode
 - [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
+- [ ] Optionale Client-Telemetrie (ADR-010): aggregierte FPS/Framezeit und BLE-Trennungen sowie Fehler-Signaturen an einen eigenen Server-Endpunkt, keine Third-Party-Tracker

@@ -44,6 +44,7 @@ Status: ❓ offen · 🔬 wird in Etappe geklärt · ✅ geklärt (mit Datum und
 | T8 | Visuelle Tests: SwiftShader-Rendering in CI stabil genug (Shader-Precision, CSM)? Toleranz ggf. anpassen (per ADR) | 🔬 E4 |
 | T9 | Stryker-Laufzeit auf engine/rules – reicht `incremental` für PR-Läufe < 10 min? | 🔬 E3 |
 | T10 | WebGPU-Renderer statt WebGL2 (Chrome/Edge) – Zeitpunkt | ❓ E10 |
+| T11 | Exakte Alloy-/Tempo-OTLP-Endpunkte, Prometheus-Job und Docker-Netz-Namen in der Financensor-Compose | 🔬 E0-opt | Beim Deploy ablesen (**TODO**), nicht raten (ADR-010) |
 
 ## Risiken
 | Risiko | Wahrscheinlichkeit | Auswirkung | Gegenmaßnahme |
