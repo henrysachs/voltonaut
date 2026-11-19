@@ -45,6 +45,7 @@ pnpm-Monorepo: `apps/web` (Vite + three.js), `apps/server` (NestJS + SQLite/Driz
 | [docs/08-backend.md](docs/08-backend.md) | Backend: Stack, Accounts, API, Anti-Cheat, Sync, Gruppenfahrten |
 | [docs/09-tooling.md](docs/09-tooling.md) | mise, Oxlint + anti-slop, strengstes TypeScript, dependency-cruiser, Oxfmt, CI |
 | [docs/10-testing.md](docs/10-testing.md) | Verifikation: BLE-Replay, Golden, Property-based, Contract, E2E, Visual, Mutation, Perf |
+| [docs/11-observability.md](docs/11-observability.md) | Metriken, Traces, Logs (OpenTelemetry, vorhandener Grafana-Stack, ADR-010) |
 | [docs/decisions/](docs/decisions/) | Architekturentscheidungen (ADRs) |
 | [docs/open-questions.md](docs/open-questions.md) | Offene Fragen und Risiken |
 
