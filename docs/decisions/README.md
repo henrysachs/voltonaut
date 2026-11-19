@@ -13,3 +13,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [007](ADR-007-guardrails-tooling.md) | Strikte Leitplanken: mise, Oxlint + anti-slop, strengstes TS, dependency-cruiser, Oxfmt | Angenommen |
 | [008](ADR-008-scene-structure.md) | Szenenstruktur: three.js-Szenengraph + System-Scheduler, kein ECS | Angenommen |
 | [009](ADR-009-hosting-cloudflare-pages.md) | Web auf Cloudflare Pages, API auf Hetzner, Login-Mails über Cloudflare Email Sending (Fallback Resend) | Angenommen |
+| [010](ADR-010-observability.md) | Observability: OpenTelemetry, strukturierte Logs, vorhandener Grafana-Stack | Angenommen |
