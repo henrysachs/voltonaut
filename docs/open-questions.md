@@ -24,9 +24,10 @@ Status: ❓ offen · 🔬 wird in Etappe geklärt · ✅ geklärt (mit Datum und
 | P2 | Level-Kurve und XP-Raten – nach 2–3 Wochen Nutzung justieren | ❓ |
 | P3 | Rider-Profil: Gewicht/Größe in-app konfigurierbar (Beispiel-Defaults 75 kg / 185 cm) ✅; FTP später | ✅ / ❓ FTP |
 | P4 | Stil: stylized low-poly (Vorschlag) vs. realistischer | ❓ |
-| P5 | VPS: Subdomain für API, vorhandener Reverse Proxy (nginx/Caddy/Docker), Node-Version, freie Ressourcen? | ❓ vor E5 |
-| P6 | SMTP-Absender für Magic-Link-Mails (vorhandenes Postfach oder Dienst)? | ❓ vor E5 |
-| P7 | Client weiter auf GitHub Pages (Bearer-Token) oder zusätzlich vom VPS unter eigener Domain (Cookie möglich)? | ❓ E5 |
+| P5 | VPS: Subdomain für API, vorhandener Reverse Proxy (nginx/Caddy/Docker), Node-Version, freie Ressourcen? SSH-Deploy-Key für CI? | ❓ Henry liefert später (optionale E0-Aufgabe) |
+| P6 | Login-Mails: Cloudflare Email Sending (Public Beta; beliebige Empfänger nur mit Workers Paid ≈ 5 $/Monat, 3 000/Monat inkl.; Free nur an verifizierte Adressen) oder Resend Free (3 000/Monat, 100/Tag)? Hat Henry Workers Paid? Absenderdomain bei Cloudflare onboarden. | ❓ vor E5 |
+| P10 | Cloudflare: `CLOUDFLARE_API_TOKEN` (Pages: Edit) + `CLOUDFLARE_ACCOUNT_ID` als GitHub-Secrets; Projektname `voltonaut`; Custom Domain `voltonaut.<domain>`; liegt die Domain bei Cloudflare DNS? Pages vs. Workers Static Assets? | ❓ Henry liefert später |
+| P7 | Gleiche Domain für Web (`voltonaut.<domain>`, Cloudflare Pages) und API (`api.voltonaut.<domain>`, Hetzner)? Dann Same-Site → später httpOnly-Cookie statt Bearer möglich; v1 bleibt Bearer | ❓ E5 |
 | P8 | Volts-Verdienformel, Shop-Preise und Tageslimit nach Nutzung justieren | ❓ nach E6 |
 | P9 | Aufbewahrungsdauer der 1-Hz-Samples auf dem Server (Vorschlag 90 Tage) und Datenschutzhinweis | ❓ E5 |
 
@@ -36,6 +37,13 @@ Status: ❓ offen · 🔬 wird in Etappe geklärt · ✅ geklärt (mit Datum und
 | T1 | Engine im Web Worker (läuft weiter bei Hintergrund-Tab, Timer-Throttling) oder Main Thread + Worker-Timer? | 🔬 E3 |
 | T2 | Fahrer-/Radmodell: CC0-Basis (Quaternius/Kenney) anpassen vs. eigenes Blender-Modell | 🔬 E4 |
 | T3 | Lizenz des Repos | ✅ MIT (Henry, 2026-11-19) |
+| T4 | NestJS braucht `experimentalDecorators` + `emitDecoratorMetadata`: von der gepinnten TS-Version (6.x vs. nativ 7.x / tsgo) unterstützt? Sonst Server-Build via SWC + Typecheck mit kompatibler TS-Version | 🔬 E0 |
+| T5 | Oxfmt ist Beta (v0.79, Nov 2026) – Formatierungsabweichungen beobachten; Fallback Prettier | 🔬 E0 |
+| T6 | anti-slop vs. three.js/NestJS: `no-shape-in-symbol-names` (THREE.Shape), `no-unknown-parameters` (Exception-Filter), `require-safety-comment-for-type-assertion` (GLTF-Traversal) – Reibung messen; Regeln nur per ADR anpassen | 🔬 E0/E4 |
+| T7 | Oxlint-Regelnamen der gewünschten Zusatzregeln in der gepinnten Version vorhanden? (`oxlint --rules`) | 🔬 E0 |
+| T8 | Visuelle Tests: SwiftShader-Rendering in CI stabil genug (Shader-Precision, CSM)? Toleranz ggf. anpassen (per ADR) | 🔬 E4 |
+| T9 | Stryker-Laufzeit auf engine/rules – reicht `incremental` für PR-Läufe < 10 min? | 🔬 E3 |
+| T10 | WebGPU-Renderer statt WebGL2 (Chrome/Edge) – Zeitpunkt | ❓ E10 |
 
 ## Risiken
 | Risiko | Wahrscheinlichkeit | Auswirkung | Gegenmaßnahme |
