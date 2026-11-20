@@ -62,6 +62,7 @@ test("rides the lake and forest at normal speed", async ({ page }, testInfo) => 
 
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await expect.poll(() => diagnostic(debug, "triangles")).toBeGreaterThan(80_000);
+  await expect.poll(() => diagnostic(debug, "crank-rad")).toBeGreaterThan(0);
   const distanceM = await diagnostic(debug, "distance-m");
   const positionZ = await diagnostic(debug, "rider-z");
   const crankRad = await diagnostic(debug, "crank-rad");

@@ -72,3 +72,13 @@ Das vollständige `CI=true mise run check` ist beim Parent auf Basis von `main` 
 | Sim, Profil, BLE-Abbruch mit erneutem Verbinden und WebGL-Fallback auf Port 5191 | 5/5 grün                                                  |
 | `git diff --check`                                                               | Grün                                                      |
 | Gesamtgate und unabhängiges Review                                               | Grün, 330 Tests, zwölf E2Es und Approve                   |
+
+## CI-Nachprüfung des normalen Fahrtstarts
+
+CI-Lauf `44735610176` scheiterte im neuen normalen Szenentest. Die Distanzprüfung startete bei 0 m und las zuletzt 6,984 m statt mehr als 8 m. Geräteverbindung und gezeichnetes Gelände belegen noch keine laufende Tretbewegung.
+
+Eine lokale Linux-Reproduktion nutzt dasselbe Playwright-Image, zwei CPU-Kerne und zusätzliche Chromium-CPU-Drosselung um Faktor 4. Der unveränderte Test scheitert am selben Assert mit zuletzt 7,845 m. Beobachtete echte Worker-Snapshots zeigen zunächst 0 W und 0 U/min, anschließend Beschleunigung und weiter steigende Distanz. Die Engine meldet keinen übersprungenen Takt. Nach dem fehlgeschlagenen Poll erreicht der Worker 18,901 m, die gerenderte Position 13,757 m mit wachsendem Kurbelwinkel. Das belegt einen zu frühen Messbeginn im Test, keinen dauerhaften Stillstand. Die genaue Last des GitHub-Runners ist lokal nicht reproduziert.
+
+Der Test wartet jetzt vor dem Distanz-Basiswert auf einen positiven gerenderten Kurbelwinkel. Dieser entsteht aus der Kadenz und Fahrzeit echter Worker-Snapshots. Die bestehenden Prüfungen auf weitere 8 m Distanz, weitere 5 m Fahrerposition, steigenden Kurbelwinkel, Kameras und Render-Budgets bleiben unverändert. Timeouts, Wiederholungen, Uhr, Grafik und Produktionscode bleiben unverändert.
+
+Die gedrosselte Serie vor der Korrektur scheitert einmal in acht Läufen. Dieselbe Serie besteht danach achtmal. Auch alle zwölf E2Es mit zwei Linux-Workern sowie Lint und Typecheck sind nach der Korrektur grün. Logs und Fehlerspur liegen temporär unter `/private/var/folders/23/tg_nxvb56ybfx4bqy70w6rjm0000gn/T/opencode/lake-cpu4-instrumented-{red,green}*`. Diese Diagnose ist kein Bildratenvergleich und kein Hardwaretest.
