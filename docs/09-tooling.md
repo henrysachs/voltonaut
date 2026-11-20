@@ -4,16 +4,16 @@ Ziel: ein **enges Konstrukt**, in dem Menschen und Coding-Agenten nicht unbemerk
 
 ## 1. Werkzeuge im Überblick
 
-| Zweck                   | Werkzeug                                                                    | Festlegung                                                                   |
-| ----------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Tool-Versionen + Tasks  | **mise** (mise-en-place)                                                    | `mise.toml` pinnt Node und pnpm exakt; alle Befehle sind mise-Tasks          |
-| Paketmanager / Monorepo | **pnpm workspaces**                                                         | ADR-006; `packageManager`-Feld + `engine-strict`; CI mit `--frozen-lockfile` |
-| Linter                  | **Oxlint** + vendorte **anti-slop**-Regeln + `oxlint-tsgolint` (type-aware) | strikt, Warnungen = Fehler; **kein ESLint**                                  |
-| Formatter               | **Oxfmt** (oxc)                                                             | exakt gepinnt; Fallback Prettier (s. §5)                                     |
-| Typecheck               | **TypeScript** (`tsc -b`, Project References)                               | strengste Einstellungen (§4)                                                 |
-| Modulgrenzen            | **dependency-cruiser**                                                      | `.dependency-cruiser.cjs`, Regeln in §6                                      |
-| Tests                   | **Vitest** (Workspace-Modus), Playwright (E2E im Sim-Modus)                 | Server-Tests mit `unplugin-swc` (Decorator-Metadaten für NestJS)             |
-| CI                      | **GitHub Actions**                                                          | führt **genau** `mise run check` aus                                         |
+| Zweck                   | Werkzeug                                                                    | Festlegung                                                                          |
+| ----------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Tool-Versionen + Tasks  | **mise** (mise-en-place)                                                    | `mise.toml` pinnt Node und pnpm exakt; alle Befehle sind mise-Tasks                 |
+| Paketmanager / Monorepo | **pnpm workspaces**                                                         | ADR-006; `packageManager`-Feld + `engine-strict`; CI mit `--frozen-lockfile`        |
+| Linter                  | **Oxlint** + vendorte **anti-slop**-Regeln + `oxlint-tsgolint` (type-aware) | strikt, Warnungen = Fehler; **kein ESLint**                                         |
+| Formatter               | **Oxfmt** (oxc)                                                             | exakt gepinnt; Fallback Prettier (s. §5)                                            |
+| Typecheck               | **TypeScript** (`tsc -b`, Project References)                               | strengste Einstellungen (§4)                                                        |
+| Modulgrenzen            | **dependency-cruiser**                                                      | `.dependency-cruiser.cjs`, Regeln in §6                                             |
+| Tests                   | **Vitest** (Workspace-Modus), Playwright (E2E im Sim-Modus)                 | Server-Tests ohne SWC (explizite `@Inject`-Tokens), Server-Build per `unplugin-swc` |
+| CI                      | **GitHub Actions**                                                          | führt **genau** `mise run check` aus                                                |
 
 ## 2. mise
 

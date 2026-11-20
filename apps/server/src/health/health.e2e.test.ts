@@ -21,24 +21,22 @@ describe("GET /healthz", () => {
 
     app = moduleRef.createNestApplication();
     await app.init();
+    await app.listen(0, "127.0.0.1");
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  it("matches the shared response schema", async () => {
-    const response = await request(app.getHttpServer()).get("/healthz").expect(200);
+  it("answers over real HTTP and matches the shared response schema", async () => {
+    const baseUrl = await app.getUrl();
+    const response = await request(baseUrl).get("/healthz").expect(200);
 
-    const parsed = HealthResponseSchema.safeParse(response.body);
+    const body = HealthResponseSchema.parse(response.body);
 
-    if (!parsed.success) {
-      throw new Error("health response does not match the shared schema");
-    }
-
-    expect(parsed.data.status).toBe("ok");
-    expect(parsed.data.version).toBe(SERVER_VERSION);
-    expect(parsed.data.uptimeS).toBeGreaterThanOrEqual(0);
+    expect(body.status).toBe("ok");
+    expect(body.version).toBe(SERVER_VERSION);
+    expect(body.uptimeS).toBeGreaterThanOrEqual(0);
   });
 
   it("accepts the contract fixture", () => {

@@ -7,4 +7,5 @@ import { HealthService } from "./health.service.js";
   controllers: [HealthController],
   providers: [HealthService],
 })
+// oxlint-disable-next-line typescript/no-extraneous-class -- Nest modules are empty decorated classes; the framework reads the decorator, not class members.
 export class HealthModule {}

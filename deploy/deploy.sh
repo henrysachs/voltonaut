@@ -1,148 +1,143 @@
 #!/usr/bin/env bash
-# Deploy, roll back, and inspect Voltonaut API releases on the Hetzner VPS.
-# Run this script on the VPS from the repository checkout at /opt/voltonaut.
+# Deploy, roll back, and inspect the Voltonaut API containers on the Hetzner VPS.
+# Run inside a checkout of deploy/ (see deploy/README.md). Requires docker and the
+# compose plugin. TLS and routing come from the existing Financensor Traefik.
 set -Eeuo pipefail
 
-APP_ROOT="${VOLTONAUT_ROOT:-/opt/voltonaut}"
-RELEASES_DIR="$APP_ROOT/releases"
-STATE_DIR="$APP_ROOT/state"
-CURRENT_LINK="$APP_ROOT/current"
-SERVICE_NAME="voltonaut-server"
-SUDO="${VOLTONAUT_SUDO:-sudo}"
-HEALTH_URL="http://127.0.0.1:3000/healthz"
+COMPOSE_FILE="${VOLTONAUT_COMPOSE_FILE:-compose.yaml}"
+STATE_DIR="${VOLTONAUT_STATE_DIR:-state}"
+HEALTH_URL="${VOLTONAUT_HEALTH_URL:-https://api.voltonaut.stammkneipe.dev/healthz}"
+HEALTH_ATTEMPTS="${VOLTONAUT_HEALTH_ATTEMPTS:-30}"
+SERVER_IMAGE="${VOLTONAUT_IMAGE:-voltonaut-server}"
 
 usage() {
-  echo "usage: deploy.sh deploy <commit-sha>" >&2
-  echo "       deploy.sh rollback [release-sha]" >&2
+  echo "usage: deploy.sh deploy <image-tag>" >&2
+  echo "       deploy.sh rollback [image-tag]" >&2
   echo "       deploy.sh status" >&2
 }
 
-ensure_layout() {
-  mkdir -p "$RELEASES_DIR" "$STATE_DIR"
+compose() {
+  docker compose -f "$COMPOSE_FILE" "$@"
 }
 
-current_target() {
-  if [ -L "$CURRENT_LINK" ]; then
-    readlink "$CURRENT_LINK"
+read_state() {
+  if [ -f "$STATE_DIR/$1" ]; then
+    cat "$STATE_DIR/$1"
   else
     echo ""
   fi
 }
 
-release_target() {
-  local release_name="$1"
-  echo "$RELEASES_DIR/$release_name/server-deploy"
+write_state() {
+  mkdir -p "$STATE_DIR"
+  printf "%s" "$2" >"$STATE_DIR/$1"
 }
 
-switch_current() {
-  local target="$1"
-  ln -sfn "$target" "$CURRENT_LINK.next"
-  mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
-}
-
-restart_service() {
-  "$SUDO" systemctl restart "$SERVICE_NAME"
+image_exists() {
+  docker image inspect "$SERVER_IMAGE:$1" >/dev/null 2>&1
 }
 
 wait_for_health() {
   local attempt
-  for attempt in $(seq 1 50); do
+
+  for attempt in $(seq 1 "$HEALTH_ATTEMPTS"); do
     if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
       return 0
     fi
-    sleep 0.2
+    sleep 1
   done
+
   return 1
 }
 
-deploy_release() {
-  local commit="$1"
-  local release_dir="$RELEASES_DIR/$commit"
-  local previous_target
-  previous_target="$(current_target)"
+up_with_tag() {
+  VOLTONAUT_TAG="$1" compose up -d --remove-orphans
+}
 
-  if [ -z "$commit" ]; then
+deploy_release() {
+  local tag="$1"
+
+  if [ -z "$tag" ]; then
     usage
     return 1
   fi
 
-  git -C "$APP_ROOT" fetch origin main
-  if ! git -C "$APP_ROOT" cat-file -e "$commit^{commit}"; then
-    echo "deploy: commit $commit not found after fetch" >&2
-    return 1
-  fi
-  if [ -e "$release_dir" ]; then
-    echo "deploy: release $commit already exists; use rollback to activate it" >&2
+  local previous_tag
+  previous_tag="$(read_state current-tag)"
+
+  if [ "$previous_tag" = "$tag" ]; then
+    echo "deploy: $tag is already the current release" >&2
     return 1
   fi
 
-  git -C "$APP_ROOT" worktree add --detach "$release_dir" "$commit"
-  if ! (
-    cd "$release_dir"
-    mise exec -- node --version
-    mise exec -- pnpm install --frozen-lockfile
-    mise exec -- pnpm --filter @voltonaut/server build
-    mise exec -- pnpm --filter @voltonaut/server deploy --prod "$release_dir/server-deploy"
-  ); then
-    echo "deploy: build failed for $commit" >&2
-    git -C "$APP_ROOT" worktree remove --force "$release_dir"
-    return 1
+  if image_exists "$tag"; then
+    echo "deploy: using local image $SERVER_IMAGE:$tag"
+  else
+    compose pull server
   fi
 
-  printf "%s\n" "$previous_target" >"$STATE_DIR/previous-target"
-  switch_current "$(release_target "$commit")"
-  restart_service
+  write_state previous-tag "$previous_tag"
+  up_with_tag "$tag"
+  write_state current-tag "$tag"
 
   if ! wait_for_health; then
-    echo "deploy: health check failed for $commit; rolling back" >&2
-    if [ -n "$previous_target" ]; then
-      switch_current "$previous_target"
-      restart_service
+    echo "deploy: health check failed for $tag; rolling back" >&2
+
+    if [ -n "$previous_tag" ]; then
+      up_with_tag "$previous_tag"
+      write_state current-tag "$previous_tag"
+    else
+      compose stop server
     fi
+
     return 1
   fi
 
-  echo "deploy: release $commit is active"
+  echo "deploy: release $tag is active and healthy"
 }
 
 rollback_release() {
-  local release_name="$1"
-  if [ -z "$release_name" ]; then
-    release_name="$(cat "$STATE_DIR/previous-target" 2>/dev/null || true)"
+  local tag="$1"
+
+  if [ -z "$tag" ]; then
+    tag="$(read_state previous-tag)"
   fi
-  if [ -z "$release_name" ]; then
+
+  if [ -z "$tag" ]; then
     echo "rollback: no previous release recorded" >&2
     return 1
   fi
 
-  local target="$release_name"
-  if [ ! -d "$target" ]; then
-    target="$(release_target "$release_name")"
-  fi
-  if [ ! -d "$target" ]; then
-    echo "rollback: release target not found: $release_name" >&2
-    return 1
+  if ! image_exists "$tag"; then
+    compose pull server
   fi
 
-  switch_current "$target"
-  restart_service
+  local current_tag
+  current_tag="$(read_state current-tag)"
+  write_state previous-tag "$current_tag"
+  up_with_tag "$tag"
+  write_state current-tag "$tag"
+
   if ! wait_for_health; then
-    echo "rollback: health check failed after switching to $target" >&2
+    echo "rollback: health check failed after switching to $tag" >&2
     return 1
   fi
 
-  echo "rollback: active release is $target"
+  echo "rollback: active release is $tag"
 }
 
 show_status() {
-  echo "current: $(current_target)"
-  echo "service: $("$SUDO" systemctl is-active "$SERVICE_NAME")"
+  local current_tag
+  local previous_tag
+  current_tag="$(read_state current-tag)"
+  previous_tag="$(read_state previous-tag)"
+
+  echo "current tag: ${current_tag:-<none>}"
+  echo "previous tag: ${previous_tag:-<none>}"
   echo "health: $(curl -fsS "$HEALTH_URL" || echo unavailable)"
-  echo "releases:"
-  find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf "  %f\n" | sort
+  compose ps
 }
 
-ensure_layout
 case "${1:-}" in
   deploy)
     deploy_release "${2:-}"

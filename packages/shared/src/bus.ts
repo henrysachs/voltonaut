@@ -3,11 +3,11 @@ import type { DeviceEvent } from "./events.js";
 export type Unsubscribe = () => void;
 
 export interface EventBus {
-  publish(event: Readonly<DeviceEvent>): void;
-  subscribe<Type extends DeviceEvent["type"]>(
+  readonly publish: (event: Readonly<DeviceEvent>) => void;
+  readonly subscribe: <Type extends DeviceEvent["type"]>(
     type: Type,
     listener: (event: Readonly<Extract<DeviceEvent, { type: Type }>>) => void,
-  ): Unsubscribe;
+  ) => Unsubscribe;
 }
 
 type AnyEventListener = (event: Readonly<DeviceEvent>) => void;

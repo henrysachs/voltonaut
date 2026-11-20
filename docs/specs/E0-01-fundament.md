@@ -23,39 +23,39 @@ Ein frischer Clone enthält ein vollständig geprüftes Monorepo. Der Browser ze
 - [ ] AK11 – `GET /healthz` liefert `status`, `version` und `uptimeS` gemäß Zod-Schema. Ein Supertest-Test prüft die echte NestJS-App.
 - [ ] AK12 – `mise run build` baut Web und Server. `pnpm --filter @voltonaut/server deploy --prod ...` erzeugt ein eigenständiges Produktionsverzeichnis.
 - [ ] AK13 – `check.yml`, `mutation.yml`, `deploy-web.yml` und das deaktivierte `deploy-server.yml` entsprechen ADR-007 und ADR-009.
-- [ ] AK14 – systemd-Unit, Caddy-Template, Deploy-Skript mit Rollback und Betriebshinweise liegen unter `deploy/`.
+- [ ] AK14 – `deploy/`: produktives Dockerfile für `apps/server` (gepinnte Node-Version, Standalone-Bundle via `pnpm deploy --prod`), Compose-Datei mit Traefik-Labels (Host-Rule `api.voltonaut.stammkneipe.dev`, Entrypoint `websecure`, Certresolver `letsencrypt`, Service-Port 3000, externes Netz `financensor_default`), Litestream-Sidecar (exakt gepinnt, teilt das SQLite-Volume) sowie Docker-Deploy-Skript mit `deploy`/`rollback`/`status`, aufgezeichnetem vorherigen Image-Tag, `docker compose pull`/`up -d` und Health-Verifikation `https://api.voltonaut.stammkneipe.dev/healthz` mit automatischem Rollback. Betriebshinweise in `deploy/README.md` (deutsch). Caddy-Template und systemd-Unit sind entfernt.
 - [ ] AK15 – CODEOWNERS, Branch-Ruleset, Spec-Vorgaben, Abhängigkeitsregister und die Asset-Lizenzdatei sind vorhanden.
 - [ ] AK16 – Aus einem frischen Clone sind `mise install && mise run install && mise run check` sowie `mise run check:mutation` grün.
 - [ ] AK17 – `opencode.jsonc` erzwingt ausschließlich den Provider `opencode-go`, auch für Agenten mit global abweichender Modellkonfiguration.
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK            | Ebene                               | Datei / Fixture                                                                                   |
-| ------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
-| AK1–AK4, AK12 | Build und Tooling                   | `mise run install`, `mise run typecheck`, `mise run lint`, `mise run fmt:check`, `mise run build` |
-| AK5           | Import-Integration                  | `fixtures/depcruise/forbidden-cross-app.ts`, `scripts/test-depcruise.mjs`                         |
-| AK6           | Guard-Negativtests                  | `scripts/guard.test.mjs`                                                                          |
-| AK7, AK16     | Vollständiges Gate                  | `mise run check`, `mise run check:mutation`                                                       |
-| AK8           | Unit und Contract                   | `packages/shared/src/*.test.ts`                                                                   |
-| AK9           | Unit und Property                   | `packages/ble/src/sim/*.test.ts`                                                                  |
-| AK10          | E2E                                 | `apps/web/e2e/sim.spec.ts`                                                                        |
-| AK11          | Server-Integration und Schema       | `apps/server/src/health/health.e2e.test.ts`                                                       |
-| AK13          | CI                                  | GitHub Actions der Pull Request                                                                   |
-| AK14          | Statische Prüfung und lokaler Build | `deploy/README.md`, `mise run build`                                                              |
-| AK15          | GitHub API und Guard                | Repository-Ruleset, `mise run guard`                                                              |
-| AK17          | OpenCode-Laufzeit und Config        | `opencode debug config`, Subagent-Metadaten                                                       |
+| AK            | Ebene                               | Datei / Fixture                                                                                    |
+| ------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| AK1–AK4, AK12 | Build und Tooling                   | `mise run install`, `mise run typecheck`, `mise run lint`, `mise run fmt:check`, `mise run build`  |
+| AK5           | Import-Integration                  | `fixtures/depcruise/forbidden-cross-app.ts`, `scripts/test-depcruise.mjs`                          |
+| AK6           | Guard-Negativtests                  | `scripts/guard.test.mjs`                                                                           |
+| AK7, AK16     | Vollständiges Gate                  | `mise run check`, `mise run check:mutation`                                                        |
+| AK8           | Unit und Contract                   | `packages/shared/src/*.test.ts`                                                                    |
+| AK9           | Unit und Property                   | `packages/ble/src/sim/*.test.ts`                                                                   |
+| AK10          | E2E                                 | `apps/web/e2e/sim.spec.ts`                                                                         |
+| AK11          | Server-Integration und Schema       | `apps/server/src/health/health.e2e.test.ts`                                                        |
+| AK13          | CI                                  | GitHub Actions der Pull Request                                                                    |
+| AK14          | Statische Prüfung und lokaler Build | `deploy/README.md`, `mise run build`, `docker build -f deploy/Dockerfile` (falls Docker verfügbar) |
+| AK15          | GitHub API und Guard                | Repository-Ruleset, `mise run guard`                                                               |
+| AK17          | OpenCode-Laufzeit und Config        | `opencode debug config`, Subagent-Metadaten                                                        |
 
 ## Nicht-Ziele
 
-- E0-opt: produktives VPS-Deploy. Dafür fehlen die Subdomain und die explizite Deploy-Freigabe.
+- E0-opt: produktives VPS-Deploy. Host, DNS-A-Record (unproxied) und die CI-Deploy-Secrets (GitHub-Environment `production`) stehen; ausstehend ist allein Henrys Freigabe über `SERVER_DEPLOY_ENABLED=true`.
 - Cloudflare-Produktions- oder Preview-Deploy ohne die beiden Cloudflare-Secrets.
 - Echte BLE-Geräte, Engine-Physik, Authentifizierung, Datenbank und 3D-Welt.
 - Änderungen an Golden-Dateien, Screenshot-Baselines oder BLE-Fixtures.
 
 ## Offene Fragen / Risiken
 
-- Die konkrete API-Subdomain fehlt.
-- Die verfügbaren Regelnamen der gepinnten Oxlint-Version und TypeScript-Decorator-Unterstützung müssen gegen die installierten Versionen geprüft und in `docs/open-questions.md` dokumentiert werden.
+- DNS-A-Record (unproxied, 19.11.2026), Deploy-Secrets und `DEPLOY_USER` im GitHub-Environment `production` sind gesetzt; `SERVER_DEPLOY_ENABLED=false` hält `deploy-server.yml` inaktiv, bis Henry die Variable auf `true` setzt.
+- Die verfügbaren Regelnamen der gepinnten Oxlint-Version und TypeScript-Decorator-Unterstützung sind geprüft und in `docs/open-questions.md` dokumentiert (T4, T7).
 - Die CI braucht ein Playwright-Image, das zur exakt gepinnten Playwright-Version passt.
 
 ## Doku-Updates (Pflicht beim Abschluss)

@@ -8,7 +8,9 @@ export interface KeyboardEventLike {
 }
 
 export interface KeyboardSource {
-  subscribe(listener: (phase: "keydown" | "keyup", event: KeyboardEventLike) => void): Unsubscribe;
+  readonly subscribe: (
+    listener: (phase: "keydown" | "keyup", event: KeyboardEventLike) => void,
+  ) => Unsubscribe;
 }
 
 export interface KeyboardAdapterOptions {
@@ -19,6 +21,13 @@ export interface KeyboardAdapterOptions {
 }
 
 export interface KeyboardAdapter extends DeviceAdapter {}
+
+type KeyPhase = "keydown" | "keyup";
+
+interface KeyPress {
+  readonly button: ControllerButton;
+  readonly pressed: boolean;
+}
 
 function keyToButton(key: string): ControllerButton | undefined {
   if (key === "ArrowUp") {
@@ -32,6 +41,34 @@ function keyToButton(key: string): ControllerButton | undefined {
   return undefined;
 }
 
+function keyEventOutcome(
+  phase: KeyPhase,
+  event: KeyboardEventLike,
+  isHeld: (button: ControllerButton) => boolean,
+): KeyPress | undefined {
+  const button = keyToButton(event.key);
+
+  if (button === undefined) {
+    return undefined;
+  }
+
+  if (phase === "keydown") {
+    return isHeld(button) ? undefined : { button, pressed: true };
+  }
+
+  return isHeld(button) ? { button, pressed: false } : undefined;
+}
+
+function publishButton(
+  bus: EventBus,
+  clock: SimClock,
+  id: string,
+  button: ControllerButton,
+  pressed: boolean,
+): void {
+  bus.publish({ type: "controller.button", tS: clock.nowS(), button, pressed, source: id });
+}
+
 export function createKeyboardAdapter(options: KeyboardAdapterOptions): KeyboardAdapter {
   const { bus, clock, source } = options;
   const id = options.id ?? "keyboard";
@@ -39,44 +76,25 @@ export function createKeyboardAdapter(options: KeyboardAdapterOptions): Keyboard
   let status: "disconnected" | "ready" = "disconnected";
   let unsubscribe: Unsubscribe | undefined;
 
-  const publish = (button: ControllerButton, pressed: boolean): void => {
-    bus.publish({
-      type: "controller.button",
-      tS: clock.nowS(),
-      button,
-      pressed,
-      source: id,
-    });
-  };
-
   return {
     kind: "keyboard",
     id,
     connect() {
       status = "ready";
       unsubscribe = source.subscribe((phase, event) => {
-        const button = keyToButton(event.key);
+        const outcome = keyEventOutcome(phase, event, (button) => pressedButtons.has(button));
 
-        if (button === undefined) {
+        if (outcome === undefined) {
           return;
         }
 
-        if (phase === "keydown") {
-          if (pressedButtons.has(button)) {
-            return;
-          }
-
-          pressedButtons.add(button);
-          publish(button, true);
-
-          return;
+        if (outcome.pressed) {
+          pressedButtons.add(outcome.button);
+        } else {
+          pressedButtons.delete(outcome.button);
         }
 
-        if (!pressedButtons.delete(button)) {
-          return;
-        }
-
-        publish(button, false);
+        publishButton(bus, clock, id, outcome.button, outcome.pressed);
       });
       bus.publish({ type: "device.status", tS: clock.nowS(), kind: "keyboard", id, status });
 

@@ -53,12 +53,28 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Deploy release on the VPS
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ vars.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            cd /opt/voltonaut
-            ./deploy/deploy.sh deploy "${{ github.sha }}"
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install the deploy SSH key
+        run: |
+          mkdir -m 700 -p ~/.ssh
+          install -m 600 /dev/null ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Build the server image
+        run: docker build -f deploy/Dockerfile -t "voltonaut-server:${{ github.sha }}" .
+
+      - name: Ship the image and the deploy files to the VPS
+        run: |
+          ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "mkdir -p /srv/voltonaut"
+          tar -C deploy -cf - Dockerfile compose.yaml litestream.yml deploy.sh README.md | \
+            ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "tar -C /srv/voltonaut -xf -"
+          docker save "voltonaut-server:${{ github.sha }}" | gzip | \
+            ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "gunzip | docker load"
+
+      - name: Switch the release and verify health
+        run: |
+          ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "cd /srv/voltonaut && bash deploy.sh deploy '${{ github.sha }}'"

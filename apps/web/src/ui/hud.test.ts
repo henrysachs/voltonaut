@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { HudState } from "../game/simRide.js";
 
-import { hudText, renderHud } from "./hud.js";
 import type { HudTargets, TextTarget } from "./hud.js";
+import { hudText, renderHud } from "./hud.js";
 
-function target(): TextTarget {
-  return { textContent: "" };
+function target(): TextTarget & { read: () => string } {
+  let text = "";
+
+  return {
+    write: (value: string): void => {
+      text = value;
+    },
+    read: () => text,
+  };
 }
 
 function state(overrides: Partial<HudState> = {}): HudState {
@@ -38,20 +45,20 @@ describe("HUD", () => {
   });
 
   it("writes every formatted value into its target", () => {
-    const targets: HudTargets = {
+    const targets = {
       powerW: target(),
       cadenceRpm: target(),
       heartRateBpm: target(),
       gear: target(),
       status: target(),
-    };
+    } satisfies HudTargets;
 
     renderHud(state({ gearIndex: 0, connected: false }), targets);
 
-    expect(targets.powerW.textContent).toBe("180 W");
-    expect(targets.cadenceRpm.textContent).toBe("92 rpm");
-    expect(targets.heartRateBpm.textContent).toBe("132 bpm");
-    expect(targets.gear.textContent).toBe("1");
-    expect(targets.status.textContent).toBe("Waiting for devices");
+    expect(targets.powerW.read()).toBe("180 W");
+    expect(targets.cadenceRpm.read()).toBe("92 rpm");
+    expect(targets.heartRateBpm.read()).toBe("132 bpm");
+    expect(targets.gear.read()).toBe("1");
+    expect(targets.status.read()).toBe("Waiting for devices");
   });
 });

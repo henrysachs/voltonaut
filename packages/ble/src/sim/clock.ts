@@ -1,9 +1,9 @@
 export interface SimClock {
-  nowS(): number;
+  readonly nowS: () => number;
 }
 
 export interface ManualClock extends SimClock {
-  advanceS(deltaS: number): void;
+  readonly advanceS: (deltaS: number) => void;
 }
 
 export function createManualClock(startS = 0): ManualClock {

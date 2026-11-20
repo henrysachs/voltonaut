@@ -174,14 +174,15 @@ module.exports = {
       name: "no-orphans",
       comment: "no orphan modules",
       severity: "error",
-      from: { orphan: true, reachable: [] },
+      from: { orphan: true, pathNot: "\\.(config|test)\\.(ts|mjs|cjs|js)$" },
+      to: {},
     },
     {
       name: "not-to-dev-dep",
       comment: "production code imports no devDependencies",
       severity: "error",
       from: {
-        pathNot: "(^|/)(vite|vitest|playwright)\\.config\\.ts$|\\.test\\.ts$|^fixtures/",
+        pathNot: "(^|/)(vite|vitest|playwright)\\.config\\.ts$|\\.(test|spec)\\.ts$|^fixtures/",
       },
       to: { dependencyTypes: ["npm-dev"] },
     },
@@ -190,11 +191,16 @@ module.exports = {
       comment: "all imports resolve",
       severity: "error",
       from: {},
-      to: { dependencyTypes: ["unresolvable"] },
+      to: { couldNotResolve: true },
     },
   ],
   options: {
     doNotFollow: { path: "node_modules" },
+    exclude: "dist/",
     tsConfig: { fileName: "tsconfig.json" },
+    enhancedResolveOptions: {
+      exportsFields: ["exports"],
+      conditionNames: ["node", "import", "require", "default"],
+    },
   },
 };

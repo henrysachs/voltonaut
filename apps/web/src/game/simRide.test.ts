@@ -1,7 +1,16 @@
 import { createEventBus } from "@voltonaut/shared";
+import type { ConnectionStatus, ControllerButton, EventBus } from "@voltonaut/shared";
 import { describe, expect, it } from "vitest";
 
 import { createSimRide } from "./simRide.js";
+
+function publishShift(bus: EventBus, tS: number, button: ControllerButton, pressed: boolean): void {
+  bus.publish({ type: "controller.button", tS, button, pressed, source: "test" });
+}
+
+function publishStatus(bus: EventBus, tS: number, id: string, status: ConnectionStatus): void {
+  bus.publish({ type: "device.status", tS, kind: "trainer", id, status });
+}
 
 describe("createSimRide", () => {
   it("tracks trainer, heart rate, gear, and connection state", () => {
@@ -10,14 +19,8 @@ describe("createSimRide", () => {
 
     bus.publish({ type: "trainer.data", tS: 1, powerW: 180, cadenceRpm: 92 });
     bus.publish({ type: "hr.data", tS: 1, bpm: 131 });
-    bus.publish({
-      type: "controller.button",
-      tS: 1,
-      button: "shiftUp",
-      pressed: true,
-      source: "test",
-    });
-    bus.publish({ type: "device.status", tS: 1, kind: "trainer", id: "sim", status: "ready" });
+    publishShift(bus, 1, "shiftUp", true);
+    publishStatus(bus, 1, "sim", "ready");
 
     expect(ride.state()).toEqual({
       powerW: 180,
@@ -32,50 +35,28 @@ describe("createSimRide", () => {
     const bus = createEventBus();
     const ride = createSimRide({ bus, initialGearIndex: 0 });
 
-    bus.publish({
-      type: "controller.button",
-      tS: 1,
-      button: "shiftDown",
-      pressed: true,
-      source: "test",
-    });
+    publishShift(bus, 1, "shiftDown", true);
     expect(ride.state().gearIndex).toBe(0);
 
-    bus.publish({
-      type: "controller.button",
-      tS: 2,
-      button: "shiftUp",
-      pressed: true,
-      source: "test",
-    });
-    bus.publish({
-      type: "controller.button",
-      tS: 3,
-      button: "shiftUp",
-      pressed: false,
-      source: "test",
-    });
+    publishShift(bus, 2, "shiftUp", true);
+    publishShift(bus, 3, "shiftUp", false);
     expect(ride.state().gearIndex).toBe(1);
   });
+});
 
+describe("createSimRide connection tracking", () => {
   it("marks the ride disconnected when the last device disconnects", () => {
     const bus = createEventBus();
     const ride = createSimRide({ bus });
 
-    bus.publish({ type: "device.status", tS: 1, kind: "trainer", id: "a", status: "ready" });
-    bus.publish({ type: "device.status", tS: 2, kind: "heartRate", id: "b", status: "ready" });
+    publishStatus(bus, 1, "a", "ready");
+    publishStatus(bus, 2, "b", "ready");
     expect(ride.state().connected).toBe(true);
 
-    bus.publish({ type: "device.status", tS: 3, kind: "trainer", id: "a", status: "disconnected" });
+    publishStatus(bus, 3, "a", "disconnected");
     expect(ride.state().connected).toBe(true);
 
-    bus.publish({
-      type: "device.status",
-      tS: 4,
-      kind: "heartRate",
-      id: "b",
-      status: "disconnected",
-    });
+    publishStatus(bus, 4, "b", "disconnected");
     expect(ride.state().connected).toBe(false);
   });
 

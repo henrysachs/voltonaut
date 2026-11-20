@@ -1,11 +1,16 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-async function numericValue(element: Locator): Promise<number> {
+interface TextContentSource {
+  readonly textContent: () => Promise<string | null>;
+}
+
+async function numericValue(element: TextContentSource): Promise<number> {
   const text = await element.textContent();
 
   return Number(text?.replaceAll(/[^0-9]/gu, "") ?? "0");
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright's fixture object is an external mutable type; it cannot be narrowed from our side.
 test("sim mode shows changing values and shifts with the arrow keys", async ({ page }) => {
   await page.goto("/?sim=1");
 

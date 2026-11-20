@@ -8,4 +8,6 @@ reports/
 *.tsbuildinfo
 .env
 .env.*
+deploy/deploy.env
+deploy/state/
 decisions.tsv

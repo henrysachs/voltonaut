@@ -1,4 +1,5 @@
-import { createEventBus, type DeviceAdapter } from "@voltonaut/shared";
+import type { DeviceAdapter } from "@voltonaut/shared";
+import { createEventBus } from "@voltonaut/shared";
 
 import {
   createFakeHeartRate,
@@ -7,9 +8,11 @@ import {
   createIntervalTicker,
   createKeyboardAdapter,
   createSimScript,
+  type KeyboardEventLike,
   type KeyboardSource,
 } from "@voltonaut/ble";
 
+import type { AppDocument } from "./app.js";
 import { startApp } from "./app.js";
 import { createSimRide } from "./game/simRide.js";
 
@@ -20,14 +23,25 @@ const SIM_SAMPLES = createSimScript([
   { powerW: 168, cadenceRpm: 91, heartRateBpm: 130, gearIndex: 0 },
 ]);
 
-function createWindowKeyboardSource(window: Window): KeyboardSource {
+interface WindowKeyboardTarget {
+  readonly addEventListener: (
+    type: "keydown" | "keyup",
+    listener: (event: KeyboardEventLike) => void,
+  ) => void;
+  readonly removeEventListener: (
+    type: "keydown" | "keyup",
+    listener: (event: KeyboardEventLike) => void,
+  ) => void;
+}
+
+function createWindowKeyboardSource(window: WindowKeyboardTarget): KeyboardSource {
   return {
     subscribe(listener) {
-      const keydown = (event: KeyboardEvent): void => {
+      const keydown = (event: KeyboardEventLike): void => {
         listener("keydown", event);
       };
 
-      const keyup = (event: KeyboardEvent): void => {
+      const keyup = (event: KeyboardEventLike): void => {
         listener("keyup", event);
       };
 
@@ -43,9 +57,27 @@ function createWindowKeyboardSource(window: Window): KeyboardSource {
 }
 
 async function connectDevices(devices: readonly DeviceAdapter[]): Promise<void> {
-  for (const device of devices) {
-    await device.connect();
-  }
+  await Promise.all(devices.map((device) => device.connect()));
+}
+
+interface DocumentQuerySource {
+  readonly querySelector: (selector: string) => Element | null;
+}
+
+function createDomDocument(source: DocumentQuerySource): AppDocument {
+  return {
+    querySelector(selector) {
+      const element = source.querySelector(selector);
+
+      return element === null
+        ? null
+        : {
+            write: (text) => {
+              element.textContent = text;
+            },
+          };
+    },
+  };
 }
 
 function startSimApp(): void {
@@ -75,7 +107,7 @@ function startSimApp(): void {
     source: createWindowKeyboardSource(window),
   });
 
-  startApp({ document, ride });
+  startApp({ document: createDomDocument(document), ride });
   void connectDevices([trainer, heartRate, play, keyboard]);
 }
 
@@ -83,7 +115,7 @@ function startOfflineApp(): void {
   const bus = createEventBus();
   const ride = createSimRide({ bus });
 
-  startApp({ document, ride });
+  startApp({ document: createDomDocument(document), ride });
 }
 
 if (new URLSearchParams(window.location.search).get("sim") === "1") {

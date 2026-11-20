@@ -10,8 +10,9 @@ export interface HudText {
   readonly status: string;
 }
 
+/** Sink for one HUD value. DOM adapters write the text into the real element. */
 export interface TextTarget {
-  textContent: string;
+  readonly write: (text: string) => void;
 }
 
 export interface HudTargets {
@@ -34,9 +35,9 @@ export function hudText(state: HudState): HudText {
 
 export function renderHud(state: HudState, targets: HudTargets): void {
   const text = hudText(state);
-  targets.powerW.textContent = text.powerW;
-  targets.cadenceRpm.textContent = text.cadenceRpm;
-  targets.heartRateBpm.textContent = text.heartRateBpm;
-  targets.gear.textContent = text.gear;
-  targets.status.textContent = text.status;
+  targets.powerW.write(text.powerW);
+  targets.cadenceRpm.write(text.cadenceRpm);
+  targets.heartRateBpm.write(text.heartRateBpm);
+  targets.gear.write(text.gear);
+  targets.status.write(text.status);
 }

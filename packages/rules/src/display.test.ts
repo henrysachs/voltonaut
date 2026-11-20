@@ -1,4 +1,4 @@
-import fc from "fast-check";
+import { assert, integer, property } from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { GEAR_COUNT } from "@voltonaut/engine";
@@ -18,8 +18,8 @@ describe("gearLabel", () => {
   });
 
   it("labels every legal gear index as one-based", () => {
-    fc.assert(
-      fc.property(fc.integer({ min: 0, max: GEAR_COUNT - 1 }), (gearIndex) => {
+    assert(
+      property(integer({ min: 0, max: GEAR_COUNT - 1 }), (gearIndex) => {
         expect(Number(gearLabel(gearIndex))).toBe(gearIndex + 1);
       }),
     );

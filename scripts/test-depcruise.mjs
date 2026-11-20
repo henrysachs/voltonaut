@@ -17,4 +17,4 @@ if (result.status === 0) {
   process.exit(1);
 }
 
-console.log("depcruise negative test passed: forbidden cross-app fixture was rejected");
+process.stdout.write("depcruise negative test passed: forbidden cross-app fixture was rejected\n");

@@ -26,4 +26,20 @@ describe("createFakePlay", () => {
       { type: "controller.button", tS: 5, button: "shiftDown", pressed: false, source: "sim-play" },
     ]);
   });
+
+  it("reports disconnected after disconnect", async () => {
+    const bus = createEventBus();
+    const clock = createManualClock();
+    const statusEvents: DeviceEvent[] = [];
+    bus.subscribe("device.status", (event) => {
+      statusEvents.push(event);
+    });
+
+    const play = createFakePlay({ bus, clock });
+    await play.connect();
+    await play.disconnect();
+
+    expect(play.status()).toBe("disconnected");
+    expect(statusEvents.at(-1)).toMatchObject({ kind: "controller", status: "disconnected" });
+  });
 });

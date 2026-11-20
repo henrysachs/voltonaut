@@ -31,50 +31,55 @@ export type TrainerControlResult =
 
 export type DeviceEvent =
   | {
-      type: "trainer.data";
-      tS: Seconds;
-      powerW?: Watts;
-      cadenceRpm?: Rpm;
-      speedMps?: Mps;
-    }
-  | { type: "hr.data"; tS: Seconds; bpm: Bpm; rrMs?: number[] }
-  | {
-      type: "controller.button";
-      tS: Seconds;
-      button: ControllerButton;
-      pressed: boolean;
-      source: string;
-    }
-  | { type: "controller.battery"; tS: Seconds; percent: number }
-  | {
-      type: "trainer.controlResult";
-      tS: Seconds;
-      opCode: number;
-      result: TrainerControlResult;
+      readonly type: "trainer.data";
+      readonly tS: Seconds;
+      readonly powerW?: Watts;
+      readonly cadenceRpm?: Rpm;
+      readonly speedMps?: Mps;
     }
   | {
-      type: "device.status";
-      tS: Seconds;
-      kind: DeviceKind;
-      id: string;
-      status: ConnectionStatus;
+      readonly type: "hr.data";
+      readonly tS: Seconds;
+      readonly bpm: Bpm;
+      readonly rrMs?: readonly number[];
+    }
+  | {
+      readonly type: "controller.button";
+      readonly tS: Seconds;
+      readonly button: ControllerButton;
+      readonly pressed: boolean;
+      readonly source: string;
+    }
+  | { readonly type: "controller.battery"; readonly tS: Seconds; readonly percent: number }
+  | {
+      readonly type: "trainer.controlResult";
+      readonly tS: Seconds;
+      readonly opCode: number;
+      readonly result: TrainerControlResult;
+    }
+  | {
+      readonly type: "device.status";
+      readonly tS: Seconds;
+      readonly kind: DeviceKind;
+      readonly id: string;
+      readonly status: ConnectionStatus;
     };
 
 export type TrainerCommand =
   | {
-      type: "simulation";
-      gradePct: Pct;
-      windMps: Mps;
-      crr: number;
-      cwKgPerM: number;
+      readonly type: "simulation";
+      readonly gradePct: Pct;
+      readonly windMps: Mps;
+      readonly crr: number;
+      readonly cwKgPerM: number;
     }
-  | { type: "targetPower"; powerW: Watts }
-  | { type: "resistance"; level: number };
+  | { readonly type: "targetPower"; readonly powerW: Watts }
+  | { readonly type: "resistance"; readonly level: number };
 
 export interface DeviceAdapter {
   readonly kind: DeviceKind;
   readonly id: string;
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
-  status(): ConnectionStatus;
+  readonly connect: () => Promise<void>;
+  readonly disconnect: () => Promise<void>;
+  readonly status: () => ConnectionStatus;
 }

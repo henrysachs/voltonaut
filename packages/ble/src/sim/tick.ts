@@ -1,11 +1,11 @@
 export type Unsubscribe = () => void;
 
 export interface TickSource {
-  start(onTick: () => void): Unsubscribe;
+  readonly start: (onTick: () => void) => Unsubscribe;
 }
 
 export interface ManualTicker extends TickSource {
-  tick(): void;
+  readonly tick: () => void;
 }
 
 export function createManualTicker(): ManualTicker {

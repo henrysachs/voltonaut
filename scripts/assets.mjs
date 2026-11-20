@@ -12,16 +12,21 @@ try {
     throw new Error("LICENSES.md must start with '# Asset licenses'");
   }
 
-  const entries = readdirSync(assetsDir, { withFileTypes: true });
-  const assets = entries.filter((entry) => entry.isFile() && entry.name !== "LICENSES.md");
+  const assetNames = [];
 
-  for (const asset of assets) {
-    if (!licenses.includes(asset.name)) {
-      throw new Error(`asset without license entry: ${asset.name}`);
+  for (const entry of readdirSync(assetsDir, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name !== "LICENSES.md") {
+      assetNames.push(entry.name);
     }
   }
 
-  console.log(`assets: ${assets.length} assets, license register present`);
+  for (const assetName of assetNames) {
+    if (!licenses.includes(assetName)) {
+      throw new Error(`asset without license entry: ${assetName}`);
+    }
+  }
+
+  process.stdout.write(`assets: ${assetNames.length} assets, license register present\n`);
 } catch (error) {
   console.error(`assets check failed: ${error.message}`);
   process.exit(1);

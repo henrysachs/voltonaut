@@ -9,7 +9,7 @@ const HUD_INTERVAL_MS = 100;
 const HUD_ELEMENT_IDS = ["powerW", "cadenceRpm", "heartRateBpm", "gear", "status"] as const;
 
 export interface AppDocument {
-  getElementById(elementId: string): TextTarget | null;
+  readonly querySelector: (selector: string) => TextTarget | null;
 }
 
 export interface StartAppOptions {
@@ -19,15 +19,15 @@ export interface StartAppOptions {
 }
 
 export interface App {
-  render(): void;
-  stop(): void;
+  readonly render: () => void;
+  readonly stop: () => void;
 }
 
 function readHudTargets(document: AppDocument): HudTargets | undefined {
   const foundTargets = new Map<string, TextTarget>();
 
   for (const elementId of HUD_ELEMENT_IDS) {
-    const element = document.getElementById(`hud-${elementId}`);
+    const element = document.querySelector(`#hud-${elementId}`);
 
     if (element === null) {
       return undefined;

@@ -22,7 +22,13 @@ export default defineConfig({
         "apps/web/src/**/*.ts",
         "apps/server/src/**/*.ts",
       ],
-      exclude: ["**/*.test.ts"],
+      exclude: [
+        "**/*.test.ts",
+        // Entry points bind a port and start the app; they are covered by the
+        // Playwright E2E run (web) and the deploy smoke (server), not by unit imports.
+        "apps/web/src/main.ts",
+        "apps/server/src/main.ts",
+      ],
       thresholds: {
         "packages/engine/src/**": {
           lines: 90,

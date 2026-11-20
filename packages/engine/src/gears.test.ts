@@ -1,4 +1,4 @@
-import fc from "fast-check";
+import { assert, constantFrom, integer, property } from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { GEAR_COUNT, MAX_GEAR_INDEX, MIN_GEAR_INDEX, shiftGearIndex } from "./gears.js";
@@ -21,11 +21,11 @@ describe("shiftGearIndex", () => {
   });
 
   it("keeps every shifted index inside the gear range", () => {
-    const arbitraryIndex = fc.integer({ min: -10, max: 40 });
-    const arbitraryDirection = fc.constantFrom("up" as const, "down" as const);
+    const arbitraryIndex = integer({ min: -10, max: 40 });
+    const arbitraryDirection = constantFrom("up" as const, "down" as const);
 
-    fc.assert(
-      fc.property(arbitraryIndex, arbitraryDirection, (index, direction) => {
+    assert(
+      property(arbitraryIndex, arbitraryDirection, (index, direction) => {
         const shifted = shiftGearIndex(index, direction);
         expect(shifted).toBeGreaterThanOrEqual(MIN_GEAR_INDEX);
         expect(shifted).toBeLessThanOrEqual(MAX_GEAR_INDEX);

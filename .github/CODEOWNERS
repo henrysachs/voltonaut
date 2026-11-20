@@ -9,6 +9,8 @@
 /.oxfmtrc.json @henrysachs
 /.dependency-cruiser.cjs @henrysachs
 /scripts/guard.mjs @henrysachs
+/scripts/guard/** @henrysachs
+/scripts/guard.test.mjs @henrysachs
 /.github/** @henrysachs
 /docs/decisions/** @henrysachs
 /fixtures/** @henrysachs
