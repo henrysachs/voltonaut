@@ -165,3 +165,4 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Optionale Client-Telemetrie (ADR-010): aggregierte FPS/Framezeit und BLE-Trennungen sowie Fehler-Signaturen an einen eigenen Server-Endpunkt, keine Third-Party-Tracker
+- [ ] Strava-Integration (optional): OAuth-Verbindung eines Strava-Kontos, akzeptierte Fahrt als Activity hochladen
