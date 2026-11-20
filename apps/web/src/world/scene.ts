@@ -13,6 +13,8 @@ import {
   type Scheduler,
 } from "./scheduler.js";
 
+const MAX_RENDER_YIELD_MS = 250;
+
 export interface RideSceneOptions {
   readonly host: Readonly<HTMLElement>;
   readonly route: EngineRoute;
@@ -55,7 +57,9 @@ class RideSceneDriver implements RideScene {
   private readonly scheduler: Scheduler;
   private lastDebugMs = -Infinity;
   private frameMs = 0;
+  private frameStartedMs = 0;
   private rafId = 0;
+  private timerId = 0;
   private disposed = false;
 
   constructor(
@@ -178,6 +182,7 @@ class RideSceneDriver implements RideScene {
 
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
+    window.clearTimeout(this.timerId);
     this.observer.disconnect();
     window.removeEventListener("keydown", this.onKey);
     window.removeEventListener("pagehide", this.dispose);
@@ -206,6 +211,7 @@ class RideSceneDriver implements RideScene {
       return;
     }
 
+    this.frameStartedMs = performance.now();
     this.frameMs = nowMs;
     const snapshot = this.options.snapshot();
 
@@ -214,6 +220,18 @@ class RideSceneDriver implements RideScene {
       this.renderer.render(this.scene, this.camera);
     }
 
+    this.timerId = window.setTimeout(this.afterPresent, 0);
+  };
+
+  private readonly afterPresent = (): void => {
+    // Include browser presentation, not just Three's asynchronous command submission.
+    // Bound the yield so a background-tab suspension cannot delay resuming the scene.
+    const frameCostMs = Math.min(performance.now() - this.frameStartedMs, MAX_RENDER_YIELD_MS);
+
+    this.timerId = window.setTimeout(this.requestFrame, frameCostMs);
+  };
+
+  private readonly requestFrame = (): void => {
     this.rafId = requestAnimationFrame(this.animate);
   };
 }
