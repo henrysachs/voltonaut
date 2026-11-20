@@ -1,0 +1,74 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  background: #10191c;
+  color: #e7f1ee;
+}
+body {
+  max-width: 1200px;
+  margin: auto;
+  padding: 2rem;
+}
+header > p:first-child {
+  color: #97edb6;
+  letter-spacing: 0.15em;
+  font-size: 0.75rem;
+}
+h1 {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  margin: 0.5rem 0;
+}
+h2 {
+  font-size: 1.2rem;
+}
+section {
+  border-top: 1px solid #45605b;
+  padding: 1.25rem 0;
+}
+button,
+input,
+select {
+  font: inherit;
+  margin: 0.3rem;
+  padding: 0.5rem;
+  border: 1px solid #66877f;
+  border-radius: 0.2rem;
+}
+button {
+  cursor: pointer;
+  background: #b6f4ce;
+  color: #10251c;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+input,
+select {
+  background: #1d2b2e;
+  color: inherit;
+}
+output {
+  display: inline-block;
+  padding: 0.5rem;
+  color: #b6f4ce;
+}
+pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+#log {
+  max-height: 32rem;
+  background: #080f11;
+  padding: 1rem;
+}
+#gatt section {
+  padding-left: 1rem;
+  border-color: #2e4541;
+}
+label {
+  display: inline-block;
+}

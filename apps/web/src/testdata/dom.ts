@@ -1,4 +1,10 @@
 import { TestElement, type TestNodeView } from "./node.js";
+import { TestInput } from "./input.js";
+import { TestSelect } from "./select.js";
+
+export { TestInput } from "./input.js";
+
+export { TestSelect } from "./select.js";
 
 export { TestElement, type TestNodeView } from "./node.js";
 
@@ -7,8 +13,9 @@ export function createTestDocument() {
   const nodes = new Map<string, TestElement>();
   const created: TestElement[] = [];
 
-  const createElement = (): TestElement => {
-    const element = new TestElement();
+  const createElement = (tag = "div"): TestElement => {
+    const element =
+      tag === "input" ? new TestInput() : tag === "select" ? new TestSelect() : new TestElement();
 
     created.push(element);
 
@@ -21,8 +28,8 @@ export function createTestDocument() {
     createElement,
     getElementById: (id: string) => nodes.get(id) ?? null,
     querySelector: (selector: string) => nodes.get(selector.slice(1)) ?? null,
-    add(id: string) {
-      const element = createElement();
+    add(id: string, tag = "div") {
+      const element = createElement(tag);
       element.id = id;
       nodes.set(id, element);
 

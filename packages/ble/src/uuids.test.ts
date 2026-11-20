@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeUuid, toShortUuid } from "./uuids.js";
+import { normalizeUuid, toShortUuid, SNIFFER_OPTIONAL_SERVICES } from "./uuids.js";
+
+it("allows every documented sniffer service, including both unverified Play variants", () => {
+  expect(SNIFFER_OPTIONAL_SERVICES).toEqual([
+    "00001826-0000-1000-8000-00805f9b34fb",
+    "00001818-0000-1000-8000-00805f9b34fb",
+    "0000180d-0000-1000-8000-00805f9b34fb",
+    "0000180f-0000-1000-8000-00805f9b34fb",
+    "0000180a-0000-1000-8000-00805f9b34fb",
+    "00001816-0000-1000-8000-00805f9b34fb",
+    "00000001-19ca-4651-86e5-fa29dcdd09d1",
+    "0000fc82-0000-1000-8000-00805f9b34fb",
+  ]);
+});
 
 describe("normalizeUuid", () => {
   it("expands short and 0x-prefixed forms into the standard base UUID", () => {
