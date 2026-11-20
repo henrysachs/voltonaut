@@ -1,0 +1,75 @@
+[tools]
+node = "24.22.3"
+pnpm = "10.33.0"
+
+[settings]
+experimental = false
+
+[tasks.install]
+run = "pnpm install --frozen-lockfile"
+
+[tasks.dev]
+description = "Web (Vite) + Server (Nest) parallel"
+run = "pnpm --parallel --filter @voltonaut/web --filter @voltonaut/server dev"
+
+[tasks."dev:web"]
+run = "pnpm --filter @voltonaut/web dev"
+
+[tasks."dev:server"]
+run = "pnpm --filter @voltonaut/server dev"
+
+[tasks.fmt]
+run = "pnpm exec oxfmt ."
+
+[tasks."fmt:check"]
+run = "pnpm exec oxfmt --check ."
+
+[tasks.lint]
+run = "pnpm exec oxlint --type-aware --deny-warnings --report-unused-disable-directives"
+
+[tasks.fix]
+run = [
+  "pnpm exec oxlint --fix",
+  "pnpm exec oxfmt .",
+  "pnpm exec oxlint --type-aware --deny-warnings",
+]
+
+[tasks.typecheck]
+run = "pnpm exec tsc -b --pretty"
+
+[tasks.depcruise]
+run = [
+  "pnpm exec depcruise apps packages --config .dependency-cruiser.cjs",
+  "node scripts/test-depcruise.mjs",
+]
+
+[tasks.guard]
+run = ["node scripts/guard.test.mjs", "node scripts/guard.mjs"]
+
+[tasks.test]
+run = "pnpm exec vitest run --coverage"
+
+[tasks."test:e2e"]
+run = "pnpm --filter @voltonaut/web exec playwright test"
+
+[tasks.check]
+description = "MUSS grün sein, bevor eine Aufgabe als erledigt gilt"
+depends = ["fmt:check", "lint", "typecheck", "depcruise", "guard", "test", "test:e2e"]
+
+[tasks."check:mutation"]
+run = "pnpm exec stryker run"
+
+[tasks.build]
+run = "pnpm -r build"
+
+[tasks.assets]
+run = "node scripts/assets.mjs"
+
+[tasks.perf]
+run = "node scripts/pending-task.mjs perf E4"
+
+[tasks."golden:update"]
+run = "node scripts/pending-task.mjs golden:update E3"
+
+[tasks."visual:update"]
+run = "node scripts/pending-task.mjs visual:update E4"

@@ -1,0 +1,17 @@
+.audit/**
+AGENTS.md
+opencode.jsonc
+node_modules/**
+# ADRs are CODEOWNERS-protected; keep them byte-stable and out of formatter churn.
+docs/decisions/**
+**/dist/**
+**/coverage/**
+**/test-results/**
+**/playwright-report/**
+**/.stryker-tmp/**
+reports/**
+tools/oxlint/anti-slop/**
+fixtures/**
+apps/server/drizzle/**
+pnpm-lock.yaml
+decisions.tsv

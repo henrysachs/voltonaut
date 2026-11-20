@@ -1,0 +1,19 @@
+{
+  "name": "@voltonaut/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api/index.ts",
+    "./bus": "./src/bus.ts",
+    "./events": "./src/events.ts",
+    "./units": "./src/units.ts"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  }
+}

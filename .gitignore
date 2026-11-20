@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+reports/
+.stryker-tmp/
+*.tsbuildinfo
+.env
+.env.*
+deploy/deploy.env
+deploy/state/
+decisions.tsv

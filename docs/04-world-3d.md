@@ -3,37 +3,45 @@
 **Ambition:** Voltonaut soll sich wie ein **richtiges Spiel** anfühlen, nicht wie eine Datenvisualisierung: lebendige Welt, Tageszeiten und Wetter, Mitfahrer, Windschatten, Zuschauer am Berg, Effekte, Sound. Die Umsetzung erfolgt etappenweise (MVP zuerst, siehe `07-roadmap.md`), die **Architektur ist aber von Anfang an für den vollen Umfang ausgelegt**.
 
 ## 1. Szenenstruktur (ADR-008)
+
 Plain three.js-Szenengraph + eigener, typisierter **System-Scheduler** (kein ECS-Framework):
+
 ```ts
 interface RenderSystem {
   readonly id: string;
-  readonly order: number;                                   // feste Reihenfolge
+  readonly order: number; // feste Reihenfolge
   init(ctx: SceneContext): void;
-  update(frame: FrameInput): void;                          // liest nur Snapshots
+  update(frame: FrameInput): void; // liest nur Snapshots
   setQuality(q: QualityLevel): void;
   dispose(): void;
 }
 interface FrameInput {
-  readonly dtS: number; readonly alpha: number;              // Interpolation zwischen Engine-Ticks
-  readonly ride: RideSnapshot; readonly riders: readonly RiderView[]; // eigener Fahrer, Bots, Remote
-  readonly env: EnvironmentState;                            // Tageszeit, Wetter (aus world/environment)
+  readonly dtS: number;
+  readonly alpha: number; // Interpolation zwischen Engine-Ticks
+  readonly ride: RideSnapshot;
+  readonly riders: readonly RiderView[]; // eigener Fahrer, Bots, Remote
+  readonly env: EnvironmentState; // Tageszeit, Wetter (aus world/environment)
 }
 ```
+
 Systeme (Reihenfolge): `environment` (Sonne, Himmel, Wetter) → `terrain` (Chunk-Streaming, LOD) → `scenery` (Instancing) → `riders` (eigener + Bots + Remote, Animation) → `crowd` (Zuschauer) → `pickups` (Volts-Blitze) → `effects` (Partikel, Banner) → `camera` → `audio` → `post` (Post-Processing) → `debug`.
 Jedes System besitzt seine three.js-Objekte; keines schreibt in Engine-State. Game-Logik (Pickup gesammelt, Segment) kommt als `RideEvent` aus der Engine und löst nur Effekte aus.
 
 ## 2. Rendering & Licht
+
 - `WebGLRenderer` (WebGPU-Renderer später prüfen ❓), `SRGBColorSpace`, ACES/AgX-Tonemapping, physikalisch korrekte Lichtintensitäten.
 - **PBR** (`MeshStandardMaterial`/`MeshPhysicalMaterial` für Lack/Carbon), Environment-Map aus HDRI (Poly Haven) per PMREM, tageszeitabhängig überblendet.
 - **Schatten:** Sonnen-`DirectionalLight` mit **Cascaded Shadow Maps** (three `CSM`-Addon) – Nahkaskade scharf für Fahrer/Rad, Fernkaskaden grob; Soft Shadows (PCF) ab High. Kontaktschatten unter Rädern (Blob-Decal) auch auf Low.
 - **Post-Processing** (three `EffectComposer`-Addons, keine Zusatzlib): SMAA/FXAA, Bloom (Volts-Blitze, Nachtlichter, Sonne), SSAO/GTAO (High), Tiefenunschärfe in Cinematic-Kamera, Vignette, Farbkorrektur-LUT pro Biom, leichte Motion Blur nur bei Sprint (High), Regentropfen-Overlay.
 
 ## 3. Umwelt: Tageszeit & Wetter
+
 - **Day/Night-Zyklus:** Sonnenstand aus Uhrzeit (realer Lokalzeit oder Spielzeit, beschleunigbar), `Sky`-Shader + Sterne/Mond nachts, Laternen und beleuchtete Torbögen (Emissive + Bloom), Scheinwerfer am Rad bei Nacht.
 - **Wetter:** `clear | cloudy | fog | rain | storm` mit Übergängen; Regen als GPU-Partikel + nasse Straße (Roughness runter, Pfützen-Reflexe), Nebeldichte, Wolkendecke, Wind sichtbar (Vegetation-Wind-Shader, Fahnen). **Wind ist rein visuell oder optional physikalisch** (Gegenwind über FTMS `windSpeed`, Einstellung, Standard aus).
 - `EnvironmentState` ist deterministisch aus `(seed, time, weatherScript)` → visuelle Tests reproduzierbar.
 
 ## 4. Strecke, Terrain, Umgebung
+
 - **Route = Daten** (`Route` in `01-architecture.md`): 2D-Centerline (Catmull-Rom) + `ElevationProfile`, Segmente, Pickups, Deko-Zonen.
 - **Straße:** extrudiertes Band entlang der 3D-Kurve, Breite 6–8 m, Fahrbahnmarkierung, Randsteine/Leitplanken prozedural, Decals (Kreide-Schriftzüge am KOM, Startlinie).
 - **Terrain:** Heightfield-Chunks (256 m, 4 LOD-Stufen, Geomorphing gegen Popping), an der Straße eingeebnet; Splat-Mapping (Gras/Fels/Erde/Schnee nach Höhe/Neigung), KTX2-Texturen.
@@ -44,6 +52,7 @@ Jedes System besitzt seine three.js-Objekte; keines schreibt in Engine-State. Ga
 - **GPX-Import** (optional, später): Lat/Lon/Ele → ENU-Projektion → Douglas-Peucker → Höhenglättung (~50 m) → `Route`; Umgebung prozedural.
 
 ## 5. Mitfahrer, Bots, Windschatten
+
 - **AI-Bots** (in `packages/engine/bots`, deterministisch): Leistungsprofile (Tempo-Gruppe 2,0/2,5/3,0/3,5 W/kg, „Kletterer", „Sprinter"), reagieren auf Steigung, bilden Gruppen, attackieren am Berg, sprinten auf der Sprint-Wertung. Gleiche Physik wie der Spieler.
 - **Seitenversatz / Spuren:** Fahrer haben eine laterale Position (Ausweichen/Überholen automatisch, kein Lenken nötig).
 - **Windschatten (Drafting):** Engine berechnet für jeden Fahrer die CdA-Reduktion abhängig von Abstand/Versatz zum Vordermann (ca. −25 bis −35 % direkt dahinter bei < 2 m, linear ausklingend bis ~10 m; ⚠️ Werte nach Literatur kalibrieren). Wirkt auf virtuelles Tempo **und** auf Trainer-Widerstand (reduzierte effektive Kraft).
@@ -51,9 +60,11 @@ Jedes System besitzt seine three.js-Objekte; keines schreibt in Engine-State. Ga
 - Remote-Fahrer (Gruppenfahrt) gehen als `RiderView` in dieselben Systeme; Drafting hinter Remote-Fahrern lokal berechnet (v2, ⚠️ Netzlatenz).
 
 ## 6. Kameras
+
 Verfolger (Standard, Feder-gedämpft), Nah-Verfolger, Seitlich/TV-Kamera (fährt neben der Gruppe), Helikopter (weite Kurven, Landschaft), Ego (Lenker-Sicht), **Cinematic-Modus** (automatischer Schnitt zwischen Shots an Kamera-Spots der Route: Kurvenausgang, Bergkamm, Zieleinfahrt, mit Tiefenunschärfe), Fotomodus (Pause, freie Kamera, Screenshot). Speed-FOV, sanftes Umschalten (Blend 0,5 s), Steuerung über Tastatur und Play-Steuerkreuz.
 
 ## 7. Effekte & Spielgefühl
+
 - **Volts-Blitz-Pickups ⚡**: rotierende, leuchtende Blitze über der Straße (Emissive + Bloom + Funken beim Einsammeln, Blitz fliegt in HUD-Zähler). Deterministische Positionen pro Route (`06-gamification.md`).
 - **Sprint/KOM:** Banner-Torbögen (grün/gepunktet), Countdown-Flaggen 500/200/100 m, Konfetti/Pyro bei PB, Zuschauerjubel.
 - **Ziel/Runde:** Zielbogen mit Partikelregen, Rundenanzeige.
@@ -62,12 +73,15 @@ Verfolger (Standard, Feder-gedämpft), Nah-Verfolger, Seitlich/TV-Kamera (fährt
 - **Power-ups (sinnvoll, optional, E9):** Zwift-ähnlich, z. B. „Aero-Boost" (CdA −15 % für 15 s), „Leichtgewicht" (−10 % Masse am Berg für 20 s), „Windschatten-Magnet" (stärkerer Draft 20 s). Einsammeln an seltenen Spots; aktivieren per Play-Taste (Power-up-Taste). **Physikrelevant** → Aktivierung wird im Ride-Upload protokolliert und vom Server identisch nachgerechnet; in Bestzeit-Wertungen getrennt markiert.
 
 ## 8. Audio & Musik
+
 Web Audio API (keine Zusatzlib): Wind proportional zum Tempo (gedämpft im Windschatten), Freilauf-Klicken beim Rollen, Reifen auf Asphalt/Schotter, Schaltgeräusch (dezent, bestätigt den Gangwechsel), Zuschauer-Jubel räumlich (PannerNode), Blitz-Sammel-Sound, Fanfare bei PB/Level-Up, Wetter-Ambience (Regen, Vögel, Stadt). Musik: eigene/CC0-Loops pro Biom, dynamisch lauter bei Sprints; Lautstärkeregler getrennt für Effekte/Musik; Musik standardmäßig aus (Henry hört evtl. eigene).
 
 ## 9. HUD & UI im Spiel
+
 Watt (3-s-Mittel), Kadenz, Puls mit Zonenfarbe, Tempo, Gang (1–24 mit Schaltanimation), Steigung, Distanz/Zeit, Volts-Zähler ⚡, Mini-Höhenprofil mit Position und Segmenten, Mini-Map, Windschatten-Indikator, Segment-Live-Delta, Fahrerliste (Bots/Freunde mit Abstand), Benachrichtigungen (Badge, Level-Up). Skalierbar, kontrastreich, ausblendbar (Cinematic).
 
 ## 10. Asset-Pipeline
+
 - **Quellen:** Blender (eigene Modelle), CC0 (Kenney, Quaternius, Poly Haven, ambientCG), CC-BY nur mit Credits; kein NC/ND; Mixamo nur als Rigging-Hilfe (Weitergabe-Bedingungen unklar). Jede Datei in `apps/web/public/assets/LICENSES.md`.
 - **Format:** glTF 2.0 Binary (`.glb`); Texturen **KTX2** (Basis Universal: ETC1S für Farbe, UASTC für Normal-Maps), Geometrie **meshopt**-komprimiert (`EXT_meshopt_compression`), optional Quantisierung.
 - **Build-Schritt:** `mise run assets` → `@gltf-transform/cli`-Pipeline: `dedup → prune → weld → resize (max 2048) → ktx2 (toktx/basisu) → meshopt → validate` von `assets-src/` nach `apps/web/public/assets/`. Ergebnis deterministisch; Größen-Report.
@@ -75,17 +89,20 @@ Watt (3-s-Mittel), Kadenz, Puls mit Zonenfarbe, Tempo, Gang (1–24 mit Schaltan
 - **Budget-Check im CI** (Teil von `check`): pro Asset und gesamt (initial ≤ 15 MB, pro Biom ≤ 25 MB), Texturgrößen ≤ 2048, Dreiecke pro Asset-Typ.
 
 ## 11. LOD & Performance-Budget
+
 Ziel: **≥ 60 fps @ 1080p auf Henrys Laptop** (Medium oder High), Low-Stufe für iGPUs.
-| Posten | Budget (High) |
-|---|---|
-| Draw Calls | ≤ 150 |
-| Dreiecke sichtbar | ≤ 500 k (Low ≤ 200 k) |
-| Eigener Fahrer + Rad | ≤ 25 k Tris, ≤ 40 Bones |
-| Bot/Remote-Fahrer | 3 LOD-Stufen (10 k / 3 k / 500 Tris), > 80 m Impostor |
-| Zuschauer | VAT-Instanzen, ≤ 3 Draw Calls gesamt |
-| GPU-Texturen | ≤ 64 MB (Low ≤ 32 MB) |
-| JS pro Frame | p95 ≤ 4 ms (Engine-Interpolation + Systeme) |
-Maßnahmen: `LOD`-Objekte mit Hysterese, Chunk-Geomorphing, Frustum-Culling + grobe Occlusion (Hügel), Instancing/BatchedMesh, Schatten nur nahe Kaskade dynamisch, Qualitätsstufen (Low/Medium/High/Ultra), **dynamische Auflösung** (Render-Scale 0,7–1,0) und Auto-Downgrade bei < 50 fps über 5 s. Messung: `10-testing.md` §8.
+
+| Posten                                                                                                                                                                                                                                                                                                                             | Budget (High)                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Draw Calls                                                                                                                                                                                                                                                                                                                         | ≤ 150                                                 |
+| Dreiecke sichtbar                                                                                                                                                                                                                                                                                                                  | ≤ 500 k (Low ≤ 200 k)                                 |
+| Eigener Fahrer + Rad                                                                                                                                                                                                                                                                                                               | ≤ 25 k Tris, ≤ 40 Bones                               |
+| Bot/Remote-Fahrer                                                                                                                                                                                                                                                                                                                  | 3 LOD-Stufen (10 k / 3 k / 500 Tris), > 80 m Impostor |
+| Zuschauer                                                                                                                                                                                                                                                                                                                          | VAT-Instanzen, ≤ 3 Draw Calls gesamt                  |
+| GPU-Texturen                                                                                                                                                                                                                                                                                                                       | ≤ 64 MB (Low ≤ 32 MB)                                 |
+| JS pro Frame                                                                                                                                                                                                                                                                                                                       | p95 ≤ 4 ms (Engine-Interpolation + Systeme)           |
+| Maßnahmen: `LOD`-Objekte mit Hysterese, Chunk-Geomorphing, Frustum-Culling + grobe Occlusion (Hügel), Instancing/BatchedMesh, Schatten nur nahe Kaskade dynamisch, Qualitätsstufen (Low/Medium/High/Ultra), **dynamische Auflösung** (Render-Scale 0,7–1,0) und Auto-Downgrade bei < 50 fps über 5 s. Messung: `10-testing.md` §8. |
 
 ## 12. Tests
+
 Routen-Daten (Bogenlänge, stetige Steigung, Loop schließt), deterministische `EnvironmentState`, Bots deterministisch (Golden), visuelle Regression der Kernszenen, Performance-Budget-Szene, Asset-Budget-Check.

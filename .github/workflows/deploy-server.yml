@@ -1,0 +1,80 @@
+name: deploy-server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --user 1001
+    outputs:
+      server-deploy-ready: ${{ steps.server.outputs.ready }}
+    env:
+      CI: "true"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned tools
+        uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Run the full gate
+        run: mise run check
+
+      - name: Detect server deploy switch
+        id: server
+        env:
+          SERVER_DEPLOY_ENABLED: ${{ vars.SERVER_DEPLOY_ENABLED }}
+        run: |
+          if [ "$SERVER_DEPLOY_ENABLED" = "true" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: hetzner-vps
+    needs: check
+    if: needs.check.outputs.server-deploy-ready == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install the deploy SSH key
+        run: |
+          mkdir -m 700 -p ~/.ssh
+          install -m 600 /dev/null ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Build the server image
+        run: docker build -f deploy/Dockerfile -t "voltonaut-server:${{ github.sha }}" .
+
+      - name: Ship the image and the deploy files to the VPS
+        run: |
+          ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "mkdir -p /srv/voltonaut"
+          tar -C deploy -cf - Dockerfile compose.yaml litestream.yml deploy.sh README.md | \
+            ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "tar -C /srv/voltonaut -xf -"
+          docker save "voltonaut-server:${{ github.sha }}" | gzip | \
+            ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "gunzip | docker load"
+
+      - name: Switch the release and verify health
+        run: |
+          ssh "${{ vars.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "cd /srv/voltonaut && bash deploy.sh deploy '${{ github.sha }}'"

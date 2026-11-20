@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "./dist/root"
+  },
+  "files": [
+    "oxlint.config.ts",
+    "vitest.config.ts",
+    "packages/shared/vitest.config.ts",
+    "packages/engine/vitest.config.ts",
+    "packages/rules/vitest.config.ts",
+    "packages/ble/vitest.config.ts"
+  ],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/shared/tsconfig.test.json" },
+    { "path": "packages/engine" },
+    { "path": "packages/engine/tsconfig.test.json" },
+    { "path": "packages/rules" },
+    { "path": "packages/rules/tsconfig.test.json" },
+    { "path": "packages/ble" },
+    { "path": "packages/ble/tsconfig.test.json" },
+    { "path": "apps/web" },
+    { "path": "apps/server" }
+  ]
+}

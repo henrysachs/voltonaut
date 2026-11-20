@@ -1,0 +1,85 @@
+name: deploy-web
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --user 1001
+    outputs:
+      cloudflare-ready: ${{ steps.cloudflare.outputs.ready }}
+    env:
+      CI: "true"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned tools
+        uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Run the full gate
+        run: mise run check
+
+      - name: Detect Cloudflare secrets
+        id: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: cloudflare-pages
+    needs: check
+    if: >-
+      needs.check.outputs.cloudflare-ready == 'true' &&
+      (
+        github.event_name == 'push' ||
+        github.event.pull_request.head.repo.fork == false
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install pinned tools
+        uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Build web
+        run: mise run build
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          branch="main"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            branch="pr-${{ github.event.pull_request.number }}"
+          fi
+
+          pnpm exec wrangler pages deploy apps/web/dist \
+            --project-name voltonaut \
+            --branch "$branch"

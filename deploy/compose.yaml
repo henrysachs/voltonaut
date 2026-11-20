@@ -1,0 +1,60 @@
+# Voltonaut API behind the existing Financensor Traefik (ADR-004, ADR-009).
+# Run from a checkout of deploy/ on the VPS:
+#   VOLTONAUT_TAG=<tag> docker compose -f compose.yaml up -d
+# The Financensor Traefik owns ports 80/443; this project only joins its network.
+
+name: voltonaut
+
+services:
+  server:
+    image: voltonaut-server:${VOLTONAUT_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+    volumes:
+      - sqlite:/app/data
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.voltonaut-server.rule=Host(`api.voltonaut.stammkneipe.dev`)
+      - traefik.http.routers.voltonaut-server.entrypoints=websecure
+      - traefik.http.routers.voltonaut-server.tls.certresolver=letsencrypt
+      - traefik.http.services.voltonaut-server.loadbalancer.server.port=3000
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/healthz').then((r) => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  litestream:
+    image: litestream/litestream:0.5.18
+    restart: unless-stopped
+    # The database file appears with E5; until then the sidecar tails an empty database.
+    command:
+      [
+        "sh",
+        "-c",
+        "test -f /data/voltonaut.db || touch /data/voltonaut.db; litestream replicate --config /etc/litestream/litestream.yml",
+      ]
+    volumes:
+      - sqlite:/data
+      - ./litestream.yml:/etc/litestream/litestream.yml:ro
+    env_file:
+      - path: deploy.env
+        required: false
+
+volumes:
+  sqlite:
+
+networks:
+  traefik:
+    name: financensor_default
+    external: true
