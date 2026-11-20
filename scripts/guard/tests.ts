@@ -90,6 +90,7 @@ function writeStrictConfigs(root: string): void {
           types: ["node"],
           experimentalDecorators: true,
           emitDecoratorMetadata: true,
+          skipLibCheck: true,
           rootDir: "src",
           outDir: "dist",
         },
@@ -123,6 +124,87 @@ await test("checkTypeScriptConfigs accepts pure and server configs and rejects l
     const findings = checkTypeScriptConfigs(root);
     assert.ok(findings.some((finding) => finding.includes("'strict' is not an allowed override")));
     assert.ok(findings.some((finding) => finding.includes("lib must be exactly")));
+  });
+});
+
+const nonServerConfigs = [
+  "tsconfig.json",
+  "packages/shared/tsconfig.json",
+  "packages/engine/tsconfig.json",
+  "packages/rules/tsconfig.json",
+  "packages/ble/tsconfig.json",
+  "apps/web/tsconfig.json",
+];
+
+await test("skipLibCheck exception cannot spread beyond server", () => {
+  withTempDir((root) => {
+    writeStrictConfigs(root);
+
+    for (const path of nonServerConfigs) {
+      const directory = join(root, path, "..");
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(
+        join(directory, "tsconfig.json"),
+        JSON.stringify({
+          extends: "../../tsconfig.base.json",
+          compilerOptions: { skipLibCheck: true },
+          exclude: ["src/**/*.test.ts"],
+        }),
+      );
+    }
+
+    const findings = checkTypeScriptConfigs(root);
+
+    for (const path of nonServerConfigs) {
+      const pathFindings = findings.filter((finding) => finding.startsWith(path));
+
+      assert.ok(
+        pathFindings.some((finding) =>
+          finding.includes("'skipLibCheck' is not an allowed override"),
+        ),
+      );
+    }
+  });
+});
+
+await test("server library exception does not weaken application strictness", () => {
+  withTempDir((root) => {
+    writeStrictConfigs(root);
+    writeFileSync(
+      join(root, "apps", "server", "tsconfig.json"),
+      JSON.stringify({
+        extends: "../../tsconfig.base.json",
+        compilerOptions: {
+          lib: ["ES2023"],
+          types: ["node"],
+          experimentalDecorators: true,
+          emitDecoratorMetadata: true,
+          skipLibCheck: true,
+          strict: false,
+        },
+      }),
+    );
+
+    const findings = checkTypeScriptConfigs(root).filter((finding) =>
+      finding.startsWith("apps/server/"),
+    );
+
+    assert.ok(findings.some((finding) => finding.includes("'strict' is not an allowed override")));
+  });
+});
+
+await test("root base retains skipLibCheck false", () => {
+  withTempDir((root) => {
+    writeStrictConfigs(root);
+    writeFileSync(
+      join(root, "tsconfig.base.json"),
+      JSON.stringify({ compilerOptions: { ...expectedBaseCompilerOptions, skipLibCheck: true } }),
+    );
+    assert.ok(
+      checkTypeScriptConfigs(root).some((finding) =>
+        finding.startsWith("tsconfig.base.json: base compilerOptions deviate"),
+      ),
+    );
   });
 });
 
