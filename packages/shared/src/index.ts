@@ -4,4 +4,8 @@ export * from "./bus.js";
 
 export * from "./events.js";
 
+export * from "./profile.js";
+
+export * from "./ride.js";
+
 export * from "./units.js";

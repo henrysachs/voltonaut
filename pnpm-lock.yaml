@@ -123,7 +123,11 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/engine: {}
+  packages/engine:
+    dependencies:
+      '@voltonaut/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/rules:
     dependencies:

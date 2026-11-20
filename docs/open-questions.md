@@ -53,6 +53,21 @@ Status: ❓ offen · 🔬 wird in Etappe geklärt · ✅ geklärt (mit Datum und
 | T14 | Zod-Pin 3.25.76                                                                                                                                                                                                                 | ✅ E0: Zod 4 hat Deklarationsprobleme in puren Paketen (shared) bei `skipLibCheck: false`; daher bewusst Zod 3.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | T15 | `unplugin`-Deklarationen importieren optionale Bundler-Module; bei `skipLibCheck: false` rot                                                                                                                                    | ✅ E0: `apps/server/vite.config.ts` und `apps/server/vitest.config.ts` sind aus dem strikten `tsc`-Projekt ausgenommen (Server-tsconfig inkludiert nur `src/**`); Lint/Format laufen trotzdem darüber.                                                                                                                                                                                                                                                                                                                                                                         |
 
+## E3-Nachtrag (2026-11-20)
+
+- T1: Die Engine läuft im Dedicated Web Worker. Akkumulator, Catch-up-Limit und Tabwechsel sind automatisiert geprüft. ADR-011 dokumentiert die Entscheidung als Vorschlag; Henrys Freigabe steht aus.
+- T9: Stryker prüft bereits die gesamte Engine einschließlich Routendaten. Der erste vollständige Lauf dauerte 151 s und scheiterte mit 75,72 %. Ein inkrementeller Lauf dauerte 39 s und scheiterte mit 75,92 %. Neue Routendaten-Tests wurden dabei nicht gegen alle statischen Mutanten ausgeführt. Nach dem Aufbewahren der inkrementellen Ergebnisdatei außerhalb des Repos lief `mise run check:mutation` vollständig neu. Ergebnis: 95,55 % bei 5099 Mutanten, 101 s inklusive Task-Start, Exit 0. Die Tests prüfen jetzt alle Höhenstützstellen und die Kreisgeometrie der Test-Loops. Die Einzelmessung ist keine Laufzeitgarantie für CI; inkrementelle Ergebnisse nach neuen Tests statischer Daten durch einen vollständigen Lauf bestätigen.
+- Geschützte `mise.toml`: `golden:update` ist noch der E3-Platzhalter. Der vorhandene Generator `scripts/golden-update.mjs` braucht die Task-Verdrahtung und Henrys Freigabe. Bis dahin bleibt AK2 teilweise offen.
+- Strategie A: Die Gang-Monotonie ist auf flacher Strecke und bergauf belegt. Bei negativem virtuellem Radkraft-Term kehrt das lineare Modell die Reihenfolge teilweise um. E2 muss das gewünschte Abfahrtsverhalten entscheiden.
+- Noch fehlende Spec-Nachweise: P7 als Property über zufällige Tick-Folgen, Profilwechsel erst zur nächsten Fahrt sowie die strenge Heading-Stetigkeit aus AK5. Die vorhandenen Polyline-Headings erfüllen nur die getestete Seam-Toleranz unter 0,02 rad. Der Detailstand steht in `docs/specs/E3-01-engine-physics.md`.
+
+Henry prüft noch manuell:
+
+1. Mehr als fünf Minuten Hintergrund-Tab in seinem Chrome mit aktiver Web-Bluetooth-Verbindung. Distanz, Datenausfall und `ride.clockSkipped` nach der Rückkehr prüfen. Der kurze Headless-Tabwechsel beweist kein Page-Freezing-Verhalten.
+2. `test-loop` auf der echten Rolle fahren und 0 %, 4 % und 8 % vergleichen. Vorher E2-Adapter anbinden und `mT`, physische Übersetzung, Sättigung sowie Schaltlatenz messen. Der E3-Default `mT = 83 kg` ist unkalibriert.
+3. Nach den E1-Mitschnitten eine echte 1-Hz-Wattreihe mit Lücken, Spitzen und Null-Kadenz als zusätzliche Golden-Fahrt prüfen.
+4. ADR-011 und die neu angelegten Golden-Dateien freigeben. Ein späterer PR braucht für die Baselines das Label `baseline-update`.
+
 ## Risiken
 
 | Risiko                                                   | Wahrscheinlichkeit      | Auswirkung                  | Gegenmaßnahme                                                          |

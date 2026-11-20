@@ -1,20 +1,40 @@
 import type { TickSource } from "@voltonaut/ble";
 import { createIntervalTicker } from "@voltonaut/ble";
+import type { RideSnapshot } from "@voltonaut/engine";
 
-import type { SimRide } from "./game/simRide.js";
 import { renderHud } from "./ui/hud.js";
 import type { HudTargets, TextTarget } from "./ui/hud.js";
+import { rideHudModelFrom } from "./ui/hud.js";
 
 const HUD_INTERVAL_MS = 100;
-const HUD_ELEMENT_IDS = ["powerW", "cadenceRpm", "heartRateBpm", "gear", "status"] as const;
+
+const HUD_ELEMENT_IDS = [
+  "powerW",
+  "cadenceRpm",
+  "heartRateBpm",
+  "gear",
+  "status",
+  "speed",
+  "distance",
+  "elevationGain",
+  "energy",
+  "warning",
+] as const;
 
 export interface AppDocument {
   readonly querySelector: (selector: string) => TextTarget | null;
 }
 
+/** Snapshot + connection state source the HUD renders from. */
+export interface RideHudSource {
+  readonly snapshot: () => RideSnapshot | undefined;
+  readonly connected: () => boolean;
+  readonly dispose: () => void;
+}
+
 export interface StartAppOptions {
   readonly document: AppDocument;
-  readonly ride: SimRide;
+  readonly ride: RideHudSource;
   readonly ticker?: TickSource;
 }
 
@@ -23,36 +43,78 @@ export interface App {
   readonly stop: () => void;
 }
 
-function readHudTargets(document: AppDocument): HudTargets | undefined {
-  const foundTargets = new Map<string, TextTarget>();
+interface OptionalHudTargets {
+  readonly powerW: TextTarget | undefined;
+  readonly cadenceRpm: TextTarget | undefined;
+  readonly heartRateBpm: TextTarget | undefined;
+  readonly gear: TextTarget | undefined;
+  readonly status: TextTarget | undefined;
+  readonly speed: TextTarget | undefined;
+  readonly distance: TextTarget | undefined;
+  readonly elevationGain: TextTarget | undefined;
+  readonly energy: TextTarget | undefined;
+  readonly warning: TextTarget | undefined;
+}
 
-  for (const elementId of HUD_ELEMENT_IDS) {
-    const element = document.querySelector(`#hud-${elementId}`);
-
-    if (element === null) {
-      return undefined;
-    }
-
-    foundTargets.set(elementId, element);
-  }
-
-  const powerW = foundTargets.get("powerW");
-  const cadenceRpm = foundTargets.get("cadenceRpm");
-  const heartRateBpm = foundTargets.get("heartRateBpm");
-  const gear = foundTargets.get("gear");
-  const status = foundTargets.get("status");
+function hudTargetsFrom(targets: OptionalHudTargets): HudTargets | undefined {
+  const {
+    powerW,
+    cadenceRpm,
+    heartRateBpm,
+    gear,
+    status,
+    speed,
+    distance,
+    elevationGain,
+    energy,
+    warning,
+  } = targets;
 
   if (
     powerW === undefined ||
     cadenceRpm === undefined ||
     heartRateBpm === undefined ||
     gear === undefined ||
-    status === undefined
+    status === undefined ||
+    speed === undefined ||
+    distance === undefined ||
+    elevationGain === undefined ||
+    energy === undefined ||
+    warning === undefined
   ) {
     return undefined;
   }
 
-  return { powerW, cadenceRpm, heartRateBpm, gear, status };
+  return {
+    powerW,
+    cadenceRpm,
+    heartRateBpm,
+    gear,
+    status,
+    speed,
+    distance,
+    elevationGain,
+    energy,
+    warning,
+  };
+}
+
+function readHudTargets(document: AppDocument): HudTargets | undefined {
+  const target = (elementId: (typeof HUD_ELEMENT_IDS)[number]): TextTarget | undefined =>
+    document.querySelector(`#hud-${elementId}`) ?? undefined;
+
+  return hudTargetsFrom({
+    powerW: target("powerW"),
+    cadenceRpm: target("cadenceRpm"),
+    heartRateBpm: target("heartRateBpm"),
+    gear: target("gear"),
+    status: target("status"),
+    speed: target("speed"),
+    distance: target("distance"),
+    elevationGain: target("elevationGain"),
+    energy: target("energy"),
+    warning: target("warning"),
+  });
 }
 
 export function startApp(options: StartAppOptions): App {
@@ -65,7 +127,13 @@ export function startApp(options: StartAppOptions): App {
   const ticker = options.ticker ?? createIntervalTicker(HUD_INTERVAL_MS);
 
   const render = (): void => {
-    renderHud(options.ride.state(), targets);
+    const snapshot = options.ride.snapshot();
+
+    if (snapshot === undefined) {
+      return;
+    }
+
+    renderHud(rideHudModelFrom(snapshot, options.ride.connected()), targets);
   };
 
   render();

@@ -1,0 +1,2124 @@
+{
+  "routeId": "test-loop",
+  "profile": {
+    "displayName": "Rider",
+    "massKg": 75,
+    "heightCm": 185,
+    "bike": {
+      "massKg": 8,
+      "chainringTeeth": 42,
+      "cogTeeth": 14,
+      "wheelCircM": 2.105
+    },
+    "gearPreset": "zwift-like-24",
+    "units": "metric"
+  },
+  "trainerStrategy": "effectiveGrade",
+  "initial": {
+    "gearIndex": 11,
+    "speedMps": 8.333333333333334,
+    "routePosM": 5600
+  },
+  "samples": [
+    {
+      "tS": 0,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 1,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 2,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 3,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 4,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 5,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 6,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 7,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 8,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 9,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 10,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 1
+    },
+    {
+      "tS": 11,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 12,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 13,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 14,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 15,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 16,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 17,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 18,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 19,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 20,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 1
+    },
+    {
+      "tS": 21,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 22,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 23,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 24,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 25,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 26,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 27,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 28,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 29,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 30,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 31,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 32,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 33,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 34,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 35,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 36,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 37,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 38,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 39,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 40,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 41,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 42,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 43,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 44,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 45,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 46,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 47,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 48,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 49,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 50,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 51,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 52,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 53,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 54,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 55,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 56,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 57,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 58,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 59,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 60,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 61,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 62,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 63,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 64,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 65,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 66,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 67,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 68,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 69,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 70,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 71,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 72,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 73,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 74,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 75,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 76,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 77,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 78,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 79,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 80,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 81,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 82,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 83,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 84,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 85,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 86,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 87,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 88,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 89,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 90,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 91,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 92,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 93,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 94,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 95,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 96,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 97,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 98,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 99,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 100,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 101,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 102,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 103,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 104,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 105,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 106,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 107,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 108,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 109,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 110,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 111,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 112,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 113,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 114,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 115,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 116,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 117,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 118,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 119,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 120,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 121,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 122,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 123,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 124,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 125,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 126,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 127,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 128,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 129,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 130,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 131,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 132,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 133,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 134,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 135,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 136,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 137,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 138,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 139,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 140,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 141,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 142,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 143,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 144,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 145,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 146,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 147,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 148,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 149,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 150,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 151,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 152,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 153,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 154,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 155,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 156,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 157,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 158,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 159,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 160,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 161,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 162,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 163,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 164,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 165,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 166,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 167,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 168,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 169,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 170,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 171,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 172,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 173,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 174,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 175,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 176,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 177,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 178,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 179,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 180,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 181,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 182,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 183,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 184,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 185,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 186,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 187,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 188,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 189,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 190,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 191,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 192,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 193,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 194,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 195,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 196,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 197,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 198,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 199,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 200,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 201,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 202,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 203,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 204,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 205,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 206,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 207,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 208,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 209,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 210,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 211,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 212,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 213,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 214,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 215,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 216,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 217,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 218,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 219,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 220,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 221,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 222,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 223,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 224,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 225,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 226,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 227,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 228,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 229,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 230,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 231,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 232,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 233,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 234,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 235,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 236,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 237,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 238,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 239,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 240,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 241,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 242,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 243,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 244,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 245,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 246,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 247,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 248,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 249,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 250,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 251,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 252,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 253,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 254,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 255,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 256,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 257,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 258,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 259,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 260,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 261,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 262,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 263,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 264,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 265,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 266,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 267,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 268,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 269,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 270,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 271,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 272,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 273,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 274,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 275,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 276,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 277,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 278,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 279,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 280,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 281,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 282,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 283,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 284,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 285,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 286,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 287,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 288,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 289,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 290,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 291,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 292,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 293,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 294,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 295,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 296,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 297,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 298,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    },
+    {
+      "tS": 299,
+      "powerW": 0,
+      "cadenceRpm": 90,
+      "hrBpm": 110,
+      "shift": 0
+    }
+  ]
+}

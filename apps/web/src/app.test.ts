@@ -1,21 +1,17 @@
 import { createManualTicker } from "@voltonaut/ble";
-import { createEventBus } from "@voltonaut/shared";
-import { describe, expect, it } from "vitest";
+import { createEngine, createRoute, FLAT_LOOP, type RideSnapshot } from "@voltonaut/engine";
+import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
+import { expect, it } from "vitest";
 
-import type { AppDocument } from "./app.js";
+import type { AppDocument, RideHudSource } from "./app.js";
 import { startApp } from "./app.js";
-import { createSimRide } from "./game/simRide.js";
 import type { TextTarget } from "./ui/hud.js";
 
-interface FakeHudTargets {
-  readonly "hud-powerW": TextTarget & { read: () => string };
-  readonly "hud-cadenceRpm": TextTarget & { read: () => string };
-  readonly "hud-heartRateBpm": TextTarget & { read: () => string };
-  readonly "hud-gear": TextTarget & { read: () => string };
-  readonly "hud-status": TextTarget & { read: () => string };
+interface Target extends TextTarget {
+  readonly read: () => string;
 }
 
-function createTextTarget(): TextTarget & { read: () => string } {
+function createTarget(): Target {
   let text = "";
 
   return {
@@ -26,22 +22,30 @@ function createTextTarget(): TextTarget & { read: () => string } {
   };
 }
 
-function createDocument(withMissingElement = false): AppDocument & {
-  targets: FakeHudTargets;
-} {
-  const targets = {
-    "hud-powerW": createTextTarget(),
-    "hud-cadenceRpm": createTextTarget(),
-    "hud-heartRateBpm": createTextTarget(),
-    "hud-gear": createTextTarget(),
-    "hud-status": createTextTarget(),
+function createTargets() {
+  return {
+    "hud-powerW": createTarget(),
+    "hud-cadenceRpm": createTarget(),
+    "hud-heartRateBpm": createTarget(),
+    "hud-gear": createTarget(),
+    "hud-status": createTarget(),
+    "hud-speed": createTarget(),
+    "hud-distance": createTarget(),
+    "hud-elevationGain": createTarget(),
+    "hud-energy": createTarget(),
+    "hud-warning": createTarget(),
   };
+}
 
+function createDocument(
+  withMissingElement = false,
+): AppDocument & { targets: Record<string, Target> } {
+  const targets = createTargets();
   const targetsById = new Map<string, TextTarget>(Object.entries(targets));
 
   return {
     targets,
-    querySelector(selector) {
+    querySelector(selector: string) {
       if (withMissingElement && selector === "#hud-status") {
         return null;
       }
@@ -51,33 +55,82 @@ function createDocument(withMissingElement = false): AppDocument & {
   };
 }
 
-describe("startApp", () => {
-  it("renders the ride state on every tick and stops after stop", () => {
-    const bus = createEventBus();
-    const ride = createSimRide({ bus });
-    const ticker = createManualTicker();
-    const document = createDocument();
+function createRideSource() {
+  const engine = createEngine({ route: createRoute(FLAT_LOOP), profile: DEFAULT_RIDER_PROFILE });
 
-    const app = startApp({ document, ride, ticker });
-    expect(document.targets["hud-powerW"].read()).toBe("0 W");
+  engine.ingest({ type: "trainer.data", tS: 0, powerW: 210, cadenceRpm: 95 });
+  engine.advance(1);
 
-    bus.publish({ type: "trainer.data", tS: 1, powerW: 210, cadenceRpm: 95 });
-    ticker.tick();
-    expect(document.targets["hud-powerW"].read()).toBe("210 W");
+  return {
+    bus: engine,
+    source: {
+      snapshot: (): RideSnapshot | undefined => engine.snapshot(),
+      connected: () => true,
+      dispose: () => {
+        engine.drainEvents();
+      },
+    },
+  };
+}
 
-    app.stop();
-    bus.publish({ type: "trainer.data", tS: 2, powerW: 250, cadenceRpm: 100 });
-    ticker.tick();
-    expect(document.targets["hud-powerW"].read()).toBe("210 W");
-  });
+it("renders the engine snapshot values into the HUD", () => {
+  const document = createDocument();
+  const ticker = createManualTicker();
 
-  it("rejects a document with missing HUD elements", () => {
-    const bus = createEventBus();
-    const ride = createSimRide({ bus });
-    const document = createDocument(true);
+  startApp({ document, ride: createRideSource().source, ticker });
 
-    expect(() => startApp({ document, ride, ticker: createManualTicker() })).toThrow(
-      "HUD elements are missing from the document",
-    );
-  });
+  expect(document.targets["hud-powerW"]?.read()).toMatch(/^\d+ W$/u);
+  expect(document.targets["hud-distance"]?.read()).toMatch(/^\d+\.\d\d km$/u);
+  expect(document.targets["hud-status"]?.read()).toBe("Sim connected");
+  expect(document.targets["hud-warning"]?.read()).toBe("");
+});
+
+it("re-renders on every tick and freezes after stop", () => {
+  const document = createDocument();
+  const ticker = createManualTicker();
+  const ride = createRideSource();
+  const app = startApp({ document, ride: ride.source, ticker });
+
+  const before = document.targets["hud-distance"]?.read();
+  ride.bus.advance(60);
+  ticker.tick();
+
+  expect(document.targets["hud-distance"]?.read()).not.toBe(before);
+
+  app.stop();
+  const stopped = document.targets["hud-distance"]?.read();
+  ride.bus.advance(60);
+  ticker.tick();
+
+  expect(document.targets["hud-distance"]?.read()).toBe(stopped);
+});
+
+it("skips rendering while no snapshot exists yet", () => {
+  const document = createDocument();
+  const ticker = createManualTicker();
+  let disposed = false;
+
+  const ride: RideHudSource = {
+    snapshot: () => {},
+    connected: () => false,
+    dispose: () => {
+      disposed = true;
+    },
+  };
+
+  const app = startApp({ document, ride, ticker });
+
+  expect(document.targets["hud-powerW"]?.read()).toBe("");
+
+  app.stop();
+  expect(disposed).toBe(true);
+});
+
+it("rejects a document with missing HUD elements", () => {
+  const document = createDocument(true);
+  const ride = createRideSource();
+
+  expect(() => startApp({ document, ride: ride.source, ticker: createManualTicker() })).toThrow(
+    "HUD elements are missing from the document",
+  );
 });

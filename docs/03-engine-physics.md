@@ -24,6 +24,8 @@ Reihenfolge: Schalten anwenden → Messwerte glätten (EMA, τ ≈ 1 s für Anze
 
 Datenausfall: kein `trainer.data` seit > 3 s → `powerW = 0` (Ausrollen), HUD-Warnung. Pause automatisch, wenn `speedMps < 0.5` und `cadence = 0` für 5 s.
 
+Ab E3 läuft die Engine im Dedicated Web Worker (ADR-011, Freigabe ausstehend). `advance(elapsedS)` verarbeitet feste 0,05-s-Ticks mit einem Akkumulator. Pro Aufwachung sind höchstens 120 Ticks erlaubt. Der Rest erzeugt `ride.clockSkipped`. Ohne frische Trainerdaten setzt die Engine nach mehr als 3 s auch die Rohkadenz auf null. Nach 100 stehenden Ticks greift Auto-Pause am Anfang von Tick 101. Leistung oder Kadenz lösen die Pause.
+
 ## 2. Physikmodell (virtuelles Tempo aus Leistung)
 
 Kräfte am Rad (θ = atan(grade/100)):
@@ -61,7 +63,7 @@ interface RiderProfile {
 ```
 
 - Validierung: Masse 30–200 kg, Größe 120–220 cm, Kettenblatt 28–60 Z., Radumfang 1,9–2,4 m.
-- CdA-Default aus Größe/Masse geschätzt (DuBois-Körperoberfläche × Faktor), überschreibbar.
+- CdA-Schätzung in E3: `0,32 · BSA(heightCm, massKg) / BSA(185, 75)` mit DuBois `BSA = 0,007184 · heightCm^0,725 · massKg^0,425`. Das Default-Profil ergibt exakt 0,32 m². Ein CdA-Feld im Profil ist noch nicht implementiert.
 - Änderungen an Masse während einer Fahrt erst bei der nächsten Fahrt wirksam (Plausibilitätsprüfung am Server nutzt den Wert, der zu Fahrtbeginn galt).
 
 ## 3. Virtuelle Gänge
@@ -130,9 +132,15 @@ const gradeEffPct = clamp(
 
 `mT` (Trainer-intern angenommene Masse) ist ❓ – Startwert 75 kg + Rad, per Kalibrierung justieren: bei Sim 5 % konstant 200 W treten, Kadenz messen, mit Erwartung vergleichen. Wir senden `crr` und `cw` selbst mit, damit `crrT`/`cwT` bekannt sind.
 
+E3 verwendet vorläufig `mT = 83 kg`, unabhängig von der Profilmasse. Das ist kein Hardware-Messwert. Die E2-Kalibrierung bleibt offen.
+
 Glättung: Trainer-Grade nur senden bei Änderung ≥ 0,1 % oder Gangwechsel; Streckensteigung über 20–30 m glätten (`gradeAt(d, smoothingM)`); Abfahrten auf −5 % clampen (Trainer kann nicht antreiben). Gangwechsel sofort senden (Latenzziel < 300 ms).
 
 Ohne Kadenz (`cadence = 0`): letzten Grade halten.
+
+E3 verwendet für Physik und Trainer dieselbe Steigung aus `gradeAt(routePosM, 25)`. Die zentrale Differenz teilt am nicht geschlossenen Routenende durch die tatsächliche, geklemmte Fensterbreite. Loop-Fenster laufen über den Übergang. Reguläre Trainer-Kommandos sind fünf Ticks auseinander; Gangwechsel umgehen dieses Intervall.
+
+Die Monotonie „höherer Gang, höherer Grade“ gilt bei Strategie A auf flacher Strecke und bergauf. Bei negativem virtuellem Radkraft-Term kann sich die Reihenfolge bergab umkehren. Ein Test belegt diese Grenze des linearen Kraftmodells; E2 muss das gewünschte Abfahrtsverhalten festlegen.
 
 ## 4a. Windschatten, Bots, Power-ups (Engine-seitig)
 

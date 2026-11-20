@@ -1,0 +1,49 @@
+{
+  "distanceM": 25403.690733,
+  "elevationGainM": 272.2861,
+  "energyKj": 612.9,
+  "tS": 3516.25,
+  "endSpeedMps": 2.107235,
+  "laps": 2,
+  "segments": [
+    {
+      "segmentId": "sprint-1",
+      "lap": 0,
+      "enteredTS": 247.8,
+      "exitedTS": 307
+    },
+    {
+      "segmentId": "kom-1",
+      "lap": 0,
+      "enteredTS": 739.4,
+      "exitedTS": 914.05
+    },
+    {
+      "segmentId": "sprint-1",
+      "lap": 1,
+      "enteredTS": 1516.25,
+      "exitedTS": 1566.7
+    },
+    {
+      "segmentId": "kom-1",
+      "lap": 1,
+      "enteredTS": 1968.65,
+      "exitedTS": 2191.75
+    },
+    {
+      "segmentId": "sprint-1",
+      "lap": 2,
+      "enteredTS": 2814.55,
+      "exitedTS": 2873.85
+    },
+    {
+      "segmentId": "kom-1",
+      "lap": 2,
+      "enteredTS": 3341.6,
+      "exitedTS": null
+    }
+  ],
+  "commandCount": 263,
+  "commandHash": "1c9cd4964c3809738eda6a90136fec46140810ded4afeadc171e5596846b90b4",
+  "schemaVersion": 1
+}
