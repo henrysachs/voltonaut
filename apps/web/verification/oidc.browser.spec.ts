@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { SessionResponseSchema, type SessionResponse } from "@voltonaut/shared";
 
-const webOrigin = "http://127.0.0.1:5187";
+const webOrigin = process.env["WEB_ORIGIN"] ?? "http://127.0.0.1:5187";
 const api = process.env["API_ORIGIN"] ?? "";
 const artifacts = process.env["AUTH_ARTIFACTS"] ?? "";
 

@@ -4,6 +4,8 @@ import type { AuthConfigResponse, SessionResponse, User } from "@voltonaut/share
 import { ApplicationSession } from "./applicationSession.js";
 import type { AuthTransport } from "./authTransport.js";
 import { sessionPersistence } from "./sessionPersistence.js";
+import { privateAuthTransport } from "./privateAuthTransport.js";
+import { deferred } from "./testdata/deferred.js";
 
 const user: User = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -13,21 +15,6 @@ const user: User = {
 
 const token = "s".repeat(43);
 const session: SessionResponse = { user, sessionToken: token };
-
-function deferred<T>() {
-  let resolve: ((value: T) => void) | undefined;
-
-  const promise = new Promise<T>((settle) => {
-    resolve = settle;
-  });
-
-  return {
-    promise,
-    resolve: (value: T) => {
-      resolve?.(value);
-    },
-  };
-}
 
 function fixture() {
   const data = new Map<string, string>();
@@ -70,7 +57,14 @@ function fixture() {
     calls.push("navigate");
   };
 
-  return { data, calls, persistence, transport, navigate };
+  return {
+    data,
+    calls,
+    persistence,
+    transport,
+    navigate,
+    privateTransport: privateAuthTransport("http://localhost:3000"),
+  };
 }
 
 function competingExchanges() {

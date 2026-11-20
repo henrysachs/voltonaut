@@ -4,6 +4,9 @@ import { takeAuthHandoff } from "./sync/authHandoff.js";
 import { authTransport } from "./sync/authTransport.js";
 import { sessionPersistence } from "./sync/sessionPersistence.js";
 import { mountAccountPanel } from "./ui/accountPanel.js";
+import { privateAuthTransport } from "./sync/privateAuthTransport.js";
+import type { ProfileBootstrap } from "./profileBootstrap.js";
+import { setupBrowserAccountData } from "./browserAccountData.js";
 
 declare global {
   interface ImportMeta {
@@ -11,7 +14,9 @@ declare global {
   }
 }
 
-export function setupBrowserAccount(): void {
+export function setupBrowserAccount(
+  profile: () => Promise<ProfileBootstrap>,
+): Readonly<Pick<ApplicationSession, "authorize" | "subscribe">> | undefined {
   const handoff = takeAuthHandoff(window.location.href, (path) => {
     window.history.replaceState(null, "", path);
   });
@@ -24,7 +29,7 @@ export function setupBrowserAccount(): void {
     link.textContent = "Zum Anmelden die kanonische Voltonaut-Seite öffnen";
     host?.append(link);
 
-    return;
+    return undefined;
   }
 
   try {
@@ -32,6 +37,7 @@ export function setupBrowserAccount(): void {
 
     const session = new ApplicationSession({
       transport: authTransport(origin),
+      privateTransport: privateAuthTransport(origin),
       persistence: sessionPersistence(origin, () => window.localStorage),
       navigate: () => {
         window.location.assign(`${origin}/v1/auth/oidc/start`);
@@ -39,11 +45,16 @@ export function setupBrowserAccount(): void {
     });
 
     mountAccountPanel(session);
+    void setupBrowserAccountData(session, profile);
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
     else if (handoff.kind === "none") void session.restore();
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");
+
+    return session;
   } catch {
     host?.append("Anmeldung nicht konfiguriert. Gastbetrieb bleibt verfügbar.");
+
+    return undefined;
   }
 }

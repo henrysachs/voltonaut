@@ -1,7 +1,12 @@
-import { DEFAULT_RIDER_PROFILE, type RiderProfile } from "@voltonaut/shared";
+import { DEFAULT_RIDER_PROFILE, ProfileInputSchema, type RiderProfile } from "@voltonaut/shared";
 
 import { openProfileDatabase } from "./sync/profile-database.js";
-import { createProfileStore, type ProfileStore } from "./sync/profile-store.js";
+import {
+  createProfileStore,
+  PROFILE_SCHEMA_VERSION,
+  type ProfileStore,
+  type ProfileWriteLease,
+} from "./sync/profile-store.js";
 import {
   fillProfileForm,
   parseProfileForm,
@@ -80,7 +85,20 @@ async function saveProfile(store: ProfileStore, profile: RiderProfile): Promise<
   }
 }
 
-export async function setupProfile(): Promise<RiderProfile> {
+export interface ProfileBootstrap {
+  readonly initialProfile: Readonly<Omit<RiderProfile, "bike">> & {
+    readonly bike: Readonly<RiderProfile["bike"]>;
+  };
+  readonly saved: () => Promise<RiderProfile | undefined>;
+  readonly apply: (
+    profile: Readonly<Omit<RiderProfile, "bike">> & {
+      readonly bike: Readonly<RiderProfile["bike"]>;
+    },
+    lease: ProfileWriteLease,
+  ) => Promise<void>;
+}
+
+export async function setupProfile(): Promise<ProfileBootstrap> {
   const database = Promise.resolve().then(() => openProfileDatabase(indexedDB));
 
   const store: ProfileStore = {
@@ -98,5 +116,22 @@ export async function setupProfile(): Promise<RiderProfile> {
 
   mountProfile(store, profile);
 
-  return profile;
+  return {
+    initialProfile: profile,
+    saved: store.load,
+    async apply(next, lease) {
+      const validated = ProfileInputSchema.parse(next);
+
+      await (
+        await database
+      ).saveRecord({ schemaVersion: PROFILE_SCHEMA_VERSION, profile: validated }, lease);
+
+      if (!lease.current()) return;
+      const inputs = profileInputs();
+
+      if (inputs !== undefined) fillProfileForm(inputs, validated);
+      text("#profile-error", "");
+      text("#profile-status", "Serverprofil lokal gespeichert. Gilt erst für die nächste Fahrt.");
+    },
+  };
 }

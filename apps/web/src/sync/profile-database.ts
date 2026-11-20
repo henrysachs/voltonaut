@@ -1,6 +1,7 @@
 import { StoredProfileRecordSchema, type StoredProfileRecord } from "@voltonaut/shared";
 
 import type { ProfileDatabase } from "./profile-store.js";
+import { writeProfileRecord } from "./profileWrite.js";
 import {
   PROFILE_DATABASE_NAME,
   PROFILE_RECORD_KEY,
@@ -39,13 +40,7 @@ function wrapDatabase(
       return parsed.success ? parsed.data : undefined;
     },
 
-    async saveRecord(record: StoredProfileRecord): Promise<void> {
-      const store = database
-        .transaction(PROFILE_STORE_NAME, "readwrite")
-        .objectStore(PROFILE_STORE_NAME);
-
-      await requestToPromise(store.put(record, PROFILE_RECORD_KEY));
-    },
+    saveRecord: (record, lease) => writeProfileRecord(database, record, lease),
   };
 }
 

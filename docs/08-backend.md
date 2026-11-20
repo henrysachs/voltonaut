@@ -73,7 +73,7 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 
 Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)` und `createRidesTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und beide Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an `AccountsModule.register` und `RidesModule.register`. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
 
-Die Datenmigration in diesem Teilschritt ist vorläufig. Nach Integration der getrennten Auth-Migration erzeugt der Parent die endgültige Reihenfolge und den Snapshot neu. `0000` bleibt unverändert. Der Browser lädt diese Daten noch nicht hoch.
+Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. `0000` und Auth-`0001` bleiben unverändert. Der Browser verwendet die Endpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
 
 ```sql
 users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at)
@@ -178,7 +178,11 @@ Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 
 ## Offline-first-Sync (Client `sync/`)
 
-Aktueller lokaler Teilschritt ist [E10-01](specs/E10-01-local-ride-recording-tcx.md). Abgeschlossene Aufnahmen bleiben in einer separaten IndexedDB und können manuell als TCX heruntergeladen werden. Sie haben keinen Serverstatus, keine Belohnung und keinen Upload. Die folgende Outbox und die Serverhistorie bleiben Zielstand.
+[E10-01](specs/E10-01-local-ride-recording-tcx.md) speichert abgeschlossene Aufnahmen separat und erlaubt TCX-Downloads. [E5-09](specs/E5-09-account-bound-sync.md) ergänzt manuelle Kontoaktionen. Das Archiv bleibt unverändert und besitzt keinen Aufnahme-Eigentümer. Erst die bestätigte Zuordnung speichert eine vollständige Kopie in `voltonaut-account-outbox`. API-Origin und kanonische Fahrt-ID bilden den atomaren Schlüssel. Der validierte Account bleibt unveränderlicher Eigentümer dieser lokalen Zuordnung.
+
+Das Panel liest das eigene Serverprofil und zusammengefasste Serverfahrten. Ein Profil-Push verwendet nur den zuletzt gespeicherten lokalen Stand. Ein Profil-Pull verändert lokale Einstellungen erst nach Bestätigung und erfolgreichem Speichern. Laufende Fahrtparameter bleiben eingefroren. Ausstehende lokale Profile werden nicht durch GET überschrieben. Logout entfernt den Kontospiegel sofort und widerruft laufende Fähigkeiten. Schon serverseitig angenommene Requests können dennoch abschließen. Ihre ausstehenden Snapshots bleiben bis zur idempotenten Wiederholung durch denselben Account erhalten.
+
+Die Outbox enthält höchstens 20 Einträge einschließlich Profilaufträgen. Netzwerkfehler und Serverfehler erhalten Backoff und höchstens fünf Versuche je Budget. Es gibt keine Retry-Schleife. Bereits bestätigte Aufträge werden nach erneuter validierter Anmeldung oder einem Online-Ereignis versucht. Ein ausgeschöpftes Budget beginnt nur nach ausdrücklichem Retry und Rückhaltefrist neu. HTTP 401 verlangt erneute Anmeldung. Andere Zugriffs-, Konflikt- und Vertragsfehler bleiben blockiert. Ohne bestätigten dauerhaften Snapshot startet kein Upload. Speicherfehler blockieren weder Aufnahme noch TCX. Die folgenden Punkte zu Belohnungen, Käufen und Konfliktauflösung beschreiben weiterhin den Zielstand.
 
 - Beim Start: Cache aus IndexedDB optional laden; Storagefehler blockieren keine Fahrt. Nur mit vorhandener Session optional `GET /v1/me` im Hintergrund. Kein automatischer Login; Gast und Sim starten ohne Authentifizierung, Storage oder Netzwerk.
 - Nach der Fahrt: `RideUpload` in **Outbox** (IndexedDB) → Upload mit Retry/Backoff; UI zeigt XP/Volts als „vorläufig" bis Server-Antwort.
