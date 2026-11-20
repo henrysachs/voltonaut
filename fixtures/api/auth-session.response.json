@@ -1,0 +1,8 @@
+{
+  "sessionToken": "a-public-contract-example-not-a-real-session-token",
+  "user": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "email": "rider@example.com",
+    "createdAt": "2026-11-20T12:00:00.000Z"
+  }
+}

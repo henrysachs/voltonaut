@@ -37,6 +37,8 @@ const allowedOverrideKeys = new Set([
   "emitDecoratorMetadata",
 ]);
 
+const serverAllowedOverrideKeys = new Set([...allowedOverrideKeys, "skipLibCheck"]);
+
 const allowedTopLevelKeys = new Set([
   "extends",
   "compilerOptions",
@@ -49,11 +51,19 @@ const allowedTopLevelKeys = new Set([
 const pureLib = ["ES2023"];
 const browserLib = ["ES2023", "DOM", "DOM.Iterable"];
 
-function allowedKeyFindings(relativePath: string, compilerOptions: CompilerOptionsFile): string[] {
+interface CompilerOptionPolicy {
+  readonly has: (key: string) => boolean;
+}
+
+function allowedKeyFindings(
+  relativePath: string,
+  compilerOptions: CompilerOptionsFile,
+  allowedKeys: CompilerOptionPolicy = allowedOverrideKeys,
+): string[] {
   const findings: string[] = [];
 
   for (const key of Object.keys(compilerOptions)) {
-    if (!allowedOverrideKeys.has(key)) {
+    if (!allowedKeys.has(key)) {
       findings.push(`${relativePath}: compiler option '${key}' is not an allowed override`);
     }
   }
@@ -174,6 +184,12 @@ function serverFindings(relativePath: string, compilerOptions: CompilerOptionsFi
     findings.push(`${relativePath}: server types must be exactly ["node"]`);
   }
 
+  if (compilerOptions["skipLibCheck"] !== true) {
+    findings.push(
+      `${relativePath}: server must set skipLibCheck to true while Drizzle declarations are broken`,
+    );
+  }
+
   if (
     compilerOptions["experimentalDecorators"] !== true ||
     compilerOptions["emitDecoratorMetadata"] !== true
@@ -188,7 +204,12 @@ function serverFindings(relativePath: string, compilerOptions: CompilerOptionsFi
 
 function compilerOptionFindings(relativePath: string, config: TsConfigFile): readonly string[] {
   const compilerOptions = config.compilerOptions ?? {};
-  const findings = allowedKeyFindings(relativePath, compilerOptions);
+
+  const allowedKeys = /^apps\/server\/tsconfig.*\.json$/u.test(relativePath)
+    ? serverAllowedOverrideKeys
+    : allowedOverrideKeys;
+
+  const findings = allowedKeyFindings(relativePath, compilerOptions, allowedKeys);
 
   if (relativePath === "tsconfig.json") {
     return [...findings, ...rootConfigFindings(relativePath, compilerOptions)];

@@ -1,36 +1,28 @@
 import { readFileSync } from "node:fs";
 
-import type { INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { HealthResponseSchema } from "@voltonaut/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AppModule } from "../app.module.js";
 import { SERVER_VERSION } from "../version.js";
+import { createTestApp, httpServerOf } from "../testing/test-app.spec.js";
+import type { TestApp } from "../testing/test-app.spec.js";
 
 const fixtureUrl = new URL("../../../../fixtures/api/health.response.json", import.meta.url);
 
 describe("GET /healthz", () => {
-  let app: INestApplication;
+  let testApp: TestApp;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
-    await app.listen(0, "127.0.0.1");
+    testApp = await createTestApp();
   });
 
   afterAll(async () => {
-    await app.close();
+    await testApp.app.close();
   });
 
   it("answers over real HTTP and matches the shared response schema", async () => {
-    const baseUrl = await app.getUrl();
-    const response = await request(baseUrl).get("/healthz").expect(200);
+    const response = await request(httpServerOf(testApp.app)).get("/healthz").expect(200);
 
     const body = HealthResponseSchema.parse(response.body);
 

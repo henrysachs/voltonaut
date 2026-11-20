@@ -5,6 +5,7 @@
     "types": ["node"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
     "rootDir": ".",
     "outDir": "dist/types"
   },
