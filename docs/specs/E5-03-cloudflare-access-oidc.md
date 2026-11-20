@@ -1,7 +1,7 @@
 # Spec E5-03 – Login über Cloudflare Access OIDC
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md`, E5, Auth über Cloudflare Access OIDC.
-- **Status:** Entwurf. Zielentscheidung angenommen, Access aktiviert; App-Konfiguration und Laufzeitumsetzung offen.
+- **Status:** Laufzeitentwurf. Zielentscheidung angenommen, Access-App und Pilot-Policy eingerichtet. Laufzeitumsetzung und echter Pilot offen. Einrichtungsnachweis: [E5-04](E5-04-access-oidc-pilot-setup.md).
 - **Betroffene Module:** geplant `apps/server/src/auth`, `database`, `apps/web/src/ui`, `sync`, API-Schemas in `packages/shared`.
 - **Entscheidung:** [ADR-013](../decisions/ADR-013-cloudflare-access-oidc.md).
 
@@ -13,10 +13,10 @@ Henry meldet sich ausdrücklich über Cloudflare Access an und erhält eine loka
 
 Diese Spec dokumentiert den Plan, nicht einen ausgelieferten Login. Alle folgenden Abnahmekriterien betreffen die spätere Laufzeitumsetzung und bleiben offen.
 
-- Auth-Grundlage aus PR #6 zuerst übernehmen oder deren benötigten Stand explizit integrieren. PR #6 ist am 20.11.2026 offen, nicht auf `main`.
-- Der Aktivierungsblocker ist seit Henrys Aktivierung am 20.11.2026 gelöst. Zuvor scheiterten Nur-Lese-Abfragen mit HTTP 403, Code 9999, `access.api.error.not_enabled`. Die erneute Prüfung bestätigt eine Organisation, einen IdP vom Typ `cloudflare` und keine Apps. Plan und Seats fehlen in der Antwort. Pilot-Login-Methode, Tarif-/Kontingentprüfung, enge App-/Policy-Freigabe und sichere Credential-Übergabe stehen aus. Keine Google- oder Microsoft-Konfiguration nachgewiesen.
+- Auth-Grundlage aus PR #6 ist seit `191d4e8` auf `main` und für die Umsetzung verfügbar.
+- Der Aktivierungsblocker ist seit Henrys Aktivierung am 20.11.2026 gelöst. Der damalige Ausgangsbefund bestätigt eine Organisation, einen IdP vom Typ `cloudflare` und keine Apps. Nach separater Freigabe sind App, Pilot-Policy und Credential-Hinterlegung inzwischen eingerichtet. E5-04 dokumentiert den aktuellen Befund einschließlich `Teams Free Base`. Seats und echter Login sind noch nicht bestätigt. Keine Google- oder Microsoft-Konfiguration nachgewiesen.
 - Keine Konfiguration, API-Schreiboperation, Buchung, neue Abhängigkeit oder Secret-Änderung gehört zur Dokumentationsaufgabe.
-- Die versehentlich als fertig markierten E0-opt-Punkte VPS-Deploy und Observability werden nur berichtigt. `SERVER_DEPLOY_ENABLED=false`; `main` liefert serverseitig nur Health. Die Korrektur ist keine neue Implementierung.
+- Die versehentlich als fertig markierten E0-opt-Punkte VPS-Deploy und Observability bleiben offen. `SERVER_DEPLOY_ENABLED=false`; Observability ist noch nicht verdrahtet.
 
 ## Abnahmekriterien
 

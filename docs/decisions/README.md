@@ -16,6 +16,6 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [010](ADR-010-observability.md) | Observability: OpenTelemetry, strukturierte Logs, vorhandener Grafana-Stack | Angenommen |
 | [011](ADR-011-engine-dedicated-worker.md) | Engine im Dedicated Web Worker | Vorgeschlagen, Henrys Freigabe ausstehend |
 | [012](ADR-012-server-skiplibcheck-drizzle.md) | `skipLibCheck: true` nur für `apps/server` wegen Drizzle-Deklarationen | Angenommen |
-| [013](ADR-013-cloudflare-access-oidc.md) | Cloudflare Access als OIDC-Broker für den Login | Zielentscheidung angenommen; Access aktiviert, App und Umsetzung offen |
+| [013](ADR-013-cloudflare-access-oidc.md) | Cloudflare Access als OIDC-Broker für den Login | App und Pilot-Policy eingerichtet; Laufzeit und echter Pilot offen |
 | [014](ADR-014-three-rendering-dependencies.md) | Abhängigkeiten für die erste 3D-Szene | Umsetzung von ADR-002 und ADR-008 |
 | [015](ADR-015-oidc-client-library.md) | openid-client für serverseitigen OIDC-Codeflow | Gewählt für E5-06 |
