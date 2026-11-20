@@ -57,10 +57,10 @@ Der HTTP-Adapter vertraut genau einem Reverse-Proxy. Produktion darf den API-Por
 ## Verifikationsstand am 20.11.2026
 
 - `mise run install` erfolgreich. Die Warnung über übersprungene `better-sqlite3`-Buildskripte ist unschädlich. Version 13.2.0 enthält native Plattform-Prebuilds.
-- `CI=true mise run check` erfolgreich. 197 Tests in 44 Dateien und 3 Browser-E2E-Tests sind grün. Coverage-Schwellen bleiben unverändert erfüllt.
+- `CI=true mise run check` nach der Review-Korrektur und Integration von `main` einschließlich BLE erfolgreich. 284 Tests in 60 Dateien und 5 Browser-E2E-Tests sind grün. Coverage-Schwellen bleiben unverändert erfüllt.
 - Review-Korrektur: `Retry-After` übernimmt die Sekundenwerte aus `@nestjs/throttler` ohne erneute Umrechnung. Der HTTP-Regressionstest `apps/server/src/auth/rate-limit.test.ts` scheiterte zuvor mit 4 statt mindestens 3590 Sekunden für beide Magic-Link-Limits und 1 statt mindestens 55 Sekunden für Sessions. Nach der Korrektur sind beide Tests grün. Die Obergrenzen betragen 3600 und 60 Sekunden. Keine Sleeps oder Modul-Mocks.
-- Nach der Review-Korrektur erfolgreich: `mise exec -- pnpm exec vitest run apps/server/src` mit 24 Tests, `mise run test` mit 197 Tests sowie `mise run lint`, `mise run typecheck`, `mise run guard`, `mise run depcruise` und `mise run build`. Der produktive Paket-Smoke-Test ist erneut erfolgreich. Das vollständige Gate wartet für diesen Stand noch auf die koordinierte Freigabe von Port 5173.
+- Der produktive Paket-Smoke-Test ist auch nach der Integration mit BLE erneut erfolgreich. Migrationen und Server starten aus dem eigenständigen Produktionspaket. Keine Mailprovider-Aufrufe.
 - Formatierung, Lint, Typecheck, Guard und dependency-cruiser einzeln erfolgreich. `mise run build` erfolgreich.
 - `pnpm --filter @voltonaut/server deploy --prod <Ausgabeverzeichnis>` enthält SQL, Snapshot und Migrationsjournal. `mise exec -- node apps/server/scripts/verify-package.ts <Ausgabeverzeichnis>` prüft den Paketstart mit normalem CWD, Migrationen, WAL, öffentliches `/healthz`, Bearer-Guard, SIGTERM und fehlende Mailkonfiguration. Der Lauf ist erfolgreich und ruft keinen Mailprovider auf.
 - Der zwischenzeitliche Konflikt auf Port 5173 ist behoben. Nach koordinierter Freigabe lief das vollständige Gate isoliert erfolgreich.
-- Kein Deploy und kein echter Mailversand. Vollständiges E5, manuelle Mail-Abnahme und Review bleiben offen.
+- Unabhängiges Nachreview der Korrektur: Approve, keine nachgewiesenen Blocker. Kein Deploy und kein echter Mailversand. Vollständiges E5 und die manuelle Mail-Abnahme bleiben offen.
