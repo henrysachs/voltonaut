@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Voltonaut</title>
     <link rel="stylesheet" href="/src/styles.css" />
@@ -10,6 +11,10 @@
     <main class="app" aria-label="Voltonaut">
       <header class="ride-title"><span>VOLTONAUT</span><span>FIRST RIDE / TEST LOOP</span></header>
       <section id="ride-scene" class="scene" aria-label="Ride world"></section>
+      <section id="account-panel" class="panel account" aria-label="Konto" lang="de">
+        <h2>Konto</h2>
+        <p>Gastfahrten bleiben lokal. Anmeldung lädt keine Fahrten hoch.</p>
+      </section>
       <section class="panel hud" aria-label="Ride HUD">
         <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
         <dl class="hud__values">

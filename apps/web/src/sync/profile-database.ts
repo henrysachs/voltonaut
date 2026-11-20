@@ -56,17 +56,38 @@ export function openProfileDatabase(
 ): Promise<ProfileDatabase> {
   return new Promise<ProfileDatabase>((resolve, reject) => {
     const request = indexedDB.open(PROFILE_DATABASE_NAME, PROFILE_SCHEMA_VERSION);
+    let unavailable = false;
+
+    const fail = (): void => {
+      unavailable = true;
+      reject(new Error("profile database could not be opened"));
+    };
+
+    const timeout = setTimeout(fail, 1000);
 
     request.addEventListener("upgradeneeded", () => {
       request.result.createObjectStore(PROFILE_STORE_NAME);
     });
 
     request.addEventListener("success", () => {
+      clearTimeout(timeout);
+
+      if (unavailable) {
+        request.result.close();
+
+        return;
+      }
+
       resolve(wrapDatabase(request.result));
     });
 
     request.addEventListener("error", () => {
-      reject(new Error("profile database could not be opened"));
+      clearTimeout(timeout);
+      fail();
+    });
+    request.addEventListener("blocked", () => {
+      clearTimeout(timeout);
+      fail();
     });
   });
 }
