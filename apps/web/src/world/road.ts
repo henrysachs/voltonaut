@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
+import { createWaymarks } from "./waymarks.js";
 
 export interface RoadSample {
   readonly left: WorldPos;
@@ -104,10 +105,8 @@ export function createRoadSystem(): RenderSystem {
       const asphalt = new THREE.MeshStandardMaterial({ color: 0x38444a, roughness: 0.95 });
       const paint = new THREE.MeshStandardMaterial({ color: 0xf0eacb, roughness: 0.8 });
       const shoulder = new THREE.MeshStandardMaterial({ color: 0xb9ae8a, roughness: 1 });
-      const grass = new THREE.MeshStandardMaterial({ color: 0x69855d, roughness: 1 });
 
       for (const [widthM, offsetM, heightM, material] of [
-        [800, 0, -0.08, grass],
         [8, 0, -0.02, shoulder],
         [7, 0, 0, asphalt],
         [0.09, -3.1, 0.01, paint],
@@ -123,7 +122,7 @@ export function createRoadSystem(): RenderSystem {
         root.add(mesh);
       }
 
-      root.add(roadsidePosts(context.route, paint));
+      root.add(roadsidePosts(context.route, paint), createWaymarks(context.route));
       context.scene.add(root);
     },
     update() {},

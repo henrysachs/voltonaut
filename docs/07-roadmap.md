@@ -79,6 +79,8 @@ Korrektur vom 20.11.2026: Die beiden E0-opt-Punkte waren versehentlich abgehakt.
 
 Teilschritt [E4-02](specs/E4-02-first-ride-scene.md) ergänzt eine erste fahrbare Szene auf der vorhandenen E3-Testroute. Die vollständigen E4-Kriterien bleiben offen.
 
+Teilschritt [E4-03](specs/E4-03-lake-forest-world.md) ergänzt begrenztes Relief, einen See mit Ufer, instanzierten Wald und Kilometermarken auf derselben 10-km-Testrunde. Terrain-Streaming, LOD, neue Routendaten, Asset-Pipeline und die Hardware-Abnahme bleiben offen.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen
