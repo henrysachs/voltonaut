@@ -91,3 +91,15 @@ Der Lauf `44760958962` überschreitet im kanonischen Bytegrenzentest das unverä
 Der Test verwendet stattdessen 25.000 gültige Segmentereignisse mit jeweils 100 Unicodezeichen als ID. Der vollständige Beleg hat 8.726.185 UTF-8-Bytes, aber nur 3.726.185 Codeeinheiten. Alle einzelnen Array-, String-, Zeit- und Referenzgrenzen bleiben erfüllt. Die ursprüngliche Fehler-Assertion bleibt unverändert. Eine zusätzliche Assertion stellt sicher, dass eine falsche Codeeinheitenzählung den Beleg nicht ablehnen würde.
 
 Der unabhängige Prüfer bestätigt für beide Datensätze genau einen Schemafehler: die kanonische UTF-8-Bytegrenze. Alle vorherigen Tests bleiben bytegleich. Produktcode, Limits, Wiederholungen und Timeouts werden nicht geändert. Fokussierte Tests, Korrekturreview und erneut das Gesamtgate mit 475 Tests und 17 E2Es sowie der Build sind grün. Die externe CI wird für den korrigierten Stand erneut ausgeführt.
+
+## CI-Korrektur des Rundenbeispiels
+
+Bei der Integration in PR #19 überschreitet der Rundenfall auf `79e8ea9` im Lauf `44797623623` das unveränderte Fünf-Sekunden-Limit. Der Test erzeugt zunächst ein vollständiges Livejournal und rechnet es danach nach. Seine bisherigen 1.400 Sekunden ergeben 29.336,560485 Meter und zwei Runden. Gefordert sind die erlaubte Route, ein Rundenübergang und dessen geordnete Segmentausgaben, nicht diese Dauer oder eine zweite Runde.
+
+Ein unabhängiger Prüfer ermittelt den kürzesten ausreichenden ganzsekündigen Präfix. Nach 479 Sekunden sind 9.978,592457 Meter und noch keine Runde erreicht. Nach 480 Sekunden sind es 10.000,960004 Meter und eine Runde. Alle vier bisherigen Assertions bestehen. Der korrigierte Test verwendet deshalb `durationS = 480` für Journal und Abschlusszeit. Er behält alle vier Assertions und prüft zusätzlich genau eine Runde.
+
+Initialisierung, Eingaben, Tickschritte, vollständige Ereignis- und Kommandoreihenfolge sowie Besitz der Abschlussausgaben bleiben unverändert. Es gibt weiterhin zwei Engine-Durchläufe, keinen zusätzlichen Suchlauf im Repositorytest. Fehlende Runden- oder Segmentausgaben werden weiterhin abgelehnt. Kein Produktcode, Helfer, Schema, physikalischer Parameter oder Timeout wird geändert. Der Beleg liegt unter `$TMPDIR/opencode/replay-lap-standards-probe-1vcwrhrg/`.
+
+Die genaue 1.400-Sekunden-Servernachrechnung entfällt. Lange Engine-Goldens bleiben erhalten, sind aber kein Ersatznachweis für diese längere Servernachrechnung. Der getrennte sporadische Hintergrundfahrt-Startfehler aus Issue #20 wird damit nicht als repariert ausgewiesen. Erst die CI des korrigierten Stands entscheidet über die Übernahme.
+
+Das unabhängige Nachreview genehmigt die tatsächliche Teständerung nach zehn bestandenen Tests in zwei Dateien. Es bestätigt alle vier ursprünglichen Assertions, die zusätzliche Ein-Runden-Assertion und die Ablehnung fehlender Abschlussereignisse. Produkt-, Helfer-, Schema- und Routenhashes bleiben unverändert. Der Reviewbeleg liegt unter `$TMPDIR/opencode/replay-lap-correction-review-qiyc5okw/`. Danach ergänzt der Parent ausschließlich die von der bestehenden Lintregel verlangte Leerzeile vor der Testdatenliste.

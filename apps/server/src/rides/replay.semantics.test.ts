@@ -115,23 +115,26 @@ it("detects reordered shifts across a tick even with contiguous replacement sequ
 });
 
 it("replays allowlisted route segments and lap crossing from zero initialization", () => {
+  const durationS = 480;
+
   const entries: RecordingEntryV2[] = [
     [0, 0, "arm"],
     [1, 0, "boundary", "start"],
   ];
 
-  for (let second = 0; second < 1400; second += 1) {
+  for (let second = 0; second < durationS; second += 1) {
     entries.push(
       [entries.length, second * 1000, "trainer", 2000, 90, null],
       [entries.length + 1, (second + 1) * 1000, "advance", 1],
     );
   }
 
-  entries.push([entries.length, 1_400_000, "boundary", "finish"]);
+  entries.push([entries.length, durationS * 1000, "boundary", "finish"]);
   const ride = recordReplay(entries);
   const result = replayed(ride);
   expect(result.summary.distanceM).toBeGreaterThan(TEST_LOOP.lengthM);
   expect(result.summary.laps).toBeGreaterThanOrEqual(1);
+  expect(result.summary.laps).toBe(1);
   expect(ride.observations.at(-1)?.events.some((event) => event.type === "lap.completed")).toBe(
     true,
   );

@@ -28,6 +28,8 @@ Die erneuten Prozessprüfungen bestehen fünf OIDC- und 14 Sync-Browserfälle so
 
 Der erste PR-Lauf auf `4d72986` enthält einen sporadischen Hintergrundfahrt-Fehler vor dem Tabwechsel. Derselbe Commit besteht gleichzeitig das identische zweite Gate. Fünf native und sechs Linux-Wiederholungen reproduzieren den Fehler nicht. Das ist keine Reparatur. [Issue #20](https://github.com/henrysachs/voltonaut/issues/20) hält Fehler, Belege und den nächsten Diagnoseschritt fest. Keine Assertion, Testgrenze, Sim-Uhr oder Weltqualität wird dafür geändert. Die Übernahme verlangt weiterhin grüne Checks des abschließenden Stands.
 
+Der nächste CI-Lauf auf `79e8ea9` scheitert stattdessen am Replay-Rundenfall nach 1.400 virtuellen Sekunden. Dessen zwei Runden sind für die Abnahme nicht erforderlich. Der unabhängig geprüfte Präfix von 480 Sekunden enthält den ersten vollständigen Rundenübergang samt Segmentausgaben. Die Testdatenkorrektur erhält alle bisherigen Assertions und ergänzt genau eine Runde. [E10-02](E10-02-replay-consistency.md#ci-korrektur-des-rundenbeispiels) beschreibt Belege und Abdeckungsgrenze. Die unveränderte Fünf-Sekunden-Grenze bleibt bestehen.
+
 Der lokale Entscheidungsnachweis und die Quellinventur liegen unter `$TMPDIR/opencode/`. Der Integrations-PR ist [#19](https://github.com/henrysachs/voltonaut/pull/19). CI führt dasselbe vollständige Gate aus. Mutation ist nicht erforderlich, weil der Diff gegen das bisherige `main` weder `packages/engine` noch `packages/rules` ändert.
 
 ## Nicht-Ziele und offene Abnahmen
