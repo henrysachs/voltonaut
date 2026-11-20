@@ -2,7 +2,7 @@
 
 - **Ziel:** Trainer und zwei gleichnamige Play-Griffe gleichzeitig anzeigen, getrennt bedienen und ohne Ansichtsbindung mitschneiden.
 - **Roadmap:** E1, Diagnosewerkzeug `debug/ble.html`. Keine Hardware-Abnahme der Etappe.
-- **Status:** Fokussiert geprüft. Integration, vollständiges Gate und unabhängiges Review stehen aus. An echter Hardware getestet: nein.
+- **Status:** Vollständiges lokales Gate, Build und unabhängiges Review grün. Separate lokale Ansicht bereit. An echter Hardware getestet: nein.
 - **Module:** `apps/web/debug/ble.html`, `src/debug/ble/`, neue Browserprüfung.
 
 ## Architekturentscheidung
@@ -34,6 +34,10 @@ Danach fokussierte Vitest-Prüfung, Typecheck, Lint und Browserprüfung auf isol
 Die drei zuerst geschriebenen UI-Regressionen schlugen vor der Änderung fehl. Nach Rückkehr zu A blieb der Status von B sichtbar. Ein ausstehender Read auf A blockierte den Marker auf B. Firmware und Notizen von A erschienen auf B. Nach der Änderung bestehen dieselben Assertions.
 
 `ble-sniffer-multidevice.spec.ts` prüft zusätzlich fünf Browserflüsse. Dazu gehören die native Doppelauswahl ohne zweiten GATT-Zugriff, drei getrennte Exporte, ein gezielter Disconnect, Fehler während Hintergrundaufnahme und ein verspäteter Verbindungsabschluss. Die Picker-Fakes lehnen Aufrufe außerhalb des synchronen Klicks ab.
+
+Die integrierende Session besteht `E2E_PORT=5195 CI=true mise run check` mit 580 Tests und 22 E2Es sowie den Build. Der Standardport bleibt 5173; ein validierter optionaler Testport trennt Prüfungen vom laufenden Hardware-Labor. Bestehende Browserassertionen wurden nur auf neue Schaltflächen und Statusfelder umgestellt. Der unabhängige Prüfer besteht 22 DOM-/Sitzungstests und zehn Browserfälle einschließlich eigener Duplikat- und Teardown-Proben. Seine ausführbaren Belege liegen unter `$TMPDIR/opencode/multidevice-review-2O5w7y/`.
+
+Die bereitgestellte statische Vorschau auf `http://localhost:5195/debug/ble.html` besitzt kein Hot-Reload. Ein frischer Browser bestätigt HTTP 200, sicheren Kontext, vorhandene native Bluetooth-API und die Schaltfläche „Gerät hinzufügen“, ohne Gerätezugriff. Das ältere Labor auf 5173 bleibt zum Sichern offener Mitschnitte unverändert.
 
 ## Offene Hardware-Abnahme
 
