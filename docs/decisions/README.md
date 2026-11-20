@@ -17,3 +17,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [011](ADR-011-engine-dedicated-worker.md) | Engine im Dedicated Web Worker | Vorgeschlagen, Henrys Freigabe ausstehend |
 | [012](ADR-012-server-skiplibcheck-drizzle.md) | `skipLibCheck: true` nur für `apps/server` wegen Drizzle-Deklarationen | Angenommen |
 | [013](ADR-013-cloudflare-access-oidc.md) | Cloudflare Access als OIDC-Broker für den Login | Zielentscheidung angenommen; Access aktiviert, App und Umsetzung offen |
+| [014](ADR-014-three-rendering-dependencies.md) | Abhängigkeiten für die erste 3D-Szene | Umsetzung von ADR-002 und ADR-008 |
