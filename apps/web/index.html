@@ -7,27 +7,133 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <main class="hud" aria-label="Ride HUD">
-      <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
-      <dl class="hud__values">
-        <div class="hud__value">
-          <dt>Power</dt>
-          <dd id="hud-powerW" data-testid="hud-power">0 W</dd>
-        </div>
-        <div class="hud__value">
-          <dt>Cadence</dt>
-          <dd id="hud-cadenceRpm" data-testid="hud-cadence">0 rpm</dd>
-        </div>
-        <div class="hud__value">
-          <dt>Heart rate</dt>
-          <dd id="hud-heartRateBpm" data-testid="hud-heart-rate">0 bpm</dd>
-        </div>
-        <div class="hud__value">
-          <dt>Gear</dt>
-          <dd id="hud-gear" data-testid="hud-gear">1</dd>
-        </div>
-      </dl>
-      <p class="hud__hint">Sim mode: use ArrowUp and ArrowDown to shift.</p>
+    <main class="app" aria-label="Voltonaut">
+      <section class="panel hud" aria-label="Ride HUD">
+        <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
+        <dl class="hud__values">
+          <div class="hud__value">
+            <dt>Power</dt>
+            <dd id="hud-powerW" data-testid="hud-power">0 W</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Cadence</dt>
+            <dd id="hud-cadenceRpm" data-testid="hud-cadence">0 rpm</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Heart rate</dt>
+            <dd id="hud-heartRateBpm" data-testid="hud-heart-rate">0 bpm</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Gear</dt>
+            <dd id="hud-gear" data-testid="hud-gear">12</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Speed</dt>
+            <dd id="hud-speed" data-testid="hud-speed">0.0 km/h</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Distance</dt>
+            <dd id="hud-distance" data-testid="hud-distance">0.00 km</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Elevation</dt>
+            <dd id="hud-elevationGain" data-testid="hud-elevation">0 m</dd>
+          </div>
+          <div class="hud__value">
+            <dt>Energy</dt>
+            <dd id="hud-energy" data-testid="hud-energy">0 kJ</dd>
+          </div>
+        </dl>
+        <p class="hud__warning" id="hud-warning" data-testid="hud-warning"></p>
+        <p class="hud__hint">Sim mode: use ArrowUp and ArrowDown to shift.</p>
+      </section>
+
+      <section class="panel profile" aria-label="Rider profile">
+        <h2 class="profile__title">Rider profile</h2>
+        <form id="profile-form" data-testid="profile-form">
+          <label class="profile__field">
+            Name
+            <input
+              id="profile-displayName"
+              data-testid="profile-displayName"
+              type="text"
+              value="Rider"
+            />
+          </label>
+          <label class="profile__field">
+            Mass (kg)
+            <input
+              id="profile-massKg"
+              data-testid="profile-massKg"
+              type="number"
+              inputmode="decimal"
+              value="75"
+            />
+          </label>
+          <label class="profile__field">
+            Height (cm)
+            <input
+              id="profile-heightCm"
+              data-testid="profile-heightCm"
+              type="number"
+              inputmode="decimal"
+              value="185"
+            />
+          </label>
+          <label class="profile__field">
+            Bike mass (kg)
+            <input
+              id="profile-bikeMassKg"
+              data-testid="profile-bikeMassKg"
+              type="number"
+              inputmode="decimal"
+              value="8"
+            />
+          </label>
+          <label class="profile__field">
+            Chainring (teeth)
+            <input
+              id="profile-chainringTeeth"
+              data-testid="profile-chainringTeeth"
+              type="number"
+              inputmode="numeric"
+              value="42"
+            />
+          </label>
+          <label class="profile__field">
+            Cog (teeth)
+            <input
+              id="profile-cogTeeth"
+              data-testid="profile-cogTeeth"
+              type="number"
+              inputmode="numeric"
+              value="14"
+            />
+          </label>
+          <label class="profile__field">
+            Wheel circumference (m)
+            <input
+              id="profile-wheelCircM"
+              data-testid="profile-wheelCircM"
+              type="number"
+              inputmode="decimal"
+              step="0.001"
+              value="2.105"
+            />
+          </label>
+          <label class="profile__field">
+            Units
+            <select id="profile-units" data-testid="profile-units">
+              <option value="metric">metric</option>
+              <option value="imperial">imperial</option>
+            </select>
+          </label>
+          <p class="profile__error" id="profile-error" data-testid="profile-error"></p>
+          <p class="profile__status" id="profile-status" data-testid="profile-status"></p>
+          <button class="profile__save" type="submit" data-testid="profile-save">Save</button>
+          <p class="profile__hint">FTP and max heart rate are reserved for later stages.</p>
+        </form>
+      </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

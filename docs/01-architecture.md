@@ -52,7 +52,7 @@ flowchart LR
 
 ## Loops und Takt
 
-- **Engine-Tick:** fest 20 Hz (`dtS = 0.05`), in einem `setInterval`-unabhängigen Akkumulator im Render-Loop; bei Tab im Hintergrund läuft ein Worker-Timer weiter (Fahrt darf nicht pausieren, wenn Henry das Fenster wechselt). _Offen:_ ob Engine in einen Web Worker wandert (siehe open-questions).
+- **Engine-Tick:** fest 20 Hz (`dtS = 0.05`) im Dedicated Web Worker, unabhängig vom Render-Loop. Der Akkumulator verarbeitet höchstens 120 Ticks pro Aufwachung. Größere Lücken erzeugen `ride.clockSkipped`; veraltete Trainerdaten führen zum Ausrollen. Entscheidung und Grenzen stehen in ADR-011. Chrome Page Freezing mit aktiver BLE-Verbindung bleibt manuell zu prüfen.
 - **Trainer-Kommandos:** max. 4 Hz, nur bei Änderung (Grade-Delta ≥ 0,1 % oder Gangwechsel), serialisiert (FTMS erlaubt nur eine ausstehende Control-Point-Prozedur).
 - **Render:** `requestAnimationFrame`, interpoliert zwischen den letzten zwei Engine-Snapshots.
 

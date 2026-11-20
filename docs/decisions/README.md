@@ -14,3 +14,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [008](ADR-008-scene-structure.md) | Szenenstruktur: three.js-Szenengraph + System-Scheduler, kein ECS | Angenommen |
 | [009](ADR-009-hosting-cloudflare-pages.md) | Web auf Cloudflare Pages, API auf Hetzner, Login-Mails über Cloudflare Email Sending (Fallback Resend) | Angenommen |
 | [010](ADR-010-observability.md) | Observability: OpenTelemetry, strukturierte Logs, vorhandener Grafana-Stack | Angenommen |
+| [011](ADR-011-engine-dedicated-worker.md) | Engine im Dedicated Web Worker | Vorgeschlagen, Henrys Freigabe ausstehend |

@@ -1,0 +1,12 @@
+{
+  "distanceM": 33782.493887,
+  "elevationGainM": 0,
+  "energyKj": 720,
+  "tS": 3600,
+  "endSpeedMps": 9.410683,
+  "laps": 6,
+  "segments": [],
+  "commandCount": 1,
+  "commandHash": "be578efc9a34234cd59a96bc57531355d417a41f3bcc26708d023a2bcfc4a09d",
+  "schemaVersion": 1
+}
