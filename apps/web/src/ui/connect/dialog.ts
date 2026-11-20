@@ -1,0 +1,72 @@
+import type { DeviceAdapter, EventBus } from "@voltonaut/shared";
+
+export interface ConnectSlot {
+  readonly label: string;
+  readonly adapter: DeviceAdapter;
+  readonly select: () => Promise<void>;
+}
+
+function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
+  const row = document.createElement("section");
+  const heading = document.createElement("h3");
+  const status = document.createElement("output");
+  const choose = document.createElement("button");
+  const retry = document.createElement("button");
+
+  heading.textContent = slot.label;
+  status.setAttribute("aria-label", `${slot.label} Status`);
+  status.setAttribute("aria-live", "polite");
+  choose.textContent = "Gerät wählen";
+  retry.textContent = "Erneut verbinden";
+
+  const update = (): void => {
+    const current = slot.adapter.status();
+    status.textContent = current;
+    retry.hidden = current !== "error";
+    choose.disabled =
+      current === "connecting" || current === "handshaking" || current === "reconnecting";
+  };
+
+  const connect = (action: () => Promise<void>): void => {
+    void action().catch(() => {
+      status.textContent = "error";
+      retry.hidden = false;
+    });
+  };
+
+  choose.addEventListener("click", () => {
+    connect(slot.select);
+  });
+  retry.addEventListener("click", () => {
+    connect(() => slot.adapter.connect());
+  });
+  bus.subscribe("device.status", update);
+  update();
+  row.append(heading, status, choose, retry);
+
+  return row;
+}
+
+export function mountConnectDialog(slots: readonly ConnectSlot[], bus: EventBus): void {
+  const open = document.createElement("button");
+  const dialog = document.createElement("dialog");
+  const title = document.createElement("h2");
+  const hint = document.createElement("p");
+  const close = document.createElement("button");
+
+  open.textContent = "Geräte verbinden";
+  title.textContent = "Bluetooth-Geräte";
+  title.id = "connect-title";
+  dialog.setAttribute("aria-labelledby", title.id);
+  hint.textContent =
+    "Zwift, Wahoo-App und Uhr vorher trennen. Nur ein Central steuert sinnvoll; Pulsgurte erlauben oft nur 1–2 Verbindungen.";
+  close.textContent = "Schließen";
+  open.addEventListener("click", () => {
+    dialog.showModal();
+  });
+  close.addEventListener("click", () => {
+    dialog.close();
+  });
+  dialog.append(title, hint, ...slots.map((slot) => renderSlot(slot, bus)), close);
+  document.body.append(open, dialog);
+}

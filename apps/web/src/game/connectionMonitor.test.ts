@@ -5,7 +5,7 @@ import { createEventBus, type EventBus } from "@voltonaut/shared";
 import { createConnectionMonitor } from "./connectionMonitor.js";
 
 describe("createConnectionMonitor", () => {
-  it("is disconnected until a device reaches ready", () => {
+  it("is disconnected until a trainer reaches ready", () => {
     const bus: EventBus = createEventBus();
     const monitor = createConnectionMonitor(bus);
 
@@ -20,7 +20,7 @@ describe("createConnectionMonitor", () => {
     expect(monitor.state()).toEqual({ connected: true });
   });
 
-  it("stays connected while one of several devices stays ready", () => {
+  it("loses connectivity when the trainer fails even if heart rate stays ready", () => {
     const bus: EventBus = createEventBus();
     const monitor = createConnectionMonitor(bus);
 
@@ -28,7 +28,7 @@ describe("createConnectionMonitor", () => {
     bus.publish({ type: "device.status", tS: 1, kind: "heartRate", id: "hr1", status: "ready" });
     bus.publish({ type: "device.status", tS: 2, kind: "trainer", id: "t1", status: "error" });
 
-    expect(monitor.state()).toEqual({ connected: true });
+    expect(monitor.state()).toEqual({ connected: false });
 
     bus.publish({
       type: "device.status",
@@ -51,4 +51,13 @@ describe("createConnectionMonitor", () => {
 
     expect(monitor.state()).toEqual({ connected: false });
   });
+});
+
+it("does not treat keyboard or heart rate as a connected trainer", () => {
+  const bus = createEventBus();
+  const monitor = createConnectionMonitor(bus);
+
+  bus.publish({ type: "device.status", tS: 0, kind: "keyboard", id: "k1", status: "ready" });
+  bus.publish({ type: "device.status", tS: 0, kind: "heartRate", id: "hr1", status: "ready" });
+  expect(monitor.state()).toEqual({ connected: false });
 });

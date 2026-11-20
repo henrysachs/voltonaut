@@ -1,16 +1,7 @@
-import type { DeviceAdapter, DeviceEvent, RiderProfile } from "@voltonaut/shared";
+import type { DeviceEvent, RiderProfile } from "@voltonaut/shared";
 import { DEFAULT_RIDER_PROFILE, createEventBus } from "@voltonaut/shared";
 
-import {
-  createFakeHeartRate,
-  createFakePlay,
-  createFakeTrainer,
-  createIntervalTicker,
-  createKeyboardAdapter,
-  createSimScript,
-  type KeyboardEventLike,
-  type KeyboardSource,
-} from "@voltonaut/ble";
+import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
 
 import type { AppDocument } from "./app.js";
 import { startApp } from "./app.js";
@@ -24,27 +15,8 @@ import type { ProfileFormInputs } from "./ui/profile/profileScreen.js";
 import { createProfileStore, type ProfileStore } from "./sync/profile-store.js";
 import { openProfileDatabase } from "./sync/profile-database.js";
 
-const SIM_SAMPLES = createSimScript([
-  { powerW: 142, cadenceRpm: 88, heartRateBpm: 122, gearIndex: 0 },
-  { powerW: 176, cadenceRpm: 94, heartRateBpm: 128, gearIndex: 0 },
-  { powerW: 205, cadenceRpm: 99, heartRateBpm: 134, gearIndex: 0 },
-  { powerW: 168, cadenceRpm: 91, heartRateBpm: 130, gearIndex: 0 },
-]);
-
-const SIM_TICK_MS = 250;
 const FAST_CLOCK_SCALE = 20;
 const APP_ROUTE_ID = "test-loop";
-
-interface WindowKeyboardTarget {
-  readonly addEventListener: (
-    type: "keydown" | "keyup",
-    listener: (event: KeyboardEventLike) => void,
-  ) => void;
-  readonly removeEventListener: (
-    type: "keydown" | "keyup",
-    listener: (event: KeyboardEventLike) => void,
-  ) => void;
-}
 
 interface DocumentQuerySource {
   readonly querySelector: (selector: string) => Element | null;
@@ -52,28 +24,6 @@ interface DocumentQuerySource {
 
 interface TextTargetView {
   readonly write: (text: string) => void;
-}
-
-function createWindowKeyboardSource(window: WindowKeyboardTarget): KeyboardSource {
-  return {
-    subscribe(listener) {
-      const keydown = (event: KeyboardEventLike): void => {
-        listener("keydown", event);
-      };
-
-      const keyup = (event: KeyboardEventLike): void => {
-        listener("keyup", event);
-      };
-
-      window.addEventListener("keydown", keydown);
-      window.addEventListener("keyup", keyup);
-
-      return () => {
-        window.removeEventListener("keydown", keydown);
-        window.removeEventListener("keyup", keyup);
-      };
-    },
-  };
 }
 
 function createDomDocument(source: DocumentQuerySource): AppDocument {
@@ -221,27 +171,6 @@ function setupProfileForm(
   });
 }
 
-function setupSimDevices(bus: ReturnType<typeof createEventBus>): void {
-  const params = new URLSearchParams(window.location.search);
-  const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
-  const ticker = createIntervalTicker(SIM_TICK_MS / clockScale);
-  const clock = { nowS: (): number => performance.now() / 1000 };
-
-  const trainer = createFakeTrainer({ bus, clock, ticker, samples: SIM_SAMPLES });
-  const heartRate = createFakeHeartRate({ bus, clock, ticker, samples: SIM_SAMPLES });
-  const play = createFakePlay({ bus, clock });
-
-  const keyboard = createKeyboardAdapter({
-    bus,
-    clock,
-    source: createWindowKeyboardSource(window),
-  });
-
-  void Promise.all(
-    [trainer, heartRate, play, keyboard].map((device: DeviceAdapter) => device.connect()),
-  );
-}
-
 async function loadProfile(store: ProfileStore): Promise<RiderProfile> {
   const profile = await store.load();
 
@@ -252,6 +181,7 @@ function startHud(
   document: DocumentQuerySource,
   link: EngineLink,
   connection: Readonly<ConnectionMonitor>,
+  connectedLabel: string,
 ): void {
   const ride = {
     snapshot: () => link.latestSnapshot(),
@@ -262,7 +192,7 @@ function startHud(
     },
   };
 
-  startApp({ document: createDomDocument(document), ride });
+  startApp({ document: createDomDocument(document), ride, connectedLabel });
 }
 
 async function start(): Promise<void> {
@@ -288,11 +218,14 @@ async function start(): Promise<void> {
   bus.subscribe("hr.data", forwardEvent);
   bus.subscribe("controller.button", forwardEvent);
 
-  startHud(document, link, connection);
+  startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupProfileForm(document, store, profile);
+  setupKeyboard(bus);
 
   if (simMode) {
-    setupSimDevices(bus);
+    setupSimDevices(bus, clockScale);
+  } else {
+    setupBluetoothDevices(bus);
   }
 }
 

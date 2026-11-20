@@ -9,14 +9,14 @@ export interface ConnectionMonitor {
   readonly dispose: () => void;
 }
 
-/** Tracks whether at least one device has reached the ready state. */
+/** Tracks trainer readiness independently of keyboard and heart-rate connections. */
 export function createConnectionMonitor(bus: EventBus): ConnectionMonitor {
   const readyDevices = new Set<string>();
 
   let connected = false;
 
   const unsubscribe = bus.subscribe("device.status", (event: DeviceEvent) => {
-    if (event.type !== "device.status") {
+    if (event.type !== "device.status" || event.kind !== "trainer") {
       return;
     }
 
