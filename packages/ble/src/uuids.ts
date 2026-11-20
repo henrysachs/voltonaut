@@ -7,8 +7,9 @@ export const FITNESS_MACHINE_SERVICE = "00001826-0000-1000-8000-00805f9b34fb";
 export const DEVICE_INFORMATION_SERVICE = "0000180a-0000-1000-8000-00805f9b34fb";
 export const CYCLING_SPEED_AND_CADENCE_SERVICE = "00001816-0000-1000-8000-00805f9b34fb";
 
-// UNVERIFIED: docs/02-bluetooth.md#4-zwift-play-controller-henrys-hardware-️-unverifiziert
 export const ZWIFT_PLAY_LEGACY_SERVICE = "00000001-19ca-4651-86e5-fa29dcdd09d1";
+
+// UNVERIFIED: docs/02-bluetooth.md#4-zwift-play-controller-henrys-hardware-️-unverifiziert
 export const ZWIFT_PLAY_V2_SERVICE = "0000fc82-0000-1000-8000-00805f9b34fb";
 export const ZWIFT_PLAY_MEASUREMENT = "00000002-19ca-4651-86e5-fa29dcdd09d1";
 export const ZWIFT_PLAY_CONTROL_POINT = "00000003-19ca-4651-86e5-fa29dcdd09d1";

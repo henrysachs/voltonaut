@@ -8,6 +8,8 @@ import type { ByteReader, ReadOnlyBytes } from "./bytes.js";
 
 export type GattProperty = "read" | "write" | "writeWithoutResponse" | "notify" | "indicate";
 
+export type GattWriteMode = "withResponse" | "withoutResponse";
+
 export interface CharacteristicInfo {
   readonly uuid: string;
   readonly properties: readonly GattProperty[];
@@ -75,7 +77,11 @@ export interface BleTransport {
    */
   readonly connect: (scan: ScanOptions, selection?: DeviceSelection) => Promise<GattProfile>;
   readonly read: (ref: CharacteristicRef) => Promise<DataView>;
-  readonly write: (ref: CharacteristicRef, payload: ReadOnlyBytes) => Promise<void>;
+  readonly write: (
+    ref: CharacteristicRef,
+    payload: ReadOnlyBytes,
+    mode?: GattWriteMode,
+  ) => Promise<void>;
   readonly subscribe: (
     ref: CharacteristicRef,
     listener: NotificationListener,

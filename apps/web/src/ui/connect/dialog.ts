@@ -4,6 +4,7 @@ export interface ConnectSlot {
   readonly label: string;
   readonly adapter: DeviceAdapter;
   readonly select: () => Promise<void>;
+  readonly description?: () => string;
 }
 
 function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
@@ -12,17 +13,23 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
   const status = document.createElement("output");
   const choose = document.createElement("button");
   const retry = document.createElement("button");
+  const disconnect = document.createElement("button");
+  const description = document.createElement("p");
+  description.setAttribute("aria-live", "polite");
 
   heading.textContent = slot.label;
   status.setAttribute("aria-label", `${slot.label} Status`);
   status.setAttribute("aria-live", "polite");
   choose.textContent = "Gerät wählen";
   retry.textContent = "Erneut verbinden";
+  disconnect.textContent = "Trennen";
 
   const update = (): void => {
     const current = slot.adapter.status();
     status.textContent = current;
+    description.textContent = slot.description?.() ?? "";
     retry.hidden = current !== "error";
+    disconnect.disabled = current === "disconnected";
     choose.disabled =
       current === "connecting" || current === "handshaking" || current === "reconnecting";
   };
@@ -40,9 +47,12 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
   retry.addEventListener("click", () => {
     connect(() => slot.adapter.connect());
   });
+  disconnect.addEventListener("click", () => {
+    connect(() => slot.adapter.disconnect());
+  });
   bus.subscribe("device.status", update);
   update();
-  row.append(heading, status, choose, retry);
+  row.append(heading, status, description, choose, retry, disconnect);
 
   return row;
 }

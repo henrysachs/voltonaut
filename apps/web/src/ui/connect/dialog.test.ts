@@ -40,3 +40,48 @@ it("shows status transitions, opens and closes, retries failed connects", async 
   document.find("Schließen").click();
   expect(document.created.some((node: TestNodeView) => node.open)).toBe(false);
 });
+
+it("shows unconfirmed side, actionable adapter details and allows cancelling handshaking", () => {
+  const document = createTestDocument();
+  const bus = createEventBus();
+  let detail = "Seite noch unbekannt";
+  let disconnected = false;
+
+  const adapter: DeviceAdapter = {
+    kind: "controller",
+    id: "play-left",
+    status: () => "handshaking",
+    connect: () => Promise.resolve(),
+    disconnect: () => {
+      disconnected = true;
+
+      return Promise.resolve();
+    },
+  };
+
+  vi.stubGlobal("document", document);
+  mountConnectDialog(
+    [
+      {
+        label: "Play links (Ziel)",
+        adapter,
+        select: () => adapter.connect(),
+        description: () => detail,
+      },
+    ],
+    bus,
+  );
+  expect(document.find("Seite noch unbekannt")).toBeDefined();
+  expect(document.find("Gerät wählen").disabled).toBe(true);
+  document.find("Trennen").click();
+  expect(disconnected).toBe(true);
+  detail = "Falscher Griff: rechts erkannt. Gerät wählen.";
+  bus.publish({
+    type: "device.status",
+    tS: 1,
+    kind: "controller",
+    id: "play-left",
+    status: "error",
+  });
+  expect(document.find("Falscher Griff: rechts erkannt. Gerät wählen.")).toBeDefined();
+});

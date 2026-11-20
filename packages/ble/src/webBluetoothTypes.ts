@@ -32,6 +32,7 @@ export interface WebBluetoothCharacteristic {
   readonly value: DataView | null;
   readonly readValue: () => Promise<DataView>;
   readonly writeValue: (value: BufferSource) => Promise<void>;
+  readonly writeValueWithoutResponse?: (value: BufferSource) => Promise<void>;
   readonly startNotifications: () => Promise<void>;
   readonly stopNotifications: () => Promise<void>;
   readonly getDescriptors: () => Promise<readonly WebBluetoothDescriptor[]>;

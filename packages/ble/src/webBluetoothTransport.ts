@@ -26,7 +26,13 @@ export interface WebBluetoothTransportOptions {
 }
 
 interface AbortHolder {
-  controller: AbortController | undefined;
+  binding: AdvertisementBinding | undefined;
+}
+
+interface AdvertisementBinding {
+  readonly device: WebBluetoothDevice;
+  readonly controller: AbortController;
+  readonly receive: (event: WebBluetoothAdvertisementEvent) => void;
 }
 
 interface ListenerList {
@@ -65,7 +71,14 @@ function toAdvertisementFrame(event: WebBluetoothAdvertisementEvent): Advertisem
 }
 
 interface AdvertisementRegistration {
-  readonly handleEvent: (event: WebBluetoothAdvertisementEvent) => void;
+  readonly listener: (frame: AdvertisementFrame) => void;
+}
+
+function stopDeviceAdvertisements(holder: AbortHolder): void {
+  const binding = holder.binding;
+  holder.binding = undefined;
+  binding?.controller.abort();
+  binding?.device.removeEventListener("advertisementreceived", binding.receive);
 }
 
 function startDeviceAdvertisements(
@@ -73,14 +86,25 @@ function startDeviceAdvertisements(
   registrations: readonly AdvertisementRegistration[],
   holder: AbortHolder,
 ): void {
-  const controller = holder.controller ?? new AbortController();
-  holder.controller = controller;
-
-  for (const registration of registrations) {
-    device?.addEventListener("advertisementreceived", registration.handleEvent);
+  if (device === undefined || registrations.length === 0 || holder.binding?.device === device) {
+    return;
   }
 
-  void device?.watchAdvertisements?.({ signal: controller.signal }).catch(() => {});
+  stopDeviceAdvertisements(holder);
+  const controller = new AbortController();
+
+  const receive = (event: WebBluetoothAdvertisementEvent): void => {
+    if (!controller.signal.aborted) {
+      for (const registration of registrations.slice()) {
+        registration.listener(toAdvertisementFrame(event));
+      }
+    }
+  };
+
+  holder.binding = { device, controller, receive };
+  device.addEventListener("advertisementreceived", receive);
+
+  void device.watchAdvertisements?.({ signal: controller.signal }).catch(() => {});
 }
 
 function watchAdvertisementsMember(
@@ -89,11 +113,7 @@ function watchAdvertisementsMember(
   holder: AbortHolder,
   listener: (frame: AdvertisementFrame) => void,
 ): () => void {
-  const registration: AdvertisementRegistration = {
-    handleEvent: (event) => {
-      listener(toAdvertisementFrame(event));
-    },
-  };
+  const registration: AdvertisementRegistration = { listener };
 
   registrations.push(registration);
   startDeviceAdvertisements(device, registrations, holder);
@@ -103,11 +123,9 @@ function watchAdvertisementsMember(
 
     registrations.length = 0;
     registrations.push(...remaining);
-    device?.removeEventListener("advertisementreceived", registration.handleEvent);
 
     if (registrations.length === 0) {
-      holder.controller?.abort();
-      holder.controller = undefined;
+      stopDeviceAdvertisements(holder);
     }
   };
 }
@@ -126,20 +144,31 @@ function onDisconnectedMember(disconnected: ListenerList, listener: () => void):
 export function createWebBluetoothTransport(options: WebBluetoothTransportOptions): BleTransport {
   const disconnected: ListenerList = { listeners: [] };
   const registrations: AdvertisementRegistration[] = [];
-  const abortHolder: AbortHolder = { controller: undefined };
+  const abortHolder: AbortHolder = { binding: undefined };
 
-  const gatt = new WebBluetoothGatt(options.central, () => {
-    for (const listener of disconnected.listeners.slice()) {
-      listener();
-    }
-  });
+  const gatt = new WebBluetoothGatt(
+    options.central,
+    () => {
+      for (const listener of disconnected.listeners.slice()) {
+        listener();
+      }
+    },
+    () => {
+      stopDeviceAdvertisements(abortHolder);
+    },
+  );
 
   return {
-    deviceName: () => gatt.device?.name ?? "unknown device",
-    deviceId: () => gatt.device?.id ?? "unknown",
-    connect: (scan, selection) => gatt.connect(scan, selection),
+    deviceName: () => gatt.rememberedDevice?.name ?? "unknown device",
+    deviceId: () => gatt.rememberedDevice?.id ?? "unknown",
+    connect: async (scan, selection) => {
+      const profile = await gatt.connect(scan, selection);
+      startDeviceAdvertisements(gatt.device, registrations, abortHolder);
+
+      return profile;
+    },
     read: (ref) => gatt.read(ref),
-    write: (ref, payload) => gatt.write(ref, payload),
+    write: (ref, payload, mode) => gatt.write(ref, payload, mode),
     subscribe: (ref, listener) => gatt.subscribe(ref, listener),
     watchAdvertisements: (listener) =>
       watchAdvertisementsMember(gatt.device, registrations, abortHolder, listener),

@@ -51,6 +51,8 @@ Erster Web-Deploy am 20.11.2026: [Sim-Fahrt](https://voltonaut.pages.dev/?sim=1)
 
 **Ziel:** Schalten mit den Zwift-Play-Griffen (LS = runter, RS = hoch) verändert den Widerstand spürbar.
 
+Teilschritt [E2-02](specs/E2-02-verified-play-input.md) verbindet beide hardwarebelegten `0x07`-Griffe mit den virtuellen Gängen und ergänzt den Decoder im BLE-Labor. Klartextantwort, digitale Zuordnung und Flankenerkennung sind durch Capture und Softwaretests belegt. Firmware, reale Parallelverbindungen und Trainersteuerung bleiben offen. Die umfassenderen Checkboxen unten bleiben deshalb offen.
+
 - [ ] Play-Firmware feststellen (1.x: 2 Verbindungen, `0x07` / 2.0.1: 1 Verbindung, vermutlich `0x23`)
 - [ ] Klartext-Handshake („RideOn") + eigener Mini-Protobuf-Decoder für `0x07`, Bitmap-Decoder `0x23` – beide gegen Sniffer-Fixtures; ButtonMap-JSON
 - [ ] Bei FW 1.x: zwei Griffe parallel verbinden und zuordnen (Device-Typ 2/3), getrennter Reconnect
