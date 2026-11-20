@@ -57,6 +57,22 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 
 ## Datenmodell (Skizze)
 
+### Implementierter Teilschritt E5-07
+
+[E5-07](specs/E5-07-owned-profile-rides.md) implementiert ausschließlich das eigene Fahrerprofil und dauerhafte lokale V1-Aufnahmen. Die folgenden SQL- und API-Skizzen bleiben der weitergehende Zielstand.
+
+- `GET /v1/me/profile` liefert `missing` oder `present` mit Profil und UTC-Änderungszeit. `PUT` validiert Profil und Fahrrad strikt.
+- `POST /v1/rides` akzeptiert `CompletedLocalRideSchema` als unkomprimiertes JSON bis 8 MiB. Schemafehler liefern 422, ungültiges JSON weiterhin 400, zu große Bodies 413. Komprimierte Bodies werden mit 415 abgelehnt. Fehlermeldungen enthalten keine rohe Nutzlast.
+- Alle gespeicherten V1-Aufnahmen haben ausschließlich `assessment: {status:'unverified',reason:'legacy_missing_replay'}`. Ohne vollständigen Physik-Anfangszustand und Ereignisse gibt es keine Replay-Prüfung, Belohnung oder Annahme als geprüfte Fahrt.
+- Globale UUID-Eindeutigkeit, kanonische geparste Nutzlast, SHA-256 und ursprünglicher Beleg liegen in derselben SQLite-Transaktion. Erstupload und identische Wiederholung liefern HTTP 200 mit demselben gespeicherten Beleg. Eine abweichende Nutzlast liefert 409 `ride_id_conflict`. Eine fremde UUID liefert auch beim Upload 404.
+- Das gemeinsame `RideIdSchema` normalisiert UUIDs beim API-Upload, Detailpfad und Cursor auf Kleinschreibung, vor Hash und Speicherung. Lokale V1-Dateien und Auth-Identifikatoren werden nicht umgeschrieben. Ein Route-Guard prüft den Medientyp vor der Zod-Bodyvalidierung. `text/plain` liefert 415, gültiges JSON mit Charset bleibt erlaubt.
+- `GET /v1/rides/:rideId` liefert eigene Aufnahme und aktuelle Bewertung. Die Liste enthält keine Samples, ist auf 20 Einträge voreingestellt und auf 50 begrenzt. Cursor und Sortierung verwenden aufsteigende UUIDs, nicht die Aufnahmezeit.
+- Jeder Zugriff ist an `SessionPrincipal.userId` gebunden. `GET /v1/me` bleibt Auth-Verantwortung. Es gibt keine automatische Löschung. Uploads sind pro Account auf 30 Anfragen pro Minute begrenzt, auch bei Wiederholungen.
+
+Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)` und `createRidesTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und beide Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an `AccountsModule.register` und `RidesModule.register`. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
+
+Die Datenmigration in diesem Teilschritt ist vorläufig. Nach Integration der getrennten Auth-Migration erzeugt der Parent die endgültige Reihenfolge und den Snapshot neu. `0000` bleibt unverändert. Der Browser lädt diese Daten noch nicht hoch.
+
 ```sql
 users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at)
 auth_identities(user_id REFERENCES users(id), issuer TEXT, subject TEXT, UNIQUE(issuer,subject))

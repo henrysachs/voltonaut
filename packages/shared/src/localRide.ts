@@ -20,8 +20,10 @@ export const LocalRideMetadataSchema = z
       .regex(/^[^\p{Cc}\p{Cs}\uFFFE\uFFFF]+$/u),
     physicsClockScale: z.number().finite().min(1).max(20),
     profile: RiderProfileSchema.extend({
-      bike: RiderProfileSchema.shape.bike.readonly(),
-    }).readonly(),
+      bike: RiderProfileSchema.shape.bike.strict().readonly(),
+    })
+      .strict()
+      .readonly(),
   })
   .strict()
   .readonly();
