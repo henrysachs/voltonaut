@@ -201,12 +201,10 @@ it("has no development mailbox or account endpoints", async () => {
   const session = await loginTestUser(app, mail, "scope@example.com");
 
   const responses = await Promise.all(
-    ["/v1/me", "/v1/rides", "/dev/mailbox"].map((path) =>
+    ["/v1/me", "/dev/mailbox"].map((path) =>
       request(httpServerOf(app)).get(path).set(bearer(session.sessionToken)),
     ),
   );
 
-  expect(responses.map((response: SupertestResponsePort) => response.status)).toEqual([
-    404, 404, 404,
-  ]);
+  expect(responses.map((response: SupertestResponsePort) => response.status)).toEqual([404, 404]);
 });

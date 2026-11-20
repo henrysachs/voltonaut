@@ -8,7 +8,7 @@ import { createTestApp, getDatabase, httpServerOf, bodyOf } from "../testing/tes
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
 
-it("creates only auth tables, enforces foreign keys and closes on Nest shutdown", async () => {
+it("creates owned tables, enforces foreign keys and closes on Nest shutdown", async () => {
   const { app } = await createTestApp();
   const db = getDatabase(app);
 
@@ -19,7 +19,9 @@ it("creates only auth tables, enforces foreign keys and closes on Nest shutdown"
     .all();
 
   expect(tables).toEqual(
-    ["__drizzle_migrations", "login_tokens", "sessions", "users"].map((name) => ({ name })),
+    ["__drizzle_migrations", "login_tokens", "profiles", "rides", "sessions", "users"].map(
+      (name) => ({ name }),
+    ),
   );
   expect(db.$client.pragma("foreign_keys", { simple: true })).toBe(1);
   expect(() =>
@@ -41,7 +43,7 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(1);
+    expect(migrations).toHaveLength(2);
     db.$client
       .prepare("INSERT INTO users VALUES ('persisted', 'persist@example.com', 0, NULL)")
       .run();

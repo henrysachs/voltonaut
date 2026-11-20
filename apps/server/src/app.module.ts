@@ -1,20 +1,24 @@
 import { Module } from "@nestjs/common";
-import { APP_FILTER, APP_GUARD } from "@nestjs/core";
-
-import { AuthGuard } from "./auth/auth.guard.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { ServerConfigModule } from "./config.module.js";
 import { DatabaseModule } from "./database/database.module.js";
-import { ErrorEnvelopeFilter } from "./filters/error-envelope.filter.js";
+import { APP_PROVIDERS } from "./app.providers.js";
 
 import { HealthModule } from "./health/health.module.js";
+import { AccountsModule } from "./accounts/accounts.module.js";
+import { RidesModule } from "./rides/rides.module.js";
+import { accountsTables, ridesTables } from "./schema.js";
 
 @Module({
-  imports: [ServerConfigModule, DatabaseModule, AuthModule, HealthModule],
-  providers: [
-    { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_FILTER, useClass: ErrorEnvelopeFilter },
+  imports: [
+    ServerConfigModule,
+    DatabaseModule,
+    AuthModule,
+    HealthModule,
+    AccountsModule.register(accountsTables),
+    RidesModule.register(ridesTables),
   ],
+  providers: APP_PROVIDERS,
 })
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest modules are empty decorated classes; the framework reads the decorator, not class members.
 export class AppModule {}

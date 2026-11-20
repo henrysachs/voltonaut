@@ -1,4 +1,7 @@
 import type { ServerConfig } from "./config.js";
+import { ExpressAdapter } from "@nestjs/platform-express";
+
+export const MAX_JSON_BODY_BYTES = 8 * 1024 * 1024;
 
 interface ExpressSettings {
   readonly set: (setting: string, value: number | boolean | string) => void;
@@ -18,6 +21,14 @@ interface HttpSetupApp {
  * per-IP rate limits see the real client behind Traefik (X-Forwarded-For).
  */
 export function setupHttp(app: HttpSetupApp, config: ServerConfig): void {
+  const adapter = app.getHttpAdapter();
+
+  if (adapter instanceof ExpressAdapter) {
+    adapter.useBodyParser("json", false, { limit: MAX_JSON_BODY_BYTES, inflate: false });
+  } else {
+    throw new TypeError("HTTP setup requires the Nest Express adapter");
+  }
+
   app.enableCors({
     origin: [...config.cors.origins],
     allowedHeaders: ["Authorization", "Content-Type", "Content-Encoding"],

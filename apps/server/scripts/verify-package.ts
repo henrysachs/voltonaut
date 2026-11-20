@@ -98,9 +98,11 @@ try {
           )
           .all(),
       ),
-    ["__drizzle_migrations", "login_tokens", "sessions", "users"].map((name) => ({ name })),
+    ["__drizzle_migrations", "login_tokens", "profiles", "rides", "sessions", "users"].map(
+      (name) => ({ name }),
+    ),
   );
-  z.object({ count: z.literal(1) }).parse(
+  z.object({ count: z.literal(2) }).parse(
     db.prepare("SELECT count(*) AS count FROM __drizzle_migrations").get(),
   );
   db.close();
