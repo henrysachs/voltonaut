@@ -24,7 +24,7 @@ async function openReplay(page: Page): Promise<void> {
       }),
   );
   await page.goto("/debug/ble.html?replay=/replay.json");
-  await page.getByRole("button", { name: "Gerät wählen", exact: true }).click();
+  await page.getByRole("button", { name: "Gerät hinzufügen", exact: true }).click();
   await expect(page.locator("#status")).toContainText("ready");
 }
 
@@ -119,11 +119,11 @@ test("native picker stays in the synchronous click; remembered reconnect never s
 }) => {
   await page.addInitScript({ content: bluetoothFakeScript() });
   await page.goto("/debug/ble.html");
-  const choose = page.getByRole("button", { name: "Gerät wählen", exact: true });
+  const choose = page.getByRole("button", { name: "Gerät hinzufügen", exact: true });
   await choose.click();
-  await expect(page.locator("#status")).toContainText("picker cancelled");
+  await expect(page.locator("#picker-status")).toContainText("picker cancelled");
   await choose.click();
-  await expect(page.locator("#status")).toContainText("radio unavailable");
+  await expect(page.locator("#picker-status")).toContainText("radio unavailable");
   await choose.click();
   await expect(page.locator("#status")).toContainText("ready");
   await expect(page.locator("body")).toHaveAttribute("data-trainer-selections", "3");
@@ -131,7 +131,7 @@ test("native picker stays in the synchronous click; remembered reconnect never s
   await expect(page.locator("#status")).toHaveText("ready");
   await expect(page.locator("body")).toHaveAttribute("data-trainer-selections", "3");
   await choose.click();
-  await expect(page.locator("#status")).toContainText("Test trainer");
+  await expect(page.locator("#selected-device")).toContainText("Test trainer");
   await expect(page.locator("body")).toHaveAttribute("data-trainer-selections", "4");
   await expect(page.locator("body")).not.toHaveAttribute("data-ble-write");
 });

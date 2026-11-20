@@ -227,7 +227,7 @@ FW 1.x: Trainer + Puls + 2 Play-Griffe = **4 gleichzeitige Verbindungen** über 
 
 Funktion:
 
-1. **Scan & Connect:** Button „Gerät wählen" mit breiten Filtern (`acceptAllDevices: true` + lange `optionalServices`-Liste: `0x1826, 0x1818, 0x180D, 0x180F, 0x180A, 0x1816, 00000001-19ca-…, 0000fc82-…`). Zeigt Name, ID, Advertising-Daten (via `watchAdvertisements`: RSSI, manufacturerData hex, serviceData).
+1. **Scan & Connect:** Button „Gerät hinzufügen" mit breiten Filtern (`acceptAllDevices: true` + lange `optionalServices`-Liste: `0x1826, 0x1818, 0x180D, 0x180F, 0x180A, 0x1816, 00000001-19ca-…, 0000fc82-…`). Zeigt Name, ID, Advertising-Daten (via `watchAdvertisements`: RSSI, manufacturerData hex, serviceData).
 2. **GATT-Explorer:** listet alle Primary Services → Characteristics mit Properties (read/write/writeWithoutResponse/notify/indicate) und Descriptors. Button pro Characteristic: Read, Subscribe, Write (Hex- oder ASCII-Eingabe).
 3. **Logger:** jede Notification/Indication/Read/Write als Zeile `{tMs (performance.now), device, service, char, dir: 'rx'|'tx', hex, ascii, decoded?}`; Filter und Pausieren; Marker-Button („Jetzt drücke ich: rechts hoch") schreibt eine Annotation in den Log.
 4. **Presets:** „Zwift-Controller-Handshake" (subscribe 02+04, write „RideOn"), „FTMS Request Control + Sim 0 %", „FTMS Sim 5 %".
@@ -237,6 +237,8 @@ Funktion:
 ### Ursprüngliche Mapping-Prozedur
 
 Die digitale Tastenvermessung in Schritten 4 und 5 ist für beide Play-Griffe abgeschlossen. Die vorhandenen Captures reichen als Regressionseingabe. Keine erneute Tastenumfrage. Firmware, physische Analogkalibrierung, Trainer und Pulsgurt bleiben getrennte Hardwarethemen.
+
+Softwarestand [E1-04](specs/E1-04-multidevice-lab.md): Eine Geräteliste zeigt den Zustand jeder Verbindung. Die Detailauswahl beendet keine Hintergrundaufnahme. Firmware, Notizen und JSON-Export gehören jeweils zum ausgewählten Gerät. Eine erneute native Auswahl desselben Geräts öffnet dessen vorhandene Details, ohne erneut GATT zu verbinden. Trainer und zwei gleichnamige Griffe sind mit drei nativen Browser-Fakes geprüft. Der gleichzeitige Betrieb echter Geräte bleibt offen.
 
 1. Zwift/Companion-App schließen, Controller aufwecken (Taste drücken, LED blinkt).
 2. Firmware der Play-Griffe in Zwift Companion notieren. Sniffer: verbinden, GATT-Explorer-Export speichern (welcher Service: `00000001-…` oder `fc82`?). Device Info lesen (Firmware `0x2A26`).

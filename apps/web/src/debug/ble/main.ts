@@ -1,73 +1,67 @@
 import {
-  createNavigatorBluetoothCentral,
-  createWebBluetoothTransport,
   createReplayTransport,
   createIntervalTicker,
   parseBleFixtureJson,
   bleFixtureSchema,
   SNIFFER_PRESETS,
-  runBlePreset,
   SNIFFER_OPTIONAL_SERVICES,
-  ZWIFT_PLAY_LEGACY_SERVICE,
-  ZWIFT_PLAY_V2_SERVICE,
   type BleTransport,
-  type BlePreset,
-  type GattProfile,
 } from "@voltonaut/ble";
-
-import { element, input, select, downloadJson, showAdvertisement } from "./dom.js";
-import { renderExplorer, type RunOperation } from "./explorer.js";
-import { createSnifferSession, type SnifferSession } from "./session.js";
+import { element, input, downloadJson } from "./dom.js";
+import { renderExplorer } from "./explorer.js";
+import { LabDevices } from "./devices.js";
+import type { LabDevice, LabChange } from "./device.js";
+import { renderDevices, restoreMetadata } from "./deviceList.js";
+import { addNativeDevice } from "./connections.js";
+import { preset } from "./presets.js";
 
 const scan = { acceptAllDevices: true, filters: [], optionalServices: SNIFFER_OPTIONAL_SERVICES };
 const clock = { nowS: () => performance.now() / 1000 };
 const ticker = createIntervalTicker(50);
-const sessions: SnifferSession[] = [];
-const profiles = new Map<SnifferSession, GattProfile>();
-let current: SnifferSession | undefined;
+const devices = new LabDevices(changed);
 let paused = false;
-let queue = Promise.resolve();
 let refreshExplorer = (): void => {};
-const controlled = new Set<SnifferSession>();
 
 function renderLog(): void {
-  if (paused || current === undefined) {
+  const target = devices.selected;
+
+  if (paused || target === undefined) {
     return;
   }
 
   const filter = input("filter").value.toLowerCase();
-  element("log").textContent = current
-    .fixture("", "")
+  element("log").textContent = target.session
+    .fixture(target.firmware, target.notes)
     .log.map((entry) => JSON.stringify(entry))
     .filter((line) => line.toLowerCase().includes(filter))
     .join("\n");
 }
 
-async function executeOperation(
-  operation: () => Promise<void>,
-  target?: SnifferSession,
-): Promise<void> {
-  try {
-    await operation();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Bluetooth operation failed";
-
-    if (target === undefined || current === target) {
-      element("status").textContent = message;
-    }
-
-    target?.marker(`error: ${message}`);
+function changed(change: LabChange, source: Readonly<LabDevice>): void {
+  if (change !== "capture") {
+    renderDevices(devices);
   }
+
+  const target = devices.selected;
+
+  if (
+    target !== undefined &&
+    (change === "selection" || (change === "profile" && target === source))
+  ) {
+    restoreMetadata(target);
+    refreshExplorer = renderExplorer("gatt", target.profile, target.session, target.run);
+  }
+
+  if (change === "selection") {
+    element("log").textContent = "";
+  }
+
+  renderLog();
+  refreshExplorer();
 }
 
-function runFor(target: SnifferSession): RunOperation {
-  return (operation) => {
-    queue = queue.then(() => executeOperation(operation, target));
-  };
-}
-
-function runSelected(operation: (target: SnifferSession) => Promise<void>): void {
-  const target = current;
+function runSelected(operation: (target: Readonly<LabDevice>) => Promise<void>): void {
+  const target = devices.selected;
 
   if (target === undefined) {
     element("status").textContent = "Zuerst Gerät wählen";
@@ -75,23 +69,7 @@ function runSelected(operation: (target: SnifferSession) => Promise<void>): void
     return;
   }
 
-  runFor(target)(() => operation(target));
-}
-
-function renderSession(): void {
-  const target = current;
-
-  if (target === undefined) {
-    return;
-  }
-
-  const profile = profiles.get(target);
-
-  if (profile !== undefined) {
-    refreshExplorer = renderExplorer("gatt", profile, target, runFor(target));
-  }
-
-  renderLog();
+  target.run(() => operation(target));
 }
 
 async function replayTransport(replay: string): Promise<BleTransport> {
@@ -116,145 +94,39 @@ async function replayTransport(replay: string): Promise<BleTransport> {
   });
 }
 
-function nativeTransport(): BleTransport {
-  const central = createNavigatorBluetoothCentral();
-
-  if (central === undefined) {
-    throw new Error("Web Bluetooth benötigt Chrome/Edge und HTTPS oder localhost");
-  }
-
-  return createWebBluetoothTransport({ central });
-}
-
-async function connectNew(transport: BleTransport): Promise<void> {
-  const session = createSnifferSession(transport, () => {
-    renderLog();
-    refreshExplorer();
-  });
-
-  const profile = await session.transport.connect(scan, "select");
-  current = session;
-  controlled.delete(session);
-  sessions.push(session);
-  profiles.set(session, profile);
-  const option = document.createElement("option");
-  option.value = String(sessions.length - 1);
-  option.textContent = `${transport.deviceName()} · ${transport.deviceId()}`;
-  select("devices").append(option);
-  select("devices").value = option.value;
-  element("status").textContent = `ready · ${option.textContent}`;
-
-  const stopAdvertisements = transport.watchAdvertisements((frame) => {
-    if (current === session) {
-      showAdvertisement(frame);
-    }
-  });
-
-  const stopDisconnected = transport.onDisconnected(() => {
-    controlled.delete(session);
-
-    if (current === session) {
-      element("status").textContent = `disconnected · ${transport.deviceName()}`;
-    }
-  });
-
-  window.addEventListener(
-    "pagehide",
-    () => {
-      stopAdvertisements();
-      stopDisconnected();
-      void session.dispose();
-    },
-    { once: true },
-  );
-  renderSession();
-}
-
-async function preset(session: SnifferSession, presetDefinition: BlePreset): Promise<void> {
-  if (presetDefinition.id === "ftms-sim-five" && !controlled.has(session)) {
-    throw new Error("Zuerst FTMS Request Control + Sim 0 % erfolgreich ausführen");
-  }
-
-  const playService = profiles
-    .get(session)
-    ?.services.find(
-      (service) =>
-        service.uuid === ZWIFT_PLAY_LEGACY_SERVICE || service.uuid === ZWIFT_PLAY_V2_SERVICE,
-    );
-
-  const selectedPreset =
-    presetDefinition.id === "zwift-play-handshake" && playService !== undefined
-      ? {
-          ...presetDefinition,
-          steps: presetDefinition.steps.map((step) => ({
-            ...step,
-            ref: { ...step.ref, serviceUuid: playService.uuid },
-          })),
-        }
-      : presetDefinition;
-
-  if (presetDefinition.id === "zwift-play-handshake") {
-    await Promise.all(
-      selectedPreset.steps.map((step) =>
-        step.kind === "subscribe" ? session.observe(step.ref) : Promise.resolve(),
-      ),
-    );
-  }
-
-  const ok = await runBlePreset({
-    transport: session.transport,
-    preset: selectedPreset,
-    clock,
-    ticker,
-  });
-
-  if (!ok) {
-    throw new Error("Preset timeout: keine erfolgreiche Control-Point-Antwort");
-  }
-
-  if (presetDefinition.id === "ftms-request-control-sim-zero") {
-    controlled.add(session);
-  }
-
-  session.marker(`Preset abgeschlossen: ${presetDefinition.label}`);
+async function addReplayDevice(replay: string): Promise<void> {
+  const transport = await replayTransport(replay);
+  const device = devices.add(transport, transport.deviceId(), transport.deviceName());
+  device.run(() => device.connect(scan));
 }
 
 function bindControls(): void {
   element("scan").addEventListener("click", () => {
-    void executeOperation(() => {
-      const replay = new URLSearchParams(location.search).get("replay");
+    const replay = new URLSearchParams(location.search).get("replay");
+    element("picker-status").textContent = "";
 
-      return replay === null
-        ? connectNew(nativeTransport())
-        : replayTransport(replay).then(connectNew);
+    const adding = replay === null ? addNativeDevice(devices, scan) : addReplayDevice(replay);
+    void adding.catch((error) => {
+      element("picker-status").textContent =
+        error instanceof Error ? error.message : "Geräteauswahl fehlgeschlagen";
     });
   });
   element("reconnect").addEventListener("click", () => {
-    runSelected(async (session) => {
-      const profile = await session.transport.connect(scan, "remembered");
-      controlled.delete(session);
-      profiles.set(session, profile);
-
-      if (current === session) {
-        renderSession();
-        element("status").textContent = "ready";
-      }
-    });
+    runSelected((device) => device.connect(scan));
   });
   element("disconnect").addEventListener("click", () => {
-    runSelected(async (session) => {
-      await session.transport.disconnect();
-      controlled.delete(session);
+    runSelected((device) => device.disconnect());
+  });
 
-      if (current === session) {
-        element("status").textContent = "disconnected";
+  for (const id of ["firmware", "notes"]) {
+    element(id).addEventListener("input", () => {
+      const target = devices.selected;
+
+      if (target !== undefined) {
+        target.setMetadata(input("firmware").value, input("notes").value);
       }
     });
-  });
-  select("devices").addEventListener("change", () => {
-    current = sessions[Number(select("devices").value)];
-    renderSession();
-  });
+  }
 }
 
 function bindLogger(): void {
@@ -266,16 +138,16 @@ function bindLogger(): void {
   });
   element("add-marker").addEventListener("click", () => {
     const text = input("marker").value;
-    runSelected(async (session) => {
-      session.marker(text);
+    runSelected(async (device) => {
+      device.session.marker(text);
       await Promise.resolve();
     });
   });
   element("export").addEventListener("click", () => {
     const firmware = input("firmware").value;
     const notes = input("notes").value;
-    runSelected(async (session) => {
-      const fixture = session.fixture(firmware, notes);
+    runSelected(async (device) => {
+      const fixture = device.session.fixture(firmware, notes);
       const parsed = bleFixtureSchema.parse(fixture);
       downloadJson(JSON.stringify(parsed, null, 2));
       await Promise.resolve();
@@ -287,10 +159,20 @@ for (const definition of SNIFFER_PRESETS) {
   const button = document.createElement("button");
   button.textContent = definition.label;
   button.addEventListener("click", () => {
-    runSelected((session) => preset(session, definition));
+    runSelected((device) => preset(device, definition, { clock, ticker }));
   });
   element("presets").append(button);
 }
+
+window.addEventListener(
+  "pagehide",
+  () => {
+    for (const device of devices.entries) {
+      void device.dispose();
+    }
+  },
+  { once: true },
+);
 
 bindControls();
 

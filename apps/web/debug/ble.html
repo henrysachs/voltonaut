@@ -14,13 +14,16 @@
     </header>
     <main>
       <section aria-label="Verbindung">
-        <button id="scan">Gerät wählen</button>
+        <h2>Geräte</h2>
+        <button id="scan">Gerät hinzufügen</button>
+        <output id="picker-status" aria-live="polite"></output>
+        <p>
+          Trainer und beide Griffe einzeln hinzufügen. Die Auswahl wechselt nur die Detailansicht.
+        </p>
+        <div id="devices" aria-label="Geräteliste"></div>
+        <h2 id="selected-device">Details · kein Gerät ausgewählt</h2>
         <button id="reconnect">Erneut verbinden</button>
         <button id="disconnect">Trennen</button>
-        <label
-          >Gerät
-          <select id="devices"></select
-        ></label>
         <output id="status" aria-live="polite">disconnected</output>
         <pre id="advertisement">Advertising noch nicht verfügbar</pre>
         <label>Firmware <input id="firmware" /></label>

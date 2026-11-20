@@ -34,6 +34,8 @@ Die drei zuerst ergänzten Regressionstests schlugen vor der Korrektur fehl. A e
 
 ## Hardware-Abnahme offen
 
+Die Mehrgeräteansicht folgt in [E1-04](E1-04-multidevice-lab.md). Sie ersetzt die Geräte-Dropdown-Auswahl durch gleichzeitig sichtbare Karten und trennt die bisherigen globalen UI-Warteschlangen und Metadaten je Sitzung. Dieser Nachtrag behauptet keine Behebung echter Funkabbrüche.
+
 Keine Aussage über reale Geräte, Firmware, Play-Tastenmapping, Verschlüsselung oder Widerstand. Echte Captures und Hardware-Abnahme erfolgen separat nach `docs/02-bluetooth.md` §5. Roadmap-Hardware-Checkboxen bleiben offen.
 
 ## Offene Fragen
