@@ -15,15 +15,6 @@ export function createEnvironmentSystem(): RenderSystem {
       context.scene.background = new THREE.Color(0xa6cbd3);
       context.scene.fog = new THREE.Fog(0xa6cbd3, 100, 550);
 
-      const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(5000, 5000),
-        new THREE.MeshStandardMaterial({ color: 0x69855d, roughness: 1 }),
-      );
-
-      ground.rotation.x = -Math.PI / 2;
-      ground.position.y =
-        Math.min(...context.route.profile.samples.map((sample) => sample.elevationM)) - 0.3;
-      ground.receiveShadow = true;
       sun.position.set(-25, 45, 30);
       sun.castShadow = true;
       sun.shadow.mapSize.set(1024, 1024);
@@ -33,7 +24,7 @@ export function createEnvironmentSystem(): RenderSystem {
       sun.shadow.camera.bottom = -18;
       sun.shadow.camera.far = 140;
       sun.shadow.normalBias = 0.04;
-      root.add(ground, sun, sun.target, new THREE.HemisphereLight(0xd5f2ff, 0x657b40, 2));
+      root.add(sun, sun.target, new THREE.HemisphereLight(0xd5f2ff, 0x657b40, 2));
       context.scene.add(root);
     },
     update(frame) {
