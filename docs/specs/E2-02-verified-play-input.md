@@ -68,6 +68,16 @@ Das Belegverzeichnis heißt `play-controller-correction-sol` unter dem oben gena
 
 Das unabhängige Nachreview genehmigt die Korrektur. Es besteht die unveränderten ursprünglichen Proben mit zwei Unit-Fällen und einem Browserfall. Vier zusätzliche Lifecycle-Proben, 21 bestehende native Lifecycle-Tests und vier aktuelle Browserfälle bestehen ebenfalls. Alle 34 geprüften Quellhashes bleiben unverändert. Der Reviewbeleg liegt unter `$TMPDIR/opencode/play-ownership-correction-review-Qjg3yV0x/REVIEW.md`. Die integrierende Session bestätigt danach erneut das vollständige Gate mit 620 Unit-Tests und 21 E2Es sowie den Build.
 
+## Gemeinsame Integration mit der Mehrgeräteansicht
+
+`lab/hardware-ble-combined` führt diese Implementierung mit Spec E1-04 zusammen. Parser, native Besitzkorrektur, Spieladapter und Labor-Sitzung bleiben gegenüber dem unabhängig geprüften Controller-Commit unverändert. Die Browserprüfung der Mehrgeräteansicht verwendet nun vollständige Play-Zustände. Jeder Geräteexport prüft zusätzlich Seite, Schaltzustand, beide Analogrohwerte und den Hinweis auf fehlende Kalibrierung.
+
+Das kombinierte `E2E_PORT=5194 CI=true mise run check` besteht mit 623 Unit-Tests und 26 E2Es. Auch der Build besteht. Die laufende App auf 5173 und die statische Mehrgeräteansicht auf 5195 bleiben unverändert. Eine Aktualisierung wartet auf die Bestätigung, dass offene Mitschnitte exportiert sind und ein Neuladen erlaubt ist.
+
+Das unabhängige Kombinationsreview genehmigt die Zusammenführung nach 35 fokussierten Tests und vier eigenen Browserproben. Die Proben bestätigen getrennte rohe und dekodierte Captures, gerätegebundene Befehle und die native Besitzkorrektur. Beide Play-Presets abonnieren `…02` und `…04` vor genau einem `RideOn` über `writeValueWithoutResponse` auf `…03`. Es gibt keine automatischen Writes oder Trainer-Steuerbefehle. Alle 101 geprüften Produktionsdateien bleiben unverändert. Der ausführbare Reviewbeleg liegt unter `$TMPDIR/opencode/combined-ble-review-NmPrdVJM/REVIEW.md`.
+
+Eine kurzzeitig gestartete Build-Vorschau auf 5196 bestätigt HTTP 200 für App und Labor, vier getrennte Verbindungszeilen und die native Bluetooth-API im sicheren Kontext. Es gibt weder Hot-Reload noch Browserfehler oder externe Netzwerkanfragen. Kein Gerät wurde ausgewählt. Die Vorschau ist danach beendet. Screenshots und Beleg liegen unter `$TMPDIR/opencode/combined-ble-built-preview-XQ1nmw/`.
+
 ## Grenzen
 
 Beide Quellmitschnitte sind echte Hardwaredaten. Neue Tests verbinden keine echte Hardware. Firmware bleibt unbekannt; physische Bedeutung und Kalibrierung der Analogkanäle bleiben `UNVERIFIED`. `0x15`/`0x19`, andere Nachrichtentypen und andere Services werden nicht als Tastenzustände interpretiert. Keine Verschlüsselung, Haptik oder Trainersteuerung. Gleichzeitiger realer Betrieb mit Trainer/Puls und die Zuverlässigkeitsfahrt bleiben manuelle Abnahme, keine erneute Tastenvermessung.

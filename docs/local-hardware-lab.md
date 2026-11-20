@@ -4,12 +4,15 @@
 
 - App mit echten Geräteadaptern: <http://localhost:5173/>
 - BLE-Labor: <http://localhost:5173/debug/ble.html>
+- Statische Mehrgeräteansicht: <http://localhost:5195/debug/ble.html>
 - Simulator ohne Hardware: <http://localhost:5173/?sim=1>
 - API-Health: <http://localhost:3300/healthz>
 
 Verwende Chrome oder Edge und die Adresse `localhost`. Der Browser behandelt sie als sicheren Kontext für Web Bluetooth. Die Geräte werden über **Gerät wählen** ausgewählt. Eine vorherige Kopplung im macOS-Bluetoothmenü ist normalerweise nicht nötig.
 
 Die normale App und das BLE-Labor verwenden die echte Bluetooth-API. Es werden keine Geräte-Fakes injiziert. Nur die ausdrücklich gewählte URL `?sim=1` erzeugt simulierte Messwerte.
+
+Die Mehrgeräteansicht auf 5195 hat kein Hot-Reload. **Gerät hinzufügen** öffnet jeweils eine native Auswahl. Drei Karten zeigen Trainer und beide Griffe getrennt. Der Ansichtswechsel trennt keine Verbindung. Die Play-Spielanbindung ist dort noch nicht enthalten. Exportiere offene Mitschnitte vor dem Schließen oder Neuladen eines Labortabs.
 
 ## Enthaltener Entwicklungsstand
 
@@ -19,13 +22,22 @@ Anmeldung erfolgt ausdrücklich über **Anmelden** als lokaler Testnutzer `teste
 
 Der Render-Worker ist weiterhin ein separates Wegwerfexperiment und ersetzt nicht den Renderer dieses Teststands. Replay-Prüfung bedeutet noch keine aufgezeichnete oder serverseitig angenommene prüfbare Fahrt.
 
+## Vorbereitete Bluetooth-Aktualisierung
+
+`lab/hardware-ble-combined` enthält zusätzlich die Mehrgeräteansicht und die unabhängig geprüfte Play-Spielanbindung. Beide echten Play-Mitschnitte bestätigen das bekannte Klartextprotokoll. Die Spielanbindung schaltet rechts hoch und links herunter, jeweils einmal pro Druck. Das Labor zeigt Seite, Tasten und unkalibrierte Analogrohwerte. Eine erneute Tastenvermessung ist nicht nötig.
+
+Das kombinierte `E2E_PORT=5194 CI=true mise run check` besteht mit 623 Unit-Tests und 26 E2Es. Auch der Build besteht. Drei native Browser-Fakes prüfen getrennte Mitschnitte einschließlich dekodierter vollständiger Play-Zustände. Die Prüfung belegt keine gleichzeitigen echten Funkverbindungen.
+
+Dieser Stand ist noch nicht auf 5173 oder 5195 eingespielt. Die Aktualisierung der laufenden App wartet auf die Bestätigung, dass alle offenen Mitschnitte exportiert sind und ein Neuladen erlaubt ist. Der nächste echte Trainer-Test liest FTMS-Features und Messwerte. Widerstandssteuerung bleibt davon getrennt.
+
 ## Erster Hardwaretest
 
 1. Stelle den Trainer sicher auf und versorge ihn mit Strom.
 2. Schließe Zwift, Wahoo, Rouvy und andere Apps, die das Gerät verbunden halten könnten.
-3. Öffne das BLE-Labor in Chrome oder Edge.
-4. Klicke **Gerät wählen** und wähle den Trainer im Browserdialog.
-5. Prüfe zunächst nur Gerätestatus und GATT-Dienste. Verwende noch keine Schreibbefehle oder Widerstands-Presets.
+3. Exportiere offene Mitschnitte im bisherigen Labor, bevor du den Tab schließt.
+4. Öffne die Mehrgeräteansicht auf 5195 in Chrome oder Edge.
+5. Klicke **Gerät hinzufügen** und wähle den Trainer im Browserdialog.
+6. Prüfe zunächst nur Gerätestatus und GATT-Dienste. Verwende noch keine Schreibbefehle oder Widerstands-Presets.
 
 Trainer und Controller reichen für den Beginn. Die Pulsgurt-Abnahme bleibt offen. Firmware, genaue Gerätebezeichnung und echte JSON-Mitschnitte werden während des gemeinsamen Tests erfasst. Reale Messungen sind nicht durch Simulatorprüfungen ersetzt.
 

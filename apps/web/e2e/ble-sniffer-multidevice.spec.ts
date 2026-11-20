@@ -77,13 +77,27 @@ async function assertCapture(page: LabPage, id: string, count: number): Promise<
   const fixture = await exportDevice(page, id);
 
   const expectedHex =
-    id === "trainer" ? "45 00 b4 00 f4 00" : `07 08 ${id === "left" ? "01" : "00"} 30 01`;
+    id === "trainer"
+      ? "45 00 b4 00 f4 00"
+      : `07 08 ${id === "left" ? "01" : "00"} 10 01 18 01 20 01 28 01 30 01 38 01 40 00 48 00`;
 
   expect(fixture.log.filter((entry) => entry.kind === "data")).toHaveLength(count);
   expect(fixture.log.every((entry) => entry.kind === "event" || entry.hex === expectedHex)).toBe(
     true,
   );
   expect(fixture.log).not.toContainEqual(expect.objectContaining({ kind: "data", dir: "tx" }));
+
+  if (id !== "trainer") {
+    for (const entry of fixture.log) {
+      if (entry.kind === "data") {
+        expect(entry.decoded).toContain(`"side":"${id}"`);
+        expect(entry.decoded).toContain('"shift":false');
+        expect(entry.decoded).toContain('"rawAnalogLr":0');
+        expect(entry.decoded).toContain('"rawAnalogUd":0');
+        expect(entry.decoded).toContain("Unkalibrierte Rohwerte, keine Spielwirkung.");
+      }
+    }
+  }
 }
 
 test("three ready devices capture independently, duplicate selection preserves every link", async ({

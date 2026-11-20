@@ -7,7 +7,10 @@ import type {
 } from "@voltonaut/ble";
 
 function multideviceValue(id: string): DataView {
-  const bytes = id === "trainer" ? [0x45, 0, 180, 0, 244, 0] : [7, 8, id === "left" ? 1 : 0, 48, 1];
+  const bytes =
+    id === "trainer"
+      ? [0x45, 0, 180, 0, 244, 0]
+      : [7, 8, id === "left" ? 1 : 0, 16, 1, 24, 1, 32, 1, 40, 1, 48, 1, 56, 1, 64, 0, 72, 0];
 
   return new DataView(Uint8Array.from(bytes).buffer);
 }
