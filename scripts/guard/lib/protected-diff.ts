@@ -7,7 +7,7 @@ const protectedPatterns: readonly RegExp[] = [
   /^tools\/oxlint\//u,
   /^\.oxfmtrc\.json$/u,
   /^\.dependency-cruiser\.cjs$/u,
-  /^scripts\/guard(\.mjs|\/|$)/u,
+  /^scripts\/guard(\.mjs|\.test\.mjs|\/|$)/u,
   /^\.github\//u,
   /^pnpm-workspace\.yaml$/u,
   /^docs\/decisions\//u,

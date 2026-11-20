@@ -12,23 +12,23 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 
 **Ziel:** Leeres, aber vollständig verdrahtetes und abgesichertes System. Jeder Agent kann `mise install && mise run check` ausführen; Web läuft auf Cloudflare Pages (sobald Secrets da sind), Server läuft lokal und in CI.
 
-- [ ] pnpm-Workspace: `apps/web`, `apps/server`, `packages/{shared,engine,rules,ble}` (ADR-006), `workspace:*`, `save-exact`
-- [ ] `mise.toml`: Node + pnpm exakt gepinnt; Tasks `install, dev, dev:web, dev:server, fmt, fmt:check, lint, fix, typecheck, depcruise, guard, test, test:e2e, check, check:mutation, build, assets, perf, golden:update, visual:update`
-- [ ] `tsconfig.base.json` strengstens + Project References; `lib` ohne DOM/Node in shared/engine/rules
-- [ ] Oxlint: `oxlint.config.ts` mit vendortem **anti-slop** (`tools/oxlint/anti-slop/`, `UPSTREAM.md`), `oxlint` + `@oxlint/plugins` exakt gleiche Version, `oxlint-tsgolint`, Warnungen = Fehler
-- [ ] Oxfmt (exakt gepinnt) + Ignore-Liste
-- [ ] `.dependency-cruiser.cjs` mit allen Regeln aus `09-tooling.md` §6, inkl. Negativtest (ein absichtlich verbotener Import in einer Test-Fixture schlägt fehl)
-- [ ] `scripts/guard.mjs` (Escape-Hatches, gelockerte Configs, geschützte Dateien ohne ADR/Label, Deps ohne `docs/dependencies.md`)
-- [ ] Vitest-Workspace inkl. Coverage-Schwellen, fast-check, Stryker-Config (engine/rules), Playwright (Chromium, Sim-Modus, Screenshot-Setup im Playwright-Docker-Image)
-- [ ] `packages/shared`: Typen aus `01-architecture.md`, Zod-Basis, Event-Bus-Typen
-- [ ] `packages/ble/sim`: FakeTrainer (Watt/Kadenz per Slider/Skript), FakeHeartRate, FakePlay + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
-- [ ] `apps/web`: Minimal-HUD (Watt, Kadenz, Puls, Gang) mit Sim-Werten; erster E2E-Test
-- [ ] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
-- [ ] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
-- [ ] Server-Gerüst läuft lokal (`mise run dev:server`) und in CI (Health-Test, Image-Build); Dockerfile, Compose-Datei mit Traefik-Labels und Litestream-Sidecar sowie Deploy-Skript liegen dokumentiert im Repo (`deploy/`)
-- [ ] _(Optional, sobald der DNS-A-Record für `voltonaut-api.stammkneipe.dev` liegt)_ **E0-opt – VPS-Deploy:** SSH-Zugang ist seit 19.11.2026 vorhanden. Image nach `ghcr.io/henrysachs/voltonaut-server`, Compose-Projekt tritt dem vorhandenen Traefik-Netz bei (Host-Rule, TLS über Traefiks Certresolver; Netzwerk-/Certresolver-Namen beim Deploy aus der Financensor-Compose, **TODO**), Rollback auf vorheriges Image-Tag, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://voltonaut-api.stammkneipe.dev/healthz` → 200 nach Deploy aus CI
-- [ ] _(Teil von E0-opt, nicht von E0 – E0 selbst bleibt unverändert)_ **Observability-Grund verdrahten** (ADR-010, `11-observability.md`): strukturierte JSON-Logs (pino) nach stdout mit `trace_id`/`span_id`; OTel-Traces per OTLP an Alloy/Tempo; `/metrics` (OTel Prometheus Exporter) nur intern im Docker-Netz, nicht über Traefik; No-Op in Dev/Tests. OTLP-Endpunkte und Observability-Netzname beim Deploy aus der Financensor-Compose eintragen (**TODO**). Grafana-Dashboards und Alarme unter `ops/grafana/` sind spätere Liefergegenstände nach dem ersten Deploy.
-- [ ] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
+- [x] pnpm-Workspace: `apps/web`, `apps/server`, `packages/{shared,engine,rules,ble}` (ADR-006), `workspace:*`, `save-exact`
+- [x] `mise.toml`: Node + pnpm exakt gepinnt; Tasks `install, dev, dev:web, dev:server, fmt, fmt:check, lint, fix, typecheck, depcruise, guard, test, test:e2e, check, check:mutation, build, assets, perf, golden:update, visual:update`
+- [x] `tsconfig.base.json` strengstens + Project References; `lib` ohne DOM/Node in shared/engine/rules
+- [x] Oxlint: `oxlint.config.ts` mit vendortem **anti-slop** (`tools/oxlint/anti-slop/`, `UPSTREAM.md`), `oxlint` + `@oxlint/plugins` exakt gleiche Version, `oxlint-tsgolint`, Warnungen = Fehler
+- [x] Oxfmt (exakt gepinnt) + Ignore-Liste
+- [x] `.dependency-cruiser.cjs` mit allen Regeln aus `09-tooling.md` §6, inkl. Negativtest (ein absichtlich verbotener Import in einer Test-Fixture schlägt fehl)
+- [x] `scripts/guard.mjs` (Escape-Hatches, gelockerte Configs, geschützte Dateien ohne ADR/Label, Deps ohne `docs/dependencies.md`)
+- [x] Vitest-Workspace inkl. Coverage-Schwellen, fast-check, Stryker-Config (engine/rules), Playwright (Chromium, Sim-Modus, Screenshot-Setup im Playwright-Docker-Image)
+- [x] `packages/shared`: Typen aus `01-architecture.md`, Zod-Basis, Event-Bus-Typen
+- [x] `packages/ble/sim`: FakeTrainer (Watt/Kadenz per Slider/Skript), FakeHeartRate, FakePlay + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
+- [x] `apps/web`: Minimal-HUD (Watt, Kadenz, Puls, Gang) mit Sim-Werten; erster E2E-Test
+- [x] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
+- [x] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
+- [x] Server-Gerüst läuft lokal (`mise run dev:server`) und in CI (Health-Test, Image-Build); Dockerfile, Compose-Datei mit Traefik-Labels und Litestream-Sidecar sowie Deploy-Skript liegen dokumentiert im Repo (`deploy/`)
+- [x] _(Optional, sobald der DNS-A-Record für `voltonaut-api.stammkneipe.dev` liegt)_ **E0-opt – VPS-Deploy:** SSH-Zugang ist seit 19.11.2026 vorhanden. Image nach `ghcr.io/henrysachs/voltonaut-server`, Compose-Projekt tritt dem vorhandenen Traefik-Netz bei (Host-Rule, TLS über Traefiks Certresolver; Netzwerk-/Certresolver-Namen beim Deploy aus der Financensor-Compose, **TODO**), Rollback auf vorheriges Image-Tag, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://voltonaut-api.stammkneipe.dev/healthz` → 200 nach Deploy aus CI
+- [x] _(Teil von E0-opt, nicht von E0 – E0 selbst bleibt unverändert)_ **Observability-Grund verdrahten** (ADR-010, `11-observability.md`): strukturierte JSON-Logs (pino) nach stdout mit `trace_id`/`span_id`; OTel-Traces per OTLP an Alloy/Tempo; `/metrics` (OTel Prometheus Exporter) nur intern im Docker-Netz, nicht über Traefik; No-Op in Dev/Tests. OTLP-Endpunkte und Observability-Netzname beim Deploy aus der Financensor-Compose eintragen (**TODO**). Grafana-Dashboards und Alarme unter `ops/grafana/` sind spätere Liefergegenstände nach dem ersten Deploy.
+- [x] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
       **Abnahme:** Frischer Clone: `mise install && mise run install && mise run check` grün; `?sim=1` zeigt laufende Werte, Pfeiltasten ändern den Gang; PR mit absichtlich verbotenem Import, `@ts-ignore` oder gelockerter Regel wird von CI abgelehnt; nach Setzen der Cloudflare-Secrets ist `https://voltonaut.stammkneipe.dev` (bzw. `https://voltonaut.pages.dev`) erreichbar und jeder PR bekommt eine Preview-URL; Server-Health-Test grün in CI.
 
 ## E1 – Bluetooth-Sniffer, Puls, FTMS lesen
