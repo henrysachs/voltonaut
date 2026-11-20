@@ -16,7 +16,10 @@ interface RecordingSetup {
 
 export function setupRideRecording(options: RecordingSetup): (event: DeviceEvent) => void {
   const recorder = createRideRecorder(options);
-  const store = openRideDatabase(indexedDB).then(createRideStore);
+
+  const store = Promise.resolve()
+    .then(() => openRideDatabase(indexedDB))
+    .then(createRideStore);
 
   mountRideRecording({
     recorder,

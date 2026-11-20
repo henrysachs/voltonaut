@@ -51,12 +51,24 @@ class RecordingPanel {
   readonly #history = document.createElement("ul");
   #busy = false;
   #stored: readonly CompletedLocalRide[] = [];
+  #securedRideId: string | undefined;
 
   constructor(options: Readonly<RecordingOptions>) {
     this.#options = options;
   }
 
   mount(): void {
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Browser owns BeforeUnloadEvent; preventing navigation requires its native contract.
+    window.addEventListener("beforeunload", (event) => {
+      const state = this.#options.recorder.state();
+
+      if (
+        state.kind === "recording" ||
+        (state.kind === "completed" && state.ride.rideId !== this.#securedRideId)
+      ) {
+        event.preventDefault();
+      }
+    });
     this.#status.setAttribute("role", "status");
     this.#status.dataset["testid"] = "recording-status";
     this.#status.textContent = "Bereit. Aufnahme wird nur beim Beenden gespeichert.";
@@ -104,8 +116,9 @@ class RecordingPanel {
       download(this.#options.exportRide(ride));
       const state = this.#options.recorder.state();
 
-      if (!this.#busy && state.kind === "completed" && state.ride.rideId === ride.rideId) {
-        this.#start.disabled = false;
+      if (state.kind === "completed" && state.ride.rideId === ride.rideId) {
+        this.#securedRideId = ride.rideId;
+        this.#start.disabled = this.#busy;
       }
     });
     row.append(label, exportButton);
@@ -144,6 +157,7 @@ class RecordingPanel {
     try {
       const store = await this.#options.loadStore();
       await store.save(state.ride);
+      this.#securedRideId = state.ride.rideId;
       this.#stored = await store.list();
       this.#status.textContent = "Lokal gespeichert. Nicht servergeprüft, keine Belohnung.";
       this.#start.disabled = false;
@@ -152,6 +166,7 @@ class RecordingPanel {
       this.#retry.hidden = false;
     } finally {
       this.#busy = false;
+      this.#start.disabled = this.#securedRideId !== state.ride.rideId;
       this.render();
     }
   }
