@@ -5,6 +5,10 @@ import { CLOCK } from "./clock.js";
 
 export type { ServerConfig } from "./config.js";
 
+export { CLOCK } from "./clock.js";
+
+export type { Clock } from "./clock.js";
+
 export const SERVER_CONFIG: unique symbol = Symbol("voltonaut:server-config");
 
 @Global()

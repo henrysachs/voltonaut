@@ -2,11 +2,14 @@ import { Module } from "@nestjs/common";
 import { ThrottlerModule } from "@nestjs/throttler";
 import type { ThrottlerOptions } from "@nestjs/throttler";
 
-import type { ServerConfig } from "../config.js";
+import type { ServerConfig } from "../config.module.js";
 import { SERVER_CONFIG } from "../config.module.js";
 import { MailModule } from "../mail/mail.module.js";
 import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
+import { OidcService } from "./oidc.service.js";
+import { OidcController } from "./oidc.controller.js";
+import { MeController } from "./me.controller.js";
 import {
   MAGIC_LINK_EMAIL_THROTTLER,
   MAGIC_LINK_IP_THROTTLER,
@@ -51,8 +54,8 @@ function authThrottlers(config: ServerConfig): ThrottlerOptions[] {
       useFactory: (config: ServerConfig) => ({ throttlers: authThrottlers(config) }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService],
+  controllers: [AuthController, OidcController, MeController],
+  providers: [AuthService, OidcService],
   exports: [AuthService],
 })
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest modules are empty decorated classes; the framework reads the decorator, not class members.

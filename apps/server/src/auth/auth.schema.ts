@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, primaryKey, index } from "drizzle-orm/sqlite-core";
 
 /**
  * Tables owned by the auth module (E5 spec data model). Timestamps are
@@ -36,3 +36,44 @@ export type UsersRow = typeof users.$inferSelect;
 export type SessionsRow = typeof sessions.$inferSelect;
 
 export type LoginTokensRow = typeof loginTokens.$inferSelect;
+
+export const authIdentities = sqliteTable(
+  "auth_identities",
+  {
+    issuer: text("issuer").notNull(),
+    subject: text("subject").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+  },
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle supplies native mutable column builders to its schema callback.
+  (table) => [primaryKey({ columns: [table.issuer, table.subject] })],
+);
+
+export const oidcTransactions = sqliteTable(
+  "oidc_transactions",
+  {
+    stateHash: text("state_hash").primaryKey(),
+    bindingHash: text("binding_hash").notNull(),
+    nonce: text("nonce").notNull(),
+    verifier: text("verifier").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    claimedAt: integer("claimed_at"),
+  },
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle supplies native mutable column builders to its schema callback.
+  (table) => [index("oidc_transactions_expiry").on(table.expiresAt)],
+);
+
+export const oidcHandoffs = sqliteTable(
+  "oidc_handoffs",
+  {
+    codeHash: text("code_hash").primaryKey(),
+    bindingHash: text("binding_hash").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle supplies native mutable column builders to its schema callback.
+  (table) => [index("oidc_handoffs_expiry").on(table.expiresAt)],
+);
