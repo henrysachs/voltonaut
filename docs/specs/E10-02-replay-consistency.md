@@ -83,3 +83,11 @@ Keine blockierenden Fragen dieser Einheit. Browsererfassung und Anschluss an Per
 - `6.05 / 0.05` ergibt in dieser Laufzeit weniger als 121 ganze Ticks. Dagegen überschreitet `121 * 0.05` die Catch-up-Grenze. Beide unveränderten Binärwerte haben eigene Replayfälle. Es gibt keine Epsilonkorrektur der Tickzahl.
 - Die Nachrechnung vergleicht Ausgaben während des Leerens nach jedem Aufruf. Sie sammelt keine zweite vollständige Ausgabehistorie im Server. Der Routenfall überschreitet eine echte `test-loop`-Runde einschließlich Segmentereignissen.
 - Der Parent besteht `CI=true mise run check` mit 475 Tests und 17 E2Es sowie den Build. Der unabhängige Prüfer besteht 84 Tests einschließlich zwölf eigener Proben und 33 unveränderter V1-Fälle. Sein wiederholbarer Nachweis samt Quellhashes liegt unter `$TMPDIR/opencode/replay-review-independent/`. Die fehlende ADR-Indexzeile ist ergänzt. Eine private Implementierungserklärung wurde nach Kommentarreview gelöscht; keine Laufzeitlogik geändert. Mutation wurde nicht gestartet, da Engine- und Rules-Code unverändert sind. Keine Hardware-, Anbieter- oder Strava-Anfrage wurde ausgeführt.
+
+## CI-Korrektur des Bytegrenzentests
+
+Der Lauf `44760958962` überschreitet im kanonischen Bytegrenzentest das unveränderte Fünf-Sekunden-Limit. Der ursprüngliche Test parst dafür 200.000 kleine Ereignisse. Sein Ziel ist die Gesamtbytegrenze, nicht diese Ereigniszahl.
+
+Der Test verwendet stattdessen 25.000 gültige Segmentereignisse mit jeweils 100 Unicodezeichen als ID. Der vollständige Beleg hat 8.726.185 UTF-8-Bytes, aber nur 3.726.185 Codeeinheiten. Alle einzelnen Array-, String-, Zeit- und Referenzgrenzen bleiben erfüllt. Die ursprüngliche Fehler-Assertion bleibt unverändert. Eine zusätzliche Assertion stellt sicher, dass eine falsche Codeeinheitenzählung den Beleg nicht ablehnen würde.
+
+Der unabhängige Prüfer bestätigt für beide Datensätze genau einen Schemafehler: die kanonische UTF-8-Bytegrenze. Alle vorherigen Tests bleiben bytegleich. Produktcode, Limits, Wiederholungen und Timeouts werden nicht geändert. Fokussierte Tests, Korrekturreview und erneut das Gesamtgate mit 475 Tests und 17 E2Es sowie der Build sind grün. Die externe CI wird für den korrigierten Stand erneut ausgeführt.

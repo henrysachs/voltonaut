@@ -276,10 +276,10 @@ it("bounds observation counts and rejects short windows and repeated arming", ()
 it("applies the canonical envelope byte cap even below each individual array cap", () => {
   const ride = envelope();
 
-  const events = Array.from({ length: 200_000 }, () => ({
-    type: "distance.tick",
-    deltaM: 1,
-    deltaElevM: 0,
+  const events = Array.from({ length: 25_000 }, () => ({
+    type: "segment.entered",
+    segmentId: "界".repeat(100),
+    tS: 0,
   }));
 
   const oversized = {
@@ -287,5 +287,6 @@ it("applies the canonical envelope byte cap even below each individual array cap
     observations: [{ ...ride.observations[0], events }, ride.observations[1]],
   };
 
+  expect(JSON.stringify(oversized).length).toBeLessThan(MAX_RECORDING_V2_BYTES);
   expect(() => RecordingV2Schema.parse(oversized)).toThrow("UTF-8 byte limit");
 });
