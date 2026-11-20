@@ -210,3 +210,28 @@ body {
   font-size: 0.8rem;
   color: #7387a1;
 }
+
+.recording p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.recording button {
+  margin: 0.25rem 0.5rem 0.25rem 0;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #8496ae;
+  border-radius: 0.4rem;
+  background: #10141c;
+  color: #f4f7fb;
+  cursor: pointer;
+}
+
+.recording button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.recording ul {
+  padding-left: 1rem;
+}
