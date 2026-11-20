@@ -286,6 +286,7 @@ flowchart LR
 ```
 
 - `sync/` (Client) besitzt den lokalen Spiegel von `/v1/me` und die Outbox; alle anderen Client-Module lesen daraus. Ohne Server/Account: Gastmodus, nur Cache + Outbox.
+- Auth-Ziel laut [ADR-013](decisions/ADR-013-cloudflare-access-oidc.md): Cloudflare Access als OIDC-Broker, keine Proxy-Sperre vor Webseite oder API. Der Server besitzt stabile Accounts, Identitätszuordnungen und eigene Bearer-Sessions. Login startet nur nach Nutzerklick; anonyme Fahrt benötigt weder Storage noch Netzwerk. Access ist aktiviert; App-Konfiguration und Implementierung stehen aus.
 - `net/` liest `RideSnapshot` (sendet eigene Distanz 2–4 Hz) und besitzt `RemoteRider[]`; world/avatar rendern Remote-Fahrer nur daraus. Für Windschatten hinter Remote-Fahrern reicht `net/` deren Distanz/Versatz als Engine-Input weiter (v2).
 - `packages/engine`, `packages/rules`, `packages/shared` enthalten Code, den Client **und** Server nutzen: Physik, Gänge, Bots/Drafting, Level-Tabelle, Badge-Prädikate, Item-Katalog, Zod-API-Schemas. So rechnet der Server Fahrten mit derselben Logik nach. So rechnet der Server Fahrten mit derselben Logik nach.
 - Details: `08-backend.md`, ADR-004, ADR-005.
@@ -296,4 +297,4 @@ flowchart LR
 
 ## Composition Root
 
-`main.ts` erzeugt in dieser Reihenfolge: Bus → `sync/` (Cache laden, Session prüfen; offline ok) → Adapter (echt oder `sim/` bei `?sim=1`) → Route laden → Engine (RiderProfile aus Cache) → Game → World/Avatar (three.js) → UI → optional `net/`. Nur hier wird entschieden, ob Sim- oder Echtgeräte laufen; alle anderen Module merken keinen Unterschied.
+`main.ts` erzeugt in dieser Reihenfolge: Bus → `sync/` (Cache optional laden, vorhandene Session optional prüfen; Storage- und Netzfehler blockieren keine Fahrt, kein automatischer Login) → Adapter (echt oder `sim/` bei `?sim=1`) → Route laden → Engine (RiderProfile aus Cache) → Game → World/Avatar (three.js) → UI → optional `net/`. Nur hier wird entschieden, ob Sim- oder Echtgeräte laufen; alle anderen Module merken keinen Unterschied.
