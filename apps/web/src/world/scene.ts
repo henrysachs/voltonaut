@@ -5,6 +5,7 @@ import { createRider } from "../avatar/rider.js";
 import { createRideCamera } from "./camera.js";
 import { createEnvironmentSystem } from "./environment.js";
 import { createFrameSampler } from "./frame.js";
+import { createLandscapeSystem } from "./landscape.js";
 import { createRoadSystem } from "./road.js";
 import {
   createScheduler,
@@ -84,6 +85,7 @@ class RideSceneDriver implements RideScene {
     this.scheduler = createScheduler(
       [
         createEnvironmentSystem(),
+        createLandscapeSystem(),
         createRoadSystem(),
         this.rider.system,
         this.rideCamera.system,
