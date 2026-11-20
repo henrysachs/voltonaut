@@ -15,7 +15,7 @@ Der geprüfte `main` ist als gastfähige Web-App öffentlich erreichbar. Der noc
 - [x] `https://voltonaut.pages.dev/?sim=1` lädt ohne Anmeldung. Die Browserprüfung bestätigt Bewegung im HUD und Schalten mit der Tastatur.
 - [x] `https://voltonaut.pages.dev/debug/ble.html` lädt den Sniffer. Die Browserprüfung verbindet keine Hardware und meldet keine Page-Errors.
 - [x] `voltonaut.stammkneipe.dev` ist als Pages-Domain registriert. Ein proxied CNAME zeigt auf `voltonaut.pages.dev`.
-- [x] Die eigene Domain liefert die Anwendung mit gültigem TLS. Der erste Browsernachweis verwendet die öffentliche DNS-Antwort direkt, weil der lokale Resolver noch eine negative Antwort zwischenspeichert.
+- [x] Die eigene Domain liefert die Anwendung mit gültigem TLS. Der erste Browsernachweis verwendet die öffentliche DNS-Antwort direkt. Der lokale Resolver meldet dabei noch `ENOTFOUND`; dessen Ursache ist nicht abschließend geprüft.
 - [x] Bestehende Dienste und Daten auf dem VPS bleiben unverändert. `SERVER_DEPLOY_ENABLED=false` bleibt bestehen.
 - [x] Keine Zugangsdaten gelangen in Repository, Frontend oder Chat. Die bestehende lokale Cloudflare-Anmeldung wird nicht nach GitHub kopiert.
 
@@ -38,7 +38,7 @@ In GitHub fehlen weiterhin die Cloudflare-Deploy-Secrets. Dieser manuelle Deploy
 - `mise exec -- pnpm --filter @voltonaut/web build` ist für den veröffentlichten Web-Stand grün.
 - Die externe Chromium-Prüfung lädt Sim-Fahrt und Sniffer über `pages.dev`. Tempo steigt, der Gang wechselt von 12 auf 13, beide Seiten antworten mit HTTP 200.
 - Dieselben Prüfungen bestehen über die eigene Domain mit aktivierter TLS-Prüfung. Nur die DNS-Auflösung wird auf die öffentliche Cloudflare-Antwort festgelegt.
-- Der öffentliche DNS-Resolver liefert den neuen Record. Der lokale Resolver meldet beim ersten Nachweis noch `ENOTFOUND`. Deshalb bleibt `pages.dev` bis zur normalen lokalen Auflösung die verlässlich geprüfte Einstiegsadresse.
+- Der öffentliche DNS-Resolver liefert den neuen Record. Der lokale Resolver meldet beim ersten Nachweis noch `ENOTFOUND`. Das belegt unterschiedliche Resolverantworten, nicht deren genaue Ursache. Deshalb bleibt `pages.dev` bis zur normalen lokalen Auflösung die verlässlich geprüfte Einstiegsadresse.
 - An echter Hardware getestet: nein.
 
 ## Blockierter API-Deploy
