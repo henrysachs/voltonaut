@@ -17,6 +17,7 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   fullyParallel: true,
+  workers: isContinuousIntegration ? 1 : "50%",
   use: {
     baseURL: origin,
     trace: "on-first-retry",
