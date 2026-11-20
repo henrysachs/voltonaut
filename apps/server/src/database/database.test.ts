@@ -16,7 +16,7 @@ import {
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
 
-it("creates only auth tables, enforces foreign keys and closes on Nest shutdown", async () => {
+it("creates owned tables, enforces foreign keys and closes on Nest shutdown", async () => {
   const { app } = await createTestApp();
   const db = getDatabase(app);
 
@@ -33,6 +33,8 @@ it("creates only auth tables, enforces foreign keys and closes on Nest shutdown"
       "login_tokens",
       "oidc_handoffs",
       "oidc_transactions",
+      "profiles",
+      "rides",
       "sessions",
       "users",
     ].map((name) => ({ name })),
@@ -57,7 +59,7 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(2);
+    expect(migrations).toHaveLength(3);
     db.$client
       .prepare("INSERT INTO users VALUES ('persisted', 'persist@example.com', 0, NULL)")
       .run();
@@ -160,7 +162,7 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
 
     try {
       const db = getDatabase(next.app).$client;
-      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(2);
+      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(3);
       expect(db.prepare("SELECT id FROM users").all()).toEqual([{ id: session.user.id }]);
       expect(db.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
       await request(httpServerOf(next.app))
