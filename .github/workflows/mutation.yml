@@ -1,0 +1,56 @@
+name: mutation
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  paths:
+    name: engine-or-rules-changed
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect engine or rules changes
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "core=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="origin/${{ github.event.pull_request.base.ref }}"
+          if git diff --name-only "${base}...HEAD" | grep -Eq '^packages/(engine|rules)/'; then
+            echo "core=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "core=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  mutation:
+    name: mutation
+    needs: paths
+    if: needs.paths.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned tools
+        uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Run mutation tests
+        run: mise run check:mutation

@@ -3,52 +3,56 @@
 Server auf Henrys **vorhandenem Hetzner-VPS** (ADR-004). Er ist **autoritativ** für Accounts, Inventar, XP/Level, Volts und Fahrthistorie (ADR-005) und betreibt die Live-Räume für Gruppenfahrten. Der Client bleibt eine statische Seite (**Cloudflare Pages**, ADR-009) und ist **offline-first**: Solo-Fahren funktioniert immer, auch ohne Server (Gastmodus / Offline-Cache).
 
 ## Stack (entschieden)
-| Baustein | Wahl | Begründung |
-|---|---|---|
-| Sprache | **TypeScript** (nicht Go) | Physik, Gangmodell, Level-/Volts-Regeln und Protokoll-Schemas liegen in `packages/*` und werden **identisch** im Browser und für die serverseitige Fahrt-Validierung genutzt; eine zweite Implementierung in Go würde auseinanderlaufen. |
-| Runtime | **Node.js LTS** (exakt per mise gepinnt) | |
-| Framework | **NestJS** (`@nestjs/core`, HTTP-Adapter Express) | klare Modul-/Provider-Struktur, DI erleichtert Tests ohne Modul-Mocking (passt zu anti-slop `no-module-mocking`), Guards/Pipes/Interceptors für Auth, Validierung, Rate-Limits; vielen Agenten vertraut. |
-| WebSocket | **`@nestjs/websockets` + `@nestjs/platform-ws`** (`WsAdapter`, rohe WebSockets, kein socket.io) | Browser-natives `WebSocket` im Client, kein zusätzliches Protokoll; Gateway nutzt dieselben Guards. |
-| Validierung | **Zod**-Schemas in `packages/shared` + `nestjs-zod` (`ZodValidationPipe`) | eine Definition für Client, Server und WS-Nachrichten; ersetzt `class-validator`-DTOs (Doppelpflege). |
-| Datenbank | **SQLite** (`better-sqlite3`, WAL) | ein VPS, kleiner Nutzerkreis, kein DB-Server; atomare Transaktionen für Käufe. |
-| ORM / Query | **Drizzle ORM** + `drizzle-kit` (Migrationen) | Schema in TypeScript = Typen ohne Codegen-Schritt; dünne SQL-nahe API, synchroner `better-sqlite3`-Treiber, später Postgres-Dialekt möglich. Kysely wäre gleichwertig typsicher, aber Schema/Migrationen getrennt; Prisma braucht Codegen + eigene Engine/Schema-Sprache und passt schlechter zu „Typen aus `packages/*`". Einbindung in Nest als eigener `DatabaseModule`-Provider. |
-| Backups | **Litestream** → S3-kompatibel / Hetzner Storage Box, alternativ nächtliches `sqlite3 .backup` | |
-| Auth v1 | **E-Mail-Magic-Link → opakes Session-Token (Bearer)**, Nest-`AuthGuard` | keine Passwörter; Token in IndexedDB, Header `Authorization: Bearer …`, WS-Auth im ersten Frame |
-| Auth v2 | **Passkeys** (`@simplewebauthn/server`) zusätzlich | |
-| Rate-Limits | `@nestjs/throttler` | besonders `/auth/*` |
-| Health | `GET /healthz` (eigener `HealthModule`, optional `@nestjs/terminus`) | ab E0 |
-| Reverse Proxy | **Caddy** (automatisches TLS) oder vorhandener nginx ❓ | `https://`/`wss://` |
-| Prozess | **systemd**-Unit | Neustart, journald-Logs |
-| Tests | Vitest + `@nestjs/testing` (`Test.createTestingModule`, `overrideProvider`) + Supertest; echte WS-Verbindungen; SQLite in-memory; **`unplugin-swc`** für Decorator-Metadaten in Vitest | esbuild emittiert keine `design:paramtypes` → ohne SWC funktioniert Nest-DI in Tests nicht |
 
-**Domains, CORS, Token:** Empfohlen: Henrys Domain liegt bei Cloudflare DNS → Web unter `voltonaut.<domain>` (Cloudflare Pages Custom Domain), API unter `api.voltonaut.<domain>` (A-Record auf den Hetzner-VPS). Web und API sind dann **verschiedene Origins** (CORS nötig: `Access-Control-Allow-Origin` exakt auf Web-Origin, Preview-Origins `*.voltonaut.pages.dev` nur gegen Staging), aber **dieselbe Site** (gleiche registrierbare Domain) → Cookies mit `SameSite=Lax` würden funktionieren. Entscheidung v1: **Bearer-Token** (funktioniert auch für `*.pages.dev`-Previews und ohne eigene Domain, keine CSRF-Fläche); Wechsel auf httpOnly-Cookie `SameSite=Strict` + CSRF-Schutz möglich, sobald beide unter Henrys Domain laufen (P7). Ohne eigene Domain (Web auf `*.pages.dev`) wären Cookies Third-Party → dann nur Bearer.
-Optional: API-Subdomain über Cloudflare-Proxy (orange Wolke) – WebSockets werden unterstützt; TLS zwischen Cloudflare und VPS dann per Origin-Zertifikat, Caddy bleibt Reverse Proxy.
+| Baustein      | Wahl                                                                                                                                                                                                                                                                     | Begründung                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sprache       | **TypeScript** (nicht Go)                                                                                                                                                                                                                                                | Physik, Gangmodell, Level-/Volts-Regeln und Protokoll-Schemas liegen in `packages/*` und werden **identisch** im Browser und für die serverseitige Fahrt-Validierung genutzt; eine zweite Implementierung in Go würde auseinanderlaufen.                                                                                                                                             |
+| Runtime       | **Node.js LTS** (exakt per mise gepinnt)                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                      |
+| Framework     | **NestJS** (`@nestjs/core`, HTTP-Adapter Express)                                                                                                                                                                                                                        | klare Modul-/Provider-Struktur, DI erleichtert Tests ohne Modul-Mocking (passt zu anti-slop `no-module-mocking`), Guards/Pipes/Interceptors für Auth, Validierung, Rate-Limits; vielen Agenten vertraut.                                                                                                                                                                             |
+| WebSocket     | **`@nestjs/websockets` + `@nestjs/platform-ws`** (`WsAdapter`, rohe WebSockets, kein socket.io)                                                                                                                                                                          | Browser-natives `WebSocket` im Client, kein zusätzliches Protokoll; Gateway nutzt dieselben Guards.                                                                                                                                                                                                                                                                                  |
+| Validierung   | **Zod**-Schemas in `packages/shared` + `nestjs-zod` (`ZodValidationPipe`)                                                                                                                                                                                                | eine Definition für Client, Server und WS-Nachrichten; ersetzt `class-validator`-DTOs (Doppelpflege).                                                                                                                                                                                                                                                                                |
+| Datenbank     | **SQLite** (`better-sqlite3`, WAL)                                                                                                                                                                                                                                       | ein VPS, kleiner Nutzerkreis, kein DB-Server; atomare Transaktionen für Käufe.                                                                                                                                                                                                                                                                                                       |
+| ORM / Query   | **Drizzle ORM** + `drizzle-kit` (Migrationen)                                                                                                                                                                                                                            | Schema in TypeScript = Typen ohne Codegen-Schritt; dünne SQL-nahe API, synchroner `better-sqlite3`-Treiber, später Postgres-Dialekt möglich. Kysely wäre gleichwertig typsicher, aber Schema/Migrationen getrennt; Prisma braucht Codegen + eigene Engine/Schema-Sprache und passt schlechter zu „Typen aus `packages/*`". Einbindung in Nest als eigener `DatabaseModule`-Provider. |
+| Backups       | **Litestream** → S3-kompatibel / Hetzner Storage Box, alternativ nächtliches `sqlite3 .backup`                                                                                                                                                                           |                                                                                                                                                                                                                                                                                                                                                                                      |
+| Auth v1       | **E-Mail-Magic-Link → opakes Session-Token (Bearer)**, Nest-`AuthGuard`                                                                                                                                                                                                  | keine Passwörter; Token in IndexedDB, Header `Authorization: Bearer …`, WS-Auth im ersten Frame                                                                                                                                                                                                                                                                                      |
+| Auth v2       | **Passkeys** (`@simplewebauthn/server`) zusätzlich                                                                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                      |
+| Rate-Limits   | `@nestjs/throttler`                                                                                                                                                                                                                                                      | besonders `/auth/*`                                                                                                                                                                                                                                                                                                                                                                  |
+| Health        | `GET /healthz` (eigener `HealthModule`, optional `@nestjs/terminus`)                                                                                                                                                                                                     | ab E0                                                                                                                                                                                                                                                                                                                                                                                |
+| Reverse Proxy | vorhandener **Traefik v3** (Container `financensor-traefik-1` auf Henrys Hetzner-VPS)                                                                                                                                                                                    | `https://`/`wss://` über Traefik-Labels; Netzwerk- und Certresolver-Namen beim Deploy aus der Financensor-Compose ablesen (**TODO**)                                                                                                                                                                                                                                                 |
+| Prozess       | **Docker Compose** (eigenes Projekt), Image z. B. `ghcr.io/henrysachs/voltonaut-server`                                                                                                                                                                                  | Neustart und Logs über Compose; SQLite auf named Volume oder Bind-Mount; Litestream als Sidecar                                                                                                                                                                                                                                                                                      |
+| Tests         | Vitest + `@nestjs/testing` (`Test.createTestingModule`, `overrideProvider`) + Supertest; echte WS-Verbindungen; SQLite in-memory; Server-Controller injizieren über **explizite `@Inject(Token)`**, deshalb laufen die Tests ohne Decorator-Metadaten auf Vitest/esbuild | `unplugin-swc` bleibt für den Produktions-Build (Vite), damit Nest auch ohne explizite Tokens funktioniert                                                                                                                                                                                                                                                                           |
+
+**Domains, CORS, Token (festgelegt 19.11.2026, Zone `stammkneipe.dev` bei Cloudflare):** Web unter `voltonaut.stammkneipe.dev` (Cloudflare Pages, Custom Domain), API/WebSocket unter `api.voltonaut.stammkneipe.dev` (A-Record auf Henrys Hetzner-VPS; Financensor-Style-Benennung). Web und API sind **verschiedene Origins** (CORS nötig: `Access-Control-Allow-Origin` exakt auf `https://voltonaut.stammkneipe.dev`, Preview-Origins `*.voltonaut.pages.dev` nur gegen Staging, dazu `http://localhost:5173`), aber **dieselbe Site** (registrierbare Domain `stammkneipe.dev`) → Cookies mit `SameSite=Lax` würden funktionieren. Entscheidung v1: **Bearer-Token** (funktioniert auch für `*.pages.dev`-Previews, keine CSRF-Fläche); Wechsel auf httpOnly-Cookie `SameSite=Strict` + CSRF-Schutz später möglich (P7).
+API-DNS: **unproxieder** A-Record auf den VPS (graue Wolke) – Traefiks `letsencrypt`-Certresolver muss den Host direkt per ACME erreichen, das Zertifikat kommt wie bei Financensor vom vorhandenen Traefik, nicht von Cloudflare (ADR-004). Kein Cloudflare-Proxy für diesen Record; sollte er später doch proxied werden, muss der SSL-Modus **Full (strict)** sein.
 
 ## Login-Mails (Magic Link, E5)
-| Option | Status (geprüft 2026-11-19) | Kosten / Limits | Einschätzung |
-|---|---|---|---|
+
+| Option                                                | Status (geprüft 2026-11-19)                                                                                                 | Kosten / Limits                                                                                                                                                                                                                                                                                                                                                                              | Einschätzung                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | **Cloudflare Email Service – Email Sending** (primär) | **Public Beta** seit 16.04.2026; Versand per REST-API, Workers-Binding oder **authentifiziertem SMTP** → aus NestJS nutzbar | Beliebige Empfänger **nur mit Workers Paid** (≈ 5 $/Monat Mindestbetrag, 3 000 Mails/Monat inkl., danach 0,35 $/1 000). Auf Workers Free nur an **verifizierte Zieladressen** im eigenen Account (kostenlos) – reicht für Henrys eigenen Login in der Entwicklung, nicht für Freunde. Neue Accounts starten mit konservativem Tageslimit. Absenderdomain muss bei Cloudflare onboarded sein. | Passt, wenn Henry Workers Paid hat oder bucht; Beta = Risiko |
-| **Resend** (Fallback) | GA | **Free: 3 000 Mails/Monat, max. 100/Tag** (UTC-Tag; eingehende Mails zählen mit), 3 Domains, keine Überziehung (Mail 101 → HTTP 429). Pro ab 20 $/Monat. | Für den Freundeskreis ausreichend und kostenlos |
+| **Resend** (Fallback)                                 | GA                                                                                                                          | **Free: 3 000 Mails/Monat, max. 100/Tag** (UTC-Tag; eingehende Mails zählen mit), 3 Domains, keine Überziehung (Mail 101 → HTTP 429). Pro ab 20 $/Monat.                                                                                                                                                                                                                                     | Für den Freundeskreis ausreichend und kostenlos              |
 
 Umsetzung: `MailModule` mit Interface `MailSender` und zwei Implementierungen (`CloudflareEmailSender` via REST/SMTP, `ResendSender`), Auswahl per Env-Variable; Tests mit In-Memory-Fake (DI, kein Modul-Mocking). SPF/DKIM/DMARC für die Absenderdomain. Quellen: https://developers.cloudflare.com/email-service/platform/pricing/ · https://developers.cloudflare.com/email-service/platform/limits/ · https://developers.cloudflare.com/changelog/post/2026-04-16-email-sending-public-beta/ · https://resend.com/pricing · https://resend.com/docs/knowledge-base/resend-email-quota
 
 ## Nest-Module (`apps/server/src/`)
-| Modul | Verantwortung | Besitzt (Tabellen) |
-|---|---|---|
-| `health/` | `/healthz` (DB erreichbar, Version, Uptime) – **E0** | – |
-| `database/` | Drizzle-Instanz als Provider, Migrationen beim Start | – |
-| `mail/` | `MailSender` (Cloudflare Email Sending / Resend) | – |
-| `auth/` | Magic Link, Sessions, `AuthGuard`, (v2) Passkeys | `users`, `sessions`, `login_tokens` |
-| `accounts/` | Rider-Profil, Anzeigename, Avatar-Config, Export/Löschung (DSGVO) | `profiles` |
-| `inventory/` | freigeschaltete Items, Ausrüsten-Validierung | `inventory` |
-| `economy/` (Volts) | Volts-Ledger, Shop, Käufe (Transaktion) | `volts_ledger` |
-| `progression/` | XP, Level, Badges, PBs aus akzeptierten Fahrten (nutzt `@voltonaut/rules`) | `progression`, `badges`, `personal_bests` |
-| `rides/` | Upload, Plausibilitätsprüfung (nutzt `@voltonaut/engine` zur Nachrechnung), Vergabe | `rides`, `ride_samples` |
-| `live/` | `LiveGateway` (`@WebSocketGateway`, `WsAdapter`), Räume In-Memory | – |
-| `catalog/` | Item-Katalog, Level-Tabelle aus `@voltonaut/rules` | read-only |
-Regel: ein Modul besitzt seine Tabellen (Drizzle-Schema-Datei liegt im Modul); andere Module nutzen dessen exportierten Service, nie fremde Tabellen direkt (per dependency-cruiser: `apps/server/src/<a>/**/*.schema.ts` nur aus `<a>/` importierbar).
+
+| Modul                                                                                                                                                                                                                                                   | Verantwortung                                                                       | Besitzt (Tabellen)                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
+| `health/`                                                                                                                                                                                                                                               | `/healthz` (DB erreichbar, Version, Uptime) – **E0**                                | –                                         |
+| `database/`                                                                                                                                                                                                                                             | Drizzle-Instanz als Provider, Migrationen beim Start                                | –                                         |
+| `mail/`                                                                                                                                                                                                                                                 | `MailSender` (Cloudflare Email Sending / Resend)                                    | –                                         |
+| `auth/`                                                                                                                                                                                                                                                 | Magic Link, Sessions, `AuthGuard`, (v2) Passkeys                                    | `users`, `sessions`, `login_tokens`       |
+| `accounts/`                                                                                                                                                                                                                                             | Rider-Profil, Anzeigename, Avatar-Config, Export/Löschung (DSGVO)                   | `profiles`                                |
+| `inventory/`                                                                                                                                                                                                                                            | freigeschaltete Items, Ausrüsten-Validierung                                        | `inventory`                               |
+| `economy/` (Volts)                                                                                                                                                                                                                                      | Volts-Ledger, Shop, Käufe (Transaktion)                                             | `volts_ledger`                            |
+| `progression/`                                                                                                                                                                                                                                          | XP, Level, Badges, PBs aus akzeptierten Fahrten (nutzt `@voltonaut/rules`)          | `progression`, `badges`, `personal_bests` |
+| `rides/`                                                                                                                                                                                                                                                | Upload, Plausibilitätsprüfung (nutzt `@voltonaut/engine` zur Nachrechnung), Vergabe | `rides`, `ride_samples`                   |
+| `live/`                                                                                                                                                                                                                                                 | `LiveGateway` (`@WebSocketGateway`, `WsAdapter`), Räume In-Memory                   | –                                         |
+| `catalog/`                                                                                                                                                                                                                                              | Item-Katalog, Level-Tabelle aus `@voltonaut/rules`                                  | read-only                                 |
+| Regel: ein Modul besitzt seine Tabellen (Drizzle-Schema-Datei liegt im Modul); andere Module nutzen dessen exportierten Service, nie fremde Tabellen direkt (per dependency-cruiser: `apps/server/src/<a>/**/*.schema.ts` nur aus `<a>/` importierbar). |
 
 ## Datenmodell (Skizze)
+
 ```sql
 users(id TEXT PK, email TEXT UNIQUE, created_at, deleted_at)
 sessions(token_hash TEXT PK, user_id, created_at, last_seen_at, expires_at, user_agent)
@@ -66,6 +70,7 @@ ride_samples(ride_id PK, samples_blob /* 1 Hz, gzip: t, power, cadence, hr, dist
 ```
 
 ## API-Skizze (REST, JSON, Präfix `/v1`)
+
 ```
 POST /v1/auth/magic-link        { email }                         → 204 (Mail mit Link https://<client>/#login=<token>)
 POST /v1/auth/session           { loginToken }                    → { sessionToken, user }
@@ -82,79 +87,107 @@ GET  /v1/me/export                                                → JSON aller
 DELETE /v1/me                                                     → 202 (Account-Löschung)
 WS   /v1/live                   erster Frame { t:'auth', sessionToken } → Räume (s. u.)
 ```
+
 ```ts
 // packages/shared/src/api/rides.ts (Zod-Schema, Typ per z.infer)
 interface RideUpload {
-  rideId: string; routeId: string; clientVersion: string;
-  startedAt: string; profileAtStart: Pick<RiderProfile, 'massKg' | 'heightCm'> & { bikeMassKg: number };
-  devices: { trainer: string; trainerSource: 'ftms' | 'cps' | 'sim'; hr?: string; controller?: string };
+  rideId: string;
+  routeId: string;
+  clientVersion: string;
+  startedAt: string;
+  profileAtStart: Pick<RiderProfile, "massKg" | "heightCm"> & { bikeMassKg: number };
+  devices: {
+    trainer: string;
+    trainerSource: "ftms" | "cps" | "sim";
+    hr?: string;
+    controller?: string;
+  };
   samples: Array<{ t: number; p: number; c: number; hr?: number; d: number; g: number }>; // 1 Hz
-  claimed: { distanceM: number; elevM: number; energyKj: number; pickups: string[]; segments: Array<{ id: string; timeS: number }> };
+  claimed: {
+    distanceM: number;
+    elevM: number;
+    energyKj: number;
+    pickups: string[];
+    segments: Array<{ id: string; timeS: number }>;
+  };
 }
 ```
 
 ## Plausibilitätsprüfung / Anti-Cheat-Grundlagen
+
 Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
+
 1. **Struktur:** Zeitstempel monoton, 1-Hz-Raster ± Toleranz, Dauer ≤ Wanduhr zwischen `startedAt` und Upload, max. 6 h, `rideId` nicht doppelt.
 2. **Physik-Rekonstruktion:** Distanz, Höhenmeter und Segmentzeiten aus Leistungs-Samples + Route + `profileAtStart` mit `@voltonaut/engine` (derselbe Code wie im Browser) neu berechnen; Abweichung > 3 % → `flagged`.
 3. **Grenzen:** Spitzenleistung ≤ 2 000 W; 20-min-Leistung ≤ 6,5 W/kg; 1-min ≤ 12 W/kg; Kadenz ≤ 200 rpm; Leistung > 0 bei Kadenz 0 über > 10 s → verdächtig.
 4. **Quelle:** `trainerSource = 'sim'` → `accepted`, aber 0 XP / 0 Volts.
 5. **Pickups:** nur Blitze anerkennen, deren Distanzmarke laut rekonstruierter Distanz überfahren wurde.
 6. **Limits:** Volts-Tageslimit (3 000), max. 4 Fahrten/Tag mit Vergabe.
-`flagged` → Fahrt gespeichert, aber keine Vergabe bis manuelle Freigabe (Admin-CLI). Ehrlich: Das hält nur Gelegenheits-Schummeln auf; manipulierte Clients mit plausiblen Fake-Daten sind ohne Hardware-Signatur nicht erkennbar. Für einen Freundeskreis reicht das.
+   `flagged` → Fahrt gespeichert, aber keine Vergabe bis manuelle Freigabe (Admin-CLI). Ehrlich: Das hält nur Gelegenheits-Schummeln auf; manipulierte Clients mit plausiblen Fake-Daten sind ohne Hardware-Signatur nicht erkennbar. Für einen Freundeskreis reicht das.
 
 ## Offline-first-Sync (Client `sync/`)
+
 - Beim Start: Cache aus IndexedDB laden → sofort fahrbereit; im Hintergrund `GET /v1/me` → Cache aktualisieren.
 - Nach der Fahrt: `RideUpload` in **Outbox** (IndexedDB) → Upload mit Retry/Backoff; UI zeigt XP/Volts als „vorläufig" bis Server-Antwort.
 - Käufe und Ausrüstungsänderungen nur **online** (Kauf ist Server-Transaktion); Ausrüstung offline nur aus dem gecachten Inventar.
 - Konflikte: Server gewinnt; Profil-Änderungen per `updated_at` (last-write-wins).
 
 ## Live-Gruppenfahrten (WebSocket)
+
 - Raum = `routeId` + optional privater Raumcode. Anzeige der anderen Fahrer (Name, Avatar-Config, Distanz, W/kg optional).
 - Kein Windschatten, keine Rennen in v1.
+
 ```ts
 type ClientMsg =
-  | { t: 'auth'; sessionToken: string }
-  | { t: 'join'; v: 1; room: string }
-  | { t: 'state'; seq: number; distanceM: number; lap: number; speedMps: number; powerW: number; cadenceRpm: number }   // 2–4 Hz
-  | { t: 'leave' };
+  | { t: "auth"; sessionToken: string }
+  | { t: "join"; v: 1; room: string }
+  | {
+      t: "state";
+      seq: number;
+      distanceM: number;
+      lap: number;
+      speedMps: number;
+      powerW: number;
+      cadenceRpm: number;
+    } // 2–4 Hz
+  | { t: "leave" };
 type ServerMsg =
-  | { t: 'welcome'; serverTimeMs: number; riders: RemoteRiderInfo[] }
-  | { t: 'joined'; rider: RemoteRiderInfo } | { t: 'left'; userId: string }
-  | { t: 'snapshot'; serverTimeMs: number; riders: Array<{ id: string; d: number; lap: number; v: number; p: number; c: number }> }  // 4 Hz
-  | { t: 'error'; code: 'unauthorized' | 'room_full' | 'bad_version' | 'rate_limited'; msg: string };
+  | { t: "welcome"; serverTimeMs: number; riders: RemoteRiderInfo[] }
+  | { t: "joined"; rider: RemoteRiderInfo }
+  | { t: "left"; userId: string }
+  | {
+      t: "snapshot";
+      serverTimeMs: number;
+      riders: Array<{ id: string; d: number; lap: number; v: number; p: number; c: number }>;
+    } // 4 Hz
+  | {
+      t: "error";
+      code: "unauthorized" | "room_full" | "bad_version" | "rate_limited";
+      msg: string;
+    };
 ```
+
 Client interpoliert Remote-Fahrer ~250 ms in der Vergangenheit; Positionen nur als Distanz entlang der Route. Limits: 50 Fahrer/Raum, 10 Nachrichten/s, 1 KB/Nachricht.
 
-## Deployment auf den Hetzner-VPS (in E0 dokumentiert; echtes Deploy = optionale Aufgabe, sobald SSH-Deploy-Key + Subdomain vorliegen)
-1. CI (`deploy-server.yml`, nur nach grünem `mise run check` auf `main`): `pnpm --filter @voltonaut/server build` → `pnpm --filter @voltonaut/server deploy --prod out/` (eigenständiges Verzeichnis mit Produktions-Dependencies).
-2. `rsync` nach `/opt/voltonaut/releases/<git-sha>/`, Symlink `/opt/voltonaut/current` umsetzen, `systemctl restart voltonaut-server`, danach `curl -f https://api.<domain>/healthz`; bei Fehler Symlink zurück (Rollback).
-3. systemd-Unit (Skizze):
-```ini
-[Unit]
-Description=Voltonaut API
-After=network-online.target
-[Service]
-ExecStart=/usr/bin/node /opt/voltonaut/current/dist/main.js
-Environment=NODE_ENV=production PORT=3000 DATABASE_PATH=/var/lib/voltonaut/voltonaut.db
-EnvironmentFile=/etc/voltonaut/server.env
-User=voltonaut
-StateDirectory=voltonaut
-Restart=on-failure
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-PrivateTmp=true
-[Install]
-WantedBy=multi-user.target
-```
-4. Caddy: `api.<domain> { reverse_proxy 127.0.0.1:3000 }` (WebSocket-Upgrade funktioniert automatisch).
-5. Node auf dem VPS: über mise mit derselben gepinnten Version (oder systemweites Paket gleicher Version) ❓.
-6. Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST` als GitHub-Secrets (Environment `production` mit manueller Freigabe), Mail-API-Keys nur in `/etc/voltonaut/server.env`. Henry liefert Key + Subdomain später; bis dahin läuft der Server nur lokal und in CI, der Deploy-Workflow existiert, ist aber deaktiviert (`if: vars.SERVER_DEPLOY_ENABLED == 'true'`).
+## Deployment auf den Hetzner-VPS (in E0 dokumentiert; echtes Deploy = optionale Aufgabe E0-opt)
+
+Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB frei. Auf dem VPS läuft bereits Financensor (Docker Compose); `financensor-traefik-1` (`traefik:v3.6`) belegt Ports 80/443. Deshalb kein Caddy und kein systemd – der Server kommt als Container hinter diesen Traefik (ADR-004). SSH-Deploy-Zugang ist eingerichtet: DNS-A-Record `api.voltonaut.stammkneipe.dev` → VPS-IP, **unproxied** (damit Traefiks `letsencrypt`-Resolver das Zertifikat direkt zieht), Deploy-Secrets und `DEPLOY_USER` im GitHub-Environment `production`. Ausstehend ist allein Henrys Freigabe über die Repository-Variable `SERVER_DEPLOY_ENABLED`.
+
+1. CI (`deploy-server.yml`, nur nach grünem `mise run check` auf `main`, Grep `vars.SERVER_DEPLOY_ENABLED`): Docker-Image lokal bauen (`docker build -f deploy/Dockerfile`, Tag = Git-SHA, Node-Pin 24.22.3 im Image) und per SSH über die Pipe übertragen (`docker save | ssh "gunzip | docker load"`) – **kein** Registry-Push, daher wird auch kein GHCR-Token gebraucht; ein späterer Wechsel auf `ghcr.io/henrysachs/voltonaut-server` bleibt möglich (dann `docker compose pull` im Skript).
+2. Per SSH `deploy/` nach `/srv/voltonaut` übertragen und `deploy.sh deploy <tag>` ausführen: `docker compose up -d` mit neuem Tag, danach `curl -f https://api.voltonaut.stammkneipe.dev/healthz`; bei Fehler automatischer Rollback auf das in `state/previous-tag` gemerkte vorherige Image-Tag.
+3. Umsetzung (im Repo unter `deploy/`; Netz `financensor_default` und Certresolver `letsencrypt` sind bereits aus der Financensor-Compose ablesbar und eingetragen):
+   - `Dockerfile`: Multi-Stage-Build, `pnpm --filter @voltonaut/server deploy --prod` erzeugt das Standalone-Bundle (dist + prod-Node-Modules).
+   - `compose.yaml`: Dienst `server` (lokales Image `voltonaut-server:<tag>`, Host-Env `0.0.0.0`, SQLite-Volume, Traefik-Labels: Host-Rule `api.voltonaut.stammkneipe.dev`, Entrypoint `websecure`, Certresolver `letsencrypt`, Service-Port 3000, Healthcheck per Node-fetch auf `/healthz`).
+   - Dienst `litestream`: Sidecar (`litestream/litestream:0.5.18`, exakt gepinnt), teilt das SQLite-Volume, repliziert nach S3-kompatiblem Ziel / Hetzner Storage Box; Zugangsdaten aus `deploy.env` (nie im Repo).
+   - Kein eigener Proxy, keine Bindung an Port 80/443.
+   - Zusätzliches Observability-/Prometheus-Netz bleibt **E0-opt** (ADR-010, `11-observability.md`); OTLP-Traces und interne `/metrics` sind bewusst noch nicht verdrahtet.
+4. Node läuft im Image (dieselbe per mise gepinnte Version), nicht als Host-Paket. Caddy-Config und systemd-Unit sind aus dem Repo entfernt.
+5. Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST` als GitHub-Secrets (Environment `production` mit manueller Freigabe), `DEPLOY_USER` als Environment-Variable, Mail-API-Keys und Litestream-Zugang nur in der Env-Datei auf dem VPS – nie im Repo. DNS-Record und Deploy-Secrets stehen (19.11.2026); der Deploy-Workflow bleibt trotzdem inaktiv, bis Henry die Repository-Variable `SERVER_DEPLOY_ENABLED` auf `true` setzt (`if: vars.SERVER_DEPLOY_ENABLED == 'true'`).
 
 ## Betrieb & Sicherheit
-- CORS: nur Web-Origin (`https://voltonaut.<domain>` bzw. `https://voltonaut.pages.dev`) + `http://localhost:5173`; `*.pages.dev`-Previews nur gegen Staging. Rate-Limits pro IP und Account (`@nestjs/throttler`), besonders auf `/auth/*`.
+
+- CORS: nur Web-Origin (`https://voltonaut.stammkneipe.dev` bzw. `https://voltonaut.pages.dev`) + `http://localhost:5173`; `*.pages.dev`-Previews nur gegen Staging. Rate-Limits pro IP und Account (`@nestjs/throttler`), besonders auf `/auth/*`.
 - Tokens nur gehasht speichern (SHA-256); Magic Links 15 min gültig, einmalig.
 - Secrets (Mail-API-Keys, Deploy-SSH-Key, Cloudflare-Token) nie im Repo; Deploy-Workflow erst nach Henrys Freigabe.
 - Datenschutz: E-Mail + Fahrtdaten = personenbezogen → Export/Löschung von Anfang an, Datenschutzhinweis im Client.
-- Monitoring: `/healthz`, journald-Logs, einfacher Uptime-Check.
+- Monitoring: `/healthz` öffentlich; strukturierte Logs, interne `/metrics` und OTel-Traces laut `11-observability.md` (ADR-010). `/metrics` nie über Traefik.

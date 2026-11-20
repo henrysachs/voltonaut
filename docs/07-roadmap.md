@@ -7,38 +7,46 @@ Jede Etappe endet mit einem lauffähigen Stand (Web auf Cloudflare Pages, Server
 Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch zweiten Agenten (`10-testing.md` §10). Checkboxen beim Erledigen abhaken.
 
 ---
+
 ## E0 – Fundament: Monorepo, Leitplanken, Sim-Modus, CI, Server-Gerüst, Deploy
+
 **Ziel:** Leeres, aber vollständig verdrahtetes und abgesichertes System. Jeder Agent kann `mise install && mise run check` ausführen; Web läuft auf Cloudflare Pages (sobald Secrets da sind), Server läuft lokal und in CI.
-- [ ] pnpm-Workspace: `apps/web`, `apps/server`, `packages/{shared,engine,rules,ble}` (ADR-006), `workspace:*`, `save-exact`
-- [ ] `mise.toml`: Node + pnpm exakt gepinnt; Tasks `install, dev, dev:web, dev:server, fmt, fmt:check, lint, fix, typecheck, depcruise, guard, test, test:e2e, check, check:mutation, build, assets, perf, golden:update, visual:update`
-- [ ] `tsconfig.base.json` strengstens + Project References; `lib` ohne DOM/Node in shared/engine/rules
-- [ ] Oxlint: `oxlint.config.ts` mit vendortem **anti-slop** (`tools/oxlint/anti-slop/`, `UPSTREAM.md`), `oxlint` + `@oxlint/plugins` exakt gleiche Version, `oxlint-tsgolint`, Warnungen = Fehler
-- [ ] Oxfmt (exakt gepinnt) + Ignore-Liste
-- [ ] `.dependency-cruiser.cjs` mit allen Regeln aus `09-tooling.md` §6, inkl. Negativtest (ein absichtlich verbotener Import in einer Test-Fixture schlägt fehl)
-- [ ] `scripts/guard.mjs` (Escape-Hatches, gelockerte Configs, geschützte Dateien ohne ADR/Label, Deps ohne `docs/dependencies.md`)
-- [ ] Vitest-Workspace inkl. Coverage-Schwellen, fast-check, Stryker-Config (engine/rules), Playwright (Chromium, Sim-Modus, Screenshot-Setup im Playwright-Docker-Image)
-- [ ] `packages/shared`: Typen aus `01-architecture.md`, Zod-Basis, Event-Bus-Typen
-- [ ] `packages/ble/sim`: FakeTrainer (Watt/Kadenz per Slider/Skript), FakeHeartRate, FakePlay + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
-- [ ] `apps/web`: Minimal-HUD (Watt, Kadenz, Puls, Gang) mit Sim-Werten; erster E2E-Test
-- [ ] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
-- [ ] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
-- [ ] Server-Gerüst läuft lokal (`mise run dev:server`) und in CI (Health-Test, Build mit `pnpm deploy --prod`); systemd-Unit, Caddy-Config und Deploy-Skript liegen dokumentiert im Repo (`deploy/`)
-- [ ] *(Optional, sobald Henry SSH-Deploy-Key + Subdomain liefert)* **E0-opt – VPS-Deploy:** Caddy (`api.voltonaut.<domain>`), systemd, Release-Verzeichnisse + Rollback, Node via mise, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://api.voltonaut.<domain>/healthz` → 200 nach Deploy aus CI
-- [ ] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
-**Abnahme:** Frischer Clone: `mise install && mise run install && mise run check` grün; `?sim=1` zeigt laufende Werte, Pfeiltasten ändern den Gang; PR mit absichtlich verbotenem Import, `@ts-ignore` oder gelockerter Regel wird von CI abgelehnt; nach Setzen der Cloudflare-Secrets ist `https://voltonaut.pages.dev` (bzw. Custom Domain) erreichbar und jeder PR bekommt eine Preview-URL; Server-Health-Test grün in CI.
+
+- [x] pnpm-Workspace: `apps/web`, `apps/server`, `packages/{shared,engine,rules,ble}` (ADR-006), `workspace:*`, `save-exact`
+- [x] `mise.toml`: Node + pnpm exakt gepinnt; Tasks `install, dev, dev:web, dev:server, fmt, fmt:check, lint, fix, typecheck, depcruise, guard, test, test:e2e, check, check:mutation, build, assets, perf, golden:update, visual:update`
+- [x] `tsconfig.base.json` strengstens + Project References; `lib` ohne DOM/Node in shared/engine/rules
+- [x] Oxlint: `oxlint.config.ts` mit vendortem **anti-slop** (`tools/oxlint/anti-slop/`, `UPSTREAM.md`), `oxlint` + `@oxlint/plugins` exakt gleiche Version, `oxlint-tsgolint`, Warnungen = Fehler
+- [x] Oxfmt (exakt gepinnt) + Ignore-Liste
+- [x] `.dependency-cruiser.cjs` mit allen Regeln aus `09-tooling.md` §6, inkl. Negativtest (ein absichtlich verbotener Import in einer Test-Fixture schlägt fehl)
+- [x] `scripts/guard.mjs` (Escape-Hatches, gelockerte Configs, geschützte Dateien ohne ADR/Label, Deps ohne `docs/dependencies.md`)
+- [x] Vitest-Workspace inkl. Coverage-Schwellen, fast-check, Stryker-Config (engine/rules), Playwright (Chromium, Sim-Modus, Screenshot-Setup im Playwright-Docker-Image)
+- [x] `packages/shared`: Typen aus `01-architecture.md`, Zod-Basis, Event-Bus-Typen
+- [x] `packages/ble/sim`: FakeTrainer (Watt/Kadenz per Slider/Skript), FakeHeartRate, FakePlay + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
+- [x] `apps/web`: Minimal-HUD (Watt, Kadenz, Puls, Gang) mit Sim-Werten; erster E2E-Test
+- [x] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
+- [x] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
+- [x] Server-Gerüst läuft lokal (`mise run dev:server`) und in CI (Health-Test, Image-Build); Dockerfile, Compose-Datei mit Traefik-Labels und Litestream-Sidecar sowie Deploy-Skript liegen dokumentiert im Repo (`deploy/`)
+- [x] _(Optional, sobald der DNS-A-Record für `voltonaut-api.stammkneipe.dev` liegt)_ **E0-opt – VPS-Deploy:** SSH-Zugang ist seit 19.11.2026 vorhanden. Image nach `ghcr.io/henrysachs/voltonaut-server`, Compose-Projekt tritt dem vorhandenen Traefik-Netz bei (Host-Rule, TLS über Traefiks Certresolver; Netzwerk-/Certresolver-Namen beim Deploy aus der Financensor-Compose, **TODO**), Rollback auf vorheriges Image-Tag, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://voltonaut-api.stammkneipe.dev/healthz` → 200 nach Deploy aus CI
+- [x] _(Teil von E0-opt, nicht von E0 – E0 selbst bleibt unverändert)_ **Observability-Grund verdrahten** (ADR-010, `11-observability.md`): strukturierte JSON-Logs (pino) nach stdout mit `trace_id`/`span_id`; OTel-Traces per OTLP an Alloy/Tempo; `/metrics` (OTel Prometheus Exporter) nur intern im Docker-Netz, nicht über Traefik; No-Op in Dev/Tests. OTLP-Endpunkte und Observability-Netzname beim Deploy aus der Financensor-Compose eintragen (**TODO**). Grafana-Dashboards und Alarme unter `ops/grafana/` sind spätere Liefergegenstände nach dem ersten Deploy.
+- [x] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
+      **Abnahme:** Frischer Clone: `mise install && mise run install && mise run check` grün; `?sim=1` zeigt laufende Werte, Pfeiltasten ändern den Gang; PR mit absichtlich verbotenem Import, `@ts-ignore` oder gelockerter Regel wird von CI abgelehnt; nach Setzen der Cloudflare-Secrets ist `https://voltonaut.stammkneipe.dev` (bzw. `https://voltonaut.pages.dev`) erreichbar und jeder PR bekommt eine Preview-URL; Server-Health-Test grün in CI.
 
 ## E1 – Bluetooth-Sniffer, Puls, FTMS lesen
+
 **Ziel:** Echte Geräte sehen und verstehen. Grundlage fürs Reverse Engineering.
+
 - [ ] `apps/web/debug/ble.html` nach Spezifikation `02-bluetooth.md` §5 (Scan, GATT-Explorer, Logger, Marker, Presets, Export)
 - [ ] `packages/ble/hrs`: Parser `0x2A37` + Adapter; **ReplayTransport** + Replay-Tests aus Fixtures (`10-testing.md` §2)
 - [ ] `packages/ble/ftms`: Parser `0x2AD2` (Flags inkl. invertiertem Bit 0, uint24, Kadenz ×0,5), Feature-Lesen `0x2ACC`
 - [ ] `packages/ble/cps`: Fallback-Parser `0x2A63` (nur lesen)
 - [ ] Verbinden-Dialog im Spiel, Statusanzeige pro Gerät, Reconnect bei Abbruch (Backoff 1/2/5 s)
 - [ ] **Hardware-Session mit Henry:** GATT-Exporte Trainer, Pulsgurt, beide Play-Griffe → `fixtures/ble/` (Firmware-Versionen notieren)
-**Abnahme:** Echter Puls und echte Watt/Kadenz im HUD; Sniffer-Exporte aller drei Geräte eingecheckt; `02-bluetooth.md` mit Befunden aktualisiert.
+      **Abnahme:** Echter Puls und echte Watt/Kadenz im HUD; Sniffer-Exporte aller drei Geräte eingecheckt; `02-bluetooth.md` mit Befunden aktualisiert.
 
 ## E2 – Play-Controller-Mapping, virtuelles Schalten, FTMS-Steuerung
+
 **Ziel:** Schalten mit den Zwift-Play-Griffen (LS = runter, RS = hoch) verändert den Widerstand spürbar.
+
 - [ ] Play-Firmware feststellen (1.x: 2 Verbindungen, `0x07` / 2.0.1: 1 Verbindung, vermutlich `0x23`)
 - [ ] Klartext-Handshake („RideOn") + eigener Mini-Protobuf-Decoder für `0x07`, Bitmap-Decoder `0x23` – beide gegen Sniffer-Fixtures; ButtonMap-JSON
 - [ ] Bei FW 1.x: zwei Griffe parallel verbinden und zuordnen (Device-Typ 2/3), getrennter Reconnect
@@ -50,19 +58,23 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] Trainer-Strategie A (Effective Grade) + B (Virtual-Power ERG) hinter Schalter
 - [ ] Kalibrier-Assistent: physische Übersetzung + Trainer-Masse (siehe `03` §3–4)
 - [ ] Testfahrt-Protokoll mit Henry: 3 Gänge × 3 Steigungen, subjektives Gefühl + Logs
-**Abnahme:** Schalten an beiden Griffen funktioniert zuverlässig (100 Drücke, 0 verloren, 0 doppelt); Widerstandsänderung < 300 ms spürbar; ADR zur gewählten Strategie ergänzt.
+      **Abnahme:** Schalten an beiden Griffen funktioniert zuverlässig (100 Drücke, 0 verloren, 0 doppelt); Widerstandsänderung < 300 ms spürbar; ADR zur gewählten Strategie ergänzt.
 
 ## E3 – Engine-Physik
+
 **Ziel:** Realistisches virtuelles Tempo auf einem Höhenprofil.
+
 - [ ] `packages/engine/physics` nach `03` §2, deterministischer Tick; Golden-Fahrten + fast-check-Properties; Mutation-Score ≥ 80 %
 - [ ] `ElevationProfile` mit `elevationAt`/`gradeAt(smoothing)`; Test-Route als reine Daten
 - [ ] RideState-Summen (Distanz, Hm, kJ, Zeit), Auto-Pause, Datenausfall-Verhalten
 - [ ] Engine → Trainer: Grade aus Route + Gang, Rate-Limit 4 Hz
 - [ ] Rider-Profil-Screen (`03` §2a: Gewicht, Größe, Rad, Kettenblatt/Cog, Gang-Preset; später FTP) – in E3 lokal gespeichert, ab E5 mit Account synchronisiert
-**Abnahme:** 60-min-Sim-Fahrt mit festem Watt-Profil liefert erwartete Distanz ± 2 %; auf echter Rolle fühlt sich der Test-Anstieg wie Anstieg an.
+      **Abnahme:** 60-min-Sim-Fahrt mit festem Watt-Profil liefert erwartete Distanz ± 2 %; auf echter Rolle fühlt sich der Test-Anstieg wie Anstieg an.
 
 ## E4 – Erste 3D-Welt: Spiel-Fundament
+
 **Ziel:** Das „Zwift-Gefühl" – und die Architektur für ein großes Spiel.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen
@@ -72,10 +84,12 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] Kameras: Verfolger, Nah, Helikopter, Ego; Speed-FOV
 - [ ] Spiel-HUD (`04` §9) inkl. Mini-Höhenprofil und Mini-Map
 - [ ] Visuelle Regressionstests (deterministische Szene) + Performance-Budget-Szene (`10-testing.md` §7–8)
-**Abnahme:** ≥ 60 fps p50 auf Henrys Laptop (High oder Medium, `mise run perf`); Beine sichtbar synchron zur echten Kadenz; Runde schließt nahtlos; Budget- und Screenshot-Tests grün.
+      **Abnahme:** ≥ 60 fps p50 auf Henrys Laptop (High oder Medium, `mise run perf`); Beine sichtbar synchron zur echten Kadenz; Runde schließt nahtlos; Budget- und Screenshot-Tests grün.
 
 ## E5 – Backend-Grundlage & Accounts
+
 **Ziel:** Server auf dem Hetzner-VPS läuft; man kann sich anmelden, Profil und Fahrten werden synchronisiert. Solo/Gast/Sim funktionieren weiterhin ohne Server.
+
 - [ ] `database/`-Modul: Drizzle + SQLite (WAL), `drizzle-kit`-Migrationen, Litestream-Backup aktiv
 - [ ] Zod-API-Schemas in `packages/shared/src/api` + Contract-Fixtures (`fixtures/api/`), Response-Validierung im Test-Interceptor
 - [ ] `mail/`: `MailSender` mit Cloudflare Email Sending (primär) und Resend (Fallback), Absenderdomain mit SPF/DKIM/DMARC
@@ -84,32 +98,40 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] `rides/`: Upload (idempotent), Plausibilitätsprüfung Stufe 1–4 (`08-backend.md`), Fahrthistorie
 - [ ] Client `sync/`: Cache, Outbox mit Retry, Gastmodus, Status-Anzeige „offline / synchronisiert"
 - [ ] `@nestjs/throttler`, Daten-Export/Löschung; VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
+- [ ] Domänen-Metriken (ADR-010): Magic-Link-Mails sent/failed, Fahrt-Uploads accepted/flagged/rejected, SQLite- und Litestream-Gesundheit (Backup-Lag)
 - [ ] Tests: `@nestjs/testing` + Supertest, Golden-Fahrten auch gegen `POST /v1/rides`, Plausibilitäts-Fixtures (echte Fahrt ok, manipulierte Fahrt flagged)
-**Abnahme:** Henry meldet sich am Laptop an, fährt eine Stunde, Fahrt erscheint in der Server-Historie; Fahrt offline gefahren wird später automatisch hochgeladen; Sim-Fahrt bringt keine Belohnung.
+      **Abnahme:** Henry meldet sich am Laptop an, fährt eine Stunde, Fahrt erscheint in der Server-Historie; Fahrt offline gefahren wird später automatisch hochgeladen; Sim-Fahrt bringt keine Belohnung.
 
 ## E6 – Gamification & Volts-Ökonomie (→ MVP)
+
 **Ziel:** Jede Fahrt bringt verbindlichen Fortschritt – mit Spielgefühl.
+
 - [ ] `progression/`: XP/Level serverseitig aus akzeptierten Fahrten; Level-Up-Effekt im Client
 - [ ] `economy/`: Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ"
+- [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
 - [ ] Segmente (1 Sprint, 1 KOM) mit Banner-Torbögen, Countdown-Flaggen, Live-Delta, PB-Konfetti; PBs serverseitig
 - [ ] Zielbogen/Rundenanzeige; 9 Start-Badges (Prädikate in `packages/rules`)
 - [ ] Fahrtzusammenfassung: vorläufig → bestätigt (Blitz-Regen-Animation)
 - [ ] Erste Sounds: Wind, Freilauf, Schalten, Blitz-Sammeln, PB-Fanfare
-**Abnahme:** Nach einer echten Stunde zeigt der Server XP, Level, Volts, PBs und Badges; identisch auf zweitem Browser nach Login; E2E „fahren → Blitz sammeln → Volts bestätigt" grün.
+      **Abnahme:** Nach einer echten Stunde zeigt der Server XP, Level, Volts, PBs und Badges; identisch auf zweitem Browser nach Login; E2E „fahren → Blitz sammeln → Volts bestätigt" grün.
 
 ## E7 – Customizing, Garage & Shop
+
 **Ziel:** Eigener Fahrer, eigenes Rad, Freischalten mit Volts.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
 - [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items
 - [ ] Garage-Showroom (Studio-Licht, Drehteller, Fotomodus), Shop mit Preisen in ⚡, gesperrte Items mit Bedingung
 - [ ] Wiegetritt/Ducken-Posen, Kurvenneigung
-**Abnahme:** Henry kauft ein Laufrad mit Volts und rüstet es aus; nach Reload/anderem Browser identisch; Kauf ohne genug Volts abgelehnt; visuelle Tests der Garage grün.
+      **Abnahme:** Henry kauft ein Laufrad mit Volts und rüstet es aus; nach Reload/anderem Browser identisch; Kauf ohne genug Volts abgelehnt; visuelle Tests der Garage grün.
 
 ## E8 – Lebendige Welt: Bots, Windschatten, Tageszeit, Wetter, Atmosphäre
+
 **Ziel:** Aus der Strecke wird eine Spielwelt.
+
 - [ ] **AI-Bots** (`packages/engine/bots`): Persönlichkeiten, Gruppen, Attacken, Sprints; Fahrer-LODs + Impostoren
 - [ ] **Windschatten** in der Engine (auch Trainer-Widerstand) + sichtbarer Effekt (HUD-Indikator, Luftstrom-Partikel, leiserer Wind)
 - [ ] Spurwahl/Überholen (laterale Position)
@@ -119,17 +141,21 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] **Kameras:** TV-Seitenkamera, **Cinematic-Modus** mit automatischem Schnitt, Fotomodus
 - [ ] **Audio/Musik:** räumlicher Jubel, Reifen/Untergrund, Wetter-Ambience, Biom-Musik (CC0/eigen), Mixer
 - [ ] Performance-Budget-Szene „Peloton am KOM" (30 Bots, Regen, Abend) im Budget
-**Abnahme:** 60-min-Fahrt mit 20 Bots bei Wetterwechsel und Sonnenuntergang ≥ 60 fps p50 auf Henrys Laptop (Medium); Windschatten messbar (Golden-Test) und spürbar; visuelle Tests für Tag/Nacht/Regen grün.
+      **Abnahme:** 60-min-Fahrt mit 20 Bots bei Wetterwechsel und Sonnenuntergang ≥ 60 fps p50 auf Henrys Laptop (Medium); Windschatten messbar (Golden-Test) und spürbar; visuelle Tests für Tag/Nacht/Regen grün.
 
 ## E9 – Live-Gruppenfahrten
+
 **Ziel:** Mit Freunden gemeinsam fahren.
+
 - [ ] `live/`: `LiveGateway` (`@nestjs/websockets` + `platform-ws`), Auth im ersten Frame, Räume (Route + Raumcode), Limits
 - [ ] Client `net/`: Join, 2–4 Hz State, Interpolation, Reconnect; Contract-Tests der WS-Schemas
 - [ ] Remote-Fahrer als `RiderView` (Name-Tag, Avatar aus Server); Windschatten hinter Freunden (v2, Latenz prüfen)
 - [ ] `mise run sim:crowd` (Fake-Clients für Lasttest)
-**Abnahme:** Zwei Accounts sehen sich flüssig auf derselben Strecke; Server übersteht Client-Abbrüche; 30 Fake-Clients ohne Ruckeln.
+- [ ] Domänen-Metriken: aktive Fahrten, offene WebSocket-Verbindungen, Gruppenfahrt-Räume
+      **Abnahme:** Zwei Accounts sehen sich flüssig auf derselben Strecke; Server übersteht Client-Abbrüche; 30 Fake-Clients ohne Ruckeln.
 
 ## E10 – Mehr Spiel: Inhalte & Extras
+
 - [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
@@ -138,3 +164,4 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] Passkeys als zweite Login-Methode
 - [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
+- [ ] Optionale Client-Telemetrie (ADR-010): aggregierte FPS/Framezeit und BLE-Trennungen sowie Fehler-Signaturen an einen eigenen Server-Endpunkt, keine Third-Party-Tracker
