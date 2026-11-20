@@ -4,6 +4,11 @@ import {
   type StoredProfileRecord,
 } from "@voltonaut/shared";
 
+export interface ProfileWriteLease {
+  readonly signal: Readonly<AbortSignal>;
+  readonly current: () => boolean;
+}
+
 /**
  * Local rider profile cache, IndexedDB v1, plain Web API (ADR-005: deliberately
  * only a cache on the way to the account profile in E5; the migration hook is
@@ -20,7 +25,7 @@ export const PROFILE_RECORD_KEY = "current";
  */
 export interface ProfileDatabase {
   readonly loadRecord: () => Promise<StoredProfileRecord | undefined>;
-  readonly saveRecord: (record: StoredProfileRecord) => Promise<void>;
+  readonly saveRecord: (record: StoredProfileRecord, lease?: ProfileWriteLease) => Promise<void>;
 }
 
 export interface ProfileStore {

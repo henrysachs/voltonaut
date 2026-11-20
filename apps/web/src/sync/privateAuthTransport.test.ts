@@ -1,0 +1,129 @@
+import { createServer } from "node:http";
+import { once } from "node:events";
+import { afterEach, expect, it } from "vitest";
+
+import { privateAuthTransport } from "./privateAuthTransport.js";
+import { localRide } from "./testdata/localRide.js";
+
+const cleanup = new Set<() => Promise<void>>();
+
+afterEach(async () => {
+  await Promise.all([...cleanup].map((close) => close()));
+  cleanup.clear();
+});
+
+interface RequestInfo {
+  readonly url?: string | undefined;
+  readonly headers: { readonly authorization?: string | undefined };
+}
+
+interface ResponseInfo {
+  readonly writeHead: (status: number, headers: Readonly<Record<string, string>>) => object;
+  readonly end: (body: string) => object;
+}
+
+async function fixture() {
+  const calls: string[] = [];
+  let current = true;
+  let status = 200;
+  let mime = "application/json";
+  let body = JSON.stringify({ status: "missing" });
+
+  const server = createServer((request: RequestInfo, response: ResponseInfo) => {
+    calls.push(`${request.url ?? ""}:${request.headers.authorization ?? ""}`);
+    response.writeHead(status, { "Content-Type": mime });
+    response.end(body);
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  const port = address instanceof Object ? address.port : undefined;
+
+  if (port === undefined) throw new Error("Missing test port");
+  const origin = `http://127.0.0.1:${port}`;
+  cleanup.add(async () => {
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => {
+      server.close(() => {
+        resolve();
+      });
+    });
+  });
+
+  const lease = privateAuthTransport(origin).authorize({
+    token: "private-token",
+    userId: "user-a",
+    generation: 1,
+    signal: AbortSignal.timeout(8000),
+    current: () => current,
+  });
+
+  return {
+    lease,
+    calls,
+    reply: (code: number, type: string, value: string) => {
+      status = code;
+      mime = type;
+      body = value;
+    },
+    supersede: () => {
+      current = false;
+    },
+  };
+}
+
+it("keeps bearer on fixed known paths and rejects caller-controlled ride/cursor URLs", async () => {
+  const f = await fixture();
+  expect(await f.lease.profile()).toEqual({ status: "missing" });
+  expect(() => f.lease.detail("https://other.invalid/exfil")).toThrow("Invalid uuid");
+  expect(() => f.lease.history("//other.invalid")).toThrow("Invalid uuid");
+  expect(f.calls).toEqual(["/v1/me/profile:Bearer private-token"]);
+  f.supersede();
+  await expect(f.lease.profile()).rejects.toMatchObject({ cause: "superseded" });
+  expect(f.calls).toHaveLength(1);
+});
+
+it.each([
+  [401, "reauth"],
+  [403, "forbidden"],
+  [404, "missing"],
+  [409, "conflict"],
+  [422, "contract"],
+  [429, "retry"],
+  [500, "retry"],
+  [201, "contract"],
+])("categorizes HTTP %s without leaking the response body", async (status, cause) => {
+  const f = await fixture();
+  f.reply(status, "application/json", '{"private":"server details"}');
+  await expect(f.lease.profile()).rejects.toMatchObject({ cause, message: cause });
+});
+
+it.each([
+  ["text/html", '{"status":"missing"}'],
+  ["application/json", '{"status":"present"}'],
+  ["application/json", "not json"],
+])("rejects malformed or mislabeled response %s", async (mime, body) => {
+  const f = await fixture();
+  f.reply(200, mime, body);
+  await expect(f.lease.profile()).rejects.toMatchObject({ cause: "contract" });
+});
+
+it("accepts only a valid stored receipt for the exact canonical ride ID", async () => {
+  const f = await fixture();
+
+  const receipt = {
+    rideId: "00000000-0000-4000-8000-000000000001",
+    storage: "stored",
+    assessment: { status: "unverified", reason: "legacy_missing_replay" },
+  };
+
+  f.reply(200, "application/json", JSON.stringify(receipt));
+  await expect(f.lease.upload(localRide)).rejects.toMatchObject({ cause: "contract" });
+  f.reply(
+    200,
+    "application/json; charset=utf-8",
+    JSON.stringify({ ...receipt, rideId: localRide.rideId }),
+  );
+  await expect(f.lease.upload(localRide)).resolves.toMatchObject({ rideId: localRide.rideId });
+});

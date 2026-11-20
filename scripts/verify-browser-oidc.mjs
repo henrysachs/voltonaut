@@ -2,13 +2,17 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
-import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { createOidcProvider } from "../apps/server/src/testing/oidc-provider.spec.ts";
+import {
+  randomPort,
+  syncBrowserControl,
+  verifySyncDatabase,
+} from "./verify-browser-sync-control.mjs";
 
 const root = join(import.meta.dirname, "..");
 const requireWeb = createRequire(new URL("../apps/web/package.json", import.meta.url));
@@ -17,24 +21,13 @@ const temporary = join(tmpdir(), "opencode");
 await mkdir(temporary, { recursive: true });
 
 const artifacts = await mkdtemp(join(temporary, "browser-oidc-"));
-const webOrigin = "http://127.0.0.1:5187";
+const syncSuite = process.argv.includes("--sync");
+const webPort = syncSuite ? 5193 : Number(process.env["VERIFY_WEB_PORT"] ?? 5187);
 
-async function randomPort() {
-  const reservation = createServer();
-  reservation.listen(0, "127.0.0.1");
-  await once(reservation, "listening");
-  const address = reservation.address();
+assert.ok([5187, 5193].includes(webPort));
 
-  if (address instanceof Object) {
-    await new Promise((resolve) => {
-      reservation.close(resolve);
-    });
-
-    return address.port;
-  }
-
-  throw new Error("Missing local port");
-}
+const webOrigin = `http://127.0.0.1:${webPort}`;
+let controlOrigin = "";
 
 /** @param {string} api */
 async function waitForHealth(api, attempts = 100) {
@@ -60,7 +53,7 @@ async function configureVite(api) {
   const config = join(artifacts, "vite.config.mjs");
   await writeFile(
     config,
-    `export default ${JSON.stringify({ root: join(root, "apps/web"), cacheDir: join(artifacts, "vite-cache"), server: { host: "127.0.0.1", port: 5187, strictPort: true } })}`,
+    `export default ${JSON.stringify({ root: join(root, "apps/web"), cacheDir: join(artifacts, "vite-cache"), server: { host: "127.0.0.1", port: webPort, strictPort: true } })}`,
   );
 
   return spawn(
@@ -79,7 +72,7 @@ async function runBrowser(api, phase) {
   const config = join(artifacts, "playwright.config.mjs");
   await writeFile(
     config,
-    `export default ${JSON.stringify({ testDir: join(root, "apps/web/verification"), testMatch: "oidc.browser.spec.ts", timeout: 60000, workers: 1, reporter: "list", outputDir: join(artifacts, "results"), use: { headless: true, launchOptions: { args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] } } })}`,
+    `export default ${JSON.stringify({ testDir: join(root, "apps/web/verification"), testMatch: syncSuite ? "sync.*.spec.ts" : "oidc.browser.spec.ts", timeout: syncSuite ? 90000 : 60000, workers: 1, reporter: "list", outputDir: join(artifacts, "results"), use: { headless: true, launchOptions: { args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] } } })}`,
   );
 
   const runner = spawn(
@@ -93,6 +86,8 @@ async function runBrowser(api, phase) {
         TMPDIR: process.env["TMPDIR"],
         API_ORIGIN: api,
         AUTH_ARTIFACTS: artifacts,
+        WEB_ORIGIN: webOrigin,
+        SYNC_CONTROL: controlOrigin,
       },
       stdio: "inherit",
     },
@@ -122,22 +117,26 @@ const provider = await createOidcProvider();
 const port = await randomPort();
 const api = `http://127.0.0.1:${port}`;
 
-const child = spawn(process.execPath, ["dist/main.js"], {
-  cwd: join(root, "apps/server"),
-  env: {
-    NODE_ENV: "test",
-    AUTH_MODE: "oidc",
-    DATABASE_PATH: ":memory:",
-    HOST: "127.0.0.1",
-    PORT: String(port),
-    OIDC_ISSUER: provider.issuer,
-    OIDC_CLIENT_ID: "test-client",
-    OIDC_CLIENT_SECRET: "test-secret",
-    OIDC_REDIRECT_URI: `${api}/v1/auth/oidc/callback`,
-    CLIENT_ORIGIN: webOrigin,
-  },
-  stdio: ["ignore", "pipe", "pipe"],
-});
+function startApi() {
+  return spawn(process.execPath, ["dist/main.js"], {
+    cwd: join(root, "apps/server"),
+    env: {
+      NODE_ENV: "test",
+      AUTH_MODE: "oidc",
+      DATABASE_PATH: syncSuite ? join(artifacts, "sync.sqlite") : ":memory:",
+      HOST: "127.0.0.1",
+      PORT: String(port),
+      OIDC_ISSUER: provider.issuer,
+      OIDC_CLIENT_ID: "test-client",
+      OIDC_CLIENT_SECRET: "test-secret",
+      OIDC_REDIRECT_URI: `${api}/v1/auth/oidc/callback`,
+      CLIENT_ORIGIN: webOrigin,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+let child = startApi();
 
 let serverLog = "";
 
@@ -155,17 +154,41 @@ child.stdout.on("data", captureLog);
 child.stderr.on("data", captureLog);
 
 let vite;
+let control;
 
 try {
   await verifyBundle();
   await waitForHealth(`${api}/healthz`);
   vite = await configureVite(api);
   await waitForHealth(webOrigin);
-  await runBrowser(api, "online");
-  assert.ok(provider.control.tokenCalls >= 4);
+
+  if (syncSuite) {
+    control = await syncBrowserControl({
+      identity: (identity) => {
+        provider.control.subject = `sync-synthetic-${identity}`;
+        provider.control.email = `sync-${identity}@example.com`;
+      },
+      stop: () => stopChild(child),
+      start: async () => {
+        child = startApi();
+        child.stdout?.on("data", captureLog);
+        child.stderr?.on("data", captureLog);
+        await waitForHealth(`${api}/healthz`);
+      },
+    });
+    controlOrigin = control.origin;
+  }
+
+  await runBrowser(api, syncSuite ? "sync" : "online");
+  assert.ok(provider.control.tokenCalls >= (syncSuite ? 3 : 4));
   assert.ok(provider.control.jwksCalls > 0);
   await stopChild(child);
-  await runBrowser(api, "offline");
+
+  if (syncSuite) {
+    await verifySyncDatabase(artifacts);
+  }
+
+  if (!syncSuite) await runBrowser(api, "offline");
   assert.equal(
     /Bearer |code=|[A-Za-z0-9_-]{43}|provider-access-private|test-secret/u.test(serverLog),
     false,
@@ -178,24 +201,38 @@ try {
         signedProvider: "RS256",
         tokenCalls: provider.control.tokenCalls,
         jwksCalls: provider.control.jwksCalls,
-        checks: [
-          "login",
-          "restore",
-          "logout",
-          "memory-session",
-          "invalid-handoff",
-          "navigation-cancel-and-continue",
-          "offline-world-recording-tcx",
-        ],
+        checks: syncSuite
+          ? [
+              "two-signed-identities",
+              "explicit-owned-v1-upload",
+              "profile-push-pull-frozen-ride",
+              "offline-outbox-reload",
+              "account-isolation",
+              "lost-response-api-restart",
+              "one-database-row-per-id",
+              "indexeddb-concurrent-claim-capacity-quota",
+            ]
+          : [
+              "login",
+              "restore",
+              "logout",
+              "memory-session",
+              "invalid-handoff",
+              "navigation-cancel-and-continue",
+              "offline-world-recording-tcx",
+            ],
+        syncSuite,
       },
       null,
       2,
     ),
   );
   process.stdout.write(
-    `Signed browser OIDC, restore/logout, memory session, navigation guard and offline world/TCX verified. Artifacts: ${artifacts}\n`,
+    `${syncSuite ? "Signed two-account profile/history sync, offline outbox, restart/idempotency and real IndexedDB verified." : "Signed browser OIDC, restore/logout, memory session, navigation guard and offline world/TCX verified."} Artifacts: ${artifacts}\n`,
   );
 } finally {
+  if (control !== undefined) await control.close();
+
   if (vite !== undefined) await stopChild(vite);
   await stopChild(child);
   await provider.close();

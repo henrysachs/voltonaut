@@ -102,7 +102,8 @@ function startHud(
 }
 
 async function start(): Promise<void> {
-  setupBrowserAccount();
+  const profileReady = setupProfile();
+  setupBrowserAccount(() => profileReady);
   const params = new URLSearchParams(window.location.search);
   const simMode = params.get("sim") === "1";
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
@@ -111,7 +112,7 @@ async function start(): Promise<void> {
   const link = createWorkerLink();
   const connection = createConnectionMonitor(bus);
 
-  const profile = await setupProfile();
+  const { initialProfile: profile } = await profileReady;
 
   // Parameters are frozen at ride start; profile edits apply to the next ride.
   link.init({ routeId: APP_ROUTE_ID, profile, clockScale });

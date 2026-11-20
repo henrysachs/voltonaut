@@ -2,6 +2,7 @@ import type { SessionResponse, User } from "@voltonaut/shared";
 
 import type { AuthTransport } from "./authTransport.js";
 import type { SessionPersistence } from "./sessionPersistence.js";
+import type { AccountLease, PrivateAuthTransport } from "./privateAuthTransport.js";
 
 export type SessionView =
   | { readonly kind: "guest"; readonly message: string }
@@ -22,6 +23,7 @@ interface SessionOptions {
   readonly transport: AuthTransport;
   readonly persistence: SessionPersistence;
   readonly navigate: () => void;
+  readonly privateTransport: PrivateAuthTransport;
 }
 
 export class ApplicationSession {
@@ -33,6 +35,19 @@ export class ApplicationSession {
 
   constructor(options: SessionOptions) {
     this.#options = options;
+  }
+
+  authorize(): AccountLease | undefined {
+    if (this.#state.kind !== "authenticated") return undefined;
+    const generation = this.#generation;
+
+    return this.#options.privateTransport.authorize({
+      token: this.#state.session.sessionToken,
+      userId: this.#state.session.user.id,
+      generation,
+      signal: this.#controller.signal,
+      current: () => generation === this.#generation && this.#state.kind === "authenticated",
+    });
   }
 
   view(): SessionView {
