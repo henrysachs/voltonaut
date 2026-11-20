@@ -4,13 +4,17 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module.js";
-
-const HOST = process.env["HOST"] ?? "127.0.0.1";
+import { setupHttp } from "./app.setup.js";
+import { parseServerConfig } from "./config.js";
 
 export async function bootstrap(): Promise<void> {
+  const config = parseServerConfig(process.env, process.env["NODE_ENV"] ?? "development");
   const app = await NestFactory.create(AppModule);
+
   app.enableShutdownHooks();
-  await app.listen(3000, HOST);
+  setupHttp(app, config);
+
+  await app.listen(config.http.port, config.http.host);
 }
 
 await bootstrap();
