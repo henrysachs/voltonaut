@@ -160,6 +160,8 @@ interface RideUpload {
 
 ## Plausibilitätsprüfung / Anti-Cheat-Grundlagen
 
+[E10-02](specs/E10-02-replay-consistency.md) implementiert separat eine reine V2-Nachrechnung mit vollständigem Initialisierungsjournal. `assessRecordingV2` liefert ausschließlich `unverified`, `rejected` oder `replayed`. Das Ergebnis vergibt weder Belohnungen noch Exportrechte. Die V1-API bleibt unverändert. Die folgenden 3-Prozent- und Annahmeregeln sind weiterhin Zielskizzen, nicht die V2-Prüfung. V2 vergleicht diskrete Werte und Enginezeiten exakt und übrige Messwerte mit enger numerischer Toleranz.
+
 Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 
 1. **Struktur:** Zeitstempel monoton, 1-Hz-Raster ± Toleranz, Dauer ≤ Wanduhr zwischen `startedAt` und Upload, max. 6 h, `rideId` nicht doppelt.

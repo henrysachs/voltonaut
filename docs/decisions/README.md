@@ -19,3 +19,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [013](ADR-013-cloudflare-access-oidc.md) | Cloudflare Access als OIDC-Broker für den Login | Zielentscheidung angenommen; Access aktiviert, App und Umsetzung offen |
 | [014](ADR-014-three-rendering-dependencies.md) | Abhängigkeiten für die erste 3D-Szene | Umsetzung von ADR-002 und ADR-008 |
 | [015](ADR-015-oidc-client-library.md) | openid-client für serverseitigen OIDC-Codeflow | Gewählt für E5-06 |
+| [016](ADR-016-server-engine-replay.md) | Öffentliche Engine für reine Server-Nachrechnung | Gewählt für E10-02 |

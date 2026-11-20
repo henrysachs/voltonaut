@@ -10,4 +10,6 @@ export * from "./ride.js";
 
 export * from "./localRide.js";
 
+export * from "./recordingV2.js";
+
 export * from "./units.js";
