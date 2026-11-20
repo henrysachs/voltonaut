@@ -40,7 +40,7 @@ it("enforces both owner foreign keys on a fresh database", async () => {
   }
 });
 
-function createExistingDatabase(directory: string): string {
+function priorMigrations(directory: string, migrationCount: number): string {
   const source = resolve("apps/server/drizzle");
   const legacy = join(directory, "legacy");
 
@@ -51,18 +51,36 @@ function createExistingDatabase(directory: string): string {
     .passthrough()
     .parse(JSON.parse(readFileSync(join(source, "meta/_journal.json"), "utf8")));
 
-  const first = journal.entries[0];
+  const entries = journal.entries.slice(0, migrationCount);
 
-  if (first === undefined) {
-    throw new Error("missing baseline migration");
+  if (entries.length !== migrationCount) {
+    throw new Error("missing prior migrations");
   }
 
   mkdirSync(join(legacy, "meta"), { recursive: true });
-  copyFileSync(join(source, `${first.tag}.sql`), join(legacy, `${first.tag}.sql`));
-  writeFileSync(
-    join(legacy, "meta/_journal.json"),
-    JSON.stringify({ ...journal, entries: [first] }),
-  );
+
+  for (const entry of entries) {
+    copyFileSync(join(source, `${entry.tag}.sql`), join(legacy, `${entry.tag}.sql`));
+  }
+
+  writeFileSync(join(legacy, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
+
+  return legacy;
+}
+
+function readAuthState(client: DatabaseReader["$client"], migrationCount: number) {
+  return {
+    users: client.prepare("SELECT * FROM users").all(),
+    sessions: client.prepare("SELECT * FROM sessions").all(),
+    identities: migrationCount === 2 ? client.prepare("SELECT * FROM auth_identities").all() : [],
+    handoffs: migrationCount === 2 ? client.prepare("SELECT * FROM oidc_handoffs").all() : [],
+    transactions:
+      migrationCount === 2 ? client.prepare("SELECT * FROM oidc_transactions").all() : [],
+  };
+}
+
+function createExistingDatabase(directory: string, migrationCount: number) {
+  const legacy = priorMigrations(directory, migrationCount);
   const path = join(directory, "existing.db");
   const client = new Database(path);
 
@@ -77,38 +95,54 @@ function createExistingDatabase(directory: string): string {
         "INSERT INTO sessions VALUES ('legacy-hash', 'legacy-user', 123, 123, 9999999999999, NULL)",
       )
       .run();
+
+    if (migrationCount === 2) {
+      client
+        .prepare(
+          "INSERT INTO auth_identities VALUES ('https://identity.example', 'subject', 'legacy-user')",
+        )
+        .run();
+      client
+        .prepare(
+          "INSERT INTO oidc_handoffs VALUES ('code-hash', 'binding-hash', 'legacy-user', 9999999999999)",
+        )
+        .run();
+      client
+        .prepare(
+          "INSERT INTO oidc_transactions VALUES ('state-hash', 'binding-hash', 'nonce', 'verifier', 9999999999999, 123)",
+        )
+        .run();
+    }
+
+    return { path, authState: readAuthState(client, migrationCount) };
   } finally {
     client.close();
   }
-
-  return path;
 }
 
-it("upgrades actual 0000 without losing users or sessions and adds both owner foreign keys", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "voltonaut-owned-upgrade-"));
-
-  try {
-    const path = createExistingDatabase(directory);
-
-    const { app } = await createTestApp({
-      config: { database: { path, migrationsDir: "drizzle" } },
-    });
+it.each([1, 2])(
+  "upgrades %i prior migrations without losing auth data and adds both owner foreign keys",
+  async (migrationCount) => {
+    const directory = mkdtempSync(join(tmpdir(), "voltonaut-owned-upgrade-"));
 
     try {
-      const db = getDatabase(app);
+      const { path, authState } = createExistingDatabase(directory, migrationCount);
 
-      expect(db.$client.prepare("SELECT * FROM users").all()).toEqual([
-        { id: "legacy-user", email: "legacy@example.com", created_at: 123, deleted_at: null },
-      ]);
-      expect(db.$client.prepare("SELECT token_hash, user_id FROM sessions").all()).toEqual([
-        { token_hash: "legacy-hash", user_id: "legacy-user" },
-      ]);
-      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(2);
-      assertOwnedForeignKeys(db);
+      const { app } = await createTestApp({
+        config: { database: { path, migrationsDir: "drizzle" } },
+      });
+
+      try {
+        const db = getDatabase(app);
+
+        expect(readAuthState(db.$client, migrationCount)).toEqual(authState);
+        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(3);
+        assertOwnedForeignKeys(db);
+      } finally {
+        await app.close();
+      }
     } finally {
-      await app.close();
+      rmSync(directory, { recursive: true, force: true });
     }
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
+  },
+);

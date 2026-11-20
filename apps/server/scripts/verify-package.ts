@@ -1,7 +1,9 @@
+/// <reference lib="es2023.array" />
+
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -14,6 +16,31 @@ const directory = resolve(process.argv[2] ?? "");
 assert.ok(existsSync(join(directory, "dist/main.js")), "pass the pnpm deploy output directory");
 
 assert.ok(existsSync(join(directory, "drizzle/meta/_journal.json")), "packaged migration journal");
+
+const journal = z
+  .object({
+    entries: z.array(z.object({ tag: z.string().regex(/^\d{4}_[a-z0-9_]+$/u) })).nonempty(),
+  })
+  .parse(JSON.parse(readFileSync(join(directory, "drizzle/meta/_journal.json"), "utf8")));
+
+const [initialMigration, ...laterMigrations] = journal.entries;
+const latestMigration = laterMigrations.at(-1) ?? initialMigration;
+
+const snapshot = z
+  .object({ tables: z.record(z.object({ name: z.string().min(1) })) })
+  .parse(
+    JSON.parse(
+      readFileSync(
+        join(directory, "drizzle/meta", `${latestMigration.tag.slice(0, 4)}_snapshot.json`),
+        "utf8",
+      ),
+    ),
+  );
+
+const expectedTables = [
+  "__drizzle_migrations",
+  ...Object.values(snapshot.tables).map((table) => table.name),
+].toSorted();
 
 const temporary = mkdtempSync(join(tmpdir(), "voltonaut-package-"));
 const databasePath = join(temporary, "auth.db");
@@ -34,11 +61,10 @@ await once(listener, "close");
 const environment = {
   PATH: process.env["PATH"],
   NODE_ENV: "production",
+  AUTH_MODE: "disabled",
   HOST: "127.0.0.1",
   PORT: `${port}`,
   DATABASE_PATH: databasePath,
-  MAIL_PROVIDER: "resend",
-  RESEND_API_KEY: "package-smoke-placeholder-never-used",
 };
 
 const server = spawn(process.execPath, ["dist/main.js"], {
@@ -75,6 +101,11 @@ try {
     .strict()
     .parse(await response.json());
 
+  const capability = await fetch(`http://127.0.0.1:${port}/v1/auth/config`);
+
+  assert.equal(capability.status, 200);
+  assert.deepEqual(await capability.json(), { mode: "disabled" });
+
   const logout = await fetch(`http://127.0.0.1:${port}/v1/auth/logout`, { method: "POST" });
 
   assert.equal(logout.status, 401);
@@ -98,26 +129,43 @@ try {
           )
           .all(),
       ),
-    ["__drizzle_migrations", "login_tokens", "profiles", "rides", "sessions", "users"].map(
-      (name) => ({ name }),
-    ),
+    expectedTables.map((name) => ({ name })),
   );
-  z.object({ count: z.literal(2) }).parse(
-    db.prepare("SELECT count(*) AS count FROM __drizzle_migrations").get(),
-  );
+
+  const applied = z
+    .object({ count: z.number().int().nonnegative() })
+    .parse(db.prepare("SELECT count(*) AS count FROM __drizzle_migrations").get());
+
+  assert.equal(applied.count, journal.entries.length, "all packaged migrations were applied");
   db.close();
 
   const missingMail = spawnSync(process.execPath, ["dist/main.js"], {
     cwd: directory,
-    env: { ...environment, RESEND_API_KEY: "" },
+    env: { ...environment, AUTH_MODE: "magic-link", MAIL_PROVIDER: "resend", RESEND_API_KEY: "" },
     stdio: "ignore",
     timeout: 5000,
   });
 
   assert.notEqual(missingMail.status, 0, "production rejects missing mail configuration");
   assert.equal(missingMail.error, undefined, "production fails rather than timing out");
+
+  const missingMode = spawnSync(process.execPath, ["dist/main.js"], {
+    cwd: directory,
+    env: {
+      ...environment,
+      AUTH_MODE: undefined,
+      MAIL_PROVIDER: "resend",
+      RESEND_API_KEY: "package-smoke-placeholder-never-used",
+    },
+    stdio: "ignore",
+    timeout: 5000,
+  });
+
+  assert.notEqual(missingMode.status, 0, "production rejects an implicit auth mode");
+  assert.equal(missingMode.error, undefined, "missing mode fails rather than timing out");
+
   process.stdout.write(
-    "Package smoke passed. Packaged migrations, WAL, public health, bearer guard, SIGTERM and fail-closed mail. No external network calls.\n",
+    "Package smoke passed. Packaged migrations, WAL, disabled-mode health, bearer guard, SIGTERM and fail-closed mode/mail. No external network calls.\n",
   );
 } finally {
   if (server.exitCode === null && server.signalCode === null) {

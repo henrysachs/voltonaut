@@ -24,7 +24,7 @@ export class AuthService {
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- drizzle's ServerDatabase is a deep-mutable ORM handle; no readonly view exists.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
-    @Inject(MAIL_SENDER) private readonly mail: Readonly<MailSender>,
+    @Inject(MAIL_SENDER) private readonly mail: Readonly<MailSender> | null,
     @Inject(SERVER_CONFIG) private readonly config: ServerConfig,
   ) {}
 
@@ -34,6 +34,9 @@ export class AuthService {
    * session exchange.
    */
   public async requestMagicLink(email: string, nowMs: number): Promise<void> {
+    this.requireMagicLink();
+
+    if (this.mail === null) throw new ApiError(503, "internal_error", "mail delivery unavailable");
     const token = createToken();
 
     this.db
@@ -63,6 +66,7 @@ export class AuthService {
     userAgent: string | undefined,
     nowMs: number,
   ): SessionResponse {
+    this.requireMagicLink();
     const tokenHash = hashToken(loginToken);
 
     return this.db.transaction(
@@ -89,21 +93,8 @@ export class AuthService {
         }
 
         const user = this.ensureUser(row.email, nowMs);
-        const sessionToken = createToken();
 
-        this.db
-          .insert(sessions)
-          .values({
-            tokenHash: hashToken(sessionToken),
-            userId: user.id,
-            createdAt: nowMs,
-            lastSeenAt: nowMs,
-            expiresAt: nowMs + this.sessionTtlMs(),
-            userAgent: userAgent?.slice(0, 512) ?? null,
-          })
-          .run();
-
-        return { sessionToken, user: userFromRow(user) };
+        return this.issueSession(user.id, userAgent, nowMs);
       },
       { behavior: "immediate" },
     );
@@ -115,6 +106,7 @@ export class AuthService {
    * is unknown or expired.
    */
   public validateSession(sessionToken: string, nowMs: number): SessionPrincipal | undefined {
+    if (this.config.auth.mode === "disabled") return undefined;
     const tokenHash = hashToken(sessionToken);
 
     const row = this.db
@@ -140,6 +132,47 @@ export class AuthService {
   /** Deletes the session row behind this token; the token is invalid afterwards. */
   public logout(sessionTokenHash: string): void {
     this.db.delete(sessions).where(eq(sessions.tokenHash, sessionTokenHash)).run();
+  }
+
+  public currentUser(userId: string): User {
+    const row = this.db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .get();
+
+    if (row === undefined) throw new ApiError(401, "unauthorized", "invalid session token");
+
+    return userFromRow(row);
+  }
+
+  public issueSession(
+    userId: string,
+    userAgent: string | undefined,
+    nowMs: number,
+  ): SessionResponse {
+    if (this.config.auth.mode === "disabled")
+      throw new ApiError(401, "unauthorized", "login disabled");
+    const user = this.currentUser(userId);
+    const sessionToken = createToken();
+    this.db
+      .insert(sessions)
+      .values({
+        tokenHash: hashToken(sessionToken),
+        userId,
+        createdAt: nowMs,
+        lastSeenAt: nowMs,
+        expiresAt: nowMs + this.sessionTtlMs(),
+        userAgent: userAgent?.slice(0, 512) ?? null,
+      })
+      .run();
+
+    return { sessionToken, user };
+  }
+
+  private requireMagicLink(): void {
+    if (this.config.auth.mode !== "magic-link")
+      throw new ApiError(404, "not_found", "login method unavailable");
   }
 
   private ensureUser(email: string, nowMs: number): UsersRow {
@@ -175,6 +208,7 @@ function userFromRow(row: UsersRow): User {
 }
 
 export interface AuthServicePort {
+  readonly currentUser: (userId: string) => User;
   readonly requestMagicLink: (email: string, nowMs: number) => Promise<void>;
   readonly createSession: (
     loginToken: string,

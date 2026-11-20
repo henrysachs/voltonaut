@@ -11,6 +11,7 @@ interface HttpSetupApp {
   readonly enableCors: (options: {
     readonly origin: readonly string[];
     readonly allowedHeaders: readonly string[];
+    readonly credentials: boolean;
   }) => void;
   readonly getHttpAdapter: () => { readonly getInstance: () => ExpressSettings };
 }
@@ -32,6 +33,7 @@ export function setupHttp(app: HttpSetupApp, config: ServerConfig): void {
   app.enableCors({
     origin: [...config.cors.origins],
     allowedHeaders: ["Authorization", "Content-Type", "Content-Encoding"],
+    credentials: config.auth.mode === "oidc",
   });
 
   const express = app.getHttpAdapter().getInstance();

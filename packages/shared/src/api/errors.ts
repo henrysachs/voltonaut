@@ -4,6 +4,8 @@ import { z } from "zod";
 export const ErrorCodeSchema = z.enum([
   "unauthorized",
   "invalid_login_token",
+  "invalid_oidc_login",
+  "identity_conflict",
   "rate_limited",
   "validation_failed",
   "not_found",
