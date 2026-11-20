@@ -26,10 +26,12 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [x] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
 - [x] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
 - [x] Server-Gerüst läuft lokal (`mise run dev:server`) und in CI (Health-Test, Image-Build); Dockerfile, Compose-Datei mit Traefik-Labels und Litestream-Sidecar sowie Deploy-Skript liegen dokumentiert im Repo (`deploy/`)
-- [x] _(Optional, sobald der DNS-A-Record für `voltonaut-api.stammkneipe.dev` liegt)_ **E0-opt – VPS-Deploy:** SSH-Zugang ist seit 19.11.2026 vorhanden. Image nach `ghcr.io/henrysachs/voltonaut-server`, Compose-Projekt tritt dem vorhandenen Traefik-Netz bei (Host-Rule, TLS über Traefiks Certresolver; Netzwerk-/Certresolver-Namen beim Deploy aus der Financensor-Compose, **TODO**), Rollback auf vorheriges Image-Tag, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://voltonaut-api.stammkneipe.dev/healthz` → 200 nach Deploy aus CI
-- [x] _(Teil von E0-opt, nicht von E0 – E0 selbst bleibt unverändert)_ **Observability-Grund verdrahten** (ADR-010, `11-observability.md`): strukturierte JSON-Logs (pino) nach stdout mit `trace_id`/`span_id`; OTel-Traces per OTLP an Alloy/Tempo; `/metrics` (OTel Prometheus Exporter) nur intern im Docker-Netz, nicht über Traefik; No-Op in Dev/Tests. OTLP-Endpunkte und Observability-Netzname beim Deploy aus der Financensor-Compose eintragen (**TODO**). Grafana-Dashboards und Alarme unter `ops/grafana/` sind spätere Liefergegenstände nach dem ersten Deploy.
+- [ ] _(Optional, nach Henrys Produktionsfreigabe)_ **E0-opt – VPS-Deploy:** SSH-Zugang ist seit 19.11.2026 vorhanden. CI überträgt das Docker-Image direkt per SSH, ohne Registry-Push (`08-backend.md`). Eigenes Compose-Projekt im vorhandenen Traefik-Netz, API `api.voltonaut.stammkneipe.dev` unproxied mit Traefik-TLS, Rollback auf vorheriges Image-Tag, `vars.SERVER_DEPLOY_ENABLED=true`, Secrets im Environment `production`. Abnahme: `https://api.voltonaut.stammkneipe.dev/healthz` → 200 nach Deploy aus CI
+- [ ] _(Teil von E0-opt, nicht von E0 – E0 selbst bleibt unverändert)_ **Observability-Grund verdrahten** (ADR-010, `11-observability.md`): strukturierte JSON-Logs (pino) nach stdout mit `trace_id`/`span_id`; OTel-Traces per OTLP an Alloy/Tempo; `/metrics` (OTel Prometheus Exporter) nur intern im Docker-Netz, nicht über Traefik; No-Op in Dev/Tests. OTLP-Endpunkte und Observability-Netzname beim Deploy aus der Financensor-Compose eintragen (**TODO**). Grafana-Dashboards und Alarme unter `ops/grafana/` sind spätere Liefergegenstände nach dem ersten Deploy.
 - [x] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
       **Abnahme:** Frischer Clone: `mise install && mise run install && mise run check` grün; `?sim=1` zeigt laufende Werte, Pfeiltasten ändern den Gang; PR mit absichtlich verbotenem Import, `@ts-ignore` oder gelockerter Regel wird von CI abgelehnt; nach Setzen der Cloudflare-Secrets ist `https://voltonaut.stammkneipe.dev` (bzw. `https://voltonaut.pages.dev`) erreichbar und jeder PR bekommt eine Preview-URL; Server-Health-Test grün in CI.
+
+Korrektur vom 20.11.2026: Die beiden E0-opt-Punkte waren versehentlich abgehakt. `SERVER_DEPLOY_ENABLED=false`; `main` enthält serverseitig nur Health, keine Observability-Verdrahtung. Die Korrektur dokumentiert offene Arbeit, keine neue Lieferung.
 
 ## E1 – Bluetooth-Sniffer, Puls, FTMS lesen
 
@@ -92,13 +94,13 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 
 - [ ] `database/`-Modul: Drizzle + SQLite (WAL), `drizzle-kit`-Migrationen, Litestream-Backup aktiv
 - [ ] Zod-API-Schemas in `packages/shared/src/api` + Contract-Fixtures (`fixtures/api/`), Response-Validierung im Test-Interceptor
-- [ ] `mail/`: `MailSender` mit Cloudflare Email Sending (primär) und Resend (Fallback), Absenderdomain mit SPF/DKIM/DMARC
-- [ ] Auth: Magic Link, Bearer-Session, Logout, Rate-Limits; Login-Screen im Client; CORS auf Web-Origin
+- [ ] Auth-Grundlage aus PR #6 integrieren; lokale Accounts und Sessions mit stabiler `users.id`. PR #6 ist offen und noch nicht auf `main` (20.11.2026).
+- [ ] Auth über Cloudflare Access OIDC (ADR-013, [E5-03](specs/E5-03-cloudflare-access-oidc.md)): Code Flow + PKCE, sichere Login-Transaktion, explizite Identitätsverknüpfung, lokale Bearer-Session, Logout, Rate-Limits, Login-Klick und exaktes CORS. Kein Access-Proxy vor Webseite oder API. Henry hat Access am 20.11.2026 aktiviert; ein `cloudflare`-IdP, keine Apps bestätigt. Pilot-Login-Methode, Free-Plan-/Seat-Prüfung, enge App-/Policy-Freigabe, sichere Credential-Übergabe, Umsetzung und Produktionsfreigabe stehen aus. Magic Link nach Cutover deaktivieren oder entfernen; Mailversand nur optional für Transaktionsmails oder ausdrücklich gewählten Legacy-/Entwicklungsbetrieb, keine Mailzugangsdaten als OIDC-Startvoraussetzung.
 - [ ] `accounts/`: RiderProfile GET/PUT (ersetzt lokales Profil aus E3, Migration lokal → Account)
 - [ ] `rides/`: Upload (idempotent), Plausibilitätsprüfung Stufe 1–4 (`08-backend.md`), Fahrthistorie
 - [ ] Client `sync/`: Cache, Outbox mit Retry, Gastmodus, Status-Anzeige „offline / synchronisiert"
 - [ ] `@nestjs/throttler`, Daten-Export/Löschung; VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
-- [ ] Domänen-Metriken (ADR-010): Magic-Link-Mails sent/failed, Fahrt-Uploads accepted/flagged/rejected, SQLite- und Litestream-Gesundheit (Backup-Lag)
+- [ ] Domänen-Metriken (ADR-010): OIDC-Login success/failed ohne Identitäts- oder Tokenlabels, Fahrt-Uploads accepted/flagged/rejected, SQLite- und Litestream-Gesundheit (Backup-Lag)
 - [ ] Tests: `@nestjs/testing` + Supertest, Golden-Fahrten auch gegen `POST /v1/rides`, Plausibilitäts-Fixtures (echte Fahrt ok, manipulierte Fahrt flagged)
       **Abnahme:** Henry meldet sich am Laptop an, fährt eine Stunde, Fahrt erscheint in der Server-Historie; Fahrt offline gefahren wird später automatisch hochgeladen; Sim-Fahrt bringt keine Belohnung.
 
@@ -161,7 +163,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
 - [ ] Optionale ERG-Workouts (nutzt `ftpW`)
-- [ ] Passkeys als zweite Login-Methode
+- [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
 - [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Optionale Client-Telemetrie (ADR-010): aggregierte FPS/Framezeit und BLE-Trennungen sowie Fehler-Signaturen an einen eigenen Server-Endpunkt, keine Third-Party-Tracker
