@@ -1,7 +1,7 @@
 # Spec E0-03 – API-Deploy-Konfiguration und lokaler Restore
 
 - **Roadmap-Bezug:** E0-opt, API auf Hetzner hinter vorhandenem Traefik, ADR-004/009.
-- **Status:** Daemonlose Regressionen, emulierter AMD64-Containerlauf und unabhängiges Korrekturreview erfolgreich. Kein produktives Deploy. Vollständiges Gate und externe CI stehen aus.
+- **Status:** Daemonlose Regressionen, emulierter AMD64-Containerlauf und unabhängiges Korrekturreview erfolgreich. Vollständiges lokales Integrationsgate und erneute daemonlose Regressionen grün. Externe CI und Übernahme nach E0-04. Kein produktives Deploy.
 - **Betroffene Module:** `deploy/`, Docker-Build-Kontext. Keine Produktlogik oder Schemaänderung.
 
 ## Ziel

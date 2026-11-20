@@ -2,7 +2,7 @@
 
 Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz. Läuft komplett im Browser (Chrome/Edge am Laptop), spricht per Web Bluetooth direkt mit Rollentrainer, Pulsgurt und Schalt-Controllern Web-App auf Cloudflare Pages, Solo-Fahrten funktionieren ohne Server; Accounts, Freischaltungen, Volts und Gruppenfahrten laufen über einen eigenen Server (TypeScript/NestJS auf einem Hetzner-VPS, ADR-004/005).
 
-> **Status:** Die Umsetzung läuft. Gastfahrt, Sim-Modus, lesende BLE-Verbindung, 3D-Landschaft sowie lokale Aufnahme mit TCX-Export sind implementiert. OIDC-Server, eigene Profile und Fahrthistorie sind lokal geprüft. Produktions-API, Kontosynchronisation, Strava und Hardwareabnahme bleiben offen. Der [Arbeitsplan](docs/specs/E5-05-autonomous-first-usable-ride.md) trennt gelieferte Funktionen von offenen Abnahmen.
+> **Status:** Gastfahrt, Sim-Modus, lesendes BLE, 3D-Landschaft und lokale Aufnahme mit TCX-Export sind implementiert. Browserkonto, kontogebundener manueller Sync, Replay-Prüfkern und serverseitige Strava-Verbindung sind lokal geprüft. Play-Tasten und Handshake sind durch echte Mitschnitte belegt. Produktions-API, V2-Aufzeichnung, Strava-Fahrtupload und gemeinsame Hardwarefahrt bleiben offen. Die [Integrationsspec](docs/specs/E0-04-current-implementation-integration.md) dokumentiert den zusammengeführten Stand.
 
 Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) zeigt den bisherigen Landschaftsstand. Aufnahme und neue Serverfunktionen sind noch nicht öffentlich bereitgestellt.
 
@@ -14,11 +14,11 @@ Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) zeigt den 
 
 ## Zielhardware (Referenz-Setup)
 
-| Gerät                                  | Anbindung                                            | Status                                          |
-| -------------------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| Wahoo KICKR CORE mit Zwift Cog         | BLE FTMS `0x1826` (Fallback: Cycling Power `0x1818`) | Standard, dokumentiert                          |
-| Zwift Play Controller (links + rechts) | proprietärer Zwift-BLE-Service                       | **UNVERIFIZIERT**, wird am echten Gerät gemappt |
-| Bluetooth-Pulsgurt                     | Heart Rate Service `0x180D`                          | Standard                                        |
+| Gerät                                  | Anbindung                                            | Status                                                       |
+| -------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| Wahoo KICKR CORE mit Zwift Cog         | BLE FTMS `0x1826` (Fallback: Cycling Power `0x1818`) | Standard, dokumentiert                                       |
+| Zwift Play Controller (links + rechts) | proprietärer Zwift-BLE-Service                       | Tasten und Klartext-Handshake belegt; gemeinsame Fahrt offen |
+| Bluetooth-Pulsgurt                     | Heart Rate Service `0x180D`                          | Standard                                                     |
 
 Browser: **Chrome oder Edge** auf dem Desktop/Laptop. Web Bluetooth braucht einen _secure context_ (HTTPS oder `localhost`). Safari/iOS und Firefox werden nicht unterstützt.
 

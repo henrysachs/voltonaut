@@ -137,6 +137,24 @@ Vor einem echten Deploy müssen Proxy- und Zugriffslogs Callback-Queries auslass
 
 `users.id` bleibt der Eigentümer von Fahrten, Inventar und Progression. Nur `(issuer, subject)` identifiziert einen externen Login. E-Mail-Gleichheit verknüpft keine Accounts. Bei einer Kollision ist der bestehende Account nachzuweisen. Zusätzliche Identitäten verlangen eine angemeldete Session, frische Reauthentifizierung und beide Besitznachweise; die letzte Login-Methode darf nicht entfernt werden. Issuer-/Subject-Stabilität wird im Pilot geprüft. Strava-OAuth erteilt separat Uploadrechte, niemals durch den Broker-Login.
 
+### Serverseitige Strava-Verbindung aus E10-03
+
+[E10-03](specs/E10-03-strava-connection.md) implementiert ausschließlich die Verbindung mit Strava. `STRAVA_MODE` ist standardmäßig `disabled`. `enabled` verlangt `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` und `STRAVA_TOKEN_KEY`. Der Callback ist die kanonische API-Adresse mit Pfad `/v1/strava/callback`. Produktion verlangt HTTPS. Der Schlüssel enthält genau 32 Byte, kodiert als 64 kleingeschriebene Hexzeichen oder kanonisches Base64. Werte bleiben privat auf dem Server.
+
+| Route                           | Vertrag                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /v1/strava/connection`     | Eigener Status mit gültigem Bearer, ohne Zugangsdaten.                                                  |
+| `POST /v1/strava/connect-start` | Bearer, exakter `CLIENT_ORIGIN` und `{action:'connect'}` starten eine browsergebundene Transaktion.     |
+| `GET /v1/strava/callback`       | Öffentlicher Callback prüft einmaligen State und Browsercookie vor dem Anbieteraufruf.                  |
+| `POST /v1/strava/confirm`       | Derselbe Eigentümer bestätigt `{code}` mit frischem Bearer, passendem Browsercookie und exaktem Origin. |
+| `POST /v1/strava/disconnect`    | Bearer, exakter Origin und `{action:'disconnect'}` sperren lokal und fordern den Anbieterwiderruf an.   |
+
+Transaktionen gelten fünf Minuten, Übergaben 60 Sekunden. Der Callback speichert Zugangsdaten zunächst unbestätigt. Erst die Bestätigung aktiviert die Verbindung. Ein anderes Konto verbraucht die Übergabe nicht. Ein Strava-Athlet gehört höchstens einem Voltonaut-Account. Es gibt keinen automatischen Transfer.
+
+`strava/` besitzt Transaktionen, Verbindungen und AES-256-GCM-Chiffrate aus Migration `0003`. Eigentümer, Athlet und Schlüsselversion sind authentifiziert gebunden. Status und Antworten enthalten keine Tokens. Trennen setzt vor dem Netzwerkaufruf dauerhaft `revocation_pending`. Nur bestätigtes HTTP 200 des Widerrufs entfernt das Chiffrat. Fehler oder Timeout erhalten die Sperre und erlauben einen erneuten ausdrücklichen Widerruf.
+
+`STRAVA_TEST_PROVIDER_ORIGIN` ist ausschließlich für Loopback-Protokollanbieter in Entwicklung und Test erlaubt. Produktion lehnt diese Einstellung ab. `mise exec -- node serververification.mjs` prüft den kompilierten Server, Browser-CORS, Kontowechsel, verschlüsselte Persistenz und Widerruf über Prozessneustarts. Der Beleg liegt in `docs/research/strava-local-verification.json`. Es gibt keine Webintegration, Uploadroute, Tokenaktualisierung oder Webhooks. Echte Zustimmung, Callbackfreigabe, Proxylogs, Schlüsselbetrieb und Datenschutz bleiben vor einer Produktionsaktivierung zu prüfen.
+
 ```ts
 // packages/shared/src/api/rides.ts (Zod-Schema, Typ per z.infer)
 interface RideUpload {

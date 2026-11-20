@@ -17,9 +17,9 @@ Echte BLE-, Widerstands- und Controllerabnahmen bleiben Hardwarearbeit. Persönl
 - Welt und Landschaft sind über PR #9 und #11 integriert und öffentlich veröffentlicht. Der Landschaftsdeploy `a2e0398` funktioniert über `voltonaut.stammkneipe.dev` mit normaler DNS-Auflösung und TLS.
 - PR #13 liefert lokale Aufnahme, Persistenz und tatsächlichen TCX-Download auf `main`. Der unabhängige Browsernachweis bestätigt identische, XSD-gültige Downloads nach Reload. Dieser neue Aufnahmestand ist noch nicht öffentlich deployed.
 - PR #15 liefert den OIDC-Server auf `main`. Signierender lokaler Provider, Browserbindung, Accountzuordnung, Session, Widerruf und Standalone-Paket sind geprüft. Das ist kein echter Cloudflare-Pilot.
-- PR #17 liefert eigene Profile und Fahrten samt additiver Migration auf `main`. Dessen gemeinsames lokales Gate, unabhängige Prozessprüfung und PR-CI sind grün. PR #16 liefert das Browserkonto. Das kombinierte lokale Gate mit eigenen Daten und ein unabhängiger echter Browserflow sind grün. Der Merge wartet auf die CI-Korrektur.
-- Die aktuelle `main`-CI und PR #16 scheitern an BLE-Wiederverbindung und Hintergrundfahrt innerhalb bestehender Zeitgrenzen. Die Linux-Reproduktion soll Ursache und Korrektur beweisen. Timeouts, Assertions und Leitplanken bleiben unverändert. Bis zur grünen `main`-CI erfolgt kein neuer öffentlicher Deploy.
-- Kontogebundene Outbox und die erste reine Replay-V2-Prüfeinheit entstehen in getrennten Worktrees. Die V2-Architektur verwendet vollständige Engine-Aufrufhistorie ab Initialisierung. Öffentliche Pose allein rekonstruiert den verborgenen warmen Zustand nachweislich nicht. Strava ist noch nicht implementiert.
+- PR #17 liefert eigene Profile und Fahrten samt additiver Migration auf `main`. PR #16 liefert das Browserkonto. Der [Integrations-PR #19](https://github.com/henrysachs/voltonaut/pull/19) führt diese Browseranbindung mit kontogebundenem manuellem Sync, Outbox und dem aktuellen Bluetooth-Stand zusammen. Das lokale Gesamtgate sowie fünf OIDC- und 14 Sync-Browserfälle sind grün.
+- Frühere CI-Läufe scheiterten an BLE-Wiederverbindung und Hintergrundfahrt innerhalb bestehender Zeitgrenzen. Der zusammengeführte Stand benötigt grüne PR-CI vor dem Merge. Timeouts, Assertions und Leitplanken bleiben unverändert. Dieser Integrationsauftrag enthält keinen öffentlichen Deploy.
+- Kontogebundene Outbox, reine Replay-V2-Prüfeinheit und serverseitige Strava-Verbindung sind implementiert und lokal geprüft. Die V2-Architektur verwendet vollständige Engine-Aufrufhistorie ab Initialisierung. Öffentliche Pose allein rekonstruiert den verborgenen warmen Zustand nachweislich nicht. V2-Browseraufzeichnung, V2-HTTP-Annahme und Strava-Fahrtupload fehlen weiterhin. Die Zusammenführung gemäß [E0-04](E0-04-current-implementation-integration.md) schließt diese Erweiterungen nicht ab.
 - Die Produktions-API bleibt ausgeschaltet. Es fehlen verdrahtete Produktionskonfiguration und nachgewiesenes Backup mit Restore. Der OIDC-Modus benötigt keinen Mailprovider.
 
 ## Ausgangsbefund zu Laufbeginn
@@ -66,9 +66,10 @@ Strava wird als eigenes Modul umgesetzt, nicht als allgemeines Providerframework
 - [x] Szene und Aufnahme integriert.
 - [x] Landschaft integriert.
 - [x] OIDC-Server geprüft und integriert.
-- [ ] Browserkonto auf gemeinsamem Stand integriert.
-- [ ] Profil, Fahrtpersistenz und Outbox geprüft.
-- [ ] Nachrechnung und Strava-Testproviderfluss geprüft.
+- [x] Browserkonto auf gemeinsamem Stand integriert.
+- [x] Profil, Fahrtpersistenz und kontogebundene manuelle Outbox geprüft.
+- [x] Reiner Nachrechnungskern und serverseitige Strava-Verbindung gegen lokale Testprovider geprüft.
+- [ ] V2-Browseraufzeichnung, V2-HTTP-Annahme und ausdrücklichen Strava-Fahrtupload liefern und prüfen.
 - [ ] Integrierten Browserfluss und freigegebenen Deploy geprüft.
 
 Jeder Implementierer arbeitet in einem eigenen Worktree. Gleichzeitige Änderungen an einem Branch, Migrationen oder Indexdateien werden nicht vorausgesetzt. Getrennte Dateien und spätere Integration vermeiden gemeinsame Schreibzustände. Neue Migrationen erhalten bei der Integration eine eindeutige Reihenfolge.

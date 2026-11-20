@@ -1,7 +1,7 @@
 # Spec E5-09 – Kontogebundener manueller Datensync
 
-- **Status:** Lokale Teilgates und Browsernachweise grün. Vollständiges Gate,
-  unabhängiges Review und Git bleiben beim Parent.
+- **Status:** Vollständiges lokales Gate und erneute Browsernachweise grün.
+  Die gemeinsame Übernahme dokumentiert E0-04.
 - **Module:** ausschließlich Web, Dokumentation und lokale Browserverifikation.
 
 ## Ziel und Grenzen
@@ -62,8 +62,8 @@ Signatur-Login, Profil-Push/Pull und Fahrtverlauf. Der eigene Browserport ist 51
 API und Provider verwenden Zufallsports und synthetische Konten. Keine Provider-
 Credentials, Modul-Mocks, neuen Abhängigkeiten oder Serveränderungen.
 
-Das vollständige Gate mit Port 5173, unabhängiges Review und Git besitzt der
-Parent. Keine Hardwareprüfung erforderlich. Offene Nutzerfragen gibt es nicht.
+Das vollständige Gate verwendet bei der Integration Port 5194 statt des laufenden
+Hardware-Labors auf 5173. Keine Hardwareprüfung erforderlich. Offene Nutzerfragen gibt es nicht.
 
 ## Verifizierter Stand
 
@@ -121,6 +121,12 @@ Providerports. Die Skripte beenden ihre Prozesse vor der Rückgabe.
 Port 5173 und das vollständige `mise run check` wurden nicht beansprucht.
 
 ## Bewusste Grenzen
+
+Die Integration nach E0-04 besteht das Gesamtgate mit 623 Unit-Tests und 26 E2Es.
+Der erneute Aufruf von `scripts/verify-browser-oidc.mjs --sync` besteht 14
+Browserfälle einschließlich der später ergänzten Profiltransaktionsregressionen.
+Die fünf OIDC-Browserfälle bestehen ebenfalls. Aktuelle Belege liegen unter
+`$TMPDIR/opencode/browser-oidc-KiZgQK/` und `$TMPDIR/opencode/browser-oidc-faor3F/`.
 
 Ohne dauerhaft bestätigte Kontozuordnung gibt es keinen flüchtigen Uploadpfad.
 Das verhindert eine nach Reload unbekannte und neu bindbare Fahrtzuordnung.
