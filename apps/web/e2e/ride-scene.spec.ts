@@ -52,7 +52,9 @@ test("releases a lost WebGL context without stopping the ride", async ({ page })
       ?.getExtension("WEBGL_lose_context")
       ?.loseContext();
   });
-  await expect(page.getByRole("status")).toContainText("3D unavailable");
+  await expect(page.getByRole("region", { name: "Ride world" }).getByRole("status")).toContainText(
+    "3D unavailable",
+  );
   await expect(page.getByLabel("3D ride scene")).toHaveCount(0);
   await expect(page.getByLabel("Render diagnostics")).toHaveCount(0);
   await page.keyboard.press("ArrowUp");

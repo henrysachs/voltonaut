@@ -1,6 +1,5 @@
 import type { DeviceEvent, RiderProfile } from "@voltonaut/shared";
 import { DEFAULT_RIDER_PROFILE, createEventBus } from "@voltonaut/shared";
-import { createRoute, TEST_ROUTES } from "@voltonaut/engine";
 
 import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
 
@@ -15,9 +14,7 @@ import { fillProfileForm, parseProfileForm, readProfileForm } from "./ui/profile
 import type { ProfileFormInputs } from "./ui/profile/profileScreen.js";
 import { createProfileStore, type ProfileStore } from "./sync/profile-store.js";
 import { openProfileDatabase } from "./sync/profile-database.js";
-import { setupRideRecording } from "./rideRecording.js";
-// oxlint-disable-next-line import/max-dependencies -- The composition root wires the independent renderer to the existing worker, devices, profile and HUD.
-import { startRideScene } from "./world/scene.js";
+import { setupRidePresentation } from "./ridePresentation.js";
 
 const FAST_CLOCK_SCALE = 20;
 const APP_ROUTE_ID = "test-loop";
@@ -214,18 +211,14 @@ async function start(): Promise<void> {
   // Parameters are frozen at ride start; profile edits apply to the next ride.
   link.init({ routeId: APP_ROUTE_ID, profile, clockScale });
 
-  const recordEvent = setupRideRecording({
-    nowMs: () => performance.now(),
-    utcNow: () => new Date().toISOString(),
-    newId: () => crypto.randomUUID(),
-    metadata: {
-      source: simMode ? "sim" : "ble",
-      routeId: APP_ROUTE_ID,
-      routeRevision: "1",
-      physicsClockScale: clockScale,
-      profile,
-    },
-    distanceM: () => link.latestSnapshot()?.distanceM,
+  const recordEvent = setupRidePresentation({
+    source: simMode ? "sim" : "ble",
+    routeId: APP_ROUTE_ID,
+    clockScale,
+    profile,
+    snapshot: () => link.latestSnapshot(),
+    sceneHost: document.querySelector("#ride-scene"),
+    debug: params.get("debug") === "1",
   });
 
   const forwardEvent = (event: DeviceEvent): void => {
@@ -241,19 +234,6 @@ async function start(): Promise<void> {
   startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupProfileForm(document, store, profile);
   setupKeyboard(bus);
-
-  const sceneHost = document.querySelector("#ride-scene");
-  const routeData = TEST_ROUTES[APP_ROUTE_ID];
-
-  if (sceneHost instanceof HTMLElement && routeData !== undefined) {
-    startRideScene({
-      host: sceneHost,
-      route: createRoute(routeData),
-      snapshot: () => link.latestSnapshot(),
-      wheelCircM: profile.bike.wheelCircM,
-      debug: params.get("debug") === "1",
-    });
-  }
 
   if (simMode) {
     setupSimDevices(bus, clockScale);

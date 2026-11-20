@@ -73,3 +73,9 @@ Das Review belegte eine fehlende Zustandsänderung. Nach mehr als sechs Stunden 
 - Browser grün nach Änderung: fünf Aufnahme-Browserfälle über eine externe Playwright-Konfiguration auf Port 5190. Der neue Fall überspringt die Zeit einmalig mit `page.clock.fastForward`, bricht die Bestätigung zuerst ab und bestätigt sie anschließend. Ohne Reload bleiben die gespeicherten TCX-Bytes unverändert; eine neue Aufnahme wird erfolgreich gespeichert.
 - Alle 13 Browserfälle bestehen auf Port 5190. Zusätzlich bestehen `mise run fmt:check`, `lint`, `typecheck`, `depcruise`, `guard`, `test` mit 335 Tests, `build` und `git diff --check`. Der Kapazitätsfall prüft auch den gesperrten Verwerfen-Button für eine abgeschlossene, noch nicht gespeicherte Aufnahme sowie den erneuten Speicherversuch.
 - Das vollständige Gate des korrigierten Standes ist beim Parent mit 335 Unit-/Integrationstests und 13 Browserfällen grün. Build und Diff-Prüfung sind ebenfalls grün. Das unabhängige Nachreview ist Approve und bestätigt die aktive Zustandsänderung sowie den Schutz abgeschlossener Aufnahmen. Die Ergebnisse im vorherigen Abschnitt beziehen sich auf den Stand vor dieser Korrektur.
+
+## Integration mit der 3D-Szene
+
+Die gemeinsame Ansicht wird in `ridePresentation.ts` verdrahtet. Renderer und Aufnahme lesen denselben öffentlichen Snapshot. Das hält den Composition Root innerhalb seiner bestehenden Größen- und Abhängigkeitsgrenzen, ohne Leitplanken zu ändern.
+
+Der erste kombinierte Browsertestlauf fand zwei mehrdeutige Statusselektoren: Aufnahme und WebGL-Fallback besitzen jeweils korrekt eine Statusregion. Die Fallback-Tests suchen deshalb jetzt innerhalb der benannten Region **Ride world**. Meldung, Kontextverlust-, HUD- und Tastaturprüfungen bleiben unverändert. Auf dem kombinierten Stand mit `main` samt 3D-Szene bestehen danach das vollständige Gate mit 347 Tests und 16 E2Es, der Build und die Diff-Prüfung.
