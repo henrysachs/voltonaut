@@ -224,7 +224,7 @@ test("confirmation recovers an overlong recording without reload or loss of save
   const exports = page.getByRole("button", { name: "TCX herunterladen", exact: true });
   const status = page.getByTestId("recording-status");
   await start.click();
-  await page.clock.runFor(1200);
+  await page.clock.fastForward(1200);
   await finish.click();
   await expect(status).toContainText("Lokal gespeichert");
   const originalDownload = page.waitForEvent("download");
@@ -249,7 +249,7 @@ test("confirmation recovers an overlong recording without reload or loss of save
   await exports.click();
   expect(await downloadText(await preservedDownload)).toBe(savedXml);
   await start.click();
-  await page.clock.runFor(1200);
+  await page.clock.fastForward(1200);
   await finish.click();
   await expect(status).toContainText("Lokal gespeichert");
   await expect(exports).toHaveCount(2);

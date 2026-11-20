@@ -79,3 +79,13 @@ Das Review belegte eine fehlende Zustandsänderung. Nach mehr als sechs Stunden 
 Die gemeinsame Ansicht wird in `ridePresentation.ts` verdrahtet. Renderer und Aufnahme lesen denselben öffentlichen Snapshot. Das hält den Composition Root innerhalb seiner bestehenden Größen- und Abhängigkeitsgrenzen, ohne Leitplanken zu ändern.
 
 Der erste kombinierte Browsertestlauf fand zwei mehrdeutige Statusselektoren: Aufnahme und WebGL-Fallback besitzen jeweils korrekt eine Statusregion. Die Fallback-Tests suchen deshalb jetzt innerhalb der benannten Region **Ride world**. Meldung, Kontextverlust-, HUD- und Tastaturprüfungen bleiben unverändert. Auf dem kombinierten Stand mit `main` samt 3D-Szene bestehen danach das vollständige Gate mit 347 Tests und 16 E2Es, der Build und die Diff-Prüfung.
+
+## CI-Nachprüfung mit See und Wald
+
+CI-Lauf `44739584796` überschreitet im Sechs-Stunden-Browserfall das unveränderte Gesamtlimit von 30 Sekunden. `page.clock.runFor(1200)` arbeitet dabei auch die Render-Termine dieser virtuellen Zeitspanne ab. Die künstliche `performance`-Uhr bildet die echte WebGL-Arbeit nicht ab, auf der das Render-Yield beruht.
+
+Nur die beiden kurzen Aufnahmeintervalle nutzen jetzt `fastForward(1200)`. Der große Zeitsprung, alle bisherigen Assertions, die nativen Bestätigungen mit Abbrechen und Annehmen sowie der Vergleich der ursprünglichen TCX-Bytes bleiben unverändert. Worker, IndexedDB und WebGL bleiben echt. Timeouts, Wiederholungen und Produktionscode bleiben unverändert.
+
+Der unveränderte Browserfall scheitert viermal unter Linux mit zwei CPU-Kernen und zwei Playwright-Workern am Gesamtlimit. Die Traces zeigen bereits beim ersten `runFor(1200)` den Verbrauch der verbleibenden Testzeit. Der korrigierte Fall besteht viermal. Auch alle fünf Aufnahme-Browserfälle bestehen. Eine zusätzliche lesende IndexedDB-Probe bestätigt zwei schema-gültige normale Aufnahmen mit Leistung, Kadenz und Puls. Die aufgezeichneten Dauern betragen 1635 ms und 1491 ms. Der große Zeitsprung gelangt nicht in die neue Aufnahme.
+
+Die externe Konfiguration nutzt den unveränderten Parent-Preview auf Port 5190. Ein TCP-Proxy innerhalb des Containers reicht diesen Port als localhost durch. Dadurch bleibt der Browserkontext wie in CI sicher und `crypto.randomUUID` verfügbar. Direkte HTTP-Läufe über den Host-Alias hatten diese Voraussetzung nicht und zählen nicht als Nachweis. Protokolle und Konfiguration liegen temporär unter `/private/var/folders/23/tg_nxvb56ybfx4bqy70w6rjm0000gn/T/opencode/combined-ci-*`. Das vollständige Gate des kombinierten Standes prüft der Parent separat.
