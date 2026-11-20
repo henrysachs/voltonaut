@@ -8,40 +8,42 @@ E1-02 nutzt das bereits freigegebene `zod` zusätzlich direkt in `packages/ble`,
 
 ## Installiert (E0, ergänzt in E3)
 
-| Paket                                                      | Workspace                                                          | Zweck                                                  | ADR      |
-| ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ | -------- |
-| typescript                                                 | root (dev)                                                         | Typecheck                                              | 002, 007 |
-| oxlint, @oxlint/plugins (gleiche Version), oxlint-tsgolint | root (dev)                                                         | Lint (type-aware) + vendorte anti-slop-Regeln          | 007      |
-| oxfmt                                                      | root (dev)                                                         | Format                                                 | 007      |
-| dependency-cruiser                                         | root (dev)                                                         | Modulgrenzen                                           | 007      |
-| vitest, @vitest/coverage-v8                                | root (dev)                                                         | Unit/Integration-Tests + Coverage                      | 007      |
-| fast-check                                                 | root (dev)                                                         | Property-based Tests                                   | 007      |
-| @stryker-mutator/core, @stryker-mutator/vitest-runner      | root (dev)                                                         | Mutationstests (engine/rules)                          | 007      |
-| wrangler                                                   | root (dev)                                                         | Cloudflare-Pages-Deploy (`deploy-web.yml`)             | 009      |
-| @types/node                                                | root, apps/web, apps/server (dev)                                  | Node-Typen für Tools/Tests                             | 007      |
-| vite                                                       | apps/web, apps/server (dev)                                        | Dev-Server/Build (Server als SSR-Bundle)               | 002      |
-| @playwright/test                                           | apps/web (dev)                                                     | E2E im Sim-Modus                                       | 007      |
-| zod                                                        | packages/shared, packages/ble, apps/server                         | API-, Konfigurations- und BLE-Fixture-Validierung      | 004      |
-| @voltonaut/shared                                          | packages/engine, packages/ble, apps/server, apps/web (workspace:*) | geteilte Typen/Schemas/Event-Bus                       | 006      |
-| @voltonaut/engine                                          | packages/rules, apps/web (workspace:*)                             | Gangmodell, Physik, Fahrten                            | 006      |
-| @voltonaut/rules                                           | apps/web (workspace:*)                                             | HUD-Labels (Katalog)                                   | 006      |
-| @voltonaut/ble                                             | apps/web (workspace:*)                                             | Sim-Geräte + Keyboard-Adapter                          | 006      |
-| @nestjs/common, @nestjs/core, @nestjs/platform-express     | apps/server                                                        | Server-Framework                                       | 004      |
-| reflect-metadata                                           | apps/server                                                        | Nest-Decorator-Metadaten zur Laufzeit                  | 004      |
-| rxjs                                                       | apps/server                                                        | Observable-Interop von Nest                            | 004      |
-| @nestjs/testing, supertest                                 | apps/server (dev)                                                  | Server-Integrationstests                               | 004, 007 |
-| @types/supertest                                           | apps/server (dev)                                                  | Typen für Supertest                                    | 004, 007 |
-| unplugin-swc, @swc/core                                    | apps/server (dev)                                                  | Decorator-Metadaten für Vitest/Vite (Nest-DI in Tests) | 004, 007 |
-| drizzle-orm                                                | apps/server                                                        | SQLite-Abfragen und Migrationen                        | 004, 012 |
-| better-sqlite3                                             | apps/server                                                        | SQLite-Treiber mit gebündelten Plattform-Prebuilds     | 004      |
-| @types/better-sqlite3                                      | apps/server (dev)                                                  | SQLite-Typen                                           | 004      |
-| drizzle-kit                                                | apps/server (dev)                                                  | SQL-Migrationsgenerator                                | 004      |
-| @nestjs/throttler                                          | apps/server                                                        | Auth-Ratenbegrenzung                                   | 004      |
+| Paket                                                      | Workspace                                                          | Zweck                                                  | ADR           |
+| ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ | ------------- |
+| typescript                                                 | root (dev)                                                         | Typecheck                                              | 002, 007      |
+| oxlint, @oxlint/plugins (gleiche Version), oxlint-tsgolint | root (dev)                                                         | Lint (type-aware) + vendorte anti-slop-Regeln          | 007           |
+| oxfmt                                                      | root (dev)                                                         | Format                                                 | 007           |
+| dependency-cruiser                                         | root (dev)                                                         | Modulgrenzen                                           | 007           |
+| vitest, @vitest/coverage-v8                                | root (dev)                                                         | Unit/Integration-Tests + Coverage                      | 007           |
+| fast-check                                                 | root (dev)                                                         | Property-based Tests                                   | 007           |
+| @stryker-mutator/core, @stryker-mutator/vitest-runner      | root (dev)                                                         | Mutationstests (engine/rules)                          | 007           |
+| wrangler                                                   | root (dev)                                                         | Cloudflare-Pages-Deploy (`deploy-web.yml`)             | 009           |
+| @types/node                                                | root, apps/web, apps/server (dev)                                  | Node-Typen für Tools/Tests                             | 007           |
+| vite                                                       | apps/web, apps/server (dev)                                        | Dev-Server/Build (Server als SSR-Bundle)               | 002           |
+| @playwright/test                                           | apps/web (dev)                                                     | E2E im Sim-Modus                                       | 007           |
+| three                                                      | apps/web                                                           | Snapshot-gesteuerte 3D-Szene                           | 002, 008, 014 |
+| @types/three                                               | apps/web (dev)                                                     | Strikte Typen für three.js                             | 014           |
+| zod                                                        | packages/shared, packages/ble, apps/server                         | API-, Konfigurations- und BLE-Fixture-Validierung      | 004           |
+| @voltonaut/shared                                          | packages/engine, packages/ble, apps/server, apps/web (workspace:*) | geteilte Typen/Schemas/Event-Bus                       | 006           |
+| @voltonaut/engine                                          | packages/rules, apps/web (workspace:*)                             | Gangmodell, Physik, Fahrten                            | 006           |
+| @voltonaut/rules                                           | apps/web (workspace:*)                                             | HUD-Labels (Katalog)                                   | 006           |
+| @voltonaut/ble                                             | apps/web (workspace:*)                                             | Sim-Geräte + Keyboard-Adapter                          | 006           |
+| @nestjs/common, @nestjs/core, @nestjs/platform-express     | apps/server                                                        | Server-Framework                                       | 004           |
+| reflect-metadata                                           | apps/server                                                        | Nest-Decorator-Metadaten zur Laufzeit                  | 004           |
+| rxjs                                                       | apps/server                                                        | Observable-Interop von Nest                            | 004           |
+| @nestjs/testing, supertest                                 | apps/server (dev)                                                  | Server-Integrationstests                               | 004, 007      |
+| @types/supertest                                           | apps/server (dev)                                                  | Typen für Supertest                                    | 004, 007      |
+| unplugin-swc, @swc/core                                    | apps/server (dev)                                                  | Decorator-Metadaten für Vitest/Vite (Nest-DI in Tests) | 004, 007      |
+| drizzle-orm                                                | apps/server                                                        | SQLite-Abfragen und Migrationen                        | 004, 012      |
+| better-sqlite3                                             | apps/server                                                        | SQLite-Treiber mit gebündelten Plattform-Prebuilds     | 004           |
+| @types/better-sqlite3                                      | apps/server (dev)                                                  | SQLite-Typen                                           | 004           |
+| drizzle-kit                                                | apps/server (dev)                                                  | SQL-Migrationsgenerator                                | 004           |
+| @nestjs/throttler                                          | apps/server                                                        | Auth-Ratenbegrenzung                                   | 004           |
 
 ## Freigegeben, aber noch nicht installiert
 
 ADR-010 gibt die Observability-Pakete frei; sie werden in **E0-opt** (erstes VPS-Deploy) mit exakten Versionen gepinnt und hier in die Tabelle oben verschoben: `@opentelemetry/sdk-node`, `@opentelemetry/api`, `@opentelemetry/auto-instrumentations-node`, `@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/exporter-prometheus`, `nestjs-pino`, `pino`, `pino-http` (Details `11-observability.md`).
 
-Später (eigenes ADR nötig): `three` + Loader (E4, `04-world-3d.md`), `@gltf-transform/cli` (Asset-Pipeline, E4), `@nestjs/websockets` + `@nestjs/platform-ws` (E5), `@simplewebauthn/server` (Passkeys, E5+), Mail-SDK (falls nicht per fetch/SMTP), `idb`.
+Später (eigenes ADR nötig): `@gltf-transform/cli` (Asset-Pipeline, E4), `@nestjs/websockets` + `@nestjs/platform-ws` (E5), `@simplewebauthn/server` (Passkeys, E5+), Mail-SDK (falls nicht per fetch/SMTP), `idb`. Three-Loader sind im installierten `three` enthalten, werden in E4-02 aber nicht genutzt.
 
 `nestjs-zod` ist nicht installiert. Seine Peers unterstützen Nest 12 nicht. Eine Nest-Pipe validiert Requests mit den geteilten Zod-Schemas.
