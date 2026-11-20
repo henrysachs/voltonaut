@@ -8,4 +8,6 @@ export * from "./profile.js";
 
 export * from "./ride.js";
 
+export * from "./localRide.js";
+
 export * from "./units.js";

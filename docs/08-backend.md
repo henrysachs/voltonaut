@@ -135,6 +135,8 @@ Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 
 ## Offline-first-Sync (Client `sync/`)
 
+Aktueller lokaler Teilschritt ist [E10-01](specs/E10-01-local-ride-recording-tcx.md). Abgeschlossene Aufnahmen bleiben in einer separaten IndexedDB und können manuell als TCX heruntergeladen werden. Sie haben keinen Serverstatus, keine Belohnung und keinen Upload. Die folgende Outbox und die Serverhistorie bleiben Zielstand.
+
 - Beim Start: Cache aus IndexedDB optional laden; Storagefehler blockieren keine Fahrt. Nur mit vorhandener Session optional `GET /v1/me` im Hintergrund. Kein automatischer Login; Gast und Sim starten ohne Authentifizierung, Storage oder Netzwerk.
 - Nach der Fahrt: `RideUpload` in **Outbox** (IndexedDB) → Upload mit Retry/Backoff; UI zeigt XP/Volts als „vorläufig" bis Server-Antwort.
 - Käufe und Ausrüstungsänderungen nur **online** (Kauf ist Server-Transaktion); Ausrüstung offline nur aus dem gecachten Inventar.

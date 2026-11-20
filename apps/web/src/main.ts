@@ -14,6 +14,7 @@ import { fillProfileForm, parseProfileForm, readProfileForm } from "./ui/profile
 import type { ProfileFormInputs } from "./ui/profile/profileScreen.js";
 import { createProfileStore, type ProfileStore } from "./sync/profile-store.js";
 import { openProfileDatabase } from "./sync/profile-database.js";
+import { setupRideRecording } from "./rideRecording.js";
 
 const FAST_CLOCK_SCALE = 20;
 const APP_ROUTE_ID = "test-loop";
@@ -210,13 +211,29 @@ async function start(): Promise<void> {
   // Parameters are frozen at ride start; profile edits apply to the next ride.
   link.init({ routeId: APP_ROUTE_ID, profile, clockScale });
 
+  const recordEvent = setupRideRecording({
+    nowMs: () => performance.now(),
+    utcNow: () => new Date().toISOString(),
+    newId: () => crypto.randomUUID(),
+    metadata: {
+      source: simMode ? "sim" : "ble",
+      routeId: APP_ROUTE_ID,
+      routeRevision: "1",
+      physicsClockScale: clockScale,
+      profile,
+    },
+    distanceM: () => link.latestSnapshot()?.distanceM,
+  });
+
   const forwardEvent = (event: DeviceEvent): void => {
+    recordEvent(event);
     link.ingest(event);
   };
 
   bus.subscribe("trainer.data", forwardEvent);
   bus.subscribe("hr.data", forwardEvent);
   bus.subscribe("controller.button", forwardEvent);
+  bus.subscribe("device.status", recordEvent);
 
   startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupProfileForm(document, store, profile);
