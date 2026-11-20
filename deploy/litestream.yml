@@ -1,6 +1,7 @@
 # Litestream replication for the Voltonaut SQLite database (ADR-004).
-# Litestream expands ${...} from its environment; the values live in deploy.env
-# on the VPS (Hetzner Storage Box or S3-compatible bucket) and are never committed.
+socket:
+  enabled: true
+  path: /tmp/voltonaut-litestream.sock
 dbs:
   - path: /data/voltonaut.db
     replicas:

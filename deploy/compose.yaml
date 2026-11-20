@@ -1,16 +1,27 @@
 # Voltonaut API behind the existing Financensor Traefik (ADR-004, ADR-009).
-# Run from a checkout of deploy/ on the VPS:
-#   VOLTONAUT_TAG=<tag> docker compose -f compose.yaml up -d
 # The Financensor Traefik owns ports 80/443; this project only joins its network.
 
 name: voltonaut
 
 services:
   server:
-    image: voltonaut-server:${VOLTONAUT_TAG:-latest}
+    image: ${VOLTONAUT_IMAGE:-voltonaut-server}:${VOLTONAUT_TAG:?explicit release tag required}
     restart: unless-stopped
     environment:
       HOST: 0.0.0.0
+      NODE_ENV: production
+      DATABASE_PATH: /app/data/voltonaut.db
+      AUTH_MODE: ${AUTH_MODE:?explicit auth mode required}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:?canonical client origin required}
+      CORS_ORIGINS: ${CLIENT_ORIGIN:?canonical client origin required}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-cloudflare}
+      CLOUDFLARE_EMAIL_API_TOKEN: ${CLOUDFLARE_EMAIL_API_TOKEN:-}
+      CLOUDFLARE_EMAIL_ACCOUNT_ID: ${CLOUDFLARE_EMAIL_ACCOUNT_ID:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
     volumes:
       - sqlite:/app/data
     networks:
@@ -37,19 +48,36 @@ services:
   litestream:
     image: litestream/litestream:0.5.18
     restart: unless-stopped
-    # The database file appears with E5; until then the sidecar tails an empty database.
-    command:
-      [
-        "sh",
-        "-c",
-        "test -f /data/voltonaut.db || touch /data/voltonaut.db; litestream replicate --config /etc/litestream/litestream.yml",
-      ]
+    user: "1000:1000"
+    command: ["replicate", "-config", "/etc/litestream/litestream.yml"]
+    depends_on:
+      server:
+        condition: service_healthy
     volumes:
       - sqlite:/data
       - ./litestream.yml:/etc/litestream/litestream.yml:ro
-    env_file:
-      - path: deploy.env
-        required: false
+    environment:
+      LITESTREAM_BUCKET: ${LITESTREAM_BUCKET:?external backup bucket required}
+      LITESTREAM_ENDPOINT: ${LITESTREAM_ENDPOINT:?external backup endpoint required}
+      LITESTREAM_ACCESS_KEY_ID: ${LITESTREAM_ACCESS_KEY_ID:?external backup access key required}
+      LITESTREAM_SECRET_ACCESS_KEY: ${LITESTREAM_SECRET_ACCESS_KEY:?external backup secret required}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "litestream",
+          "sync",
+          "-wait",
+          "-timeout",
+          "10",
+          "-socket",
+          "/tmp/voltonaut-litestream.sock",
+          "/data/voltonaut.db",
+        ]
+      interval: 10s
+      timeout: 15s
+      retries: 3
+      start_period: 10s
 
 volumes:
   sqlite:
