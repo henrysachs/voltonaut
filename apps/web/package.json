@@ -13,11 +13,13 @@
     "@voltonaut/ble": "workspace:*",
     "@voltonaut/engine": "workspace:*",
     "@voltonaut/rules": "workspace:*",
-    "@voltonaut/shared": "workspace:*"
+    "@voltonaut/shared": "workspace:*",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
     "@types/node": "26.6.6",
+    "@types/three": "0.187.0",
     "vite": "8.3.8"
   }
 }
