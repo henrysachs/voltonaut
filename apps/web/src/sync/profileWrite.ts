@@ -2,7 +2,15 @@ import { StoredProfileRecordSchema, type StoredProfileRecord } from "@voltonaut/
 import { PROFILE_RECORD_KEY, PROFILE_STORE_NAME, type ProfileWriteLease } from "./profile-store.js";
 
 type ProfileTransaction = Readonly<
-  Pick<IDBTransaction, "abort" | "addEventListener" | "removeEventListener">
+  Pick<EventTarget, "addEventListener" | "removeEventListener"> & {
+    abort(): void;
+    objectStore(name: string): Readonly<{
+      put(
+        record: StoredProfileRecord,
+        key: string,
+      ): Readonly<Pick<EventTarget, "addEventListener">>;
+    }>;
+  }
 >;
 
 function abortIfPending(transaction: ProfileTransaction): "aborted" | "finished" {
@@ -52,7 +60,9 @@ function watchCommit(transaction: ProfileTransaction, lease?: ProfileWriteLease)
 }
 
 export async function writeProfileRecord(
-  database: Readonly<Pick<IDBDatabase, "transaction">>,
+  database: Readonly<{
+    transaction(name: string, mode: "readwrite"): ProfileTransaction;
+  }>,
   record: StoredProfileRecord,
   lease?: ProfileWriteLease,
 ): Promise<void> {

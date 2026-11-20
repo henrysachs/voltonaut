@@ -67,8 +67,8 @@ export class LocalStravaProvider {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
   }
-  public async listen(): Promise<void> {
-    this.server.listen(0, "127.0.0.1");
+  public async listen(port = 0): Promise<void> {
+    this.server.listen(port, "127.0.0.1");
     await once(this.server, "listening");
     this.origin = `http://127.0.0.1:${z.object({ port: z.number() }).parse(this.server.address()).port}`;
   }
@@ -125,12 +125,13 @@ export class LocalStravaProvider {
     res: Readonly<ProviderResponse>,
   ): void {
     const callback = new URL(url.searchParams.get("redirect_uri") ?? "http://invalid.local");
+    const localCallback = ["127.0.0.1", "localhost"].includes(callback.hostname);
 
     if (
       url.searchParams.get("client_id") !== this.clientId ||
       url.searchParams.get("response_type") !== "code" ||
       url.searchParams.get("scope") !== "activity:write" ||
-      !["127.0.0.1", "localhost"].includes(callback.hostname)
+      !localCallback
     ) {
       res.writeHead(400);
       res.end("{}");

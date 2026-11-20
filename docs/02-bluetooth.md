@@ -82,7 +82,31 @@ FTMS-Kadenz wird bei gesetztem Bit 2 gelesen (GSS v9 §3.124). Der Widerspruch z
 
 ## 4. Zwift Play Controller (Henrys Hardware) ⚠️ UNVERIFIZIERT
 
-Henry besitzt **Zwift Play** (zwei Griffe, links + rechts), nicht Click. Alles in diesem Abschnitt stammt aus öffentlichem Reverse Engineering (Quellen unten) und ist an Henrys Geräten **nicht** getestet. Click/Ride bleiben als Nebenpfad dokumentiert, weil die Protokolle eng verwandt sind.
+Henry besitzt **Zwift Play** (zwei Griffe, links + rechts), nicht Click. Der rechte Griff ist seit dem Mitschnitt vom 20.11.2026 teilweise an echter Hardware bestätigt, siehe Befund unten. Die übrigen Angaben stammen aus öffentlichem Reverse Engineering und bleiben unverifiziert. Click/Ride bleiben als Nebenpfad dokumentiert, weil die Protokolle eng verwandt sind.
+
+### Hardwarebefund vom 20.11.2026: rechter Griff
+
+Quelle ist Henrys Export `ble-2026-11-20T16-54-57.901Z.json`. Die vollständige Datei besteht das vorhandene Fixture-Schema mit 1.071 monotonen Logeinträgen. Der originale Export bleibt unverändert außerhalb des Repositories. Geräte-ID und vollständiger User-Agent werden hier nicht übernommen.
+
+- Henry identifiziert den Griff über seine A/B/Y/Z-Tasten als rechts.
+- Tatsächlicher Service ist `00000001-19ca-4651-86e5-fa29dcdd09d1`. Characteristic `…02` liefert Notifications, `…03` erlaubt `writeWithoutResponse`, `…04` liefert Indications und lässt sich lesen. Zusätzlich ist `…06` vorhanden; dessen Funktion ist damit nicht bestätigt.
+- Der Klartext-Write `52 69 64 65 4f 6e` erhält dieselben sechs `RideOn`-Bytes als Antwort auf `…04`. Danach kommen lesbare `0x07`-Tastenzustände auf `…02`. Der verschlüsselte Pfad ist für diesen Mitschnitt nicht nötig.
+- Markierte Tests bestätigen A = Protobuf-Feld 4, B = 5, Y = 2, Z = 3 und seitliche Schalttaste = 6. Alle enthalten Drücken (`0`) und Loslassen (`1`). Das Seitenfeld 1 bleibt beim rechten Griff `0`.
+- Der Marker `Neigung` ist im Export enthalten. Danach ändert sich Feld 8; Feld 9 bleibt `0`. Nach der bekannten `sint32`-Dekodierung reicht der beobachtete Kanal von −100 bis +100. Das sind keine belegten Winkelgrade oder bereits kalibrierten Lenkwerte.
+- Firmware ist im Export nicht eingetragen. Device Information mit lesbarem `0x2A26` ist vorhanden, aber noch nicht ausgelesen. Service und Paketformat beweisen keine konkrete Firmwareversion.
+
+Die Zuordnung entspricht dem bereits veröffentlichten SwiftControl-Schema. Der Mitschnitt ist ein Hardware-Regressionsbeleg, keine Neuerfindung des Protokolls.
+
+### Hardwarebefund vom 20.11.2026: linker Griff
+
+Henrys zweiter Export `ble-2026-11-20T17-05-04.565Z.json` besteht dasselbe Fixture-Schema mit 272 Logeinträgen und 182 `0x07`-Tastenzuständen. Beide Exporte enthalten unterschiedliche gerätebezogene Browser-IDs. Der linke Griff antwortet ebenfalls mit den sechs Klartextbytes `RideOn` über denselben Service und dieselben Characteristic-Rollen.
+
+- Das Seitenfeld 1 bleibt links `1`, gegenüber rechts `0`.
+- Markierte Drück-/Loslassvorgänge bestätigen oben = Feld 2, unten = 5, links = 3, rechts = 4 und seitliche Schalttaste = 6.
+- Erneut gilt `0` für gedrückt und `1` für losgelassen. Wiederholte Statuspakete sind keine zusätzlichen Tastendrücke.
+- Die Analogfelder bleiben in diesem linken Mitschnitt `0`. Firmware und Analogfunktionen sind dadurch nicht zusätzlich bestätigt.
+
+Damit ist die bekannte digitale Feldzuordnung für beide konkreten Griffe hardwaregestützt. Spielanbindung, gleichzeitiger Betrieb mit Trainer und Pulsgurt sowie Trainersteuerung bleiben gesonderte Abnahmen.
 
 ### Tasten (laut Zwift-Support / Doku-Zusammenstellungen)
 

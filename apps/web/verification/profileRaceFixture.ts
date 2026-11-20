@@ -90,8 +90,14 @@ export async function selectionStatus(): Promise<{
   const state = await navigator.locks.query();
 
   return {
-    held: state.held?.some((lock: Readonly<LockInfo>) => lock.name === "voltonaut-profile-selection") === true,
-    pending: state.pending?.some((lock: Readonly<LockInfo>) => lock.name === "voltonaut-profile-selection") === true,
+    held:
+      state.held?.some(
+        (lock: Readonly<LockInfo>) => lock.name === "voltonaut-profile-selection",
+      ) === true,
+    pending:
+      state.pending?.some(
+        (lock: Readonly<LockInfo>) => lock.name === "voltonaut-profile-selection",
+      ) === true,
   };
 }
 

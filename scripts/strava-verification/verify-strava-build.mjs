@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
-import { z } from "zod";
+import { z } from "../../packages/shared/node_modules/zod/index.js";
 import { chromium } from "./strava-browser-runtime.mjs";
 import {
   createVerificationHost,
@@ -13,7 +13,7 @@ import {
   closeVerificationHost,
 } from "./strava-verification-host.mjs";
 
-const root = resolve(import.meta.dirname, "../../..");
+const root = resolve(import.meta.dirname, "../..");
 
 const host = await createVerificationHost(
   root,

@@ -19,7 +19,9 @@ it("encrypts with random authenticated nonces bound to exact owner, athlete and 
   expect(() =>
     decryptTokens(first.replace('"keyId":"1"', '"keyId":"2"'), key, "owner", "42"),
   ).toThrow(Error);
-  expect(() => decryptTokens(first.replace(/"tag":"./u, '"tag":"z'), key, "owner", "42")).toThrow(Error);
+  expect(() => decryptTokens(first.replace(/"tag":"./u, '"tag":"z'), key, "owner", "42")).toThrow(
+    Error,
+  );
   const envelope = z.object({ ciphertext: z.string() }).passthrough().parse(JSON.parse(first));
   const changed = Buffer.from(envelope.ciphertext, "hex");
   changed[0] = changed.readUInt8(0) ^ 1;

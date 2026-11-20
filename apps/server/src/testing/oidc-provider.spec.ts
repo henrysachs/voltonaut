@@ -77,8 +77,8 @@ export class LocalOidcProvider {
     });
   });
 
-  public async listen(): Promise<void> {
-    this.server.listen(0, "127.0.0.1");
+  public async listen(port = 0): Promise<void> {
+    this.server.listen(port, "127.0.0.1");
     await once(this.server, "listening");
     const address = z.object({ port: z.number() }).parse(this.server.address());
     this.issuer = `http://127.0.0.1:${address.port}`;

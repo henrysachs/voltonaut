@@ -123,11 +123,20 @@ test("sync pull freshly checks another tab's pending profile despite a ready cac
     await fixture.queuePending(value);
   }, owner);
   await other.evaluate(hold, "voltonaut-account-outbox");
+
   try {
     await pull(page);
-    await expect(page.getByRole("button", { name: "Serverprofil für nächste Fahrt lokal verwenden", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", {
+        name: "Serverprofil für nächste Fahrt lokal verwenden",
+        exact: true,
+      }),
+    ).toBeDisabled();
     expect(await page.evaluate(savedName)).toBe("Pending Local");
-  } finally { await other.evaluate(release, "voltonaut-account-outbox"); }
+  } finally {
+    await other.evaluate(release, "voltonaut-account-outbox");
+  }
+
   await expect(page.getByRole("region", { name: "Kontodaten", exact: true })).toContainText(
     "Ein lokales Profil wartet",
   );

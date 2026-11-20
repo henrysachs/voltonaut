@@ -5,9 +5,9 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { z } from "zod";
-import { LocalStravaProvider } from "../src/testing/strava-provider.spec.ts";
-import { createOidcProvider } from "../src/testing/oidc-provider.spec.ts";
+import { z } from "../../packages/shared/node_modules/zod/index.js";
+import { LocalStravaProvider } from "../../apps/server/src/testing/strava-provider.spec.ts";
+import { createOidcProvider } from "../../apps/server/src/testing/oidc-provider.spec.ts";
 
 async function reservePort() {
   const reservation = createServer();
@@ -66,16 +66,16 @@ export async function createVerificationHost(root, serverDirectory) {
     temporary,
     environment,
     serverDirectory,
-    preload: join(root, "apps/server/scripts/loopback-network-only.mjs"),
+    preload: join(root, "scripts/strava-verification/loopback-network-only.mjs"),
   };
 }
 
 /** @param {string} root @param {string} api */
 async function startFixture(root, api) {
-  const html = readFileSync(join(root, "apps/server/scripts/strava-fixture.html"), "utf8").replace(
-    "__API__",
-    api,
-  );
+  const html = readFileSync(
+    join(root, "scripts/strava-verification/strava-fixture.html"),
+    "utf8",
+  ).replace("__API__", api);
 
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Node owns the mutable HTTP handles in this boundary adapter.
   const fixture = createServer((_req, res) => {

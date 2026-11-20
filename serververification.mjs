@@ -1,1 +1,1 @@
-await import("./apps/server/scripts/verify-strava-build.mjs");
+await import("./scripts/strava-verification/verify-strava-build.mjs");
