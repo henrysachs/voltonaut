@@ -22,6 +22,7 @@
     "@voltonaut/shared": "workspace:*",
     "better-sqlite3": "13.2.0",
     "drizzle-orm": "0.45.4",
+    "openid-client": "6.9.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "3.25.76"

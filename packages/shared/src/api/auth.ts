@@ -29,3 +29,21 @@ export const SessionResponseSchema = z.object({
 });
 
 export type SessionResponse = z.infer<typeof SessionResponseSchema>;
+
+export const AuthConfigResponseSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("disabled") }).strict(),
+  z.object({ mode: z.literal("oidc") }).strict(),
+  z.object({ mode: z.literal("magic-link") }).strict(),
+]);
+
+export type AuthConfigResponse = z.infer<typeof AuthConfigResponseSchema>;
+
+export const OidcExchangeRequestSchema = z
+  .object({ code: z.string().regex(/^[A-Za-z0-9_-]{43}$/u) })
+  .strict();
+
+export type OidcExchangeRequest = z.infer<typeof OidcExchangeRequestSchema>;
+
+export const MeResponseSchema = z.object({ user: UserSchema });
+
+export type MeResponse = z.infer<typeof MeResponseSchema>;

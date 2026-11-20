@@ -1,6 +1,8 @@
 # ADR-013 – Cloudflare Access als OIDC-Broker für den Login
 
-**Status:** Angenommen als Zielentscheidung durch Henry (2026-11-20). Henry hat Access am selben Tag aktiviert. App und Pilot-Policy sind inzwischen nach separater Freigabe eingerichtet, siehe [E5-04](../specs/E5-04-access-oidc-pilot-setup.md). Implementierung und Produktionsnachweis stehen aus. Ersetzt den Magic-Link-Standard aus ADR-005 Punkt 6 und den Login-Mail-Teil von ADR-009. Spec: [E5-03](../specs/E5-03-cloudflare-access-oidc.md).
+**Status:** Angenommen als Zielentscheidung durch Henry (2026-11-20). Henry hat Access am selben Tag aktiviert. App und Pilot-Policy sind inzwischen nach separater Freigabe eingerichtet, siehe [E5-04](../specs/E5-04-access-oidc-pilot-setup.md). Der Serverflow ist lokal geprüft und auf `main`; Produktionsnachweis und echter Pilot stehen aus. Ersetzt den Magic-Link-Standard aus ADR-005 Punkt 6 und den Login-Mail-Teil von ADR-009. Spec: [E5-03](../specs/E5-03-cloudflare-access-oidc.md).
+
+**Nachtrag E5-06:** Die Auth-Grundlage ist inzwischen auf `main`, die externe Pilot-App ist getrennt eingerichtet. [ADR-015](ADR-015-oidc-client-library.md) wählt `openid-client` 6.9.0. [E5-06](../specs/E5-06-oidc-server-login.md) prüft den Serverflow lokal, ohne echte Anbieteranmeldung. Die folgenden ursprünglichen Bestandsbefunde bleiben historisch. Webintegration, zusätzliche Identitätsverwaltung und Produktionspilot bleiben offen.
 
 ## Kontext
 
@@ -32,7 +34,7 @@ PR #6 mit lokalen `users`, `sessions`, `login_tokens` und SQLite ist inzwischen 
 ### Servergesteuerter Login
 
 - Authorization Code Flow mit PKCE `S256`, `state`, `nonce` und exakt registrierten Redirect-URIs. Keine Wildcards für Produktions-, Preview- oder lokale Callbacks.
-- Eine gepflegte OIDC-Clientbibliothek übernimmt Protokoll- und JWT-Prüfung. Keine selbst geschriebene JWT-Validierung. Bibliothekswahl und Eintrag in `docs/dependencies.md` folgen vor einer Installation; diese Dokumentationsänderung installiert keine Abhängigkeit.
+- Eine gepflegte OIDC-Clientbibliothek übernimmt Protokoll- und JWT-Prüfung. Keine selbst geschriebene JWT-Validierung. [ADR-015](ADR-015-oidc-client-library.md) legt dafür `openid-client` 6.9.0 fest; die Abhängigkeit ist in `docs/dependencies.md` erfasst.
 - Der Server besitzt kurzlebige, einmalig verwendbare Login-Transaktionen mit `state`, `nonce`, PKCE-Verifier und Browserbindung. Die Bindung kann über ein geschütztes Transaktionscookie erfolgen, unabhängig von der Bearer-Anwendungssession.
 - Der Callback prüft erwarteten Issuer, Audience, Signatur, Ablauf, `state`, `nonce` und Code-Bindung über die Bibliothek gegen die serverseitige Transaktion. Fehler erzeugen keine Session.
 - Broker-Access- oder Refresh-Token und Client-Secret bleiben serverseitig. Weder diese Werte noch das Voltonaut-Bearer-Token gelangen in Redirect-URLs, Browserlogs oder Frontend-Bundles. Falls die SPA Bearer beibehält, erhält sie die Session über einen kurzlebigen, einmaligen und browsergebundenen Übergabecode. Endpunktnamen bleiben Implementierungsdetail.
@@ -40,7 +42,7 @@ PR #6 mit lokalen `users`, `sessions`, `login_tokens` und SQLite ist inzwischen 
 
 ### Ablösung des Magic Links
 
-Im Cloudflare-Authmodus startet der Server ohne Cloudflare-Email-Sending- oder Resend-Zugangsdaten. Die Produktions-Mailpflicht aus PR #6 muss dafür ausdrücklich angepasst und getestet werden. Bestehende Produktionsprüfungen dürfen nicht still abgeschwächt werden.
+Im Cloudflare-Authmodus startet der Server ohne Cloudflare-Email-Sending- oder Resend-Zugangsdaten. E5-06 hat die Produktions-Mailpflicht aus PR #6 ausdrücklich angepasst und getestet. Produktion verlangt ein explizites `AUTH_MODE`; nur `magic-link` benötigt Mailzugang, `oidc` und `disabled` nicht. Bestehende Produktionsprüfungen dürfen nicht still abgeschwächt werden.
 
 Magic Link ist bis zur Migration ein ausdrücklich gewählter Legacy- oder Entwicklungsmodus, kein zweiter Standard. Nach dem OIDC-Cutover wird dieser Login deaktiviert oder entfernt. Die frühere Mailanbieter-Recherche bleibt historisch erhalten; Transaktionsmails sind optional. Strava-OAuth und Upload-Berechtigungen bleiben vom Login getrennt. Broker-Token gewähren keinen Strava-API-Zugriff.
 
