@@ -39,3 +39,9 @@ Keine Aussage über reale Geräte, Firmware, Play-Tastenmapping, Verschlüsselun
 ## Offene Fragen
 
 Keine für die Software-Portierung. Hardware-Fragen bleiben unverändert offen.
+
+## CI-Nachtrag am 20.11.2026
+
+Der Replay-Browsertest wurde unter verzögerter Automation dreimal mit dem CI-Fehler reproduziert. `page.clock.install()` allein hielt die Uhr nicht an; `fastForward()` bündelte dadurch Antworten verschiedener Preset-Schritte. Der Test pausiert die Uhr jetzt vor der Navigation und verarbeitet Zeitabschnitte mit `runFor()`. Anwendung, Fixture und Assertions bleiben unverändert. Temporäre Diagnose-Verzögerungen wurden entfernt.
+
+Nach der Korrektur bestanden 30 wiederholte Sniffer-Browsertests. Nach Integration des aktuellen `main` samt Auth-Grundlage ist auch `CI=true mise run check` mit 311 Tests und acht E2Es grün. Beide HTML-Seiten bauen. Das unabhängige Nachreview des Test-Fixes ist Approve.

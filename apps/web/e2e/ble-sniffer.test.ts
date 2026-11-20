@@ -7,7 +7,10 @@ import { bluetoothFakeScript } from "./helpers/bluetooth.js";
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns its mutable page object.
 async function openReplay(page: Page): Promise<void> {
-  await page.clock.install();
+  const start = new Date("2026-11-20T10:00:00.000Z");
+  await page.clock.install({ time: start });
+  // Only explicit clock advances may move the replay, regardless of automation speed.
+  await page.clock.pauseAt(start);
   await page.route(
     (url: { readonly pathname: string }) => url.pathname === "/replay.json",
     (
@@ -45,19 +48,20 @@ test("replay sniffer explores, captures, waits for preset indications and export
   await page.getByRole("button", { name: "Read", exact: true }).click();
   await page.getByRole("button", { name: "Subscribe", exact: true }).nth(0).click();
   await page.getByRole("button", { name: "Subscribe", exact: true }).nth(2).click();
-  await page.clock.fastForward(500);
+  await page.clock.runFor(500);
   await expect(page.locator("#log")).toContainText('\\"powerW\\":250');
   await expect(page.locator("#log")).toContainText('\\"bpm\\":64');
   await page.getByRole("button", { name: "FTMS Request Control + Sim 0 %", exact: true }).click();
   await expect(page.locator("#log")).toContainText('"hex":"00"');
-  await page.clock.fastForward(500);
+  // Process the 1000 ms response and its polling tick before the next reply at 1250 ms.
+  await page.clock.runFor(600);
   await expect(page.locator("#log")).toContainText("11 00 00 00 00 28 33");
   await expect(page.locator("#log")).not.toContainText("Preset abgeschlossen");
-  await page.clock.fastForward(300);
+  await page.clock.runFor(300);
   await expect(page.locator("#log")).toContainText("Preset abgeschlossen");
   await page.getByRole("button", { name: "FTMS Sim 5 %", exact: true }).click();
   await expect(page.locator("#log")).toContainText("11 00 00 f4 01 28 33");
-  await page.clock.fastForward(300);
+  await page.clock.runFor(300);
   await page.getByRole("button", { name: "Zwift-Controller-Handshake", exact: true }).click();
   await expect(page.locator("#log")).toContainText("52 69 64 65 4f 6e");
   await page.getByLabel("Marker", { exact: true }).fill("RS gedrückt");
