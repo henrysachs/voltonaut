@@ -2,7 +2,9 @@
 
 Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz. Läuft komplett im Browser (Chrome/Edge am Laptop), spricht per Web Bluetooth direkt mit Rollentrainer, Pulsgurt und Schalt-Controllern Web-App auf Cloudflare Pages, Solo-Fahrten funktionieren ohne Server; Accounts, Freischaltungen, Volts und Gruppenfahrten laufen über einen eigenen Server (TypeScript/NestJS auf einem Hetzner-VPS, ADR-004/005).
 
-> **Status:** Planungsphase. Dieses Repo enthält bisher nur Dokumentation, noch keinen Anwendungscode. Start der Umsetzung mit Etappe E0 (siehe [docs/07-roadmap.md](docs/07-roadmap.md)).
+> **Status:** Die Umsetzung läuft. Gastfahrt, Sim-Modus, lesende BLE-Verbindung, 3D-Landschaft sowie lokale Aufnahme mit TCX-Export sind implementiert. OIDC-Server, eigene Profile und Fahrthistorie sind lokal geprüft. Produktions-API, Kontosynchronisation, Strava und Hardwareabnahme bleiben offen. Der [Arbeitsplan](docs/specs/E5-05-autonomous-first-usable-ride.md) trennt gelieferte Funktionen von offenen Abnahmen.
+
+Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) zeigt den bisherigen Landschaftsstand. Aufnahme und neue Serverfunktionen sind noch nicht öffentlich bereitgestellt.
 
 ## Vision in drei Sätzen
 
@@ -20,7 +22,7 @@ Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz.
 
 Browser: **Chrome oder Edge** auf dem Desktop/Laptop. Web Bluetooth braucht einen _secure context_ (HTTPS oder `localhost`). Safari/iOS und Firefox werden nicht unterstützt.
 
-## Schnellstart (Platzhalter – existiert ab E0)
+## Schnellstart
 
 Voraussetzung: [mise](https://mise.jdx.dev). Alle Werkzeugversionen sind in `mise.toml` gepinnt.
 
@@ -47,7 +49,7 @@ pnpm-Monorepo: `apps/web` (Vite + three.js), `apps/server` (NestJS + SQLite/Driz
 | [docs/04-world-3d.md](docs/04-world-3d.md)                         | 3D-Spiel: PBR, Schatten, Tageszeit/Wetter, Bots, Windschatten, Kameras, Effekte, Audio, Assets, Budget |
 | [docs/05-avatar-customization.md](docs/05-avatar-customization.md) | Fahrer- und Radmodell, Animation, Customizing                                                          |
 | [docs/06-gamification.md](docs/06-gamification.md)                 | XP, Level, Unlocks, Badges, Segmente, Persistenz                                                       |
-| [docs/07-roadmap.md](docs/07-roadmap.md)                           | Etappen E0–E7 mit Aufgaben und Abnahmekriterien                                                        |
+| [docs/07-roadmap.md](docs/07-roadmap.md)                           | Etappen E0–E10 mit Aufgaben und Abnahmekriterien                                                       |
 | [docs/08-backend.md](docs/08-backend.md)                           | Backend: Stack, Accounts, API, Anti-Cheat, Sync, Gruppenfahrten                                        |
 | [docs/09-tooling.md](docs/09-tooling.md)                           | mise, Oxlint + anti-slop, strengstes TypeScript, dependency-cruiser, Oxfmt, CI                         |
 | [docs/10-testing.md](docs/10-testing.md)                           | Verifikation: BLE-Replay, Golden, Property-based, Contract, E2E, Visual, Mutation, Perf                |
@@ -57,7 +59,7 @@ pnpm-Monorepo: `apps/web` (Vite + three.js), `apps/server` (NestJS + SQLite/Driz
 
 ## Lizenz
 
-Code: [MIT](LICENSE) © 2026 Henry Sachs. Eingebundene 3D-Assets behalten ihre eigene Lizenz (siehe `public/assets/LICENSES.md` und `docs/04-world-3d.md`).
+Code: [MIT](LICENSE) © 2026 Henry Sachs. Eingebundene 3D-Assets behalten ihre eigene Lizenz (siehe [Asset-Lizenzen](apps/web/public/assets/LICENSES.md) und `docs/04-world-3d.md`).
 
 ## Haftungsausschluss
 
