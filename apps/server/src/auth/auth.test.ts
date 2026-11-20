@@ -196,7 +196,7 @@ it("slides session expiry and never authenticates deleted accounts", async () =>
     .expect(401);
 });
 
-it("has no development mailbox or account endpoints", async () => {
+it("returns the authenticated account but exposes no development mailbox or rides", async () => {
   const { app, mail } = await setup();
   const session = await loginTestUser(app, mail, "scope@example.com");
 
@@ -207,6 +207,6 @@ it("has no development mailbox or account endpoints", async () => {
   );
 
   expect(responses.map((response: SupertestResponsePort) => response.status)).toEqual([
-    404, 404, 404,
+    200, 404, 404,
   ]);
 });

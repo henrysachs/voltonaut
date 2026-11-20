@@ -16,16 +16,22 @@ it("defaults development/test to memory and refuses incomplete production mail c
     { MAIL_PROVIDER: "resend" },
     { CLOUDFLARE_EMAIL_API_TOKEN: "token" },
   ]) {
-    expect(() => parseServerConfig(env, "production")).toThrow(/.+/u);
+    expect(() => parseServerConfig({ AUTH_MODE: "magic-link", ...env }, "production")).toThrow(
+      /.+/u,
+    );
   }
 
   const cloudflare = parseServerConfig(
-    { CLOUDFLARE_EMAIL_API_TOKEN: "test-token", CLOUDFLARE_EMAIL_ACCOUNT_ID: "test-account" },
+    {
+      AUTH_MODE: "magic-link",
+      CLOUDFLARE_EMAIL_API_TOKEN: "test-token",
+      CLOUDFLARE_EMAIL_ACCOUNT_ID: "test-account",
+    },
     "production",
   );
 
   const resend = parseServerConfig(
-    { MAIL_PROVIDER: "resend", RESEND_API_KEY: "test-key" },
+    { AUTH_MODE: "magic-link", MAIL_PROVIDER: "resend", RESEND_API_KEY: "test-key" },
     "production",
   );
 

@@ -1,10 +1,18 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import request from "supertest";
 import { expect, it } from "vitest";
+import { z } from "zod";
 
-import { createTestApp, getDatabase, httpServerOf, bodyOf } from "../testing/test-app.spec.js";
+import {
+  createTestApp,
+  getDatabase,
+  httpServerOf,
+  bodyOf,
+  loginTestUser,
+  bearer,
+} from "../testing/test-app.spec.js";
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
 
@@ -19,7 +27,15 @@ it("creates only auth tables, enforces foreign keys and closes on Nest shutdown"
     .all();
 
   expect(tables).toEqual(
-    ["__drizzle_migrations", "login_tokens", "sessions", "users"].map((name) => ({ name })),
+    [
+      "__drizzle_migrations",
+      "auth_identities",
+      "login_tokens",
+      "oidc_handoffs",
+      "oidc_transactions",
+      "sessions",
+      "users",
+    ].map((name) => ({ name })),
   );
   expect(db.$client.pragma("foreign_keys", { simple: true })).toBe(1);
   expect(() =>
@@ -41,7 +57,7 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(1);
+    expect(migrations).toHaveLength(2);
     db.$client
       .prepare("INSERT INTO users VALUES ('persisted', 'persist@example.com', 0, NULL)")
       .run();
@@ -78,4 +94,83 @@ it("keeps health public and returns a safe 503 envelope when the database closes
     error: { code: "internal_error", message: "database unavailable" },
   });
   await app.close();
+});
+
+function legacyMigrations(directory: string): string {
+  const folder = join(directory, "legacy-migrations");
+  mkdirSync(join(folder, "meta"), { recursive: true });
+  const source = new URL("../../drizzle/", import.meta.url);
+
+  const journal = z
+    .object({
+      version: z.string(),
+      dialect: z.string(),
+      entries: z.array(
+        z.object({
+          idx: z.number(),
+          version: z.string(),
+          when: z.number(),
+          tag: z.string(),
+          breakpoints: z.boolean(),
+        }),
+      ),
+    })
+    .parse(JSON.parse(readFileSync(new URL("meta/_journal.json", source), "utf8")));
+
+  writeFileSync(
+    join(folder, "meta", "_journal.json"),
+    JSON.stringify({ ...journal, entries: journal.entries.slice(0, 1) }),
+  );
+  copyFileSync(
+    new URL("0000_steep_trish_tilby.sql", source),
+    join(folder, "0000_steep_trish_tilby.sql"),
+  );
+
+  return folder;
+}
+
+it("upgrades the original migration without replacing legacy users, tokens, or sessions", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "voltonaut-oidc-upgrade-"));
+  const path = join(directory, "legacy.db");
+
+  try {
+    const first = await createTestApp({
+      config: { database: { path, migrationsDir: legacyMigrations(directory) } },
+    });
+
+    const session = await loginTestUser(first.app, first.mail, "legacy@example.com");
+    expect(
+      getDatabase(first.app).$client.prepare("SELECT * FROM __drizzle_migrations").all(),
+    ).toHaveLength(1);
+    await first.app.close();
+
+    const next = await createTestApp({
+      config: {
+        database: { path, migrationsDir: "drizzle" },
+        auth: {
+          mode: "oidc",
+          issuer: "https://identity.example",
+          clientId: "test",
+          clientSecret: "test-secret",
+          redirectUri: "https://api.example/v1/auth/oidc/callback",
+          allowLoopbackHttp: false,
+        },
+      },
+    });
+
+    try {
+      const db = getDatabase(next.app).$client;
+      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(2);
+      expect(db.prepare("SELECT id FROM users").all()).toEqual([{ id: session.user.id }]);
+      expect(db.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
+      await request(httpServerOf(next.app))
+        .get("/v1/me")
+        .set(bearer(session.sessionToken))
+        .expect(200);
+    } finally {
+      await next.app.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
