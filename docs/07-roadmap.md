@@ -31,7 +31,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [x] `CODEOWNERS`, Branch-Ruleset für `main` (`09-tooling.md` §8), `docs/specs/_template.md`, `docs/specs/_review-checklist.md`, `docs/dependencies.md`, `apps/web/public/assets/LICENSES.md`
       **Abnahme:** Frischer Clone: `mise install && mise run install && mise run check` grün; `?sim=1` zeigt laufende Werte, Pfeiltasten ändern den Gang; PR mit absichtlich verbotenem Import, `@ts-ignore` oder gelockerter Regel wird von CI abgelehnt; nach Setzen der Cloudflare-Secrets ist `https://voltonaut.stammkneipe.dev` (bzw. `https://voltonaut.pages.dev`) erreichbar und jeder PR bekommt eine Preview-URL; Server-Health-Test grün in CI.
 
-Korrektur vom 20.11.2026: Die beiden E0-opt-Punkte waren versehentlich abgehakt. `SERVER_DEPLOY_ENABLED=false`; `main` enthält serverseitig nur Health, keine Observability-Verdrahtung. Die Korrektur dokumentiert offene Arbeit, keine neue Lieferung.
+Korrektur vom 20.11.2026: Die beiden E0-opt-Punkte waren versehentlich abgehakt. `SERVER_DEPLOY_ENABLED=false`; Observability ist noch nicht verdrahtet. Die Korrektur dokumentiert offene Arbeit, keine neue Lieferung.
 
 ## E1 – Bluetooth-Sniffer, Puls, FTMS lesen
 
@@ -94,8 +94,8 @@ Korrektur vom 20.11.2026: Die beiden E0-opt-Punkte waren versehentlich abgehakt.
 
 - [ ] `database/`-Modul: Drizzle + SQLite (WAL), `drizzle-kit`-Migrationen, Litestream-Backup aktiv
 - [ ] Zod-API-Schemas in `packages/shared/src/api` + Contract-Fixtures (`fixtures/api/`), Response-Validierung im Test-Interceptor
-- [ ] Auth-Grundlage aus PR #6 integrieren; lokale Accounts und Sessions mit stabiler `users.id`. PR #6 ist offen und noch nicht auf `main` (20.11.2026).
-- [ ] Auth über Cloudflare Access OIDC (ADR-013, [E5-03](specs/E5-03-cloudflare-access-oidc.md)): Code Flow + PKCE, sichere Login-Transaktion, explizite Identitätsverknüpfung, lokale Bearer-Session, Logout, Rate-Limits, Login-Klick und exaktes CORS. Kein Access-Proxy vor Webseite oder API. Henry hat Access am 20.11.2026 aktiviert; ein `cloudflare`-IdP, keine Apps bestätigt. Pilot-Login-Methode, Free-Plan-/Seat-Prüfung, enge App-/Policy-Freigabe, sichere Credential-Übergabe, Umsetzung und Produktionsfreigabe stehen aus. Magic Link nach Cutover deaktivieren oder entfernen; Mailversand nur optional für Transaktionsmails oder ausdrücklich gewählten Legacy-/Entwicklungsbetrieb, keine Mailzugangsdaten als OIDC-Startvoraussetzung.
+- [x] Auth-Grundlage aus PR #6 integriert; lokale Accounts und Sessions mit stabiler `users.id`. Seit `191d4e8` auf `main`. Cloudflare-OIDC ist damit noch nicht implementiert.
+- [ ] Auth über Cloudflare Access OIDC (ADR-013, [E5-03](specs/E5-03-cloudflare-access-oidc.md)): Code Flow + PKCE, sichere Login-Transaktion, explizite Identitätsverknüpfung, lokale Bearer-Session, Logout, Rate-Limits, Login-Klick und exaktes CORS. Kein Access-Proxy vor Webseite oder API. App, Zwei-Personen-Pilot-Policy und sichere Credential-Hinterlegung sind nach separater Freigabe eingerichtet, siehe [E5-04](specs/E5-04-access-oidc-pilot-setup.md). Die API meldet `Teams Free Base`. Seats, echte Pilot-Anmeldung, Laufzeitumsetzung und Produktionsfreigabe stehen aus. Magic Link nach Cutover deaktivieren oder entfernen; Mailversand nur optional für Transaktionsmails oder ausdrücklich gewählten Legacy-/Entwicklungsbetrieb, keine Mailzugangsdaten als OIDC-Startvoraussetzung.
 - [ ] `accounts/`: RiderProfile GET/PUT (ersetzt lokales Profil aus E3, Migration lokal → Account)
 - [ ] `rides/`: Upload (idempotent), Plausibilitätsprüfung Stufe 1–4 (`08-backend.md`), Fahrthistorie
 - [ ] Client `sync/`: Cache, Outbox mit Retry, Gastmodus, Status-Anzeige „offline / synchronisiert"

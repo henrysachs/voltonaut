@@ -1,6 +1,6 @@
 # ADR-013 – Cloudflare Access als OIDC-Broker für den Login
 
-**Status:** Angenommen als Zielentscheidung durch Henry (2026-11-20). Henry hat Access am selben Tag aktiviert. App-Konfiguration, Implementierung und Produktionsnachweis stehen aus. Ersetzt den Magic-Link-Standard aus ADR-005 Punkt 6 und den Login-Mail-Teil von ADR-009. Spec: [E5-03](../specs/E5-03-cloudflare-access-oidc.md).
+**Status:** Angenommen als Zielentscheidung durch Henry (2026-11-20). Henry hat Access am selben Tag aktiviert. App und Pilot-Policy sind inzwischen nach separater Freigabe eingerichtet, siehe [E5-04](../specs/E5-04-access-oidc-pilot-setup.md). Implementierung und Produktionsnachweis stehen aus. Ersetzt den Magic-Link-Standard aus ADR-005 Punkt 6 und den Login-Mail-Teil von ADR-009. Spec: [E5-03](../specs/E5-03-cloudflare-access-oidc.md).
 
 ## Kontext
 
@@ -10,7 +10,7 @@ Der erste übernommene Nur-Lese-Befund vom 20.11.2026 lieferte für Access-Organ
 
 Diese Befunde stammen aus dem verbundenen MCP-Zugang; die `cf`-CLI war nicht installiert. Der prüfende Agent führte keine externen Schreiboperationen aus und erzeugte keine Secrets. Teamdomain, Account-ID und IdP-ID werden nicht im Repo festgeschrieben; die Umsetzung verwendet Umgebungskonfiguration.
 
-PR #6 mit lokalen `users`, `sessions`, `login_tokens` und SQLite ist offen und noch nicht auf `main`. Seine Auth-Grundlage ist eine Implementierungsabhängigkeit, kein hier gelieferter Stand. ADR-012 ist dort für serverseitiges `skipLibCheck` reserviert.
+PR #6 mit lokalen `users`, `sessions`, `login_tokens` und SQLite ist inzwischen als `191d4e8` auf `main` gemergt. Seine Auth-Grundlage ist verfügbar, OIDC noch nicht implementiert. ADR-012 dokumentiert das serverseitige `skipLibCheck`.
 
 ## Entscheidung
 
@@ -48,11 +48,11 @@ Magic Link ist bis zur Migration ein ausdrücklich gewählter Legacy- oder Entwi
 
 - Kein eigener Mailversand als Voraussetzung für den Ziel-Login. Voltonaut muss trotzdem Account-Zuordnung, Sessions und sichere Kontoverknüpfung betreiben.
 - Neue Logins hängen von Access und dem gewählten Identity Provider ab. Bei deren Ausfall bleibt anonymes Fahren möglich.
-- Access verwendet Seats. Öffentliche Quellen bestätigen einen Free-Plan und Seat-Abrechnung, aber keinen hier verifizierten Account-Tarif, Preis oder konkretes Kontingent. Vor Erweiterung des Piloten müssen Plan, verfügbare Seats und Kosten geprüft werden. Kein kostenpflichtiger Plan ohne gesonderte Freigabe.
-- Die einmalige Aktivierung durch Henry ist erledigt. Seine konkrete Free-Planauswahl, Bedingungen und verfügbaren Seats sind vor dem Pilot zu bestätigen. Organisation und Identity Provider wurden danach nur lesend geprüft. Die Pilot-Login-Methode ist noch auszuwählen.
-- Vorgeschlagen wird ausschließlich eine Voltonaut-OIDC-App mit PKCE und den Scopes `openid`, `email` und nur bei Bedarf `profile`. Eine minimale Allow-Policy lässt zunächst Henry zu. Keine `Everyone`-Policy, keine accountweite SSO-Umstellung. Vor einer Erweiterung muss Henry den konkreten Plan sehen und freigeben.
-- Die bestehende Freigabe für Deploy-Secrets erlaubt keine pauschale Verwaltung von OIDC-Secrets. Vor deren Einrichtung braucht es eine enge ausdrückliche Freigabe oder Henrys eigene sichere Einrichtung. Keine Tokens im Chat anfordern, keine bestehenden Secrets lesen oder überschreiben.
-- Produktionspilot, Betriebsfreigabe und Rollback sind eigenständige Schritte der Spec. Dieses ADR behauptet weder eine konfigurierte Voltonaut-OIDC-App noch einen laufenden Login oder eine produktiv bereitgestellte Anwendung.
+- Access verwendet Seats. Die Account-API bestätigt inzwischen `Teams Free Base`, aber keine Zahl verfügbarer Seats. Es wurde kein Tarif geändert. Vor einer breiteren Nutzung müssen verfügbare Seats und Kosten geprüft werden. Kein kostenpflichtiger Plan ohne gesonderte Freigabe.
+- Die einmalige Aktivierung durch Henry ist erledigt. Die App nutzt ausschließlich den vorhandenen Identity Provider vom Typ `cloudflare`. Dessen tatsächliches Login-Verhalten ist noch im Pilot zu prüfen.
+- Eingerichtet ist genau eine Voltonaut-OIDC-App mit verpflichtendem PKCE, Client-Secret und den Scopes `openid` und `email`. Die minimale Allow-Policy erlaubt nach ausdrücklicher Freigabe Henry und Florian. Keine `Everyone`-Policy und keine accountweite SSO-Umstellung.
+- Die enge Freigabe für diese neuen OIDC-Credentials ist erfolgt. Client-Secret, Client-ID und Issuer liegen in GitHub `production`, nicht im Repository. Die allgemeine Deploy-Freigabe ersetzt keine gesonderte Erlaubnis für andere oder bestehende Secrets. Keine Tokens im Chat anfordern und keine bestehenden Secrets ohne Freigabe lesen oder überschreiben.
+- Produktionspilot, Betriebsfreigabe und Rollback bleiben eigenständige Schritte der Spec. Eine konfigurierte App und erfolgreiche Discovery beweisen weder die OIDC-Laufzeitumsetzung noch einen laufenden Login oder produktiven Accountbetrieb.
 
 ## Alternativen
 
