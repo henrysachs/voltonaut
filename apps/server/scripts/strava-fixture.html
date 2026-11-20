@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Local Strava protocol verification, not application UI</title>
+  <h1>Local protocol fixture</h1>
+  <p>No real accounts, credentials or Strava requests.</p>
+  <button id="login-a">Login A</button>
+  <button id="login-b">Login B</button>
+  <button id="switch-a">Switch A</button>
+  <button id="switch-b">Switch B</button>
+  <button id="start">Connect start</button>
+  <a id="authorize">Go to local Strava</a>
+  <button id="confirm">Confirm</button>
+  <button id="status">Status</button>
+  <button id="disconnect">Disconnect</button>
+  <output id="result">ready</output>
+  <script type="module">
+    const api = "__API__";
+    const output = document.querySelector("#result");
+    const handoff = new URL(location.href).searchParams.get("code");
+    history.replaceState(null, "", location.pathname);
+    async function command(path, body) {
+      const current = sessionStorage.getItem("current");
+      const token = sessionStorage.getItem(`session-${current}`);
+      const response = await fetch(`${api}/v1/strava/${path}`, {
+        method: body === undefined ? "GET" : "POST",
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const value = await response.json();
+      output.textContent = response.ok ? (value.status ?? "started") : `error-${response.status}`;
+      return value;
+    }
+    for (const account of ["a", "b"]) {
+      document.querySelector(`#login-${account}`).onclick = () => {
+        sessionStorage.setItem("current", account);
+        location.href = `${api}/v1/auth/oidc/start`;
+      };
+      document.querySelector(`#switch-${account}`).onclick = () => {
+        sessionStorage.setItem("current", account);
+        output.textContent = `account-${account}`;
+      };
+    }
+    document.querySelector("#start").onclick = async () => {
+      const value = await command("connect-start", { action: "connect" });
+      document.querySelector("#authorize").href = value.authorizationUrl;
+    };
+    document.querySelector("#confirm").onclick = () => command("confirm", { code: handoff });
+    document.querySelector("#status").onclick = () => command("connection");
+    document.querySelector("#disconnect").onclick = () =>
+      command("disconnect", { action: "disconnect" });
+    if (location.pathname === "/auth/finish") {
+      const response = await fetch(`${api}/v1/auth/oidc/exchange`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: handoff }),
+      });
+      const session = await response.json();
+      if (!response.ok) throw new Error("local login failed");
+      sessionStorage.setItem(`session-${sessionStorage.getItem("current")}`, session.sessionToken);
+      output.textContent = "logged-in";
+    } else if (location.pathname === "/strava/finish") {
+      output.textContent = "confirmation-ready";
+    }
+  </script>
+</html>

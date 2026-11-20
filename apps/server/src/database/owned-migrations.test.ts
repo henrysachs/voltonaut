@@ -136,7 +136,7 @@ it.each([1, 2])(
         const db = getDatabase(app);
 
         expect(readAuthState(db.$client, migrationCount)).toEqual(authState);
-        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(3);
+        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(4);
         assertOwnedForeignKeys(db);
       } finally {
         await app.close();
