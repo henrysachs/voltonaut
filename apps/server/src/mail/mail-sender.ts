@@ -16,10 +16,12 @@ export interface SentMail {
 }
 
 /** Selects the provider purely from configuration; no code change needed to switch. */
-export function createMailSender(config: Pick<ServerConfig, "mail">): MailSender {
+export function createMailSender(config: Pick<ServerConfig, "mail">): MailSender | null {
   const mail = config.mail;
 
   switch (mail.provider) {
+    case "disabled":
+      return null;
     case "cloudflare":
       return new CloudflareEmailSender({ mail });
     case "resend":

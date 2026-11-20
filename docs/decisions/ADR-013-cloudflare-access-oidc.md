@@ -2,6 +2,8 @@
 
 **Status:** Angenommen als Zielentscheidung durch Henry (2026-11-20). Henry hat Access am selben Tag aktiviert. App-Konfiguration, Implementierung und Produktionsnachweis stehen aus. Ersetzt den Magic-Link-Standard aus ADR-005 Punkt 6 und den Login-Mail-Teil von ADR-009. Spec: [E5-03](../specs/E5-03-cloudflare-access-oidc.md).
 
+**Nachtrag E5-06:** Die Auth-Grundlage ist inzwischen auf `main`, die externe Pilot-App ist getrennt eingerichtet. [ADR-015](ADR-015-oidc-client-library.md) wählt `openid-client` 6.9.0. [E5-06](../specs/E5-06-oidc-server-login.md) prüft den Serverflow lokal, ohne echte Anbieteranmeldung. Die folgenden ursprünglichen Bestandsbefunde bleiben historisch. Webintegration, zusätzliche Identitätsverwaltung und Produktionspilot bleiben offen.
+
 ## Kontext
 
 Henry wählt Cloudflare Access für den Login. Das [Voltonaut-Konto](../../GLOSSARY.md) und seine Spieldaten bleiben unter Voltonauts Kontrolle wie in ADR-005. Die öffentliche Anwendung einschließlich Offline-, Sim-, E3- und BLE-Fahrt bleibt anonym nutzbar.

@@ -4,7 +4,7 @@ Server auf Henrys **vorhandenem Hetzner-VPS** (ADR-004). Er ist **autoritativ** 
 
 ## Stack (entschieden)
 
-Auth-Ziel seit Henrys Entscheidung vom 20.11.2026 ist [Cloudflare Access als OIDC-Broker](decisions/ADR-013-cloudflare-access-oidc.md). Das ist noch nicht implementiert. Access ist durch Henry aktiviert; die Nur-Lese-Prüfung bestätigt einen `cloudflare`-IdP und keine Apps. Plan und Seats sind nicht bestätigt. Auth-Grundlagen-PR #6 ist offen und nicht auf `main`. Umsetzung und Pilot stehen in [E5-03](specs/E5-03-cloudflare-access-oidc.md). Die übrigen Tabellen und API-Skizzen beschreiben ebenfalls den Zielstand, nicht eine bereits bereitgestellte API.
+Auth-Ziel seit Henrys Entscheidung vom 20.11.2026 ist [Cloudflare Access als OIDC-Broker](decisions/ADR-013-cloudflare-access-oidc.md). Die Account- und Sessiongrundlage ist auf `main`. [E5-06](specs/E5-06-oidc-server-login.md) implementiert den Server-Codeflow mit `openid-client` und einem lokalen signierenden Testprovider. Die externe Pilot-App ist getrennt eingerichtet. Webintegration, Identitätsverwaltung, echter Anbieterlogin und Produktionsbetrieb sind damit nicht nachgewiesen. Die übrigen Tabellen und API-Skizzen beschreiben den Zielstand.
 
 | Baustein       | Wahl                                                                                                                                                                                                                                                                     | Begründung                                                                                                                                                                                                                                                                                                                                                                           |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -79,7 +79,12 @@ ride_samples(ride_id PK, samples_blob /* 1 Hz, gzip: t, power, cadence, hr, dist
 
 ```
 # OIDC login start → Access; server callback → verified identity → one-time browser-bound SPA handoff.
-# Endpoint names remain open in E5-03. No bearer, access, or refresh tokens in redirect URLs.
+GET  /v1/auth/config                                              → { mode: disabled|oidc|magic-link }
+GET  /v1/auth/oidc/start                                           → 302 Anbieter, Browserbindungscookie
+GET  /v1/auth/oidc/callback                                        → 302 CLIENT_ORIGIN/auth/finish?code=<Übergabe>
+POST /v1/auth/oidc/exchange      { code }                           → { sessionToken, user }
+# Exchange requires original browser cookie and exact CLIENT_ORIGIN header.
+# No bearer, access, or refresh tokens in redirect URLs.
 POST /v1/auth/logout                                              → 204
 GET  /v1/me                                                       → { user, profile, progression, voltsBalance, inventory[], badges[], pbs{} }
 PUT  /v1/me/profile             RiderProfile                      → profile          (Validierung: Bereiche wie 03 §2a)
@@ -93,6 +98,22 @@ GET  /v1/me/export                                                → JSON aller
 DELETE /v1/me                                                     → 202 (Account-Löschung)
 WS   /v1/live                   erster Frame { t:'auth', sessionToken } → Räume (s. u.)
 ```
+
+Der aktuelle `GET /v1/me` liefert ausschließlich `{user}`. Profil und Spieldaten sind Folgeeinheiten. Die Sessionantwort bleibt die bestehende `SessionResponse` aus `packages/shared`. Der Webclient muss die Übergabe mit `credentials: "include"` austauschen und den Code sofort aus der Adresszeile entfernen. Vorher darf die Abschlussseite keine fremden Ressourcen laden.
+
+### Auth-Konfiguration aus E5-06
+
+`AUTH_MODE` ist in Produktion Pflicht. Erlaubt sind `disabled`, `oidc`, `magic-link`. Nur Entwicklung und Test verwenden ohne Angabe weiter den bisherigen Magic Link. OIDC und Disabled erstellen keinen Mailtransport; beide lehnen Legacy-Loginendpunkte ab. Expliziter Legacy-Produktionsbetrieb verlangt weiterhin einen echten Mailprovider und dessen Zugangsdaten.
+
+OIDC benötigt `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI` und den festen `CLIENT_ORIGIN`. Der Callbackpfad ist `/v1/auth/oidc/callback`, ohne Query oder Fragment. Produktion verlangt HTTPS. HTTP ist nur in Entwicklung und Test für Loopback zulässig, auch bei entdeckten Anbieterendpunkten. Keine Zugangsdatenwerte im Repo. Die Anwendung liest die Konfiguration, nicht GitHub-Secrets direkt.
+
+Im OIDC-Modus enthält `CORS_ORIGINS` genau `CLIENT_ORIGIN`. CORS erlaubt Credentials. Web und API müssen dieselbe Site verwenden; lokal wird derselbe Loopback-Hostname verwendet. Das hostgebundene HttpOnly-Cookie hat `SameSite=Lax`, in Produktion zusätzlich `Secure` und den Namen `__Host-voltonaut-oidc`. Es enthält keine Anwendungssession.
+
+Logintransaktionen gelten fünf Minuten, Übergaben 60 Sekunden. Callback-Beanspruchung geschieht atomar vor dem Anbieteraufruf über `claimed_at`. Die beanspruchte Zeile bleibt während des Aufrufs als Kapazitätsreservierung bestehen. Der erfolgreiche Callback ersetzt sie atomar durch eine Übergabe; ein Fehler benötigt einen neuen Loginstart. Datenbankfehler beim lokalen Sessioneinschub rollen dagegen die Übergabeverwendung zurück. Transaktionen einschließlich laufender Reservierungen und Übergaben sind zusammen auf 1000 begrenzt. Bereinigung löscht je Tabelle höchstens 100 abgelaufene Einträge pro Start oder erfolgreichem Callback. Beim Start bleiben diese Löschungen auch dann bestehen, wenn die anschließende Kapazitätsprüfung HTTP 429 liefert. Start, Callback und Exchange verwenden das vorhandene IP-Limit `THROTTLER_SESSION_IP_PER_MIN` mit Standard 10 pro Minute. Discovery und Anbieteraufrufe besitzen jeweils zwei Sekunden Timeout. Bei Ausfall bleiben Health und öffentliche Nutzung verfügbar.
+
+Die additive Migration ergänzt `auth_identities`, `oidc_transactions` und `oidc_handoffs`. Vorhandene `users.id`, Login-Token und Bearer-Sessions bleiben erhalten. E-Mail-Gleichheit erzeugt HTTP 409 `identity_conflict`, keine Verknüpfung. Bei bekannter Identität bleibt der lokale Kontakt unverändert, auch wenn der Broker eine andere E-Mail liefert. Verknüpfen und Entfernen weiterer Identitäten bleiben offen.
+
+Vor einem echten Deploy müssen Proxy- und Zugriffslogs Callback-Queries auslassen. Der Server loggt keine Anbieterantworten oder Callbackwerte. Der lokale Testprovider beweist weder Cloudflares Allow-Policy noch Subjectstabilität beim echten Login. Backup, Restore, Pilot und Produktionsfreigabe bleiben getrennte Betriebsschritte.
 
 `users.id` bleibt der Eigentümer von Fahrten, Inventar und Progression. Nur `(issuer, subject)` identifiziert einen externen Login. E-Mail-Gleichheit verknüpft keine Accounts. Bei einer Kollision ist der bestehende Account nachzuweisen. Zusätzliche Identitäten verlangen eine angemeldete Session, frische Reauthentifizierung und beide Besitznachweise; die letzte Login-Methode darf nicht entfernt werden. Issuer-/Subject-Stabilität wird im Pilot geprüft. Strava-OAuth erteilt separat Uploadrechte, niemals durch den Broker-Login.
 
