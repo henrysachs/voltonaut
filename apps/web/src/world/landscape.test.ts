@@ -17,6 +17,10 @@ import { disposeObject } from "./resources.js";
 const route = createRoute(TEST_LOOP);
 const plan = createLandscapePlan(route);
 
+const roadSamples = [0, 10, 110, 180, 2999, 3000, 4200, 5000, 5600, 6600, 8000, 9999].map(
+  (distanceM) => ({ distanceM, rowCount: distanceM === 0 ? Infinity : 3 }),
+);
+
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The test reads the geometry owned by this mutable Three group.
 function landGeometry(terrain: Readonly<THREE.Group>): Pick<THREE.BufferGeometry, "setDrawRange"> {
   const mesh = terrain.getObjectByName("route-terrain");
@@ -100,11 +104,17 @@ it("joins both road shoulders across the whole elevation profile and has relief 
 
 it("builds upward-facing bounded terrain which supports the real road at climbs and the loop seam", () => {
   const terrain = createTerrain(plan);
+  const geometry = landGeometry(terrain);
+  const indicesPerRow = (TERRAIN_OFFSETS_M.length - 1) * 6;
 
   terrain.updateMatrixWorld(true);
   const ray = new THREE.Raycaster();
 
-  for (const distanceM of [0, 10, 110, 180, 2999, 3000, 4200, 5000, 5600, 6600, 8000, 9999]) {
+  for (const { distanceM, rowCount } of roadSamples) {
+    const row = Math.floor(distanceM / 10);
+
+    geometry.setDrawRange(Math.max(0, row - 1) * indicesPerRow, indicesPerRow * rowCount);
+
     for (const lateralM of [-3.5, 0, 3.5]) {
       const position = offsetPosition(route, distanceM, lateralM);
 
