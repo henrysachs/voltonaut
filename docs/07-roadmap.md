@@ -79,6 +79,8 @@ Erster Web-Deploy am 20.11.2026: [Sim-Fahrt](https://voltonaut.pages.dev/?sim=1)
 
 **Ziel:** Das „Zwift-Gefühl" – und die Architektur für ein großes Spiel.
 
+Teilschritt [E4-02](specs/E4-02-first-ride-scene.md) ergänzt eine erste fahrbare Szene auf der vorhandenen E3-Testroute. Die vollständigen E4-Kriterien bleiben offen.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen
