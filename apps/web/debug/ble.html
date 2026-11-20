@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voltonaut · BLE-Labor</title>
+    <link rel="stylesheet" href="/src/debug/ble/styles.css" />
+  </head>
+  <body>
+    <header>
+      <p>VOLTONAUT / DIAGNOSE</p>
+      <h1>BLE-Labor</h1>
+      <p>GATT erkunden. Bytes mitschneiden. Hardware verstehen.</p>
+    </header>
+    <main>
+      <section aria-label="Verbindung">
+        <button id="scan">Gerät wählen</button>
+        <button id="reconnect">Erneut verbinden</button>
+        <button id="disconnect">Trennen</button>
+        <label
+          >Gerät
+          <select id="devices"></select
+        ></label>
+        <output id="status" aria-live="polite">disconnected</output>
+        <pre id="advertisement">Advertising noch nicht verfügbar</pre>
+        <label>Firmware <input id="firmware" /></label>
+        <label>Notizen <input id="notes" /></label>
+      </section>
+      <section aria-label="Presets">
+        <h2>Diagnose-Presets</h2>
+        <div id="presets"></div>
+        <p>
+          Trainer vorher stromlos machen. Andere Zentralen trennen. Presets verändern den
+          Widerstand.
+        </p>
+      </section>
+      <section aria-label="GATT-Explorer">
+        <h2>GATT-Explorer</h2>
+        <div id="gatt"></div>
+      </section>
+      <section aria-label="Logger">
+        <h2>Live-Log</h2>
+        <label>Filter <input id="filter" type="search" /></label>
+        <button id="pause">Anzeige pausieren</button>
+        <label>Marker <input id="marker" placeholder="Jetzt drücke ich: RS" /></label>
+        <button id="add-marker">Marker setzen</button>
+        <button id="export">JSON exportieren</button>
+        <pre id="log" aria-label="BLE-Log"></pre>
+      </section>
+    </main>
+    <script type="module" src="/src/debug/ble/main.ts"></script>
+  </body>
+</html>
