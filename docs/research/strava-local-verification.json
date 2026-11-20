@@ -1,0 +1,25 @@
+{
+  "artifact": "compiled Nest server",
+  "provider": "loopback protocol fake only",
+  "browser": "Chromium protocol fixture, not application UI",
+  "checks": [
+    "explicit server-only connection; no upload routes",
+    "real OIDC sessions A/B",
+    "credentialed cross-origin start",
+    "HttpOnly SameSite=Lax path cookie",
+    "top-level local provider navigation",
+    "B cannot consume A handoff",
+    "A confirms once",
+    "encrypted SQLite persists across process restart",
+    "failed remote revoke stays locally blocked across restart",
+    "retry confirms genuine fake-provider revoke and removes ciphertext",
+    "invalid key and production fake-provider configuration rejected",
+    "production legacy mail requirement unchanged",
+    "browser and compiled API restricted to loopback network"
+  ],
+  "providerRequests": {
+    "token": 1,
+    "revoke": 2,
+    "unexpected": 0
+  }
+}

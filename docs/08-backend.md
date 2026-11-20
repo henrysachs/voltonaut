@@ -71,7 +71,7 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 
 Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)` und `createRidesTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und beide Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an `AccountsModule.register` und `RidesModule.register`. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
 
-Die Datenmigration in diesem Teilschritt ist vorläufig. Nach Integration der getrennten Auth-Migration erzeugt der Parent die endgültige Reihenfolge und den Snapshot neu. `0000` bleibt unverändert. Der Browser lädt diese Daten noch nicht hoch.
+Die Migrationen `0000` bis `0002` sind festgeschrieben. Strava ergänzt ausschließlich `0003`. Der Browser lädt diese Fahrtdaten noch nicht hoch.
 
 ```sql
 users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at)

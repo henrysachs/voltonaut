@@ -7,7 +7,8 @@ import { APP_PROVIDERS } from "./app.providers.js";
 import { HealthModule } from "./health/health.module.js";
 import { AccountsModule } from "./accounts/accounts.module.js";
 import { RidesModule } from "./rides/rides.module.js";
-import { accountsTables, ridesTables } from "./schema.js";
+import { accountsTables, ridesTables, stravaTables } from "./schema.js";
+import { StravaModule } from "./strava/strava.module.js";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { accountsTables, ridesTables } from "./schema.js";
     HealthModule,
     AccountsModule.register(accountsTables),
     RidesModule.register(ridesTables),
+    StravaModule.register(stravaTables),
   ],
   providers: APP_PROVIDERS,
 })

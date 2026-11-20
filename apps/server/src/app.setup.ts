@@ -33,7 +33,7 @@ export function setupHttp(app: HttpSetupApp, config: ServerConfig): void {
   app.enableCors({
     origin: [...config.cors.origins],
     allowedHeaders: ["Authorization", "Content-Type", "Content-Encoding"],
-    credentials: config.auth.mode === "oidc",
+    credentials: config.auth.mode === "oidc" || config.strava.mode === "enabled",
   });
 
   const express = app.getHttpAdapter().getInstance();
