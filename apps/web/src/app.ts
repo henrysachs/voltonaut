@@ -36,6 +36,7 @@ export interface StartAppOptions {
   readonly document: AppDocument;
   readonly ride: RideHudSource;
   readonly ticker?: TickSource;
+  readonly connectedLabel?: string;
 }
 
 export interface App {
@@ -133,7 +134,11 @@ export function startApp(options: StartAppOptions): App {
       return;
     }
 
-    renderHud(rideHudModelFrom(snapshot, options.ride.connected()), targets);
+    renderHud(
+      rideHudModelFrom(snapshot, options.ride.connected()),
+      targets,
+      options.connectedLabel,
+    );
   };
 
   render();
