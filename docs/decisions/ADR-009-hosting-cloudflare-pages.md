@@ -2,6 +2,8 @@
 
 **Status:** Angenommen (2026-11-19). Ersetzt den Hosting-Teil von ADR-002 (GitHub Pages). **Änderung 19.11.2026:** Domains festgezogen (`stammkneipe.dev`); API-Deploy hinter dem vorhandenen Traefik statt Caddy/systemd (ADR-004).
 
+**Nachtrag 20.11.2026:** Der Login-Mail-Teil ist als Ziel durch [ADR-013](ADR-013-cloudflare-access-oidc.md) ersetzt. Die Mailanbieter-Auswahl und Preise unten bleiben historische Recherche vom 19.11.2026, keine aktuelle Buchungsempfehlung. Mailversand ist nur noch optional für Transaktionsmails oder ausdrücklich gewählten Legacy-/Entwicklungsbetrieb. Maßgeblicher API-Host ist `api.voltonaut.stammkneipe.dev`, unproxied mit Traefik-TLS, wie in `08-backend.md` dokumentiert. Die ältere Host-/Universal-SSL-Begründung unten ist historisch und gilt nicht für diesen direkten API-Zugang.
+
 ## Kontext
 Henry hat einen Cloudflare-Account. Der Web-Client ist statisch (Vite-Build), die API läuft auf dem Hetzner-VPS (ADR-004). Für Magic-Link-Login (E5) wird ein Mail-Dienst gebraucht.
 

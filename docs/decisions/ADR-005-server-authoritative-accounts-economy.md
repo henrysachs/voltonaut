@@ -13,7 +13,7 @@ Henry will Accounts auf dem eigenen Server, auf denen freigeschaltete Räder, La
 3. **Vergabe nur serverseitig:** Der Server berechnet XP, Volts, Badges und PBs aus den hochgeladenen 1-Hz-Samples neu (gemeinsamer Code in `packages/engine` und `packages/rules`) und führt **Plausibilitätsprüfungen** durch (`08-backend.md`). Client-Angaben sind nur Vorschau.
 4. **Käufe nur online** als atomare DB-Transaktion; Volts als Ledger (nie überschreiben).
 5. **Gastmodus:** ohne Account fahrbar; lokale Fahrten können innerhalb 30 Tagen nach Registrierung nachgereicht werden.
-6. Auth v1: E-Mail-Magic-Link + Bearer-Session-Token; Passkeys als v2.
+6. Auth-Ziel seit Henrys Entscheidung vom 20.11.2026: Cloudflare Access als OIDC-Broker mit lokalen Bearer-Sessions und stabiler Account-ID ([ADR-013](ADR-013-cloudflare-access-oidc.md)). Der ursprüngliche Plan vom 19.11.2026 war E-Mail-Magic-Link mit späteren Passkeys. Access ist aktiviert; App-Konfiguration und Umsetzung der Ablösung stehen aus.
 
 ## Konsequenzen
 

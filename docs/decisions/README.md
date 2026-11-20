@@ -12,7 +12,8 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [006](ADR-006-monorepo-pnpm-workspaces.md) | Monorepo mit pnpm workspaces (Nx verworfen) | Angenommen |
 | [007](ADR-007-guardrails-tooling.md) | Strikte Leitplanken: mise, Oxlint + anti-slop, strengstes TS, dependency-cruiser, Oxfmt | Angenommen |
 | [008](ADR-008-scene-structure.md) | Szenenstruktur: three.js-Szenengraph + System-Scheduler, kein ECS | Angenommen |
-| [009](ADR-009-hosting-cloudflare-pages.md) | Web auf Cloudflare Pages, API auf Hetzner, Login-Mails über Cloudflare Email Sending (Fallback Resend) | Angenommen |
+| [009](ADR-009-hosting-cloudflare-pages.md) | Web auf Cloudflare Pages, API auf Hetzner; historische Login-Mail-Auswahl | Hosting angenommen; Login-Mail-Ziel durch 013 ersetzt |
 | [010](ADR-010-observability.md) | Observability: OpenTelemetry, strukturierte Logs, vorhandener Grafana-Stack | Angenommen |
 | [011](ADR-011-engine-dedicated-worker.md) | Engine im Dedicated Web Worker | Vorgeschlagen, Henrys Freigabe ausstehend |
 | [012](ADR-012-server-skiplibcheck-drizzle.md) | `skipLibCheck: true` nur für `apps/server` wegen Drizzle-Deklarationen | Angenommen |
+| [013](ADR-013-cloudflare-access-oidc.md) | Cloudflare Access als OIDC-Broker für den Login | Zielentscheidung angenommen; Access aktiviert, App und Umsetzung offen |
