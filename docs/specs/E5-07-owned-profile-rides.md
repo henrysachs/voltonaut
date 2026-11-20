@@ -1,7 +1,7 @@
 # Spec E5-07 – Eigenes Profil und dauerhafte Fahrthistorie
 
 - **Roadmap-Bezug:** E5, serverseitiges Profil und Fahrt-Upload. Keine abgeschlossene Anti-Cheat- oder Belohnungsfunktion.
-- **Status:** Lokales Gesamtgate und unabhängiges Korrekturreview grün. Gemeinsame Auth-Integration und endgültige Migration stehen aus.
+- **Status:** Auth, aktuelle Welt und Aufnahme integriert. Gemeinsames lokales Gate, Paketprüfung und unabhängiges Integrationsreview grün. Externe CI und Merge stehen aus.
 - **Betroffene Module:** `shared/api`, `server/accounts`, `server/rides`, Server-Composition-Root und Migrationen.
 
 ## Ziel
@@ -35,12 +35,12 @@ Die Tabellenfabriken `createAccountsTables(userIdColumn: SQLiteColumn)` und `cre
 - [x] Unkomprimiertes JSON wird vor dem Parsen auf 8 MiB begrenzt. Größere Bodies liefern 413 ohne Nutzlast im Fehler. Normale Stundenaufnahmen überschreiten nicht das Transportlimit.
 - [x] Der Route-Guard prüft den Medientyp vor der Zod-Bodyvalidierung. Angemeldetes `text/plain` mit gültigem JSON liefert 415. `application/json; charset=utf-8` bleibt gültig. Ohne Session greift weiterhin zuerst der globale Auth-Guard.
 - [x] Private Uploads besitzen ein Account-Rate-Limit nach dem vorhandenen Throttler-Muster.
-- [x] Neue Migrationen funktionieren auf leerer Datenbank und nach `0000`, erhalten Nutzer und Sessions und erzwingen beide Eigentümer-Fremdschlüssel.
+- [x] Neue Migrationen funktionieren auf leerer Datenbank sowie nach `0000` und Auth-`0001`. Nutzer, Sessions, Identitäten, Übergaben und beanspruchte Logintransaktionen bleiben erhalten. Beide Eigentümer-Fremdschlüssel greifen.
 - [x] Es gibt keine automatische Löschung, Belohnung oder behauptete Physikprüfung.
 
 ## Testplan
 
-Reale Nest-Module, Supertest und SQLite prüfen Verträge, Isolation, Konflikte, parallele Wiederholungen, Pagination, Bodygrenzen und Neustartpersistenz. Migrationstests prüfen frische Datenbanken und ein vorhandenes `0000` mit Nutzern und Sessions. Keine Modul-Mocks und keine Hardware.
+Reale Nest-Module, Supertest und SQLite prüfen Verträge, Isolation, Konflikte, parallele Wiederholungen, Pagination, Bodygrenzen und Neustartpersistenz. Migrationstests prüfen frische Datenbanken sowie vorhandene `0000`- und Auth-`0001`-Datenbanken mit echten Vorgängermigrationen und gespeicherten Authdaten. Keine Modul-Mocks und keine Hardware.
 
 ## Nicht-Ziele
 
@@ -48,17 +48,17 @@ Web-Integration, OIDC, `GET /v1/me`, Inventar, Progression, Avatar, Strava, gzip
 
 ## Migration und Verifikation
 
-Die neue Datenmigration ist vorläufig. Der Parent integriert zuerst die separat entstehende Auth-Migration und erzeugt danach die endgültige Reihenfolge samt Snapshot neu. `0000` wird nicht geändert. Das vollständige Gate und unabhängiges Review führt der Parent nach Integration aus. Port 5173 bleibt reserviert.
+`0002_owned_profiles_rides.sql` folgt auf die unveränderte Auth-Migration `0001_material_red_shift.sql`. Drizzle erzeugt SQL und Snapshot aus dem gemeinsamen Schema neu. Nur die zuvor nicht angewendete vorläufige Datenmigration wird ersetzt. `0000` und Auth-`0001` bleiben unverändert. Das erzeugte Daten-SQL entspricht dem bereits geprüften vorläufigen SQL. Alle bisherigen Auth-Tabellen bleiben im neuen Snapshot identisch. `db:generate` meldet danach keine Schemaänderung.
 
 ## Offene Fragen
 
-Keine blockierenden Fragen. Endgültige Migrationsnummer folgt nach Auth-Integration.
+Keine blockierenden Fragen.
 
 ## Lokale Ergebnisse
 
 - `mise run fmt:check`, `lint`, `typecheck`, `depcruise`, `guard`, `test` und `build` sind nach der Korrektur grün. Vitest besteht mit Coverage, 78 Dateien und 391 Tests.
 - `mise exec -- node apps/server/scripts/verify-owned-data.ts` besteht nach dem Build. Der echte gebaute Server speichert Profil und Aufnahme. Nach SIGTERM startet ein neuer Prozess auf derselben SQLite-Datei. Der ursprüngliche Beleg, die Aufnahme und das Profil bleiben mit derselben Bearer-Session abrufbar. Das Skript nutzt ausschließlich lokale Zufallsports und eine synthetische Testsitzung.
-- `mise exec -- pnpm --filter @voltonaut/server db:generate` meldet nach Erzeugung von `0001_romantic_angel.sql` keine Schemaänderung. Beide Eigentümer-Fremdschlüssel stehen in SQL und TypeScript.
+- `mise exec -- pnpm --filter @voltonaut/server db:generate` meldet nach Erzeugung von `0002_owned_profiles_rides.sql` keine Schemaänderung. Beide Eigentümer-Fremdschlüssel stehen in SQL und TypeScript.
 - `git diff --check` ist grün. Keine neue Abhängigkeit und keine Änderung an Leitplanken. Keine Hardwareprüfung.
 - Das vollständige `CI=true mise run check` ist am korrigierten Einzelstand mit 391 Tests und 16 E2Es grün. Das unabhängige Korrekturreview ist Approve. Nach gemeinsamer Auth-Integration werden Migration, Paket-Smoke und vollständiges Gate erneut geprüft.
 
@@ -73,4 +73,11 @@ Das Review belegte zwei Grenzfehler. SQLite verglich UUID-Texte mit unterschiedl
 - Die Ursache der UUID-Aliase wird am API-Eingang behoben. Upload, Detailpfad und Cursor verwenden dasselbe kanonische ID-Schema. Es gibt keine globale UUID-Umschreibung, Änderung an Auth-IDs oder Datenmigration.
 - Die Medientypprüfung liegt jetzt in `RideUploadMediaTypeGuard`, nach globaler Authentifizierung und dem bestehenden Upload-Rate-Limit, vor der Body-Pipe. Die bisherigen Fehler 400, 422 und 413 sowie die Ablehnung komprimierter Bodies bleiben durch Tests belegt.
 - Das gebaute Prozess-Skript lädt zuerst eine großgeschriebene UUID hoch und wiederholt sie nach SIGTERM kleingeschrieben. Es prüft die rohe kanonische Antwort, genau eine SQLite-Zeile, den großgeschriebenen Detailpfad, 415 für `text/plain` und gültiges JSON mit Charset. Der Lauf besteht.
-- Die unabhängige Korrekturprüfung bestätigt beide Uploadreihenfolgen, unveränderte Belege und Hashes, fremde Aliase, Detail-/Cursor-Aliase sowie Medientypen am gebauten Server. 54 gezielte Tests, Prozess-Neustart und das vollständige Einzelgate sind grün. Die endgültige Datenmigration folgt beim Parent erst nach Integration der Auth-Migration. `0000` bleibt unverändert.
+- Die unabhängige Korrekturprüfung bestätigt beide Uploadreihenfolgen, unveränderte Belege und Hashes, fremde Aliase, Detail-/Cursor-Aliase sowie Medientypen am gebauten Server. 54 gezielte Tests, Prozess-Neustart und das vollständige Einzelgate sind grün. Die gemeinsame Auth-Integration verwendet inzwischen die neu erzeugte Datenmigration `0002`. `0000` und Auth-`0001` bleiben unverändert.
+
+## Gemeinsamer Integrationsnachweis
+
+- `CI=true mise run check` besteht nach Integration von Auth, Landschaft und Aufnahme mit 436 Tests und 17 E2Es. `mise run build` ist grün.
+- Ein frisch mit `pnpm --filter @voltonaut/server deploy --prod` erzeugtes Produktionspaket besteht `verify-package.ts`. Es startet mit explizitem `AUTH_MODE=disabled`, enthält alle drei Migrationen und erzwingt weiterhin die Konfigurationsgrenzen.
+- `verify-oidc-build.mjs` und `verify-owned-data.ts` bestehen erneut gegen den gebauten gemeinsamen Server. Keine echten Provider werden aufgerufen.
+- Der unabhängige Prüfer besteht 97 gezielte Tests und eine zusätzliche gemeinsame Prozessprobe. Eine vom signierenden Testprovider ausgestellte OIDC-Session erreicht Profil und Fahrten. Neustart erhält Authdaten, Profil und Beleg. Logout sperrt anschließend auch die Datenendpunkte. Exakte Credential-CORS, Bodygrenzen, Migrationseinträge und Fremdschlüssel werden am laufenden Artefakt geprüft.
