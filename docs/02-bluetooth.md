@@ -66,7 +66,13 @@ Beispiel `0x11`: 4,5 % Steigung, Crr 0,0040, Cw 0,51 → `11 00 00 C2 01 28 33`.
 
 ### Fallback: Cycling Power Service `0x1818` ✅
 
-Nur lesen (Watt `0x2A63` Cycling Power Measurement, Kadenz aus Crank-Revolution-Daten), kein Steuern. Für den Fall, dass FTMS-Kontrolle nicht erlangt wird (z. B. andere App hält Kontrolle). Spiel läuft dann „passiv": Steigung nur visuell, Gänge wirken nur auf virtuelles Tempo.
+Nur lesen (Watt `0x2A63` Cycling Power Measurement, Kadenz aus Crank-Revolution-Daten), kein Steuern. E1 verwendet CPS, wenn FTMS-Service oder Indoor Bike Data fehlen. Die Fahrt läuft ohne Trainer-Steuerung. Physischer Widerstand und virtuelle Gänge werden erst in E2 gekoppelt.
+
+Feldreihenfolge von `0x2A63`: Flags (uint16 LE), **Instantaneous Power (sint16 LE) direkt an Byte 2–3**, danach optionale Felder. Pedal Power Balance (Bit 0) und Accumulated Torque (Bit 2) stehen nach Power, nicht davor. Wheel Revolution Data (Bit 4) belegt sechs Bytes. Crank Revolution Data (Bit 5) belegt vier Bytes; die Event-Zeit hat die Einheit 1/1024 s. Kadenz entsteht aus den Differenzen zweier Frames, einschließlich uint16-Überlauf.
+
+Softwarestand E1-02: Der Picker akzeptiert FTMS **oder** CPS. Fehlende Steuerrechte allein lösen keinen Wechsel aus. Die Fahrt fordert keine Steuerrechte an und schreibt nicht auf den Control Point. Virtuelle Gänge bleiben per Tastatur bedienbar, ohne Aussage über physischen Widerstand.
+
+FTMS-Kadenz wird bei gesetztem Bit 2 gelesen (GSS v9 §3.124). Der Widerspruch zur invertierten Darstellung in FTMS v1.0 Tabelle 4.10 bleibt bis zur Hardware-Fixture als unverifiziert markiert. Synthetische Parser-/Replay-Tests sind kein Hardware-Befund.
 
 ## 3. Pulsgurt: Heart Rate Service ✅
 

@@ -67,11 +67,11 @@ export interface HudTargets {
 /** Data-loss warning threshold from docs/03 section 1 (> 3 s without data). */
 export const DATA_AGE_WARNING_S = 3;
 
-export function hudText(model: RideHudModel): HudText {
+export function hudText(model: RideHudModel, connectedLabel = "Sim connected"): HudText {
   const status = model.paused
     ? "Paused (auto)"
     : model.connected
-      ? "Sim connected"
+      ? connectedLabel
       : "Waiting for devices";
 
   return {
@@ -88,8 +88,12 @@ export function hudText(model: RideHudModel): HudText {
   };
 }
 
-export function renderHud(model: RideHudModel, targets: HudTargets): void {
-  const text = hudText(model);
+export function renderHud(
+  model: RideHudModel,
+  targets: HudTargets,
+  connectedLabel = "Sim connected",
+): void {
+  const text = hudText(model, connectedLabel);
   targets.powerW.write(text.powerW);
   targets.cadenceRpm.write(text.cadenceRpm);
   targets.heartRateBpm.write(text.heartRateBpm);

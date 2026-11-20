@@ -4,6 +4,8 @@ Jede **installierte** direkte Abhängigkeit hat einen Eintrag (geprüft von `scr
 
 E3 ergänzt `@voltonaut/shared` als direkte Workspace-Abhängigkeit der Engine (ADR-006, ADR-011). Worker und IndexedDB nutzen native Browser-APIs; neue externe Abhängigkeiten gibt es nicht.
 
+E1-02 nutzt das bereits freigegebene `zod` zusätzlich direkt in `packages/ble`, exakt Version `3.25.76`, für das Fixture-Schema und die Browser-API-Grenze (ADR-004).
+
 ## Installiert (E0, ergänzt in E3)
 
 | Paket                                                      | Workspace                                                          | Zweck                                                  | ADR      |
@@ -19,7 +21,7 @@ E3 ergänzt `@voltonaut/shared` als direkte Workspace-Abhängigkeit der Engine (
 | @types/node                                                | root, apps/web, apps/server (dev)                                  | Node-Typen für Tools/Tests                             | 007      |
 | vite                                                       | apps/web, apps/server (dev)                                        | Dev-Server/Build (Server als SSR-Bundle)               | 002      |
 | @playwright/test                                           | apps/web (dev)                                                     | E2E im Sim-Modus                                       | 007      |
-| zod                                                        | packages/shared, apps/server                                       | API- und Konfigurationsvalidierung                     | 004      |
+| zod                                                        | packages/shared, packages/ble, apps/server                         | API-, Konfigurations- und BLE-Fixture-Validierung      | 004      |
 | @voltonaut/shared                                          | packages/engine, packages/ble, apps/server, apps/web (workspace:*) | geteilte Typen/Schemas/Event-Bus                       | 006      |
 | @voltonaut/engine                                          | packages/rules, apps/web (workspace:*)                             | Gangmodell, Physik, Fahrten                            | 006      |
 | @voltonaut/rules                                           | apps/web (workspace:*)                                             | HUD-Labels (Katalog)                                   | 006      |
