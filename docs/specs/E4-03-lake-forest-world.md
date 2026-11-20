@@ -82,3 +82,11 @@ Eine lokale Linux-Reproduktion nutzt dasselbe Playwright-Image, zwei CPU-Kerne u
 Der Test wartet jetzt vor dem Distanz-Basiswert auf einen positiven gerenderten Kurbelwinkel. Dieser entsteht aus der Kadenz und Fahrzeit echter Worker-Snapshots. Die bestehenden Prüfungen auf weitere 8 m Distanz, weitere 5 m Fahrerposition, steigenden Kurbelwinkel, Kameras und Render-Budgets bleiben unverändert. Timeouts, Wiederholungen, Uhr, Grafik und Produktionscode bleiben unverändert.
 
 Die gedrosselte Serie vor der Korrektur scheitert einmal in acht Läufen. Dieselbe Serie besteht danach achtmal. Auch alle zwölf E2Es mit zwei Linux-Workern sowie Lint und Typecheck sind nach der Korrektur grün. Logs und Fehlerspur liegen temporär unter `/private/var/folders/23/tg_nxvb56ybfx4bqy70w6rjm0000gn/T/opencode/lake-cpu4-instrumented-{red,green}*`. Diese Diagnose ist kein Bildratenvergleich und kein Hardwaretest.
+
+## CI-Nachprüfung der Terrain-Raycasts
+
+CI-Lauf `44739584734` überschreitet im Straßenstütztest das unveränderte Vitest-Limit von fünf Sekunden. Der Test raycastet 36-mal das vollständige Terrain. Wie der vorhandene Baumtest begrenzt er jetzt die Dreieckssuche auf die aktuelle Zeile und deren Nachbarn. Bei 0 m bleibt die vollständige Suche erhalten. Dort gehören die erste und letzte, im Indexpuffer getrennte Zeile zum Rundenschluss.
+
+Alle zwölf Streckenpositionen, drei Seitenpositionen, vier Stützprüfungen und vier globalen Grenzen bleiben erhalten. Ein externer Vergleich mit vollständigen Raycasts belegt für alle 36 Koordinaten dieselbe Trefferhöhe und Dreieckszeile, einschließlich der Zeilen 0 und 999 am Rundenschluss. Der lokale Test besteht mit dem unveränderten Fünf-Sekunden-Limit. Der ursprüngliche Zeitfehler tritt lokal ohne CI-Last nicht auf.
+
+Vergleichsskript und Protokolle liegen unter `/private/var/folders/23/tg_nxvb56ybfx4bqy70w6rjm0000gn/T/opencode/combined-ci-terrain-*`. Produktionsgeometrie, Auflösung und Budgets bleiben unverändert. Das vollständige Gate des kombinierten Standes prüft der Parent separat.
