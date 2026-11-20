@@ -82,7 +82,33 @@ FTMS-Kadenz wird bei gesetztem Bit 2 gelesen (GSS v9 §3.124). Der Widerspruch z
 
 ## 4. Zwift Play Controller (Henrys Hardware) ⚠️ UNVERIFIZIERT
 
-Henry besitzt **Zwift Play** (zwei Griffe, links + rechts), nicht Click. Alles in diesem Abschnitt stammt aus öffentlichem Reverse Engineering (Quellen unten) und ist an Henrys Geräten **nicht** getestet. Click/Ride bleiben als Nebenpfad dokumentiert, weil die Protokolle eng verwandt sind.
+Henry besitzt **Zwift Play**, zwei getrennte Griffe, nicht Click. Die digitalen Eingaben beider Griffe sind durch die Mitschnitte vom 20.11.2026 bestätigt. Die übrigen Angaben stammen aus öffentlichem Reverse Engineering und bleiben unverifiziert. Click und Ride sind keine implementierten Controllerpfade.
+
+Die neuen [Hardware-Fixtures und ihre Herkunft](../fixtures/ble/zwift-play-hardware-20261120.md) erhalten sämtliche Bytes, Zeitstempel und Marker. Nur Browser-Geräte-ID und vollständiger User-Agent sind anonymisiert. [E2-02](specs/E2-02-verified-play-input.md) verbindet diese belegten Eingaben mit der bestehenden Fahrt.
+
+### Hardwarebefund vom 20.11.2026: rechter Griff
+
+Quelle ist Henrys Export `ble-2026-11-20T16-54-57.901Z.json`. Die vollständige Datei besteht das vorhandene Fixture-Schema mit 1.071 monotonen Logeinträgen. Der originale Export bleibt unverändert außerhalb des Repositories. Geräte-ID und vollständiger User-Agent werden hier nicht übernommen.
+
+- Henry identifiziert den Griff über seine A/B/Y/Z-Tasten als rechts.
+- Tatsächlicher Service ist `00000001-19ca-4651-86e5-fa29dcdd09d1`. Characteristic `…02` liefert Notifications, `…03` erlaubt `writeWithoutResponse`, `…04` liefert Indications und lässt sich lesen. Zusätzlich ist `…06` vorhanden; dessen Funktion ist damit nicht bestätigt.
+- Der Klartext-Write `52 69 64 65 4f 6e` erhält dieselben sechs `RideOn`-Bytes als Antwort auf `…04`. Danach kommen lesbare `0x07`-Tastenzustände auf `…02`. Der verschlüsselte Pfad ist für diesen Mitschnitt nicht nötig.
+- Markierte Tests bestätigen A = Protobuf-Feld 4, B = 5, Y = 2, Z = 3 und seitliche Schalttaste = 6. Alle enthalten Drücken (`0`) und Loslassen (`1`). Das Seitenfeld 1 bleibt beim rechten Griff `0`.
+- Der Marker `Neigung` ist im Export enthalten. Danach ändert sich Feld 8; Feld 9 bleibt `0`. Nach der bekannten `sint32`-Dekodierung reicht der beobachtete Kanal von −100 bis +100. Das sind keine belegten Winkelgrade oder bereits kalibrierten Lenkwerte.
+- Firmware ist im Export nicht eingetragen. Device Information mit lesbarem `0x2A26` ist vorhanden, aber noch nicht ausgelesen. Service und Paketformat beweisen keine konkrete Firmwareversion.
+
+Die Zuordnung entspricht dem bereits veröffentlichten SwiftControl-Schema. Der Mitschnitt ist ein Hardware-Regressionsbeleg, keine Neuerfindung des Protokolls.
+
+### Hardwarebefund vom 20.11.2026: linker Griff
+
+Henrys zweiter Export `ble-2026-11-20T17-05-04.565Z.json` besteht dasselbe Fixture-Schema mit 272 Logeinträgen und 182 `0x07`-Tastenzuständen. Beide Exporte enthalten unterschiedliche gerätebezogene Browser-IDs. Der linke Griff antwortet ebenfalls mit den sechs Klartextbytes `RideOn` über denselben Service und dieselben Characteristic-Rollen.
+
+- Das Seitenfeld 1 bleibt links `1`, gegenüber rechts `0`.
+- Markierte Drück-/Loslassvorgänge bestätigen oben = Feld 2, unten = 5, links = 3, rechts = 4 und seitliche Schalttaste = 6.
+- Erneut gilt `0` für gedrückt und `1` für losgelassen. Wiederholte Statuspakete sind keine zusätzlichen Tastendrücke.
+- Die Analogfelder bleiben in diesem linken Mitschnitt `0`. Firmware und Analogfunktionen sind dadurch nicht zusätzlich bestätigt.
+
+Damit ist die bekannte digitale Feldzuordnung für beide konkreten Griffe hardwaregestützt. Spielanbindung, gleichzeitiger Betrieb mit Trainer und Pulsgurt sowie Trainersteuerung bleiben gesonderte Abnahmen.
 
 ### Tasten (laut Zwift-Support / Doku-Zusammenstellungen)
 
@@ -91,24 +117,26 @@ Henry besitzt **Zwift Play** (zwei Griffe, links + rechts), nicht Click. Alles i
 - Schalten (Zwift/Rouvy-Konvention): **LS = runter, RS = hoch** („Plus/Minus"); Paddel werden fürs Schalten nicht gebraucht.
 - Haptik: beide Griffe können vibrieren → Schaltbestätigung möglich (Kommando `0x12…`, siehe unten).
 
-### Firmware-Weiche: 1.x vs. 2.0.1 (wichtig!)
+### Firmware-Hinweise aus Fremdquellen, nicht implementiert
 
-|                                                                                                                                                                                                             | Firmware ≤ 1.3.1                            | Firmware 2.0.1 (Mai 2026, Rollout zeitweise pausiert)                                                    |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Verbindungen                                                                                                                                                                                                | **2** (linker und rechter Griff getrennt)   | **1** (Griffe verlinken sich, eine Verbindung)                                                           |
-| Device-Typ im Advertising                                                                                                                                                                                   | 3 = links, 2 = rechts                       | ❓ vermutlich ein Eintrag für das Paar                                                                   |
-| Nachrichtenformat                                                                                                                                                                                           | `0x07` `PlayKeyPadStatus` (Protobuf, s. u.) | ❓ nicht dokumentiert; wahrscheinlich `0x23`-Bitmap wie Ride/Click v2 („in line with Click v2 and Ride") |
-| Rouvy verlangt 2.0.1. **Erster Schritt der Hardware-Session: Firmware-Version in Zwift Companion ablesen** (H4). Der Decoder muss beide Varianten können; welche aktiv ist, entscheidet der Sniffer-Befund. |
+Die folgende Tabelle beschreibt Fremdquellen, keine Feststellung zu Henrys Firmware. Der implementierte Adapter wählt ausschließlich den belegten Service und das belegte Paketformat. Er leitet daraus keine Firmwareversion ab.
+
+|                                                                                                                                                                                                    | Firmware ≤ 1.3.1                            | Firmware 2.0.1 (Mai 2026, Rollout zeitweise pausiert)                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Verbindungen                                                                                                                                                                                       | **2** (linker und rechter Griff getrennt)   | **1** (Griffe verlinken sich, eine Verbindung)                                                           |
+| Device-Typ im Advertising                                                                                                                                                                          | 3 = links, 2 = rechts                       | ❓ vermutlich ein Eintrag für das Paar                                                                   |
+| Nachrichtenformat                                                                                                                                                                                  | `0x07` `PlayKeyPadStatus` (Protobuf, s. u.) | ❓ nicht dokumentiert; wahrscheinlich `0x23`-Bitmap wie Ride/Click v2 („in line with Click v2 and Ride") |
+| Rouvy verlangt laut Fremdquelle 2.0.1. Henrys Firmware ist unbekannt. Für die belegten `0x07`-Griffe ist weder ein Update noch die Implementierung eines zweiten Nachrichtenformats Voraussetzung. |
 
 ### Erkennung
 
-| Merkmal                                     | Wert                                                                                    |
-| ------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Manufacturer ID (Advertising)               | `0x094A` (= 2378, Zwift Inc.)                                                           |
-| Device-Typ (1. Byte nach Mfr-ID)            | 1 Zwift Hub · **2 Play rechts · 3 Play links** · 7 Ride rechts · 8 Ride links · 9 Click |
-| Name                                        | „Zwift Play" (beide Griffe gleich → Seite nur über Device-Typ)                          |
-| Service (ältere Firmware)                   | `00000001-19ca-4651-86e5-fa29dcdd09d1`                                                  |
-| Service (neuere Firmware / Ride / Click v2) | `0000fc82-0000-1000-8000-00805f9b34fb`                                                  |
+| Merkmal                                     | Wert                                                                                               |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Manufacturer ID (Advertising)               | `0x094A` (= 2378, Zwift Inc.)                                                                      |
+| Device-Typ (1. Byte nach Mfr-ID)            | 1 Zwift Hub · **2 Play rechts · 3 Play links** · 7 Ride rechts · 8 Ride links · 9 Click            |
+| Name                                        | „Zwift Play", beide Griffe gleich. Die implementierte Seitenprüfung nutzt Feld 1 im Tastenzustand. |
+| Service (ältere Firmware)                   | `00000001-19ca-4651-86e5-fa29dcdd09d1`                                                             |
+| Service (neuere Firmware / Ride / Click v2) | `0000fc82-0000-1000-8000-00805f9b34fb`                                                             |
 
 `requestDevice`-Filter: `{ manufacturerData: [{ companyIdentifier: 0x094A }] }` plus Namens-Präfix `"Zwift"`; **beide** Service-UUIDs in `optionalServices`, plus `0x180F` (Battery) und `0x180A` (Device Info). Bei FW 1.x zweimal koppeln (zwei Dialoge, „Linken Griff verbinden" / „Rechten Griff verbinden").
 
@@ -122,9 +150,9 @@ Henry besitzt **Zwift Play** (zwei Griffe, links + rechts), nicht Click. Alles i
 
 ### Handshake
 
-- **Klartext (bevorzugt):** `startNotifications` auf 0x…02 und 0x…04, dann nur die 6 Bytes `"RideOn"` (`52 69 64 65 4F 6E`) auf 0x…03. Play antwortet laut BikeControl/MarcelCode `RideOn 01 04`, danach kommen **unverschlüsselte** Frames auf 0x…02. BikeControl schreibt, Play habe „kein verschlüsseltes Handshake, keine Firmware-Einschränkungen". Wahrscheinlich real, aber aus Quellcode abgeleitet.
+- **An beiden Griffen bestätigt:** Zuerst Notifications auf `…02` und Indications auf `…04` abonnieren. Dann genau sechs `RideOn`-Bytes (`52 69 64 65 4f 6e`) per WriteWithoutResponse auf `…03` schreiben. Beide Griffe antworten mit genau denselben sechs Bytes auf `…04`. Ein Versionsanhang ist weder nötig noch in diesen Antworten enthalten. Der Adapter akzeptiert nur die beobachtete Antwort.
 - **Verschlüsselt (Makinolo 2023, ajchellew-Mitschnitt):** `"RideOn" + 01 02 + 64-Byte-P-256-Public-Key` (X‖Y ohne `0x04`). Antwort `"RideOn" + 2 Versionsbytes + Geräte-Key` (gesehen: `00 09`, `01 03`, `01 01`). Danach ECDH (secp256r1) → HKDF-SHA256 (salt = deviceKey‖appKey, 36 Bytes: 32 AES-256-Key + 4 Nonce-Präfix) → AES-CCM, 4-Byte-MIC, Frame `[4-Byte-Counter][Ciphertext][MIC]`. **Plan:** nicht implementieren, solange der Klartext-Pfad funktioniert. WebCrypto kann ECDH/HKDF, aber **kein AES-CCM** → bräuchte JS-Lib.
-- Die 2 Versionsbytes nach „RideOn" werden ignoriert.
+- Andere Antwortformen, einschließlich Versionsanhängen aus Fremdquellen, sind nicht freigegeben. Der Adapter beendet den Versuch ohne weitere Writes.
 
 ### Nachrichtenformat (erstes Byte = Typ, Rest = Protobuf)
 
@@ -141,7 +169,7 @@ Henry besitzt **Zwift Play** (zwei Griffe, links + rechts), nicht Click. Alles i
 
 ```proto
 message PlayKeyPadStatus {
-  optional PlayButtonStatus RightPad = 1;       // welcher Griff sendet (ON=rechts? → verifizieren)
+  optional PlayButtonStatus RightPad = 1;       // bestätigt: ON=rechts, OFF=links
   optional PlayButtonStatus Button_Y_Up = 2;    // rechts: Y  | links: Steuerkreuz hoch
   optional PlayButtonStatus Button_Z_Left = 3;  // rechts: Z  | links: links
   optional PlayButtonStatus Button_A_Right = 4; // rechts: A  | links: rechts
@@ -153,11 +181,25 @@ message PlayKeyPadStatus {
 }
 ```
 
-Mapping-Hypothese: `RightPad` + `Button_Shift` gedrückt → `shiftUp`; linker Griff + `Button_Shift` → `shiftDown`. ⚠️ Polarität von `RightPad` und ob die Seitentaste wirklich Feld 6 ist, im Sniffer prüfen.
+Bestätigte Zuordnung: Seitenfeld `1 = 0` bedeutet rechts, `1 = 1` bedeutet links. Seitentaste in Feld 6 erzeugt rechts `shiftUp`, links `shiftDown`. Nur Zustandswechsel erzeugen Ereignisse. Halten wiederholt keine Schaltung.
+
+### Grenzen der Spielanbindung
+
+BLE besitzt Parser, Handshake, Seitenprüfung, Flanken und getrennte Wiederverbindungen. Der Dialog bietet die Zielseiten **Play links** und **Play rechts**. Bis zum ersten gültigen Tastensignal bleibt die Seite ausdrücklich unbekannt. Erst nach gültiger Klartextantwort und passender Seite meldet der Adapter `ready`. Ein Griff auf der falschen Zielseite meldet einen behebbaren Fehler, keine Schaltung. **Trennen** beendet auch eine laufende Seitenprüfung. Pro Klick öffnet der Browser einen Picker für ein Gerät. Bereits verbundene andere Geräte bleiben verbunden.
+
+Der native Transport lehnt dieselbe Geräte-ID in einer zweiten aktiven Verbindung vor GATT-Setup und Übernahme des Geräts ab. Dadurch beendet die Abmeldung eines falsch ausgewählten Griffs nicht die Notifications des bereits verbundenen Griffs. Verschiedene Geräte behalten getrennte FIFOs.
+
+Gemerkte Auswahl und aktiver GATT-Besitz sind getrennt. Namen und Geräte-ID bleiben nach dem Trennen verfügbar, berechtigen aber nicht zu Cleanup. Nur die aktive Besitzinstanz darf native GATT-Zugriffe ausführen. Ihre Lease endet erst nach dem FIFO-Teardown. Alte Disconnect- und Advertisement-Callbacks können weder eine neue Verbindung wiederbeleben noch den Besitzer eines anderen Slots trennen.
+
+Der Parser verlangt die neun vollständig übertragenen Felder. Fehlende oder doppelte Felder, ungültige Enums, falsche Wire-Types, abgeschnittene Varints und uint32-Überläufe liefern Fehler. Unbekannte zusätzliche Varint-Felder werden ignoriert. Unbekannte Nachrichtentypen erzeugen keine Tasten. Der Adapter sendet ausschließlich `RideOn`, keine Trainerkommandos oder Haptik.
+
+`rawAnalogLr` und `rawAnalogUd` sind rohe Zigzag-Werte. Physische Richtung, Kalibrierung, Winkel, Lenkung und Bremswirkung bleiben **UNVERIFIED**. Feld 7 ist nicht physisch vermessen und bekommt keine Spielaktion. Die Firmware beider Griffe bleibt unbekannt. Service `…06`, `0x15` und `0x19` bleiben ohne Interpretation. Das BLE-Labor zeigt bekannte `0x07`-Eingaben über denselben öffentlichen Parser. Andere Nachrichten bleiben roh.
+
+Die Softwarebelege verwenden echte Capture-Bytes, Replay und injizierte native GATT-Geräte. Sie ersetzen keine reale gemeinsame Funkprüfung mit Trainer und Pulsgurt. Eine erneute Vermessung der bereits bestätigten digitalen Tasten ist nicht nötig.
 
 `0x23`-Bitmap (falls FW 2.0.1), Belegung laut MarcelCode/JustFabi: `0x1` links · `0x2` hoch · `0x4` rechts · `0x8` runter · `0x10` A · `0x20` B · `0x40` Y · `0x80` Z · `0x100`/`0x200` Shifter L · `0x400` Power-up L · `0x800` On/Off L · `0x1000`/`0x2000` Shifter R · `0x4000` Power-up R · `0x8000` On/Off R. **Achtung:** ajchellew/ein Web-Bluetooth-Gist nennen eine abweichende Belegung (Z `0x100`, Shift-up L `0x200`, Shift-down L `0x400`, …, Shift-up R `0x2000`, Shift-down R `0x4000`). Quellen widersprechen sich → nur Sniffer entscheidet.
 
-### Decoder-Design
+### Weitergehendes Decoder-Design, nicht implementiert
 
 ```ts
 interface ControllerProtocol {
@@ -185,14 +227,18 @@ FW 1.x: Trainer + Puls + 2 Play-Griffe = **4 gleichzeitige Verbindungen** über 
 
 Funktion:
 
-1. **Scan & Connect:** Button „Gerät wählen" mit breiten Filtern (`acceptAllDevices: true` + lange `optionalServices`-Liste: `0x1826, 0x1818, 0x180D, 0x180F, 0x180A, 0x1816, 00000001-19ca-…, 0000fc82-…`). Zeigt Name, ID, Advertising-Daten (via `watchAdvertisements`: RSSI, manufacturerData hex, serviceData).
+1. **Scan & Connect:** Button „Gerät hinzufügen" mit breiten Filtern (`acceptAllDevices: true` + lange `optionalServices`-Liste: `0x1826, 0x1818, 0x180D, 0x180F, 0x180A, 0x1816, 00000001-19ca-…, 0000fc82-…`). Zeigt Name, ID, Advertising-Daten (via `watchAdvertisements`: RSSI, manufacturerData hex, serviceData).
 2. **GATT-Explorer:** listet alle Primary Services → Characteristics mit Properties (read/write/writeWithoutResponse/notify/indicate) und Descriptors. Button pro Characteristic: Read, Subscribe, Write (Hex- oder ASCII-Eingabe).
 3. **Logger:** jede Notification/Indication/Read/Write als Zeile `{tMs (performance.now), device, service, char, dir: 'rx'|'tx', hex, ascii, decoded?}`; Filter und Pausieren; Marker-Button („Jetzt drücke ich: rechts hoch") schreibt eine Annotation in den Log.
 4. **Presets:** „Zwift-Controller-Handshake" (subscribe 02+04, write „RideOn"), „FTMS Request Control + Sim 0 %", „FTMS Sim 5 %".
 5. **Live-Decoder:** wenn bekannter Parser vorhanden (FTMS, HRS, Zwift 0x23/0x37/0x07), dekodierte Werte daneben anzeigen; Bitmap als 32 Kästchen, die beim Drücken rot werden.
 6. **Export:** JSON-Download `{ meta: {ua, date, deviceName, firmware?}, gatt: [...], log: [...] }` → wird als Fixture unter `fixtures/ble/` eingecheckt.
 
-### Mapping-Prozedur (Henry + Agent)
+### Ursprüngliche Mapping-Prozedur
+
+Die digitale Tastenvermessung in Schritten 4 und 5 ist für beide Play-Griffe abgeschlossen. Die vorhandenen Captures reichen als Regressionseingabe. Keine erneute Tastenumfrage. Firmware, physische Analogkalibrierung, Trainer und Pulsgurt bleiben getrennte Hardwarethemen.
+
+Softwarestand [E1-04](specs/E1-04-multidevice-lab.md): Eine Geräteliste zeigt den Zustand jeder Verbindung. Die Detailauswahl beendet keine Hintergrundaufnahme. Firmware, Notizen und JSON-Export gehören jeweils zum ausgewählten Gerät. Eine erneute native Auswahl desselben Geräts öffnet dessen vorhandene Details, ohne erneut GATT zu verbinden. Trainer und zwei gleichnamige Griffe sind mit drei nativen Browser-Fakes geprüft. Der gleichzeitige Betrieb echter Geräte bleibt offen.
 
 1. Zwift/Companion-App schließen, Controller aufwecken (Taste drücken, LED blinkt).
 2. Firmware der Play-Griffe in Zwift Companion notieren. Sniffer: verbinden, GATT-Explorer-Export speichern (welcher Service: `00000001-…` oder `fc82`?). Device Info lesen (Firmware `0x2A26`).

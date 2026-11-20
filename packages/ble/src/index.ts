@@ -20,6 +20,10 @@ export * from "./hrs/parse.js";
 
 export * from "./keyboard.js";
 
+export * from "./zwift-play/parse.js";
+
+export * from "./zwift-play/adapter.js";
+
 export * from "./reconnect.js";
 
 export * from "./replay/ReplayTransport.js";

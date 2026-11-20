@@ -72,3 +72,35 @@ pre {
 label {
   display: inline-block;
 }
+#scan {
+  font-weight: 700;
+  padding: 0.8rem 1.2rem;
+}
+#devices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+#devices article {
+  border: 1px solid #45605b;
+  border-radius: 0.4rem;
+  padding: 0.6rem;
+  overflow-wrap: anywhere;
+}
+#devices button {
+  background: #1d2b2e;
+  color: inherit;
+  text-align: left;
+}
+#devices button[aria-pressed="true"] {
+  border-color: #b6f4ce;
+  box-shadow: 0 0 0 2px #b6f4ce;
+}
+#devices p {
+  font-size: 0.8rem;
+  color: #b4c8c1;
+}
+#devices .error output {
+  color: #ffb6ad;
+}

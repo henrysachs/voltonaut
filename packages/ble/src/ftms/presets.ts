@@ -33,7 +33,6 @@ const ftmsControlPoint: CharacteristicRef = {
   characteristicUuid: FITNESS_MACHINE_CONTROL_POINT,
 };
 
-// UNVERIFIED: docs/02-bluetooth.md#characteristics-gleiche-uuids-in-beiden-service-varianten
 const playMeasurement: CharacteristicRef = {
   serviceUuid: ZWIFT_PLAY_LEGACY_SERVICE,
   characteristicUuid: ZWIFT_PLAY_MEASUREMENT,

@@ -8,7 +8,7 @@ COMPOSE_FILE="${VOLTONAUT_COMPOSE_FILE:-compose.yaml}"
 STATE_DIR="${VOLTONAUT_STATE_DIR:-state}"
 HEALTH_URL="${VOLTONAUT_HEALTH_URL:-https://api.voltonaut.stammkneipe.dev/healthz}"
 HEALTH_ATTEMPTS="${VOLTONAUT_HEALTH_ATTEMPTS:-30}"
-SERVER_IMAGE="${VOLTONAUT_IMAGE:-voltonaut-server}"
+ENV_FILE="${VOLTONAUT_ENV_FILE:-deploy.env}"
 
 usage() {
   echo "usage: deploy.sh deploy <image-tag>" >&2
@@ -17,7 +17,7 @@ usage() {
 }
 
 compose() {
-  docker compose -f "$COMPOSE_FILE" "$@"
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
 read_state() {
@@ -31,10 +31,6 @@ read_state() {
 write_state() {
   mkdir -p "$STATE_DIR"
   printf "%s" "$2" >"$STATE_DIR/$1"
-}
-
-image_exists() {
-  docker image inspect "$SERVER_IMAGE:$1" >/dev/null 2>&1
 }
 
 wait_for_health() {
@@ -51,7 +47,7 @@ wait_for_health() {
 }
 
 up_with_tag() {
-  VOLTONAUT_TAG="$1" compose up -d --remove-orphans
+  VOLTONAUT_TAG="$1" compose up -d --wait --wait-timeout 90
 }
 
 deploy_release() {
@@ -70,29 +66,31 @@ deploy_release() {
     return 1
   fi
 
-  if image_exists "$tag"; then
-    echo "deploy: using local image $SERVER_IMAGE:$tag"
+  local image
+  image="$(VOLTONAUT_TAG="$tag" compose config --images server)"
+
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    echo "deploy: using local image $image"
   else
-    compose pull server
+    VOLTONAUT_TAG="$tag" compose pull server
   fi
 
-  write_state previous-tag "$previous_tag"
-  up_with_tag "$tag"
-  write_state current-tag "$tag"
-
-  if ! wait_for_health; then
+  if ! up_with_tag "$tag" || ! wait_for_health; then
     echo "deploy: health check failed for $tag; rolling back" >&2
 
     if [ -n "$previous_tag" ]; then
-      up_with_tag "$previous_tag"
-      write_state current-tag "$previous_tag"
+      if ! up_with_tag "$previous_tag" || ! wait_for_health; then
+        echo "deploy: recovery failed; recorded tags describe the last confirmed release only" >&2
+      fi
     else
-      compose stop server
+      VOLTONAUT_TAG="$tag" compose stop server
     fi
 
     return 1
   fi
 
+  write_state previous-tag "$previous_tag"
+  write_state current-tag "$tag"
   echo "deploy: release $tag is active and healthy"
 }
 
@@ -108,22 +106,7 @@ rollback_release() {
     return 1
   fi
 
-  if ! image_exists "$tag"; then
-    compose pull server
-  fi
-
-  local current_tag
-  current_tag="$(read_state current-tag)"
-  write_state previous-tag "$current_tag"
-  up_with_tag "$tag"
-  write_state current-tag "$tag"
-
-  if ! wait_for_health; then
-    echo "rollback: health check failed after switching to $tag" >&2
-    return 1
-  fi
-
-  echo "rollback: active release is $tag"
+  deploy_release "$tag"
 }
 
 show_status() {
@@ -135,7 +118,7 @@ show_status() {
   echo "current tag: ${current_tag:-<none>}"
   echo "previous tag: ${previous_tag:-<none>}"
   echo "health: $(curl -fsS "$HEALTH_URL" || echo unavailable)"
-  compose ps
+  VOLTONAUT_TAG="${current_tag:-unreleased}" compose ps
 }
 
 case "${1:-}" in

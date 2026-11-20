@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createTestDocument,
-  TestElement,
-  TestInput,
-  TestSelect,
-  type TestNodeView,
-} from "../../testdata/dom.js";
-import { SNIFFER_FIXTURE } from "@voltonaut/ble/testdata";
+import type { TestNodeView } from "../../testdata/dom.js";
 import { downloadJson, element, input, select } from "./dom.js";
 import { snifferDevice } from "../../testdata/sniffer.js";
+import { prepareDom } from "./testdata/ui.js";
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM fake nodes retain mutable children so assertions inspect the current render.
-function visibleButton(root: Readonly<TestElement>, text: string): TestElement | undefined {
+interface ButtonNode {
+  readonly textContent: string;
+  readonly disabled: boolean;
+  readonly children: readonly ButtonNode[];
+  readonly click: () => void;
+}
+
+function visibleButton(root: ButtonNode, text: string): ButtonNode | undefined {
   for (const node of root.children) {
     if (node.textContent === text) {
       return node;
@@ -25,41 +25,6 @@ function visibleButton(root: Readonly<TestElement>, text: string): TestElement |
   }
 
   return undefined;
-}
-
-function prepareDom() {
-  const document = createTestDocument();
-
-  for (const id of [
-    "scan",
-    "reconnect",
-    "disconnect",
-    "status",
-    "advertisement",
-    "presets",
-    "gatt",
-    "pause",
-    "add-marker",
-    "export",
-    "log",
-  ]) {
-    document.add(id);
-  }
-
-  for (const id of ["filter", "firmware", "notes", "marker"]) {
-    document.add(id, "input");
-  }
-
-  document.add("devices", "select");
-  vi.stubGlobal("document", document);
-  vi.stubGlobal("HTMLElement", TestElement);
-  vi.stubGlobal("HTMLInputElement", TestInput);
-  vi.stubGlobal("HTMLSelectElement", TestSelect);
-  vi.stubGlobal("location", { search: "?replay=/replay.json" });
-  vi.stubGlobal("window", { addEventListener: () => {} });
-  vi.stubGlobal("fetch", () => Promise.resolve(new Response(JSON.stringify(SNIFFER_FIXTURE))));
-
-  return document;
 }
 
 beforeEach(() => {
@@ -122,8 +87,7 @@ describe("sniffer connection operations", () => {
     expect(dom.querySelector("#status")?.textContent).toBe("disconnected");
     dom.querySelector("#reconnect")?.click();
     await vi.advanceTimersByTimeAsync(0);
-    select("devices").value = "0";
-    dom.querySelector("#devices")?.fire("change");
+    dom.querySelector("#devices")?.children[0]?.children[0]?.click();
     expect(dom.querySelector("#status")?.textContent).toBe("ready");
   });
 });
@@ -143,7 +107,7 @@ describe("sniffer boundary errors", () => {
     await import("./main.js");
     dom.querySelector("#scan")?.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(dom.querySelector("#status")?.textContent).toContain("fixture rejected");
+    expect(dom.querySelector("#picker-status")?.textContent).toContain("fixture rejected");
   });
 });
 
@@ -164,8 +128,7 @@ async function twoDevices(notificationsReady: Readonly<Promise<void>> = Promise.
   await vi.advanceTimersByTimeAsync(0);
 
   const choose = (index: number): void => {
-    select("devices").value = String(index);
-    dom.querySelector("#devices")?.fire("change");
+    dom.querySelector("#devices")?.children[index]?.children[0]?.click();
   };
 
   const click = (text: string): void => {
@@ -237,6 +200,46 @@ describe("sniffer multi-device ownership", () => {
 });
 
 describe("sniffer delayed operation context", () => {
+  it("restores A's error status when returning from B", async () => {
+    const { dom, a, choose, click } = await twoDevices();
+    click("Read");
+    await vi.advanceTimersByTimeAsync(0);
+    choose(1);
+    a.failRead();
+    await vi.advanceTimersByTimeAsync(0);
+    choose(0);
+    expect(dom.querySelector("#status")?.textContent).toContain("read failed");
+  });
+
+  it("does not block B's marker behind A's pending read", async () => {
+    const { dom, a, choose, click } = await twoDevices();
+    click("Read");
+    await vi.advanceTimersByTimeAsync(0);
+    choose(1);
+    input("marker").value = "B remains usable";
+    dom.querySelector("#add-marker")?.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(dom.querySelector("#log")?.textContent).toContain("B remains usable");
+    a.finishRead();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("does not copy A's capture metadata into B", async () => {
+    const { dom, choose } = await twoDevices();
+    input("firmware").value = "firmware A";
+    dom.querySelector("#firmware")?.fire("input");
+    input("notes").value = "notes A";
+    dom.querySelector("#notes")?.fire("input");
+    choose(1);
+    expect(input("firmware").value).toBe("");
+    expect(input("notes").value).toBe("");
+    choose(0);
+    expect(input("firmware").value).toBe("firmware A");
+    expect(input("notes").value).toBe("notes A");
+  });
+});
+
+describe("sniffer delayed operation attribution", () => {
   it("attributes a delayed read failure only to A while B remains selected", async () => {
     const { dom, a, choose, click } = await twoDevices();
     click("Read");

@@ -10,14 +10,11 @@ import type {
   WebBluetoothCharacteristic,
   WebBluetoothCharacteristicProperties,
   WebBluetoothDescriptor,
-  WebBluetoothDevice,
   WebBluetoothServer,
   WebBluetoothService,
 } from "./webBluetoothTypes.js";
 
-export interface DeviceState {
-  device: WebBluetoothDevice | undefined;
-  server: WebBluetoothServer | undefined;
+export interface GattServices {
   readonly services: Map<string, WebBluetoothService>;
 }
 
@@ -89,7 +86,7 @@ function sequentially<T, U>(
 }
 
 async function discoverService(
-  state: DeviceState,
+  state: GattServices,
   service: WebBluetoothService,
   signal: AbortSignal,
 ): Promise<GattProfile["services"][number]> {
@@ -123,7 +120,7 @@ async function discoverService(
 }
 
 export async function discoverProfile(
-  state: DeviceState,
+  state: GattServices,
   server: WebBluetoothServer,
   signal: AbortSignal,
 ): Promise<GattProfile> {
@@ -137,7 +134,7 @@ export async function discoverProfile(
 }
 
 export function resolveCharacteristic(
-  state: DeviceState,
+  state: GattServices,
   ref: CharacteristicRef,
 ): Promise<WebBluetoothCharacteristic> {
   const serviceUuid = normalizeUuid(ref.serviceUuid) ?? ref.serviceUuid;

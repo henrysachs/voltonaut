@@ -22,6 +22,13 @@
       "when": 1795185388866,
       "tag": "0002_owned_profiles_rides",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795190268028,
+      "tag": "0003_strava_connection",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { StoredProfileRecordSchema, type StoredProfileRecord } from "@voltonaut/shared";
 
 import type { ProfileDatabase } from "./profile-store.js";
+import { writeProfileRecord } from "./profileWrite.js";
 import {
   PROFILE_DATABASE_NAME,
   PROFILE_RECORD_KEY,
@@ -39,13 +40,7 @@ function wrapDatabase(
       return parsed.success ? parsed.data : undefined;
     },
 
-    async saveRecord(record: StoredProfileRecord): Promise<void> {
-      const store = database
-        .transaction(PROFILE_STORE_NAME, "readwrite")
-        .objectStore(PROFILE_STORE_NAME);
-
-      await requestToPromise(store.put(record, PROFILE_RECORD_KEY));
-    },
+    saveRecord: (record, lease) => writeProfileRecord(database, record, lease),
   };
 }
 
@@ -56,17 +51,38 @@ export function openProfileDatabase(
 ): Promise<ProfileDatabase> {
   return new Promise<ProfileDatabase>((resolve, reject) => {
     const request = indexedDB.open(PROFILE_DATABASE_NAME, PROFILE_SCHEMA_VERSION);
+    let unavailable = false;
+
+    const fail = (): void => {
+      unavailable = true;
+      reject(new Error("profile database could not be opened"));
+    };
+
+    const timeout = setTimeout(fail, 1000);
 
     request.addEventListener("upgradeneeded", () => {
       request.result.createObjectStore(PROFILE_STORE_NAME);
     });
 
     request.addEventListener("success", () => {
+      clearTimeout(timeout);
+
+      if (unavailable) {
+        request.result.close();
+
+        return;
+      }
+
       resolve(wrapDatabase(request.result));
     });
 
     request.addEventListener("error", () => {
-      reject(new Error("profile database could not be opened"));
+      clearTimeout(timeout);
+      fail();
+    });
+    request.addEventListener("blocked", () => {
+      clearTimeout(timeout);
+      fail();
     });
   });
 }

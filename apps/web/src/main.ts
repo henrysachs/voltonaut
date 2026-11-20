@@ -1,5 +1,5 @@
-import type { DeviceEvent, RiderProfile } from "@voltonaut/shared";
-import { DEFAULT_RIDER_PROFILE, createEventBus } from "@voltonaut/shared";
+import type { DeviceEvent } from "@voltonaut/shared";
+import { createEventBus } from "@voltonaut/shared";
 
 import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
 
@@ -9,11 +9,8 @@ import type { EngineLink } from "./game/engine-link.js";
 import { createEngineLink } from "./game/engine-link.js";
 import type { EngineWorkerRequest, EngineWorkerResponse } from "./game/engineWorkerCore.js";
 import { createConnectionMonitor, type ConnectionMonitor } from "./game/connectionMonitor.js";
-import type { FormInput } from "./ui/profile/profileScreen.js";
-import { fillProfileForm, parseProfileForm, readProfileForm } from "./ui/profile/profileScreen.js";
-import type { ProfileFormInputs } from "./ui/profile/profileScreen.js";
-import { createProfileStore, type ProfileStore } from "./sync/profile-store.js";
-import { openProfileDatabase } from "./sync/profile-database.js";
+import { setupProfile } from "./profileBootstrap.js";
+import { setupBrowserAccount } from "./browserAccount.js";
 import { setupRidePresentation } from "./ridePresentation.js";
 
 const FAST_CLOCK_SCALE = 20;
@@ -21,10 +18,6 @@ const APP_ROUTE_ID = "test-loop";
 
 interface DocumentQuerySource {
   readonly querySelector: (selector: string) => Element | null;
-}
-
-interface TextTargetView {
-  readonly write: (text: string) => void;
 }
 
 function createDomDocument(source: DocumentQuerySource): AppDocument {
@@ -41,10 +34,6 @@ function createDomDocument(source: DocumentQuerySource): AppDocument {
           };
     },
   };
-}
-
-function textTarget(source: DocumentQuerySource, selector: string): TextTargetView | null {
-  return createDomDocument(source).querySelector(selector);
 }
 
 /** Structural channel the main thread uses to talk to the engine worker. */
@@ -94,90 +83,6 @@ function createWorkerLink(): EngineLink {
   });
 }
 
-function profileFormInputs(document: DocumentQuerySource): ProfileFormInputs | undefined {
-  const inputFrom = (selector: string): FormInput | undefined => {
-    const element = document.querySelector(selector);
-
-    if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
-      return element;
-    }
-
-    return undefined;
-  };
-
-  const displayName = inputFrom("#profile-displayName");
-  const massKg = inputFrom("#profile-massKg");
-  const heightCm = inputFrom("#profile-heightCm");
-  const bikeMassKg = inputFrom("#profile-bikeMassKg");
-  const chainringTeeth = inputFrom("#profile-chainringTeeth");
-  const cogTeeth = inputFrom("#profile-cogTeeth");
-  const wheelCircM = inputFrom("#profile-wheelCircM");
-  const units = inputFrom("#profile-units");
-
-  if (
-    displayName === undefined ||
-    massKg === undefined ||
-    heightCm === undefined ||
-    bikeMassKg === undefined ||
-    chainringTeeth === undefined ||
-    cogTeeth === undefined ||
-    wheelCircM === undefined ||
-    units === undefined
-  ) {
-    return undefined;
-  }
-
-  return { displayName, massKg, heightCm, bikeMassKg, chainringTeeth, cogTeeth, wheelCircM, units };
-}
-
-function setupProfileForm(
-  document: DocumentQuerySource,
-  store: ProfileStore,
-  profile: RiderProfile,
-): void {
-  const form = document.querySelector("#profile-form");
-  const inputs = profileFormInputs(document);
-
-  if (form === null || inputs === undefined) {
-    return;
-  }
-
-  fillProfileForm(inputs, profile);
-
-  const error = textTarget(document, "#profile-error");
-  const status = textTarget(document, "#profile-status");
-
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- SubmitEvent is the DOM listener contract type.
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const result = parseProfileForm(readProfileForm(inputs));
-
-    if (!result.ok) {
-      error?.write("Profile rejected: values out of range.");
-      status?.write("Not saved");
-
-      return;
-    }
-
-    void (async () => {
-      try {
-        await store.save(result.profile);
-        error?.write("");
-        status?.write("Saved locally");
-      } catch {
-        status?.write("Save failed");
-      }
-    })();
-  });
-}
-
-async function loadProfile(store: ProfileStore): Promise<RiderProfile> {
-  const profile = await store.load();
-
-  return profile ?? DEFAULT_RIDER_PROFILE;
-}
-
 function startHud(
   document: DocumentQuerySource,
   link: EngineLink,
@@ -197,6 +102,8 @@ function startHud(
 }
 
 async function start(): Promise<void> {
+  const profileReady = setupProfile();
+  setupBrowserAccount(() => profileReady);
   const params = new URLSearchParams(window.location.search);
   const simMode = params.get("sim") === "1";
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
@@ -205,8 +112,7 @@ async function start(): Promise<void> {
   const link = createWorkerLink();
   const connection = createConnectionMonitor(bus);
 
-  const store = createProfileStore(await openProfileDatabase(indexedDB));
-  const profile = await loadProfile(store);
+  const { initialProfile: profile } = await profileReady;
 
   // Parameters are frozen at ride start; profile edits apply to the next ride.
   link.init({ routeId: APP_ROUTE_ID, profile, clockScale });
@@ -232,7 +138,6 @@ async function start(): Promise<void> {
   bus.subscribe("device.status", recordEvent);
 
   startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
-  setupProfileForm(document, store, profile);
   setupKeyboard(bus);
 
   if (simMode) {

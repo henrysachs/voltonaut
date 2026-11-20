@@ -3,13 +3,19 @@ import { bytesCopy, byteReader, type ReadOnlyBytes } from "./bytes.js";
 import {
   discoverProfile,
   resolveCharacteristic,
-  type DeviceState,
+  type GattServices,
 } from "./webBluetoothDiscovery.js";
+import {
+  ownConnection,
+  type GattConnection,
+  type OwnedConnection,
+} from "./webBluetoothConnection.js";
 import type {
   BleScanFilter,
   CharacteristicRef,
   DeviceSelection,
   GattProfile,
+  GattWriteMode,
   NotificationListener,
   ScanOptions,
 } from "./transport.js";
@@ -48,19 +54,24 @@ function onCharacteristicValueChanged(
 function releaseQueue(): void {}
 
 export class WebBluetoothGatt {
-  private state: DeviceState = { device: undefined, server: undefined, services: new Map() };
+  private connection: GattConnection = { kind: "unowned" };
+  private selectedDevice: WebBluetoothDevice | undefined;
   private session = new AbortController();
   private queue = Promise.resolve();
   private readonly subscriptions = new Set<() => void>();
-  private removeDisconnectListener: (() => void) | undefined;
 
   constructor(
     private readonly central: WebBluetoothCentral,
     private readonly onDisconnected: () => void,
+    private readonly onInvalidated: () => void,
   ) {}
 
   get device(): WebBluetoothDevice | undefined {
-    return this.state.device;
+    return this.connection.kind === "owned" ? this.connection.device : undefined;
+  }
+
+  get rememberedDevice(): WebBluetoothDevice | undefined {
+    return this.selectedDevice;
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
@@ -70,88 +81,104 @@ export class WebBluetoothGatt {
     return result;
   }
 
-  private invalidate(): void {
+  private invalidate(): OwnedConnection | undefined {
+    const previous = this.connection;
+    this.connection = { kind: "unowned" };
     this.session.abort(new Error("device is not connected"));
-    this.removeDisconnectListener?.();
+
+    if (previous.kind === "owned") {
+      previous.detach();
+      previous.services.services.clear();
+      this.onInvalidated();
+    }
 
     for (const stop of this.subscriptions) {
       stop();
     }
 
-    this.state.server = undefined;
-    this.state.services.clear();
+    return previous.kind === "owned" ? previous : undefined;
+  }
+
+  private retire(connection: OwnedConnection | undefined): Promise<void> {
+    return this.enqueue(() => {
+      connection?.close();
+
+      return Promise.resolve();
+    });
   }
 
   private withSession<T>(
-    operation: (current: DeviceState, signal: AbortSignal) => Promise<T>,
+    operation: (current: GattServices, signal: AbortSignal) => Promise<T>,
   ): Promise<T> {
-    const current = this.state;
-    const { signal } = this.session;
+    const current = this.connection;
+
+    if (current.kind === "unowned") {
+      return Promise.reject(new Error("device is not connected"));
+    }
+
+    const { signal } = current;
 
     return this.enqueue(async () => {
       signal.throwIfAborted();
-      const result = await operation(current, signal);
+      const result = await operation(current.services, signal);
       signal.throwIfAborted();
 
       return result;
     });
   }
 
-  private rememberDevice(device: WebBluetoothDevice): void {
-    this.state.device = device;
-    const { signal } = this.session;
-
-    const onDisconnected = (): void => {
-      if (signal.aborted) {
-        return;
-      }
-
-      this.invalidate();
-      this.onDisconnected();
-    };
-
-    device.addEventListener("gattserverdisconnected", onDisconnected);
-    this.removeDisconnectListener = () => {
-      device.removeEventListener("gattserverdisconnected", onDisconnected);
-    };
-  }
-
   connect(scan: ScanOptions, selection: DeviceSelection = "remembered"): Promise<GattProfile> {
-    const previous = this.state;
-    this.invalidate();
-    this.state = { device: previous.device, server: undefined, services: new Map() };
+    const retired = this.retire(this.invalidate());
     this.session = new AbortController();
-    const current = this.state;
     const { signal } = this.session;
 
     const selected =
-      selection === "select" || current.device === undefined
+      selection === "select" || this.selectedDevice === undefined
         ? this.central.requestDevice(toRequestOptions(scan))
-        : Promise.resolve(current.device);
+        : Promise.resolve(this.selectedDevice);
 
-    return selected.then((device: WebBluetoothDevice) =>
-      this.enqueue(async () => {
-        signal.throwIfAborted();
+    return this.connectSelected(selected, retired, signal);
+  }
 
-        if (previous.device !== device) {
-          previous.device?.gatt?.disconnect();
-        }
+  private async connectSelected(
+    selected: Promise<WebBluetoothDevice>,
+    retired: Promise<void>,
+    signal: AbortSignal,
+  ): Promise<GattProfile> {
+    try {
+      const [device] = await Promise.all([selected, retired]);
 
-        this.rememberDevice(device);
+      return await this.enqueue(() => this.open(device, signal));
+    } catch (error) {
+      if (this.session.signal === signal) {
+        await this.retire(this.invalidate());
+      }
 
-        if (device.gatt === null) {
-          throw new Error("device exposes no GATT server");
-        }
+      throw error;
+    }
+  }
 
-        const server = await device.gatt.connect();
-        signal.throwIfAborted();
-        current.server = server;
-        const profile = await discoverProfile(current, server, signal);
-        signal.throwIfAborted();
+  private async open(device: WebBluetoothDevice, signal: AbortSignal): Promise<GattProfile> {
+    signal.throwIfAborted();
+    this.selectedDevice = device;
 
-        return profile;
-      }),
-    );
+    const connection = ownConnection(this.central, device, signal, () => {
+      void this.retire(this.invalidate());
+      this.onDisconnected();
+    });
+
+    this.connection = connection;
+
+    if (device.gatt === null) {
+      throw new Error("device exposes no GATT server");
+    }
+
+    const server = await device.gatt.connect();
+    signal.throwIfAborted();
+    const profile = await discoverProfile(connection.services, server, signal);
+    signal.throwIfAborted();
+
+    return profile;
   }
 
   read(ref: CharacteristicRef): Promise<DataView> {
@@ -163,10 +190,31 @@ export class WebBluetoothGatt {
     });
   }
 
-  write(ref: CharacteristicRef, payload: ReadOnlyBytes): Promise<void> {
+  write(ref: CharacteristicRef, payload: ReadOnlyBytes, mode?: GattWriteMode): Promise<void> {
     return this.withSession(async (current, signal) => {
       const characteristic = await resolveCharacteristic(current, ref);
       signal.throwIfAborted();
+
+      const withoutResponse =
+        mode === "withoutResponse" ||
+        (mode === undefined &&
+          characteristic.properties.write !== true &&
+          characteristic.properties.writeWithoutResponse === true);
+
+      if (withoutResponse) {
+        if (
+          characteristic.properties.writeWithoutResponse !== true ||
+          characteristic.writeValueWithoutResponse === undefined
+        ) {
+          throw new Error("writeWithoutResponse is unavailable");
+        }
+
+        return characteristic.writeValueWithoutResponse(bytesCopy(payload));
+      }
+
+      if (mode === "withResponse" && characteristic.properties.write !== true) {
+        throw new Error("write with response is unavailable");
+      }
 
       return characteristic.writeValue(bytesCopy(payload));
     });
@@ -211,13 +259,6 @@ export class WebBluetoothGatt {
   }
 
   disconnect(): Promise<void> {
-    const current = this.state;
-    this.invalidate();
-
-    return this.enqueue(() => {
-      current.device?.gatt?.disconnect();
-
-      return Promise.resolve();
-    });
+    return this.retire(this.invalidate());
   }
 }

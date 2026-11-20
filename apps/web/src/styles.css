@@ -211,13 +211,16 @@ body {
   color: #7387a1;
 }
 
-.recording p {
+.recording p,
+.account-data p,
+.account-data li {
   font-size: 0.85rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
-.recording button {
+.recording button,
+.account-data button {
   margin: 0.25rem 0.5rem 0.25rem 0;
   padding: 0.55rem 0.8rem;
   border: 1px solid #8496ae;
@@ -227,11 +230,23 @@ body {
   cursor: pointer;
 }
 
-.recording button:disabled {
+.recording button:disabled,
+.account-data button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
 .recording ul {
   padding-left: 1rem;
+}
+
+.account-data {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.account-data h3 {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  color: #b7c8ce;
 }

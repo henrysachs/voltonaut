@@ -6,9 +6,12 @@ import {
   toHex,
   parseIndoorBikeData,
   parseHeartRateMeasurement,
+  parsePlayInput,
   INDOOR_BIKE_DATA,
   HEART_RATE_MEASUREMENT,
   ZWIFT_PLAY_COMMAND_RESPONSE,
+  ZWIFT_PLAY_MEASUREMENT,
+  ZWIFT_PLAY_LEGACY_SERVICE,
   type BleFixture,
   type BleLogEntry,
   type BleTransport,
@@ -29,6 +32,20 @@ export interface SnifferSession {
 }
 
 function decode(ref: CharacteristicRef, data: ByteReader): string {
+  if (
+    ref.serviceUuid === ZWIFT_PLAY_LEGACY_SERVICE &&
+    ref.characteristicUuid === ZWIFT_PLAY_MEASUREMENT
+  ) {
+    const result = parsePlayInput(data);
+
+    return result.ok
+      ? JSON.stringify({
+          ...result.value,
+          analogInfo: "Unkalibrierte Rohwerte, keine Spielwirkung.",
+        })
+      : "";
+  }
+
   if (ref.characteristicUuid === INDOOR_BIKE_DATA) {
     const result = parseIndoorBikeData(data);
 
@@ -135,12 +152,12 @@ function createLoggedTransport(raw: BleTransport, recorder: Recorder): BleTransp
 
       return view;
     },
-    async write(ref, bytes) {
+    async write(ref, bytes, mode) {
       if (recorder.encrypted()) {
         throw new Error("Encrypted handshake: writes stopped. Export capture for H5.");
       }
 
-      await raw.write(ref, bytes);
+      await raw.write(ref, bytes, mode);
       recorder.data(ref, bytesToDataView(bytes), "tx");
     },
   };

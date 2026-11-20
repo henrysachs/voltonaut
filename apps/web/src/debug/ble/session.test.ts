@@ -7,6 +7,8 @@ import {
   INDOOR_BIKE_DATA,
   HEART_RATE_SERVICE,
   HEART_RATE_MEASUREMENT,
+  ZWIFT_PLAY_MEASUREMENT,
+  ZWIFT_PLAY_LEGACY_SERVICE,
   bytesToDataView,
   type BleTransport,
   type ByteReader,
@@ -15,6 +17,15 @@ import { SNIFFER_FIXTURE } from "@voltonaut/ble/testdata";
 import { createSnifferSession } from "./session.js";
 
 const scan = { acceptAllDevices: true, filters: [], optionalServices: [] };
+
+const PLAY_CAPTURE_BYTES = [
+  "07 08 00 10 01 18 01 20 00 28 01 30 01 38 01 40 00 48 00",
+  "07 08 01 10 00 18 01 20 01 28 01 30 01 38 01 40 00 48 00",
+  "07 08 00 10 01 18 01 20 01 28 01 30 01 38 01 40 c7 01 48 00",
+  "15 08 00",
+  "19 08 00",
+  "07 08",
+];
 
 function missingSubscription(): never {
   throw new Error("Subscribe first");
@@ -88,4 +99,51 @@ describe("sniffer encrypted response", () => {
       expect.objectContaining({ event: "encrypted-handshake" }),
     );
   });
+});
+
+it("uses the public Play decoder for readable captured keys and raw analog, leaving unknown frames raw", async () => {
+  const clock = createManualClock();
+  const ticker = createManualTicker();
+
+  const raw = createReplayTransport({
+    fixture: {
+      ...SNIFFER_FIXTURE,
+      log: PLAY_CAPTURE_BYTES.map((hex) => ({
+        kind: "data",
+        tMs: 1,
+        device: "Play",
+        service: ZWIFT_PLAY_LEGACY_SERVICE,
+        char: ZWIFT_PLAY_MEASUREMENT,
+        hex,
+        dir: "rx",
+        ascii: "",
+        decoded: "",
+        marker: "",
+      })),
+    },
+    clock,
+    ticker,
+  });
+
+  const session = createSnifferSession(
+    raw,
+    () => {},
+    () => clock.nowS() * 1000,
+  );
+
+  await session.transport.connect(scan);
+  await session.observe({
+    serviceUuid: ZWIFT_PLAY_LEGACY_SERVICE,
+    characteristicUuid: ZWIFT_PLAY_MEASUREMENT,
+  });
+  clock.advanceS(1);
+  ticker.tick();
+  const log = session.fixture("", "").log;
+  expect(JSON.stringify(log)).toContain('\\"a\\":true');
+  expect(JSON.stringify(log)).toContain('\\"up\\":true');
+  expect(JSON.stringify(log)).toContain('\\"rawAnalogLr\\":-100');
+  expect(log).toContainEqual(expect.objectContaining({ hex: "15 08 00", decoded: "" }));
+  expect(log).toContainEqual(expect.objectContaining({ hex: "19 08 00", decoded: "" }));
+  expect(log).toContainEqual(expect.objectContaining({ hex: "07 08", decoded: "" }));
+  await session.dispose();
 });

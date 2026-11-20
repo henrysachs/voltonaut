@@ -16,6 +16,63 @@ const ref = { serviceUuid: HEART_RATE_SERVICE, characteristicUuid: HEART_RATE_ME
 
 afterEach(() => vi.unstubAllGlobals());
 
+it("honors explicit without-response writes when both native properties are offered", async () => {
+  let withoutResponse = 0;
+
+  const fake = createTestCentral({
+    writeWithoutResponse: () => {
+      withoutResponse += 1;
+
+      return Promise.resolve();
+    },
+  });
+
+  const transport = createWebBluetoothTransport({ central: fake.central });
+  await transport.connect(scan);
+  await transport.write(ref, Uint8Array.from([0x52]), "withoutResponse");
+  await transport.write(ref, Uint8Array.from([0x52]), "withResponse");
+  expect(withoutResponse).toBe(1);
+  expect(fake.writes()).toHaveLength(1);
+
+  const onlyWithout = createTestCentral({
+    properties: { writeWithoutResponse: true },
+    writeWithoutResponse: () => Promise.resolve(),
+  });
+
+  const limited = createWebBluetoothTransport({ central: onlyWithout.central });
+  await limited.connect(scan);
+  await expect(limited.write(ref, Uint8Array.from([0x52]), "withResponse")).rejects.toThrow(
+    "write with response is unavailable",
+  );
+});
+
+describe("native writeWithoutResponse", () => {
+  it("uses native writeWithoutResponse for a characteristic without write-with-response", async () => {
+    let writes = 0;
+
+    const fake = createTestCentral({
+      properties: { writeWithoutResponse: true },
+      writeWithoutResponse: () => {
+        writes += 1;
+
+        return Promise.resolve();
+      },
+    });
+
+    const transport = createWebBluetoothTransport({ central: fake.central });
+    await transport.connect(scan);
+    await transport.write(ref, Uint8Array.from([0x52, 0x69, 0x64, 0x65, 0x4f, 0x6e]));
+    expect(writes).toBe(1);
+    expect(fake.writes()).toHaveLength(0);
+    const unavailable = createTestCentral({ properties: { writeWithoutResponse: true } });
+    const unsupported = createWebBluetoothTransport({ central: unavailable.central });
+    await unsupported.connect(scan);
+    await expect(unsupported.write(ref, new Uint8Array())).rejects.toThrow(
+      "writeWithoutResponse is unavailable",
+    );
+  });
+});
+
 describe("Web Bluetooth boundary", () => {
   it("discovers, reads, writes and subscribes the selected device", async () => {
     const fake = createTestCentral();

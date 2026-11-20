@@ -1,0 +1,227 @@
+import {
+  createEngine,
+  createRoute,
+  TEST_LOOP,
+  type Engine,
+  type RideSnapshot,
+} from "@voltonaut/engine";
+import {
+  RecordingV2Schema,
+  type RecordingEntryV2,
+  type RecordingV2,
+  type ReplayObservationV2,
+} from "@voltonaut/shared";
+
+import { replayCommandEqual, replayEventEqual, replaySnapshotEqual } from "./replayComparison.js";
+import { recordingV2Eligibility, type ReplayEligibility } from "./replayEligibility.js";
+
+export interface ReplayWindowSummary {
+  readonly elapsedRealS: number;
+  readonly distanceM: number;
+  readonly elevationGainM: number;
+  readonly energyKj: number;
+  readonly tS: number;
+  readonly laps: number;
+  readonly eventCount: number;
+  readonly commandCount: number;
+}
+
+export type RecordingV2Assessment =
+  | { readonly status: "unverified"; readonly reason: "incomplete_journal" | "unknown_revision" }
+  | { readonly status: "rejected"; readonly reason: "invalid_contract" | "observation_mismatch" }
+  | {
+      readonly status: "replayed";
+      readonly physicsRevision: "engine-v1";
+      readonly summary: ReplayWindowSummary;
+      readonly eligibility: ReplayEligibility;
+    };
+
+function applyEntry(engine: Engine, entry: RecordingEntryV2, clockScale: number): void {
+  switch (entry[2]) {
+    case "trainer":
+      engine.ingest({ type: "trainer.data", tS: 0, ...trainerFields(entry) });
+
+      return;
+    case "hr":
+      engine.ingest({ type: "hr.data", tS: 0, bpm: entry[3] });
+
+      return;
+    case "shift":
+      engine.ingest({
+        type: "controller.button",
+        tS: 0,
+        button: entry[3],
+        pressed: true,
+        source: "recording-v2",
+      });
+
+      return;
+    case "advance":
+      engine.advance(entry[3] * clockScale);
+      break;
+    case "status":
+    case "arm":
+    case "boundary":
+      break;
+  }
+}
+
+interface TrainerReadings {
+  powerW?: number;
+  cadenceRpm?: number;
+  speedMps?: number;
+}
+
+function trainerFields(
+  entry: Extract<
+    RecordingEntryV2,
+    readonly [number, number, "trainer", ...(readonly (number | null)[])]
+  >,
+): Readonly<TrainerReadings> {
+  const fields: TrainerReadings = {};
+
+  if (entry[3] !== null) fields.powerW = entry[3];
+
+  if (entry[4] !== null) fields.cadenceRpm = entry[4];
+
+  if (entry[5] !== null) fields.speedMps = entry[5];
+
+  return fields;
+}
+
+function windowSummary(
+  start: RideSnapshot,
+  finish: RideSnapshot,
+  counts: {
+    readonly elapsedRealS: number;
+    readonly eventCount: number;
+    readonly commandCount: number;
+  },
+): ReplayWindowSummary {
+  return {
+    ...counts,
+    distanceM: finish.distanceM - start.distanceM,
+    elevationGainM: finish.elevationGainM - start.elevationGainM,
+    energyKj: finish.energyKj - start.energyKj,
+    tS: finish.tS - start.tS,
+    laps: finish.lap - start.lap,
+  };
+}
+
+class ReplayRun {
+  private readonly recording: RecordingV2;
+  private readonly engine: Engine;
+  private observationIndex = 0;
+  private eventOffset = 0;
+  private commandOffset = 0;
+  private eventCount = 0;
+  private commandCount = 0;
+  private start: { readonly snapshot: RideSnapshot; readonly workerMs: number } | undefined;
+  private staleTrainer = false;
+  private clockSkipped = false;
+
+  constructor(recording: RecordingV2) {
+    this.recording = recording;
+    this.engine = createEngine({
+      route: createRoute(TEST_LOOP),
+      profile: recording.initialization.profile,
+    });
+  }
+
+  private drain(observation: ReplayObservationV2): boolean {
+    for (const event of this.engine.drainEvents()) {
+      if (!replayEventEqual(event, observation.events[this.eventOffset])) return false;
+      this.eventOffset += 1;
+
+      if (this.start !== undefined) this.eventCount += 1;
+      this.clockSkipped ||= event.type === "ride.clockSkipped";
+    }
+
+    for (const command of this.engine.drainCommands()) {
+      if (!replayCommandEqual(command, observation.commands[this.commandOffset])) return false;
+      this.commandOffset += 1;
+
+      if (this.start !== undefined) this.commandCount += 1;
+    }
+
+    return true;
+  }
+
+  private boundary(
+    entry: RecordingEntryV2,
+    observation: ReplayObservationV2,
+  ): RecordingV2Assessment | undefined {
+    const snapshot = this.engine.snapshot();
+
+    if (
+      this.eventOffset !== observation.events.length ||
+      this.commandOffset !== observation.commands.length ||
+      !replaySnapshotEqual(snapshot, observation.snapshot)
+    )
+      return { status: "rejected", reason: "observation_mismatch" };
+    this.observationIndex += 1;
+    this.eventOffset = 0;
+    this.commandOffset = 0;
+
+    if (entry[3] === "start") this.start = { snapshot, workerMs: entry[1] };
+
+    if (entry[3] !== "finish" || this.start === undefined) return undefined;
+
+    return {
+      status: "replayed",
+      physicsRevision: "engine-v1",
+      summary: windowSummary(this.start.snapshot, snapshot, {
+        elapsedRealS: (entry[1] - this.start.workerMs) / 1000,
+        eventCount: this.eventCount,
+        commandCount: this.commandCount,
+      }),
+      eligibility: recordingV2Eligibility(this.recording, {
+        staleTrainer: this.staleTrainer,
+        clockSkipped: this.clockSkipped,
+      }),
+    };
+  }
+
+  run(): RecordingV2Assessment {
+    for (const entry of this.recording.entries) {
+      const observation = this.recording.observations[this.observationIndex];
+
+      if (observation === undefined) return { status: "rejected", reason: "invalid_contract" };
+      applyEntry(this.engine, entry, this.recording.initialization.clockScale);
+
+      if (!this.drain(observation)) return { status: "rejected", reason: "observation_mismatch" };
+
+      if (entry[2] === "advance") this.staleTrainer ||= this.engine.snapshot().dataAgeS > 3;
+
+      if (entry[2] === "boundary") {
+        const result = this.boundary(entry, observation);
+
+        if (result !== undefined) return result;
+      }
+    }
+
+    return { status: "rejected", reason: "invalid_contract" };
+  }
+}
+
+/** Pure consistency assessment only. No account lookup, persistence, rewards or provider calls. */
+export function assessRecordingV2(recording: RecordingV2): RecordingV2Assessment {
+  const parsed = RecordingV2Schema.safeParse(recording);
+
+  if (!parsed.success) return { status: "rejected", reason: "invalid_contract" };
+  const normalized = parsed.data;
+
+  if (normalized.journalState !== "complete")
+    return { status: "unverified", reason: "incomplete_journal" };
+  const initialization = normalized.initialization;
+
+  if (
+    initialization.physicsRevision !== "engine-v1" ||
+    initialization.routeId !== "test-loop" ||
+    initialization.routeRevision !== "1"
+  ) {
+    return { status: "unverified", reason: "unknown_revision" };
+  }
+
+  return new ReplayRun(normalized).run();
+}

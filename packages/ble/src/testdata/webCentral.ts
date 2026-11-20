@@ -2,12 +2,15 @@
 import type {
   WebBluetoothAdvertisementEvent,
   WebBluetoothCharacteristic,
+  WebBluetoothCharacteristicProperties,
   WebBluetoothCharacteristicValueChangedEvent,
   WebBluetoothDevice,
 } from "../webBluetoothTypes.js";
 import { HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT } from "../uuids.js";
 
 interface TestCentralOptions {
+  readonly properties?: WebBluetoothCharacteristicProperties;
+  readonly writeWithoutResponse?: () => Promise<void>;
   readonly serviceUuid?: string;
   readonly characteristicUuid?: string;
   readonly startNotifications?: () => Promise<void>;
@@ -32,7 +35,7 @@ function createCharacteristic(options: TestCentralOptions) {
 
   const characteristic: WebBluetoothCharacteristic = {
     uuid: options.characteristicUuid ?? HEART_RATE_MEASUREMENT,
-    properties,
+    properties: options.properties ?? properties,
     get value() {
       return view;
     },
@@ -42,6 +45,9 @@ function createCharacteristic(options: TestCentralOptions) {
 
       return Promise.resolve();
     },
+    ...(options.writeWithoutResponse !== undefined && {
+      writeValueWithoutResponse: options.writeWithoutResponse,
+    }),
     startNotifications: () => options.startNotifications?.() ?? Promise.resolve(),
     stopNotifications: () => {
       stops += 1;
@@ -73,9 +79,39 @@ function createCharacteristic(options: TestCentralOptions) {
 
 type DeviceListener = (event: WebBluetoothAdvertisementEvent) => void;
 
-function createDevice(characteristic: WebBluetoothCharacteristic, options: TestCentralOptions) {
+function createDeviceEvents() {
   const events = new Map<string, Set<DeviceListener>>();
+
+  return {
+    add: (type: string, listener: DeviceListener) => {
+      const listeners = events.get(type) ?? new Set<DeviceListener>();
+      listeners.add(listener);
+      events.set(type, listeners);
+    },
+    remove: (type: string, listener: DeviceListener) => {
+      events.get(type)?.delete(listener);
+    },
+    captureEvent: (type: string, event: WebBluetoothAdvertisementEvent) => {
+      const listeners = [...(events.get(type) ?? [])];
+
+      return () => {
+        for (const listener of listeners) {
+          listener(event);
+        }
+      };
+    },
+    event: (type: string, event: WebBluetoothAdvertisementEvent) => {
+      for (const listener of events.get(type) ?? []) {
+        listener(event);
+      }
+    },
+  };
+}
+
+function createDevice(characteristic: WebBluetoothCharacteristic, options: TestCentralOptions) {
+  const events = createDeviceEvents();
   let connects = 0;
+  let disconnects = 0;
 
   const service = {
     uuid: options.serviceUuid ?? HEART_RATE_SERVICE,
@@ -90,7 +126,9 @@ function createDevice(characteristic: WebBluetoothCharacteristic, options: TestC
 
       return (options.beforeConnect?.() ?? Promise.resolve()).then(() => server);
     },
-    disconnect: () => {},
+    disconnect: () => {
+      disconnects += 1;
+    },
     getPrimaryServices: () => Promise.resolve([service]),
   };
 
@@ -98,26 +136,17 @@ function createDevice(characteristic: WebBluetoothCharacteristic, options: TestC
     id: "strap-1",
     name: "Test strap",
     gatt: server,
-    addEventListener: (type: string, listener: DeviceListener) => {
-      const listeners = events.get(type) ?? new Set<DeviceListener>();
-
-      listeners.add(listener);
-      events.set(type, listeners);
-    },
-    removeEventListener: (type: string, listener: DeviceListener) => {
-      events.get(type)?.delete(listener);
-    },
+    addEventListener: events.add,
+    removeEventListener: events.remove,
     watchAdvertisements: () => Promise.resolve(),
   };
 
   return {
     device,
     connects: () => connects,
-    event(type: string, event: WebBluetoothAdvertisementEvent) {
-      for (const listener of events.get(type) ?? []) {
-        listener(event);
-      }
-    },
+    disconnects: () => disconnects,
+    captureEvent: events.captureEvent,
+    event: events.event,
   };
 }
 

@@ -8,10 +8,13 @@ import {
   createSimScript,
   createTrainerAdapter,
   createHeartRateAdapter,
+  createPlayAdapter,
   createNavigatorBluetoothCentral,
   createWebBluetoothTransport,
   type KeyboardEventLike,
   type KeyboardSource,
+  type PlayAdapterOptions,
+  type WebBluetoothCentral,
 } from "@voltonaut/ble";
 import { mountConnectDialog } from "./ui/connect/dialog.js";
 
@@ -81,6 +84,26 @@ export function setupSimDevices(bus: EventBus, clockScale: number): void {
   void Promise.all([trainer, heartRate, play].map((device) => device.connect()));
 }
 
+function playSlots(
+  options: Omit<PlayAdapterOptions, "side" | "transport">,
+  central: WebBluetoothCentral,
+) {
+  return (["left", "right"] satisfies readonly ("left" | "right")[]).map((side) => {
+    const adapter = createPlayAdapter({
+      ...options,
+      side,
+      transport: createWebBluetoothTransport({ central }),
+    });
+
+    return {
+      label: side === "left" ? "Play links (Ziel)" : "Play rechts (Ziel)",
+      adapter,
+      select: adapter.select,
+      description: adapter.description,
+    };
+  });
+}
+
 export function setupBluetoothDevices(bus: EventBus): void {
   const central = createNavigatorBluetoothCentral();
 
@@ -114,6 +137,7 @@ export function setupBluetoothDevices(bus: EventBus): void {
     [
       { label: "Trainer", adapter: trainer, select: trainer.select },
       { label: "Puls", adapter: heartRate, select: heartRate.select },
+      ...playSlots({ bus, clock, ticker }, central),
     ],
     bus,
   );

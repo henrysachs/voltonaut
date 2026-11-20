@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { parseStravaConfig } from "./strava/strava.config.js";
+import type { StravaConfig } from "./strava/strava.config.js";
 
 const OriginSchema = z
   .string()
@@ -30,6 +32,7 @@ export type MailConfig = (z.infer<typeof MailConfigSchema> | { readonly provider
 
 export interface ServerConfig {
   readonly auth: AuthConfig;
+  readonly strava: StravaConfig;
   readonly clientOrigin: string;
   readonly database: { readonly path: string; readonly migrationsDir: string };
   readonly mail: MailConfig;
@@ -196,6 +199,7 @@ export function parseServerConfig(
 
   return {
     auth,
+    strava: stravaForBrowser(env, environment, browser),
     ...browser,
     database: {
       path: z
@@ -234,6 +238,25 @@ export function parseServerConfig(
         .parse(env["PORT"] ?? 3000),
     },
   };
+}
+
+function stravaForBrowser(
+  env: Readonly<Record<string, string | undefined>>,
+  environment: string,
+  browser: Pick<ServerConfig, "clientOrigin" | "cors">,
+): StravaConfig {
+  const strava = parseStravaConfig(env, environment === "production");
+
+  if (
+    strava.mode === "enabled" &&
+    (!safeOidcUrl(browser.clientOrigin, environment !== "production") ||
+      browser.cors.origins.length !== 1 ||
+      browser.cors.origins[0] !== browser.clientOrigin)
+  ) {
+    throw new Error("config: Strava requires safe CLIENT_ORIGIN and exact credentialed CORS");
+  }
+
+  return strava;
 }
 
 export function testServerConfig(overrides?: Partial<ServerConfig>): ServerConfig {
