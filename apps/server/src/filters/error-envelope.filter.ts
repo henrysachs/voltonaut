@@ -74,6 +74,12 @@ function resolveError(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- instanceof narrowing needs the real error classes; Error subtypes are deep-mutable by design.
   exception: ApiError | ThrottlerException | ZodError | HttpException | Error,
 ): ResolvedError {
+  const parserError = resolveParserError(exception);
+
+  if (parserError !== undefined) {
+    return parserError;
+  }
+
   if (exception instanceof ApiError) {
     return {
       status: exception.getStatus(),
@@ -105,6 +111,48 @@ function resolveError(
   return {
     status: 500,
     envelope: errorEnvelope("internal_error", "internal server error"),
+    retryAfterS: undefined,
+  };
+}
+
+function resolveParserError(exception: Readonly<Error>): ResolvedError | undefined {
+  const parsed = z
+    .object({ type: z.enum(["entity.too.large", "entity.parse.failed", "encoding.unsupported"]) })
+    .safeParse(exception.cause ?? exception);
+
+  if (!parsed.success) {
+    return undefined;
+  }
+
+  const errors = {
+    "entity.too.large": {
+      status: 413,
+      code: "payload_too_large",
+      message: "JSON body exceeds 8 MiB",
+    },
+    "entity.parse.failed": {
+      status: 400,
+      code: "validation_failed",
+      message: "malformed JSON body",
+    },
+    "encoding.unsupported": {
+      status: 415,
+      code: "unsupported_media_type",
+      message: "uncompressed JSON required",
+    },
+  } satisfies {
+    readonly [key: string]: {
+      readonly status: number;
+      readonly code: ErrorCode;
+      readonly message: string;
+    };
+  };
+
+  const error = errors[parsed.data.type];
+
+  return {
+    status: error.status,
+    envelope: errorEnvelope(error.code, error.message),
     retryAfterS: undefined,
   };
 }

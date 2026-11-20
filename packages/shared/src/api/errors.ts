@@ -9,6 +9,9 @@ export const ErrorCodeSchema = z.enum([
   "rate_limited",
   "validation_failed",
   "not_found",
+  "ride_id_conflict",
+  "payload_too_large",
+  "unsupported_media_type",
   "internal_error",
 ]);
 

@@ -27,6 +27,12 @@ it("preserves absent readings and real zero, independent of the physics clock", 
   expect(ride.metadata.physicsClockScale).toBe(20);
 });
 
+it("keeps existing local V1 files compatible without rewriting UUID case", () => {
+  const rideId = record.rideId.toUpperCase();
+
+  expect(CompletedLocalRideSchema.parse({ ...record, rideId }).rideId).toBe(rideId);
+});
+
 it.each([
   [],
   [{ elapsedMs: 0, distanceM: 0, gap: true }],

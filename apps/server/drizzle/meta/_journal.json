@@ -15,6 +15,13 @@
       "when": 1795177056289,
       "tag": "0001_material_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795185388866,
+      "tag": "0002_owned_profiles_rides",
+      "breakpoints": true
     }
   ]
 }
