@@ -87,6 +87,8 @@ Teilschritt [E4-02](specs/E4-02-first-ride-scene.md) ergänzt eine erste fahrbar
 
 Teilschritt [E4-03](specs/E4-03-lake-forest-world.md) ergänzt begrenztes Relief, einen See mit Ufer, instanzierten Wald und Kilometermarken auf derselben 10-km-Testrunde. Terrain-Streaming, LOD, neue Routendaten, Asset-Pipeline und die Hardware-Abnahme bleiben offen.
 
+Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.md) und [E4-05](specs/E4-05-ingame-menu.md) trennen native Renderwartezeiten vom Fahrbetrieb und halten Welt und HUD neben einem Ingame-Menü sichtbar. Geräte, Profil, Aufnahmen und Konto bleiben bedienbar, ohne die Fahrt zu pausieren. Die gemeinsame Kombination mit FTMS-Steuerung ist softwaregeprüft; reale Hardware-FPS und die gemeinsame Probefahrt bleiben offen. Das vollständige Spiel-HUD ist damit nicht abgenommen.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen

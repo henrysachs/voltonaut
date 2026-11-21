@@ -2,6 +2,7 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { nativeControlFakeScript } from "./helpers/nativeControl.js";
+import { closeGameMenu, openGameMenu } from "./helpers/gameMenu.js";
 
 async function choose(page: Page, name: string): Promise<void> {
   const row = page
@@ -144,12 +145,29 @@ test("menu/form arrows never shift an enabled trainer, body arrows and physical 
   await expect(page.getByTestId("hud-gear")).toHaveText("12");
   await expect.poll(() => grade(page)).toBe(initial);
   await page.getByRole("button", { name: "Schließen", exact: true }).click();
+  await openGameMenu(page, "Profil");
   await page.getByTestId("profile-massKg").focus();
   await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("c");
   await waitInputFrames(page);
   await expect(page.getByTestId("hud-gear")).toHaveText("12");
   await expect.poll(() => grade(page)).toBe(initial);
   await expect(page.locator("body")).toHaveAttribute("data-control-count", count);
+  await expect(page.locator(".scene__camera")).toHaveText("Camera: chase · C");
+  await page.evaluate(() => document.dispatchEvent(new Event("test-control-right-down")));
+  await expect(page.getByTestId("hud-gear")).toHaveText("13");
+  await expect.poll(() => grade(page)).toBeGreaterThan(initial);
+  const higher = await grade(page);
+  await waitInputFrames(page);
+  await expect(page.getByTestId("hud-gear")).toHaveText("13");
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event("test-control-right-up"));
+    document.dispatchEvent(new Event("test-control-left-down"));
+  });
+  await expect(page.getByTestId("hud-gear")).toHaveText("12");
+  await expect.poll(() => grade(page)).toBeLessThan(higher);
+  await page.evaluate(() => document.dispatchEvent(new Event("test-control-left-up")));
+  await closeGameMenu(page);
   await page.locator("body").click({ position: { x: 5, y: 5 } });
   await preventedArrowStaysQuiet(page);
   await page.keyboard.press("ArrowUp");

@@ -12,6 +12,7 @@ import { createConnectionMonitor, type ConnectionMonitor } from "./game/connecti
 import { setupProfile } from "./profileBootstrap.js";
 import { setupBrowserAccount } from "./browserAccount.js";
 import { setupRidePresentation } from "./ridePresentation.js";
+import { mountGameMenu } from "./ui/gameMenu.js";
 
 const FAST_CLOCK_SCALE = 20;
 const APP_ROUTE_ID = "test-loop";
@@ -150,6 +151,7 @@ async function start(): Promise<void> {
   setupKeyboard(bus);
 
   devices?.mount();
+  mountGameMenu();
 }
 
 await start();
