@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { openGameMenu } from "./helpers/gameMenu.js";
 import { bluetoothFakeScript } from "./helpers/bluetooth.js";
+import { reportMenuFailure } from "./helpers/menuFailure.js";
+import type { FirstDrawPoll } from "./helpers/menuFailure.js";
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("ride menu exposes existing profile, recordings and account without body scroll", async ({
@@ -92,35 +94,47 @@ test("editing the menu never shifts or changes camera while native number editin
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page and test fixtures.
 test("menu keeps world and HUD moving", async ({ page }, testInfo) => {
-  await page.goto("/?sim=1&debug=1");
-  const diagnostics = page.getByLabel("Render diagnostics");
-  await expect
-    .poll(async () => Number(await diagnostics.getAttribute("data-calls")))
-    .toBeGreaterThan(0);
-  await page.screenshot({ path: testInfo.outputPath("desktop-ride.png") });
-  await openGameMenu(page, "Profil");
-  const distanceM = Number(await diagnostics.getAttribute("data-distance-m"));
-  const hudDistance = await page.getByTestId("hud-distance").textContent();
-  await expect
-    .poll(async () => Number(await diagnostics.getAttribute("data-distance-m")))
-    .toBeGreaterThan(distanceM + 8);
-  await expect(page.getByTestId("hud-distance")).not.toHaveText(String(hudDistance));
-  const calls = Number(await diagnostics.getAttribute("data-calls"));
-  const triangles = Number(await diagnostics.getAttribute("data-triangles"));
-  expect(calls).toBeLessThanOrEqual(150);
-  expect(triangles).toBeLessThanOrEqual(500_000);
-  await testInfo.attach("menu-render-budget.json", {
-    body: JSON.stringify({
-      calls,
-      triangles,
-      distanceM,
-      movedDistanceM: Number(await diagnostics.getAttribute("data-distance-m")),
-    }),
-    contentType: "application/json",
-  });
-  await expect(page.locator("#ride-scene")).toBeInViewport({ ratio: 1 });
-  await expect(page.locator(".hud")).toBeInViewport({ ratio: 1 });
-  await page.screenshot({ path: testInfo.outputPath("desktop-menu.png") });
+  let firstDrawPoll: FirstDrawPoll = { kind: "not-polled" };
+
+  try {
+    await page.goto("/?sim=1&debug=1");
+    const diagnostics = page.getByLabel("Render diagnostics");
+    await expect
+      .poll(async () => {
+        const rawCalls = await diagnostics.getAttribute("data-calls");
+        firstDrawPoll = { kind: "polled", rawCalls };
+
+        return Number(rawCalls);
+      })
+      .toBeGreaterThan(0);
+    await page.screenshot({ path: testInfo.outputPath("desktop-ride.png") });
+    await openGameMenu(page, "Profil");
+    const distanceM = Number(await diagnostics.getAttribute("data-distance-m"));
+    const hudDistance = await page.getByTestId("hud-distance").textContent();
+    await expect
+      .poll(async () => Number(await diagnostics.getAttribute("data-distance-m")))
+      .toBeGreaterThan(distanceM + 8);
+    await expect(page.getByTestId("hud-distance")).not.toHaveText(String(hudDistance));
+    const calls = Number(await diagnostics.getAttribute("data-calls"));
+    const triangles = Number(await diagnostics.getAttribute("data-triangles"));
+    expect(calls).toBeLessThanOrEqual(150);
+    expect(triangles).toBeLessThanOrEqual(500_000);
+    await testInfo.attach("menu-render-budget.json", {
+      body: JSON.stringify({
+        calls,
+        triangles,
+        distanceM,
+        movedDistanceM: Number(await diagnostics.getAttribute("data-distance-m")),
+      }),
+      contentType: "application/json",
+    });
+    await expect(page.locator("#ride-scene")).toBeInViewport({ ratio: 1 });
+    await expect(page.locator(".hud")).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: testInfo.outputPath("desktop-menu.png") });
+  } catch (error) {
+    await reportMenuFailure(page, firstDrawPoll).catch(() => null);
+    throw error;
+  }
 });
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page and test fixtures.
