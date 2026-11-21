@@ -4,7 +4,7 @@ import type { FirstDrawPoll } from "./helpers/menuFailure.js";
 import { captureFirstFrameFailure, startNativeCapture } from "./helpers/nativeFirstFrame.js";
 
 for (let repetition = 0; repetition < 12; repetition += 1) {
-  const traced = repetition % 2 === 1;
+  const traced = repetition % 2 === 0;
   const title = `native first frame ${repetition} ${traced ? "traced" : "baseline"}`;
   const capture = traced ? startNativeCapture : () => Promise.resolve(() => Promise.resolve());
 
