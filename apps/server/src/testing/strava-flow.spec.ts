@@ -9,7 +9,7 @@ import { bearer, bodyOf, createTestApp, httpServerOf, loginTestUser } from "./te
 
 export const STRAVA_ORIGIN = "http://127.0.0.1:5197";
 
-export async function setupStrava() {
+export async function setupStrava(subscriptionId: string | null = "123") {
   const provider = new LocalStravaProvider("123", "generated-test-client-secret");
   await provider.listen();
   afterEach(() => provider.close());
@@ -30,6 +30,7 @@ export async function setupStrava() {
         clientId: "123",
         clientSecret: "generated-test-client-secret",
         tokenKey: randomBytes(32).toString("hex"),
+        webhook: { verifyToken: "b".repeat(64), subscriptionId },
         providerOrigin: provider.origin,
         redirectUri: "http://127.0.0.1:3000/v1/strava/callback",
       },

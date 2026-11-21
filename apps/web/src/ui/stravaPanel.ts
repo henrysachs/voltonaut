@@ -12,6 +12,8 @@ type Host = Readonly<Pick<HTMLElement, "append" | "replaceChildren">>;
 
 const connectionLabels: Readonly<Record<StravaStatus["status"], string>> = {
   disabled: "Strava ist auf diesem Server deaktiviert.",
+  registration_required:
+    "Strava-Verbindung noch gesperrt. Die Webhook-Registrierung des Servers fehlt.",
   disconnected: "Nicht mit Strava verbunden.",
   pending: "Bestätigung im ursprünglichen Tab fehlt.",
   confirmation_expired:
@@ -33,6 +35,7 @@ const blockedLabels: Readonly<
   not_replayed: "Diese Fahrt hat keinen zulässigen nachgerechneten Beleg.",
   window_source: "Das Aufnahmefenster erfüllt die deklarative BLE-Richtlinie nicht.",
   connection_disabled: connectionLabels.disabled,
+  registration_required: connectionLabels.registration_required,
   connection_missing: connectionLabels.disconnected,
   confirmation_required: connectionLabels.pending,
   credentials_unavailable: connectionLabels.credentials_unavailable,
@@ -124,19 +127,23 @@ function appendRide(host: Host, sync: Readonly<StravaSync>, state: AccountView):
   else appendConsent(host, sync, view, state);
 }
 
+function appendStatusLine(host: Host, value: string): void {
+  const line = text(value);
+  line.setAttribute("role", "status");
+  host.append(line);
+}
+
 function appendConnection(host: Host, sync: Readonly<StravaSync>, state: AccountView): void {
   const status = state.connection.kind === "ready" ? state.connection.value : undefined;
 
-  const line = text(
+  appendStatusLine(
+    host,
     status === undefined
       ? state.connection.kind === "failed"
         ? "Strava-Status nicht bestätigt."
         : "Strava-Status wird geladen …"
       : connectionLabels[status.status],
   );
-
-  line.setAttribute("role", "status");
-  host.append(line);
 
   if (status?.status === "connected") host.append(text(`Strava-Athlet ${status.athleteId}.`));
   host.append(
@@ -160,7 +167,11 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
       ),
     );
 
-  if (status !== undefined && status.status !== "disabled" && status.status !== "disconnected")
+  const disconnected = ["disabled", "disconnected", "registration_required"].includes(
+    status?.status ?? "disconnected",
+  );
+
+  if (!disconnected)
     host.append(
       button(
         "Strava trennen / Widerruf prüfen",
@@ -170,9 +181,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
         state.busy,
       ),
     );
-  const message = text(state.message);
-  message.setAttribute("role", "status");
-  host.append(message);
+  appendStatusLine(host, state.message);
 }
 
 function appendHistory(

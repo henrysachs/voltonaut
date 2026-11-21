@@ -4,7 +4,7 @@ import type { StravaStatus } from "@voltonaut/shared";
 import { SERVER_CONFIG, CLOCK } from "../config.module.js";
 import type { ServerConfig, Clock } from "../config.module.js";
 import { createToken, hashToken } from "../auth/tokens.js";
-import { StravaProvider } from "./strava.provider.js";
+import { StravaProvider, stravaRegistrationRequired } from "./strava.provider.js";
 import { StravaStore } from "./strava.store.js";
 import { stravaCallbackUrl, stravaBinding, stravaCookie } from "./strava.browser.js";
 import { decryptTokens, encryptTokens } from "./strava.crypto.js";
@@ -26,7 +26,10 @@ export class StravaService {
     if (this.config.strava.mode === "disabled") return { status: "disabled" };
     const row = this.store.connection(userId);
 
-    if (row === undefined) return { status: "disconnected" };
+    if (row === undefined)
+      return this.config.strava.webhook.subscriptionId === null
+        ? { status: "registration_required" }
+        : { status: "disconnected" };
 
     if (row.status === "revocation_pending") return { status: "revocation_pending" };
 
@@ -60,6 +63,8 @@ export class StravaService {
 
   public start(userId: string, channel: string) {
     const config = this.provider.enabledConfig();
+
+    if (config.webhook.subscriptionId === null) throw stravaRegistrationRequired();
     const state = createToken();
     const binding = createToken();
     this.store.start(

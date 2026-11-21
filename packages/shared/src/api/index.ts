@@ -8,6 +8,8 @@ export * from "./rides.js";
 
 export * from "./strava.js";
 
+export * from "./strava-webhook.js";
+
 export * from "./errors.js";
 
 export const HealthResponseSchema = z.object({

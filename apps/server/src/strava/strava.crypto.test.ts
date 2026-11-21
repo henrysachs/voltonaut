@@ -41,6 +41,7 @@ it("defaults disabled and rejects incomplete, noncanonical and production fake c
     CLIENT_ORIGIN: "https://example.com",
     CORS_ORIGINS: "https://example.com",
     STRAVA_TOKEN_KEY: randomBytes(32).toString("base64"),
+    STRAVA_WEBHOOK_VERIFY_TOKEN: "b".repeat(64),
   };
 
   expect(parseServerConfig(env, "production").strava.mode).toBe("enabled");

@@ -13,6 +13,7 @@ export async function providerFixture() {
     clientId: "123",
     clientSecret: "synthetic-client-secret",
     tokenKey: "a".repeat(64),
+    webhook: { verifyToken: "b".repeat(64), subscriptionId: "123" },
     redirectUri: "http://127.0.0.1:5238/v1/strava/callback",
     providerOrigin: peer.origin,
   });

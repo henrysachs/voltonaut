@@ -4,10 +4,10 @@ import { StravaScheduler } from "./strava.scheduler.js";
 import { StravaService } from "./strava.service.js";
 import { StravaStore } from "./strava.store.js";
 import { StravaDeliveryService } from "./strava.delivery.js";
-import { StravaRateStore } from "./strava.rate-store.js";
 import { RidesService } from "../rides/rides.service.js";
 import { parseServerConfig } from "../config.js";
 import { stravaTables, ridesTables } from "../schema.js";
+import { authorizationFixture } from "./strava.authorization-fixture.spec.js";
 
 export async function schedulerFixture() {
   const owners = fixture();
@@ -18,7 +18,9 @@ export async function schedulerFixture() {
     strava: remote.provider.enabledConfig(),
   };
 
-  const clock = { nowMs: () => 20000 };
+  const time = { nowMs: 20000 };
+  const clock = { nowMs: () => time.nowMs };
+  const checks = authorizationFixture(owners.a, remote.provider, clock);
   const connections = new StravaStore(owners.a.db, stravaTables);
 
   const service = new StravaService(
@@ -43,10 +45,11 @@ export async function schedulerFixture() {
     owners.a.jobs,
     owners.a.credentials,
     remote.provider,
-    new StravaRateStore(owners.a.db, stravaTables),
+    checks.rates,
     service,
     clock,
+    checks.authorization,
   );
 
-  return { ...owners, ...remote, config, scheduler };
+  return { ...owners, ...remote, ...checks, time, config, scheduler };
 }

@@ -2,11 +2,14 @@
 
 from dataclasses import dataclass
 from enum import Enum
+import base64
+import binascii
 import ipaddress
 import json
 import os
 from pathlib import Path
 import re
+import secrets
 import stat
 import subprocess
 import sys
@@ -20,6 +23,9 @@ MAX_PAYLOAD_BYTES = 1024 * 1024
 CLIENT_ORIGIN = "https://voltonaut.stammkneipe.dev"
 REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"
 SECRET_KEYS = ("OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET")
+STRAVA_TARGET = Path("/srv/voltonaut/strava.env")
+STRAVA_REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/strava/callback"
+STRAVA_SECRET_KEYS = ("STRAVA_CLIENT_ID", "STRAVA_CLIENT_SECRET")
 
 
 class ProvisionError(Exception):
@@ -29,6 +35,10 @@ class ProvisionError(Exception):
 class Result(Enum):
     CREATED = "created"
     UNCHANGED = "unchanged"
+
+
+class EnvironmentValues(Protocol):
+    def values(self) -> dict[str, str]: ...
 
 
 @dataclass(frozen=True, repr=False)
@@ -46,6 +56,32 @@ class Config:
             "OIDC_CLIENT_ID": self.client_id,
             "OIDC_CLIENT_SECRET": self.client_secret,
         }
+
+
+@dataclass(frozen=True, repr=False)
+class StravaConfig:
+    client_id: str
+    client_secret: str
+
+    def values(self) -> dict[str, str]:
+        return {"STRAVA_MODE": "enabled", "STRAVA_CLIENT_ID": self.client_id,
+                "STRAVA_CLIENT_SECRET": self.client_secret,
+                "STRAVA_REDIRECT_URI": STRAVA_REDIRECT_URI,
+                "RIDE_SOURCE_POLICY": "declared_ble_v1"}
+
+
+def parse_strava(raw: object) -> StravaConfig:
+    if not isinstance(raw, dict):
+        raise ProvisionError("invalid configuration")
+    client_id, secret = raw.get("STRAVA_CLIENT_ID"), raw.get("STRAVA_CLIENT_SECRET")
+    if (not isinstance(client_id, str) or not re.fullmatch(r"[1-9][0-9]{0,19}", client_id)
+            or not isinstance(secret, str) or not re.fullmatch(r"[!-~]{1,1024}", secret)
+            or secret.lower() in {"changeme", "change-me", "replace-me", "placeholder", "your-client-secret"}):
+        raise ProvisionError("invalid configuration")
+    config = StravaConfig(client_id, secret)
+    if raw != config.values():
+        raise ProvisionError("invalid configuration")
+    return config
 
 
 def parse_config(raw: object) -> Config:
@@ -98,21 +134,123 @@ def json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return result
 
 
-def parse_payload(payload: bytes) -> Config:
+def parse_payload(payload: bytes) -> Config | StravaConfig:
     if len(payload) > MAX_PAYLOAD_BYTES:
         raise ProvisionError("invalid configuration")
     try:
         raw: object = json.loads(payload, object_pairs_hook=json_object)
+        if isinstance(raw, dict) and "STRAVA_MODE" in raw:
+            return parse_strava(raw)
         return parse_config(raw)
     except (ValueError, UnicodeError, RecursionError):
         raise ProvisionError("invalid configuration") from None
 
 
-def render_config(config: Config) -> bytes:
+def render_values(values: dict[str, str]) -> bytes:
     def quote(value: str) -> str:
         return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "$$") + '"'
 
-    return "".join(f"{key}={quote(value)}\n" for key, value in config.values().items()).encode("utf-8")
+    return "".join(f"{key}={quote(value)}\n" for key, value in values.items()).encode("utf-8")
+
+
+def render_config(config: EnvironmentValues) -> bytes:
+    return render_values(config.values())
+
+
+def private_values(path: Path) -> dict[str, str]:
+    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        metadata = os.fstat(directory_fd)
+        if metadata.st_uid != os.geteuid() or stat.S_IMODE(metadata.st_mode) & 0o022:
+            raise ProvisionError("unsafe configuration directory")
+        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory_fd)
+    except OSError:
+        raise ProvisionError("existing configuration rejected") from None
+    finally:
+        os.close(directory_fd)
+    with os.fdopen(fd, "rb") as source:
+        metadata = os.fstat(source.fileno())
+        if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
+                or stat.S_IMODE(metadata.st_mode) != 0o600):
+            raise ProvisionError("existing configuration rejected")
+        content = source.read(MAX_PAYLOAD_BYTES + 1)
+    if len(content) > MAX_PAYLOAD_BYTES:
+        raise ProvisionError("existing configuration rejected")
+    values: dict[str, str] = {}
+    for line in content.decode("utf-8").splitlines():
+        match = re.fullmatch(r'([A-Z_]+)="((?:[^"\\\r\n\0]|\\["\\])*)"', line)
+        if match is None or match[1] in values:
+            raise ProvisionError("existing configuration rejected")
+        values[match[1]] = re.sub(r'\\(["\\])', r'\1', match[2]).replace("$$", "$")
+    if render_values(values) != content:
+        raise ProvisionError("existing configuration rejected")
+    return values
+
+
+def strava_matches(path: Path, config: StravaConfig) -> Result:
+    values = private_values(path)
+    key = values.pop("STRAVA_TOKEN_KEY", "")
+    if not re.fullmatch(r"[a-f0-9]{64}", key):
+        try:
+            decoded = base64.b64decode(key, validate=True)
+        except (ValueError, binascii.Error):
+            raise ProvisionError("existing configuration rejected") from None
+        if len(decoded) != 32 or base64.b64encode(decoded).decode("ascii") != key:
+            raise ProvisionError("existing configuration rejected")
+    if not re.fullmatch(r"[a-f0-9]{64}", values.pop("STRAVA_WEBHOOK_VERIFY_TOKEN", "")):
+        raise ProvisionError("existing configuration rejected")
+    if values != config.values():
+        raise ProvisionError("existing configuration rejected")
+    return Result.UNCHANGED
+
+
+def encrypted_tokens_absent() -> bool:
+    script = ("const DB=require('better-sqlite3');"
+              "try{const db=new DB('/app/data/voltonaut.db',{readonly:true,fileMustExist:true});"
+              "const row=db.prepare('SELECT count(*) AS n FROM strava_connections "
+              "WHERE length(encrypted_tokens)>0').get();"
+              "process.stdout.write(row.n===0?'empty':'blocked');db.close();}"
+              "catch{process.exitCode=1;}")
+    result = run_command(["docker", "exec", "voltonaut-server-1", "node", "-e", script])
+    return result.code == 0 and result.stdout == b"empty"
+
+
+def write_strava(path: Path, config: StravaConfig, tokens_absent=encrypted_tokens_absent) -> Result:
+    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        metadata = os.fstat(directory_fd)
+        if metadata.st_uid != os.geteuid() or stat.S_IMODE(metadata.st_mode) & 0o022:
+            raise ProvisionError("unsafe configuration directory")
+        try:
+            os.stat(path.name, dir_fd=directory_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            return strava_matches(path, config)
+        if not tokens_absent():
+            raise ProvisionError("existing encrypted credentials require original key")
+        expected = render_values({**config.values(), "STRAVA_TOKEN_KEY": secrets.token_hex(32),
+                                  "STRAVA_WEBHOOK_VERIFY_TOKEN": secrets.token_hex(32)})
+        fd, staged = tempfile.mkstemp(prefix=".provision-strava-", dir=path.parent)
+        staged_name = Path(staged).name
+        try:
+            with os.fdopen(fd, "wb") as output:
+                os.fchmod(output.fileno(), 0o600)
+                output.write(expected)
+                output.flush()
+                os.fsync(output.fileno())
+            try:
+                os.link(staged_name, path.name, src_dir_fd=directory_fd,
+                        dst_dir_fd=directory_fd, follow_symlinks=False)
+            except FileExistsError:
+                return strava_matches(path, config)
+            os.fsync(directory_fd)
+            return Result.CREATED
+        finally:
+            os.unlink(staged_name, dir_fd=directory_fd)
+            os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def existing_matches(directory_fd: int, name: str, expected: bytes) -> Result:
@@ -129,7 +267,7 @@ def existing_matches(directory_fd: int, name: str, expected: bytes) -> Result:
     return Result.UNCHANGED
 
 
-def write_config(path: Path, config: Config) -> Result:
+def write_config(path: Path, config: EnvironmentValues) -> Result:
     expected = render_config(config)
     directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
@@ -192,7 +330,7 @@ def ssh_options() -> list[str]:
             "-i", str(Path.home() / ".ssh/id_ed25519")]
 
 
-def send(user: str, host: str, config: Config, runner: Runner = run_command) -> Result:
+def send(user: str, host: str, config: Config | StravaConfig, runner: Runner = run_command) -> Result:
     if (not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", user)
             or len(host) > 253 or not re.fullmatch(
                 r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?", host)
@@ -235,11 +373,20 @@ def main(argv: list[str]) -> int:
     try:
         if argv == ["receive"]:
             config = parse_payload(sys.stdin.buffer.read(MAX_PAYLOAD_BYTES + 1))
-            result = write_config(TARGET, config)
-        elif len(argv) == 3 and argv[0] == "send":
-            raw = {key: os.environ.get(key, "") for key in SECRET_KEYS}
-            raw.update(AUTH_MODE="oidc", CLIENT_ORIGIN=CLIENT_ORIGIN, OIDC_REDIRECT_URI=REDIRECT_URI)
-            result = send(argv[1], argv[2], parse_config(raw))
+            result = (write_strava(STRAVA_TARGET, config) if isinstance(config, StravaConfig)
+                      else write_config(TARGET, config))
+        elif len(argv) in (3, 4) and argv[0] == "send":
+            profile = argv[3] if len(argv) == 4 else "oidc"
+            if profile == "oidc":
+                raw = {key: os.environ.get(key, "") for key in SECRET_KEYS}
+                raw.update(AUTH_MODE="oidc", CLIENT_ORIGIN=CLIENT_ORIGIN, OIDC_REDIRECT_URI=REDIRECT_URI)
+                config = parse_config(raw)
+            elif profile == "strava":
+                config = parse_strava(StravaConfig(os.environ.get("STRAVA_CLIENT_ID", ""),
+                                      os.environ.get("STRAVA_CLIENT_SECRET", "")).values())
+            else:
+                raise ProvisionError("invalid command")
+            result = send(argv[1], argv[2], config)
         else:
             raise ProvisionError("invalid command")
         print(result.value)

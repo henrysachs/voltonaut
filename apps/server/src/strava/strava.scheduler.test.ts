@@ -14,11 +14,11 @@ function block(credentials: Readonly<StravaCredentialStore>, state: string): voi
     return;
   }
 
-  const work = required(credentials.claimWork("owner", "poll", 19000));
-
   if (state === "reauthorization_required") {
-    credentials.credentialFailure(work);
-    credentials.releaseWork(work);
+    const work = required(credentials.claimWork("owner", "refresh", 19000));
+    credentials.finishRefresh(work, { kind: "refused" });
+  } else {
+    required(credentials.claimWork("owner", "poll", 19000));
   }
 }
 
@@ -96,7 +96,7 @@ it.each<{ readonly state: string; readonly credentialState: string }>([
   },
 );
 
-it("stops current authorization failures while retaining the accepted receipt", async () => {
+it("treats a current 401 as a hint while retaining consent and the accepted receipt", async () => {
   const { a, reopen, peer, grant, config, scheduler } = await schedulerFixture();
   a.db.$client
     .prepare("UPDATE strava_connections SET encrypted_tokens = ? WHERE user_id = 'owner'")
@@ -114,12 +114,10 @@ it("stops current authorization failures while retaining the accepted receipt", 
     await scheduler.tick();
     await scheduler.tick();
     expect(peer.resources.pollCalls).toBe(0);
-    expect(reopen().credentials.connection("owner")?.credentialState).toBe(
-      "reauthorization_required",
-    );
+    expect(reopen().credentials.connection("owner")?.credentialState).toBe("available");
     const stopped = required(a.jobs.own("owner", consent.rideId));
     expect(stopped).toMatchObject({
-      authority: { kind: "stopped", reason: "credentials" },
+      authority: { kind: "consented" },
       progress: { kind: "processing", issue: "authorization" },
     });
     expect(processing(stopped).receipt).toEqual(processing(job).receipt);
