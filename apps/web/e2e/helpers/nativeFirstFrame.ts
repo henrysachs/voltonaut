@@ -131,6 +131,8 @@ export async function startNativeCapture(
   const startedMs = performance.now();
   const observations = observePage(page, startedMs);
   const stopGpuScheduling = startGpuScheduling(session, startedMs);
+  const { gpu } = await session.send("SystemInfo.getInfo");
+  const gpuDevices = gpu.devices;
 
   await page.addInitScript(observeRenderReplies);
 
@@ -154,6 +156,7 @@ export async function startNativeCapture(
         architecture: process.arch,
         observations,
         gpuScheduling,
+        gpuDevices,
       })}\n`,
     );
     process.stderr.write(
