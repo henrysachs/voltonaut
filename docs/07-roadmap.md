@@ -180,3 +180,5 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Optionale Client-Telemetrie (ADR-010): aggregierte FPS/Framezeit und BLE-Trennungen sowie Fehler-Signaturen an einen eigenen Server-Endpunkt, keine Third-Party-Tracker
 - [ ] Strava-Integration (optional): OAuth-Verbindung eines Strava-Kontos, akzeptierte Fahrt als Activity hochladen
+  - [x] [E10-04](specs/E10-04-complete-ride-delivery.md): Worker-Journal, kanonische API und ausdrücklicher dauerhafter TCX-Versand gegen lokale Testanbieter softwaregeprüft. Bestehende Aufnahmen bleiben erhalten.
+  - [ ] Echter Anbieterpilot mit Zustimmung, Callback-/Logprüfung, Sichtbarkeit und Betriebsfreigabe. Replay-Konsistenz bleibt ausdrücklich kein Hardwareattest.

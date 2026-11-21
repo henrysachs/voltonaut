@@ -1,22 +1,29 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout } from "node:timers/promises";
-import { z } from "zod";
 
 import {
   DEFAULT_RIDER_PROFILE,
   ProfileStateSchema,
   RideDetailSchema,
   RideReceiptSchema,
-} from "../../../packages/shared/dist/index.js";
+} from "@voltonaut/shared";
+import {
+  journalFixture,
+  loseJournalReply,
+  unusedPort,
+  verifyJournal,
+} from "./verify-owned-journal.ts";
 
 const directory = resolve(process.argv[2] ?? "apps/server");
-const temporary = mkdtempSync(join(tmpdir(), "voltonaut-process-rides-"));
+
+const temporary =
+  process.env["REPLAYED_API_ARTIFACTS"] ?? mkdtempSync(join(tmpdir(), "voltonaut-process-rides-"));
+
 const databasePath = join(temporary, "rides.db");
 
 const environment = {
@@ -25,6 +32,7 @@ const environment = {
   HOST: "127.0.0.1",
   DATABASE_PATH: databasePath,
   MAIL_PROVIDER: "memory",
+  RIDE_SOURCE_POLICY: "declared_ble_v1",
 };
 
 const token = crypto.randomUUID();
@@ -47,23 +55,20 @@ const recording = {
   ],
 };
 
-async function unusedPort(): Promise<number> {
-  const listener = createServer();
+const journal = journalFixture();
 
-  await new Promise<void>((done) => {
-    listener.listen(0, "127.0.0.1", done);
+async function uploadJournal(baseUrl: string) {
+  const response = await fetch(`${baseUrl}/v2/rides`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(journal),
   });
 
-  const address = z.object({ port: z.number() }).parse(listener.address());
-  const port = address.port;
+  assert.equal(response.status, 200);
+  const receipt = RideReceiptSchema.parse(await response.json());
+  assert.equal(receipt.assessment.status, "replayed");
 
-  await new Promise<void>((done) => {
-    listener.close(() => {
-      done();
-    });
-  });
-
-  return port;
+  return receipt;
 }
 
 async function startServer() {
@@ -132,7 +137,7 @@ async function seedSession(): Promise<void> {
 }
 
 async function upload(baseUrl: string, rideId: string = recording.rideId) {
-  const response = await fetch(`${baseUrl}/v1/rides`, {
+  const response = await fetch(`${baseUrl}/v2/rides`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json; charset=utf-8" },
     body: JSON.stringify({ ...recording, rideId }),
@@ -157,8 +162,9 @@ async function writeInitialState() {
   try {
     await seedSession();
     const receipt = await upload(first.baseUrl, recording.rideId.toUpperCase());
+    await loseJournalReply(first.baseUrl, headers);
 
-    const plainText = await fetch(`${first.baseUrl}/v1/rides`, {
+    const plainText = await fetch(`${first.baseUrl}/v2/rides`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "text/plain" },
       body: JSON.stringify(recording),
@@ -187,8 +193,9 @@ try {
 
   try {
     assert.deepEqual(await upload(second.baseUrl), original);
+    const journalReceipt = await uploadJournal(second.baseUrl);
 
-    const detail = await fetch(`${second.baseUrl}/v1/rides/${recording.rideId.toUpperCase()}`, {
+    const detail = await fetch(`${second.baseUrl}/v2/rides/${recording.rideId.toUpperCase()}`, {
       headers,
     });
 
@@ -205,19 +212,18 @@ try {
     const db = new DatabaseSync(databasePath);
 
     try {
-      z.object({ count: z.literal(1) }).parse(
-        db.prepare("SELECT count(*) AS count FROM rides").get(),
-      );
+      await verifyJournal(db, temporary, journalReceipt);
     } finally {
       db.close();
     }
 
     process.stdout.write(
-      "Built-process restart passed. Canonical UUID aliases keep one recording and receipt across SIGTERM. Profile and bearer ownership persist. Plain-text JSON is 415; JSON charset works. Local HTTP only.\n",
+      "Built-process restart passed. Legacy receipt and replayed warmup journal persist. Atomic raw payload, summary and TCX hash verified after SIGTERM; declared BLE only, no hardware attestation. Plain-text JSON is 415; JSON charset works. Local HTTP only.\n",
     );
   } finally {
     await second.stop();
   }
 } finally {
-  rmSync(temporary, { recursive: true, force: true });
+  if (process.env["REPLAYED_API_ARTIFACTS"] === undefined)
+    rmSync(temporary, { recursive: true, force: true });
 }

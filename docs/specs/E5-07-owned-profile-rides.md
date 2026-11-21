@@ -57,7 +57,7 @@ Keine blockierenden Fragen.
 ## Lokale Ergebnisse
 
 - `mise run fmt:check`, `lint`, `typecheck`, `depcruise`, `guard`, `test` und `build` sind nach der Korrektur grün. Vitest besteht mit Coverage, 78 Dateien und 391 Tests.
-- `mise exec -- node apps/server/scripts/verify-owned-data.ts` besteht nach dem Build. Der echte gebaute Server speichert Profil und Aufnahme. Nach SIGTERM startet ein neuer Prozess auf derselben SQLite-Datei. Der ursprüngliche Beleg, die Aufnahme und das Profil bleiben mit derselben Bearer-Session abrufbar. Das Skript nutzt ausschließlich lokale Zufallsports und eine synthetische Testsitzung.
+- `mise exec -- node apps/server/scripts/verify-owned-data.mjs` besteht nach dem Server-Build. Der Launcher kompiliert den TypeScript-Prüfeinstieg mit der vorhandenen Server-Vite-Konfiguration in ein temporäres Verzeichnis; öffentliche Workspace-Importe benötigen keine erzeugten Paket-Deklarationen. Der echte gebaute Server speichert Profil und Aufnahme. Nach SIGTERM startet ein neuer Prozess auf derselben SQLite-Datei. Der ursprüngliche Beleg, die Aufnahme und das Profil bleiben mit derselben Bearer-Session abrufbar. Das Skript nutzt ausschließlich lokale Zufallsports und eine synthetische Testsitzung.
 - `mise exec -- pnpm --filter @voltonaut/server db:generate` meldet nach Erzeugung von `0002_owned_profiles_rides.sql` keine Schemaänderung. Beide Eigentümer-Fremdschlüssel stehen in SQL und TypeScript.
 - `git diff --check` ist grün. Keine neue Abhängigkeit und keine Änderung an Leitplanken. Keine Hardwareprüfung.
 - Das vollständige `CI=true mise run check` ist am korrigierten Einzelstand mit 391 Tests und 16 E2Es grün. Das unabhängige Korrekturreview ist Approve. Nach gemeinsamer Auth-Integration werden Migration, Paket-Smoke und vollständiges Gate erneut geprüft.
@@ -79,5 +79,5 @@ Das Review belegte zwei Grenzfehler. SQLite verglich UUID-Texte mit unterschiedl
 
 - `CI=true mise run check` besteht nach Integration von Auth, Landschaft und Aufnahme mit 436 Tests und 17 E2Es. `mise run build` ist grün.
 - Ein frisch mit `pnpm --filter @voltonaut/server deploy --prod` erzeugtes Produktionspaket besteht `verify-package.ts`. Es startet mit explizitem `AUTH_MODE=disabled`, enthält alle drei Migrationen und erzwingt weiterhin die Konfigurationsgrenzen.
-- `verify-oidc-build.mjs` und `verify-owned-data.ts` bestehen erneut gegen den gebauten gemeinsamen Server. Keine echten Provider werden aufgerufen.
+- `verify-oidc-build.mjs` und `verify-owned-data.mjs` bestehen erneut gegen den gebauten gemeinsamen Server. Keine echten Provider werden aufgerufen.
 - Der unabhängige Prüfer besteht 97 gezielte Tests und eine zusätzliche gemeinsame Prozessprobe. Eine vom signierenden Testprovider ausgestellte OIDC-Session erreicht Profil und Fahrten. Neustart erhält Authdaten, Profil und Beleg. Logout sperrt anschließend auch die Datenendpunkte. Exakte Credential-CORS, Bodygrenzen, Migrationseinträge und Fremdschlüssel werden am laufenden Artefakt geprüft.

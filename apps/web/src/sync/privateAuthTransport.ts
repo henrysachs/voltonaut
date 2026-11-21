@@ -6,12 +6,25 @@ import {
   RideListSchema,
   RideReceiptSchema,
   RideUploadSchema,
+  StravaStatusSchema,
+  StravaStartRequestSchema,
+  StravaStartResponseSchema,
+  StravaConfirmRequestSchema,
+  StravaDisconnectRequestSchema,
+  StravaRideViewSchema,
+  StravaUploadRequestSchema,
+  StravaDeliverySchema,
   type ProfileInput,
   type ProfileState,
   type RideDetail,
   type RideList,
   type RideReceipt,
   type RideUpload,
+  type StravaStatus,
+  type StravaStartResponse,
+  type StravaRideView,
+  type StravaConsent,
+  type StravaDelivery,
 } from "@voltonaut/shared";
 import type { ProfileWriteLease } from "./profile-store.js";
 
@@ -40,6 +53,16 @@ export interface AccountLease extends ProfileWriteLease {
   readonly history: (cursor: string | null) => Promise<RideList>;
   readonly detail: (rideId: string) => Promise<RideDetail>;
   readonly upload: (ride: RideUpload) => Promise<RideReceipt>;
+  readonly strava: StravaLease;
+}
+
+export interface StravaLease {
+  readonly status: () => Promise<StravaStatus>;
+  readonly start: (channel: string) => Promise<StravaStartResponse>;
+  readonly confirm: (code: string) => Promise<StravaStatus>;
+  readonly disconnect: () => Promise<StravaStatus>;
+  readonly ride: (rideId: string) => Promise<StravaRideView>;
+  readonly upload: (consent: StravaConsent) => Promise<StravaDelivery>;
 }
 
 interface LeaseAuthorization {
@@ -73,6 +96,47 @@ interface ResponseSchema<T> {
   readonly parse: (...input: readonly [Parameters<typeof ProfileStateSchema.parse>[0]]) => T;
 }
 
+function stravaLease(request: ReturnType<typeof authorizedRequest>): StravaLease {
+  return {
+    status: () => request("/v1/strava/connection", StravaStatusSchema, undefined, "include"),
+    start: (channel) =>
+      request(
+        "/v1/strava/connect-start",
+        StravaStartResponseSchema,
+        JSON.stringify(StravaStartRequestSchema.parse({ action: "connect", channel })),
+        "include",
+      ),
+    confirm: (code) =>
+      request(
+        "/v1/strava/confirm",
+        StravaStatusSchema,
+        JSON.stringify(StravaConfirmRequestSchema.parse({ code })),
+        "include",
+      ),
+    disconnect: () =>
+      request(
+        "/v1/strava/disconnect",
+        StravaStatusSchema,
+        JSON.stringify(StravaDisconnectRequestSchema.parse({ action: "disconnect" })),
+        "include",
+      ),
+    ride: (rideId) =>
+      request(
+        `/v1/strava/rides/${RideIdSchema.parse(rideId)}`,
+        StravaRideViewSchema,
+        undefined,
+        "include",
+      ),
+    upload: (consent) =>
+      request(
+        `/v1/strava/rides/${RideIdSchema.parse(consent.rideId)}`,
+        StravaDeliverySchema,
+        JSON.stringify(StravaUploadRequestSchema.parse({ action: "upload", consent })),
+        "include",
+      ),
+  };
+}
+
 export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
   return {
     authorize(authorization) {
@@ -84,6 +148,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         generation: authorization.generation,
         signal: authorization.signal,
         current: authorization.current,
+        strava: stravaLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>
           request(
@@ -93,13 +158,13 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
           ),
         history: (cursor) =>
           request(
-            cursor === null ? "/v1/rides" : `/v1/rides?cursor=${RideIdSchema.parse(cursor)}`,
+            cursor === null ? "/v2/rides" : `/v2/rides?cursor=${RideIdSchema.parse(cursor)}`,
             RideListSchema,
           ),
-        detail: (rideId) => request(`/v1/rides/${RideIdSchema.parse(rideId)}`, RideDetailSchema),
+        detail: (rideId) => request(`/v2/rides/${RideIdSchema.parse(rideId)}`, RideDetailSchema),
         async upload(ride) {
           const payload = RideUploadSchema.parse(ride);
-          const receipt = await request("/v1/rides", RideReceiptSchema, JSON.stringify(payload));
+          const receipt = await request("/v2/rides", RideReceiptSchema, JSON.stringify(payload));
 
           if (receipt.rideId !== payload.rideId) throw new PrivateRequestError("contract");
 
@@ -110,11 +175,23 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
   };
 }
 
+type PrivatePath =
+  | "/v1/me/profile"
+  | "/v2/rides"
+  | `/v2/rides?cursor=${string}`
+  | `/v2/rides/${string}`
+  | "/v1/strava/connection"
+  | "/v1/strava/connect-start"
+  | "/v1/strava/confirm"
+  | "/v1/strava/disconnect"
+  | `/v1/strava/rides/${string}`;
+
 function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization) {
   return async function request<T>(
-    path: string,
+    path: PrivatePath,
     schema: ResponseSchema<T>,
     body?: string,
+    credentials: "omit" | "include" = "omit",
   ): Promise<T> {
     if (!authorization.current()) throw new PrivateRequestError("superseded");
 
@@ -128,7 +205,7 @@ function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization)
         body: body ?? null,
         signal: AbortSignal.any([authorization.signal, AbortSignal.timeout(8000)]),
         cache: "no-store",
-        credentials: "omit",
+        credentials,
         redirect: "error",
       });
 

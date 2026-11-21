@@ -12,6 +12,7 @@ import {
   type RecordingEntryV2,
   type RecordingV2,
   type ReplayObservationV2,
+  type WindowFailure,
 } from "@voltonaut/shared";
 
 import { assessRecordingV2, type RecordingV2Assessment } from "../rides/replay.js";
@@ -116,11 +117,24 @@ export function recordReplay(entries: readonly RecordingEntryV2[], clockScale = 
 export function normalReplay(): RecordingV2 {
   return recordReplay([
     [0, 0, "arm"],
-    [1, 0, "boundary", "start"],
-    [2, 0, "status", "trainer", "ready"],
-    [3, 0, "trainer", 250, 90, null],
+    [1, 0, "status", "trainer", "ready"],
+    [2, 0, "trainer", 250, 90, null],
+    [3, 0, "boundary", "start"],
     [4, 1000, "advance", 1],
     [5, 1000, "boundary", "finish"],
+  ]);
+}
+
+export function warmupReplay(): RecordingV2 {
+  return recordReplay([
+    [0, 0, "arm"],
+    [1, 0, "status", "trainer", "ready"],
+    [2, 0, "trainer", 250, 90, null],
+    [3, 1000, "advance", 1],
+    [4, 1000, "trainer", 300, 80, null],
+    [5, 1000, "boundary", "start"],
+    [6, 2000, "advance", 1],
+    [7, 2000, "boundary", "finish"],
   ]);
 }
 
@@ -132,4 +146,10 @@ export function replayed(
   if (result.status !== "replayed") throw new Error(JSON.stringify(result));
 
   return result;
+}
+
+export function windowFailures(ride: RecordingV2): readonly WindowFailure[] {
+  const window = replayed(ride).source.window;
+
+  return window.kind === "continuous" ? [] : window.reasons;
 }

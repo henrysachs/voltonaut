@@ -1,17 +1,83 @@
 import { z } from "zod";
 
-import { CompletedLocalRideSchema, MAX_LOCAL_RIDE_MS } from "../localRide.js";
+import { MAX_LOCAL_RIDE_MS } from "../localRide.js";
+import { RideRecordingSchema } from "../recordingCapture.js";
 
-export const RideAssessmentSchema = z
+const nonnegative = z.number().finite().nonnegative();
+
+export const WindowFailureSchema = z.enum([
+  "sim",
+  "clock_scale",
+  "trainer_not_ready",
+  "trainer_disconnect",
+  "stale_trainer",
+  "gap",
+  "clock_skipped",
+]);
+
+export const WindowQualitySchema = z.union([
+  z
+    .object({ kind: z.literal("continuous") })
+    .strict()
+    .readonly(),
+  z
+    .object({
+      kind: z.literal("blocked"),
+      reasons: z.tuple([WindowFailureSchema]).rest(WindowFailureSchema).readonly(),
+    })
+    .strict()
+    .readonly(),
+]);
+
+export const SourceAssessmentSchema = z
   .object({
-    status: z.literal("unverified"),
-    reason: z.literal("legacy_missing_replay"),
+    assurance: z.literal("client_declared"),
+    declaredSource: z.enum(["sim", "ble"]),
+    window: WindowQualitySchema,
   })
-  .strict();
+  .strict()
+  .readonly();
+
+export const ReplayWindowSummarySchema = z
+  .object({
+    elapsedRealS: nonnegative,
+    distanceM: nonnegative,
+    elevationGainM: nonnegative,
+    energyKj: nonnegative,
+    tS: nonnegative,
+    laps: nonnegative.int(),
+    eventCount: nonnegative.int(),
+    commandCount: nonnegative.int(),
+  })
+  .strict()
+  .readonly();
+
+export const RideAssessmentSchema = z.union([
+  z
+    .object({
+      status: z.literal("unverified"),
+      reason: z.enum(["legacy_missing_replay", "incomplete_journal", "unknown_revision"]),
+    })
+    .strict()
+    .readonly(),
+  z
+    .object({ status: z.literal("rejected"), reason: z.literal("observation_mismatch") })
+    .strict()
+    .readonly(),
+  z
+    .object({
+      status: z.literal("replayed"),
+      physicsRevision: z.literal("engine-v1"),
+      summary: ReplayWindowSummarySchema,
+      source: SourceAssessmentSchema,
+    })
+    .strict()
+    .readonly(),
+]);
 
 export const RideIdSchema = z.string().uuid().toLowerCase();
 
-export const RideUploadSchema = CompletedLocalRideSchema.transform((recording) => ({
+export const RideUploadSchema = RideRecordingSchema.transform((recording) => ({
   ...recording,
   rideId: RideIdSchema.parse(recording.rideId),
 })).readonly();
@@ -26,7 +92,7 @@ export const RideReceiptSchema = z
 
 export const RideDetailSchema = z
   .object({
-    recording: CompletedLocalRideSchema,
+    recording: RideRecordingSchema,
     assessment: RideAssessmentSchema,
   })
   .strict();
@@ -63,6 +129,14 @@ export const RideListSchema = z
   .strict();
 
 export type RideAssessment = z.infer<typeof RideAssessmentSchema>;
+
+export type WindowFailure = z.infer<typeof WindowFailureSchema>;
+
+export type WindowQuality = z.infer<typeof WindowQualitySchema>;
+
+export type SourceAssessment = z.infer<typeof SourceAssessmentSchema>;
+
+export type ReplayWindowSummary = z.infer<typeof ReplayWindowSummarySchema>;
 
 export type RideUpload = z.infer<typeof RideUploadSchema>;
 

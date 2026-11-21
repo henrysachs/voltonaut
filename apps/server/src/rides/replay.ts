@@ -10,46 +10,31 @@ import {
   type RecordingEntryV2,
   type RecordingV2,
   type ReplayObservationV2,
+  type RideAssessment,
+  type ReplayWindowSummary,
 } from "@voltonaut/shared";
 
 import { replayCommandEqual, replayEventEqual, replaySnapshotEqual } from "./replayComparison.js";
-import { recordingV2Eligibility, type ReplayEligibility } from "./replayEligibility.js";
-
-export interface ReplayWindowSummary {
-  readonly elapsedRealS: number;
-  readonly distanceM: number;
-  readonly elevationGainM: number;
-  readonly energyKj: number;
-  readonly tS: number;
-  readonly laps: number;
-  readonly eventCount: number;
-  readonly commandCount: number;
-}
+import { recordingV2Eligibility } from "./replayEligibility.js";
 
 export type RecordingV2Assessment =
-  | { readonly status: "unverified"; readonly reason: "incomplete_journal" | "unknown_revision" }
-  | { readonly status: "rejected"; readonly reason: "invalid_contract" | "observation_mismatch" }
-  | {
-      readonly status: "replayed";
-      readonly physicsRevision: "engine-v1";
-      readonly summary: ReplayWindowSummary;
-      readonly eligibility: ReplayEligibility;
-    };
+  | RideAssessment
+  | { readonly status: "rejected"; readonly reason: "invalid_contract" };
 
 function applyEntry(engine: Engine, entry: RecordingEntryV2, clockScale: number): void {
   switch (entry[2]) {
     case "trainer":
-      engine.ingest({ type: "trainer.data", tS: 0, ...trainerFields(entry) });
+      engine.ingest({ type: "trainer.data", tS: entry[1] / 1000, ...trainerFields(entry) });
 
       return;
     case "hr":
-      engine.ingest({ type: "hr.data", tS: 0, bpm: entry[3] });
+      engine.ingest({ type: "hr.data", tS: entry[1] / 1000, bpm: entry[3] });
 
       return;
     case "shift":
       engine.ingest({
         type: "controller.button",
-        tS: 0,
+        tS: entry[1] / 1000,
         button: entry[3],
         pressed: true,
         source: "recording-v2",
@@ -117,7 +102,6 @@ class ReplayRun {
   private eventCount = 0;
   private commandCount = 0;
   private start: { readonly snapshot: RideSnapshot; readonly workerMs: number } | undefined;
-  private staleTrainer = false;
   private clockSkipped = false;
 
   constructor(recording: RecordingV2) {
@@ -134,7 +118,7 @@ class ReplayRun {
       this.eventOffset += 1;
 
       if (this.start !== undefined) this.eventCount += 1;
-      this.clockSkipped ||= event.type === "ride.clockSkipped";
+      this.clockSkipped ||= this.start !== undefined && event.type === "ride.clockSkipped";
     }
 
     for (const command of this.engine.drainCommands()) {
@@ -175,8 +159,7 @@ class ReplayRun {
         eventCount: this.eventCount,
         commandCount: this.commandCount,
       }),
-      eligibility: recordingV2Eligibility(this.recording, {
-        staleTrainer: this.staleTrainer,
+      source: recordingV2Eligibility(this.recording, {
         clockSkipped: this.clockSkipped,
       }),
     };
@@ -190,8 +173,6 @@ class ReplayRun {
       applyEntry(this.engine, entry, this.recording.initialization.clockScale);
 
       if (!this.drain(observation)) return { status: "rejected", reason: "observation_mismatch" };
-
-      if (entry[2] === "advance") this.staleTrainer ||= this.engine.snapshot().dataAgeS > 3;
 
       if (entry[2] === "boundary") {
         const result = this.boundary(entry, observation);

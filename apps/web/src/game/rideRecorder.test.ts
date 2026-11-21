@@ -1,172 +1,242 @@
 import { expect, it } from "vitest";
-import { DEFAULT_RIDER_PROFILE, MAX_LOCAL_RIDE_MS } from "@voltonaut/shared";
+import { createEngine, createRoute, TEST_LOOP } from "@voltonaut/engine";
+import {
+  DEFAULT_RIDER_PROFILE,
+  MAX_LOCAL_RIDE_MS,
+  archivedRideTrack,
+  projectRecordingTrack,
+  RecordingV2Schema,
+  serializeRideTcx,
+  type DeviceEvent,
+} from "@voltonaut/shared";
 
 import { createRideRecorder } from "./rideRecorder.js";
+import type { CaptureResult } from "./rideCaptureProtocol.js";
+
+const firstId = "550e8400-e29b-41d4-a716-446655440000";
+const secondId = "550e8400-e29b-41d4-a716-446655440001";
 
 function setup() {
-  let nowMs = 100;
-
-  const recorder = createRideRecorder({
-    nowMs: () => nowMs,
-    utcNow: () => "2026-11-20T12:00:00.000Z",
-    newId: () => "550e8400-e29b-41d4-a716-446655440000",
-    metadata: {
-      source: "sim",
+  const initialization = {
+    initializedAt: "2026-11-20T12:00:00.000Z",
+    initialization: {
+      physicsRevision: "engine-v1",
       routeId: "test-loop",
       routeRevision: "1",
-      physicsClockScale: 1,
       profile: DEFAULT_RIDER_PROFILE,
+      source: "sim",
+      clockScale: 1,
+      workerTimeOriginMs: Date.parse("2026-11-20T12:00:00.000Z"),
+      initializedWorkerMs: 0,
     },
-  });
+  } satisfies Parameters<typeof createRideRecorder>[0];
+
+  const recorder = createRideRecorder(initialization);
+  const engine = createEngine({ route: createRoute(TEST_LOOP), profile: DEFAULT_RIDER_PROFILE });
+  let wakeMs = 0;
+  recorder.arm(0);
+
+  function ingest(event: DeviceEvent, atMs: number) {
+    recorder.ingest(event, atMs);
+    engine.ingest(event);
+  }
+
+  function advance(atMs: number) {
+    recorder.advance(atMs, (atMs - wakeMs) / 1000);
+    engine.advance((atMs - wakeMs) / 1000);
+    wakeMs = atMs;
+    recorder.outputs(engine.drainEvents(), engine.drainCommands());
+    recorder.sample(atMs, engine.snapshot());
+  }
+
+  ingest({ type: "device.status", tS: 999, kind: "trainer", id: "trainer", status: "ready" }, 0);
+  ingest({ type: "trainer.data", tS: 999, powerW: 200, cadenceRpm: 90 }, 0);
 
   return {
     recorder,
-    setTime: (value: number) => {
-      nowMs = value;
-    },
+    engine,
+    ingest,
+    advance,
+    command: (kind: "start" | "finish" | "release" | "discard", atMs: number, rideId = firstId) =>
+      recorder.command({ kind, rideId }, atMs, engine.snapshot()),
   };
 }
 
-it("uses a distance baseline and real monotonic time, preserving zero and missing readings", () => {
-  const { recorder, setTime } = setup();
-  recorder.ingest({ type: "trainer.data", tS: 999, powerW: 0, cadenceRpm: 0 });
-  recorder.start(500);
-  expect(() => {
-    recorder.start(600);
-  }).toThrow("bereits");
-  setTime(1100);
-  recorder.sample(510);
-  const ride = recorder.finish(511);
-  expect(ride.startedAt).toBe("2026-11-20T12:00:00.000Z");
-  expect(ride.samples.map((sample) => sample.elapsedMs)).toEqual([0, 1000]);
-  expect(ride.samples[1]).toMatchObject({ distanceM: 10, powerW: 0, cadenceRpm: 0 });
-  expect(ride.samples[1]?.hrBpm).toBeUndefined();
-  expect(() => recorder.finish(512)).toThrow("Keine laufende");
-  recorder.start(1000);
-  expect(recorder.state().kind).toBe("recording");
-});
+function finished(result: CaptureResult) {
+  if (result.kind !== "finished") throw new Error("Expected finished capture");
 
-it("does not fabricate intermediate samples or stale sensor readings", () => {
-  const { recorder, setTime } = setup();
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: 120 });
-  recorder.start(0);
-  setTime(10_100);
-  recorder.sample(50);
-  const ride = recorder.finish(50);
-  expect(ride.samples).toHaveLength(2);
-  expect(ride.samples[1]).toMatchObject({ elapsedMs: 10_000, gap: true });
-  expect(ride.samples[1]?.powerW).toBeUndefined();
-});
+  return result.capture;
+}
 
-it("rejects empty, reverse, nonfinite and overlong captures", () => {
-  const { recorder, setTime } = setup();
-  recorder.start(0);
-  expect(() => recorder.finish(0)).toThrow("leer oder ungültig");
-  setTime(50);
-  expect(() => {
-    recorder.sample(1);
-  }).toThrow("ungültig");
-  setTime(1100);
-  expect(() => {
-    recorder.sample(Number.NaN);
-  }).toThrow("ungültig");
-  setTime(21_600_101);
-  expect(() => recorder.finish(1)).toThrow("ungültig");
-});
+function journal(result: CaptureResult) {
+  const capture = finished(result);
 
-it("keeps fractional final seconds and rejects decreasing distance", () => {
-  const { recorder, setTime } = setup();
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: 20, cadenceRpm: 30 });
-  recorder.start(100);
-  setTime(1100);
-  recorder.sample(110);
-  setTime(2100);
-  expect(() => {
-    recorder.sample(109);
-  }).toThrow("rückwärts");
-  setTime(2350);
-  const ride = recorder.finish(115);
-  expect(ride.samples.at(-1)).toMatchObject({ elapsedMs: 2250, distanceM: 15 });
-});
+  if (capture.kind !== "journal") throw new Error("Expected complete journal");
 
-it("clears disconnected sources and does not invent omitted fields", () => {
-  const { recorder, setTime } = setup();
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: 20, cadenceRpm: 30 });
-  recorder.ingest({ type: "hr.data", tS: 0, bpm: 120 });
-  recorder.start(0);
-  recorder.ingest({
-    type: "device.status",
-    tS: 0,
-    kind: "heartRate",
-    id: "hr",
-    status: "disconnected",
+  return capture;
+}
+
+function local(result: CaptureResult) {
+  const capture = finished(result);
+
+  if (capture.kind !== "local_only") throw new Error("Expected local-only capture");
+
+  return capture;
+}
+
+it("keeps warm physics and real UTC while the selected track starts at zero", () => {
+  const run = setup();
+  run.advance(1000);
+  const baseline = run.engine.snapshot().distanceM;
+  expect(run.command("start", 1000).kind).toBe("state");
+  run.advance(2000);
+  const capture = journal(run.command("finish", 2250));
+  const recording = capture.recording;
+  expect(RecordingV2Schema.safeParse(recording).success).toBe(true);
+  const track = projectRecordingTrack(recording);
+  expect(track.startedAt).toBe("2026-11-20T12:00:01.000Z");
+  expect(track.samples[0]).toMatchObject({
+    elapsedMs: 0,
+    distanceM: 0,
+    powerW: 200,
+    cadenceRpm: 90,
   });
-  recorder.ingest({
-    type: "device.status",
-    tS: 0,
-    kind: "trainer",
-    id: "trainer",
-    status: "reconnecting",
+  expect(track.samples.at(-1)?.elapsedMs).toBe(1250);
+  expect(track.samples.at(-1)?.distanceM).toBeCloseTo(
+    run.engine.snapshot().distanceM - baseline,
+    12,
+  );
+  expect(
+    recording.entries.slice(0, recording.window.startSeq).some((entry) => entry[2] === "advance"),
+  ).toBe(true);
+  expect(recording.observations[0]?.events[0]).toEqual({ type: "ride.started" });
+  expect(serializeRideTcx(archivedRideTrack(capture))).toBe(serializeRideTcx(track));
+});
+
+it("retains completion until matching release, and projects only the chosen second window", () => {
+  const run = setup();
+  run.command("start", 0);
+  run.advance(1000);
+  const first = journal(run.command("finish", 1000));
+  expect(run.command("start", 1000, secondId).kind).toBe("failed");
+  expect(run.command("release", 1000, secondId).kind).toBe("failed");
+  run.advance(2000);
+  expect(run.recorder.view(2000)).toMatchObject({ kind: "completed", rideId: firstId });
+  expect(run.command("release", 2000).kind).toBe("state");
+  run.command("start", 2000, secondId);
+  run.advance(3000);
+  const second = journal(run.command("finish", 3000, secondId));
+  expect(
+    second.recording.entries.filter((entry) => entry[2] === "boundary").map((entry) => entry[3]),
+  ).toEqual(["start", "sample", "finish"]);
+  expect(
+    second.recording.entries
+      .filter((entry) => entry[2] !== "boundary")
+      .slice(0, 4)
+      .map((entry) => entry.slice(1)),
+  ).toEqual(
+    first.recording.entries
+      .filter((entry) => entry[2] !== "boundary")
+      .map((entry) => entry.slice(1)),
+  );
+  expect(projectRecordingTrack(second.recording).samples[0]?.distanceM).toBe(0);
+  expect(second.recording.observations[0]?.events[0]).toEqual({ type: "ride.started" });
+  expect(run.command("discard", 3000).kind).toBe("failed");
+});
+
+it("manual discard removes no physics and stale ride commands cannot alter another window", () => {
+  const run = setup();
+  run.command("start", 0);
+  run.advance(1000);
+  run.command("discard", 1000);
+  run.command("start", 1000, secondId);
+  expect(run.command("discard", 1000).kind).toBe("failed");
+  expect(run.command("finish", 2000).kind).toBe("failed");
+  run.advance(2000);
+  const capture = journal(run.command("finish", 2000, secondId));
+  expect(capture.recording.entries.filter((entry) => entry[2] === "advance")).toHaveLength(2);
+  expect(
+    capture.recording.entries.filter((entry) => entry[2] === "boundary").map((entry) => entry[3]),
+  ).toEqual(["start", "sample", "finish"]);
+});
+
+it("preserves per-field raw freshness, partials, zero and disconnect omissions", () => {
+  const run = setup();
+  run.ingest({ type: "hr.data", tS: 999, bpm: 120 }, 0);
+  run.command("start", 0);
+  run.ingest({ type: "trainer.data", tS: 999, cadenceRpm: 0 }, 1000);
+  run.advance(1000);
+  run.ingest({ type: "trainer.data", tS: 999, powerW: 0 }, 2000);
+  run.advance(2000);
+  run.advance(3000);
+  run.ingest(
+    { type: "device.status", tS: 0, kind: "heartRate", id: "hr", status: "disconnected" },
+    3000,
+  );
+  run.ingest(
+    { type: "device.status", tS: 0, kind: "trainer", id: "t", status: "disconnected" },
+    3000,
+  );
+  const track = archivedRideTrack(finished(run.command("finish", 3500)));
+  expect(track.samples[1]).toMatchObject({ powerW: 200, cadenceRpm: 0, hrBpm: 120 });
+  expect(track.samples[2]).toMatchObject({ powerW: 0, cadenceRpm: 0 });
+  expect(track.samples[3]?.hrBpm).toBeUndefined();
+  expect(track.samples.at(-1)).toMatchObject({ gap: true });
+  expect(track.samples.at(-1)?.powerW).toBeUndefined();
+  expect(track.samples.at(-1)?.cadenceRpm).toBeUndefined();
+});
+
+it("omits invalid capture channels without clamping the real engine, permanently local for this epoch", () => {
+  const run = setup();
+  run.command("start", 0);
+  run.ingest({ type: "trainer.data", tS: 0, powerW: 2500, cadenceRpm: 80 }, 1000);
+  run.advance(2000);
+  expect(run.engine.snapshot().powerW).toBeGreaterThan(2000);
+  const capture = local(run.command("finish", 2000));
+  expect(capture.reason).toBe("invalid_input");
+  expect(capture.track.samples.at(-1)?.powerW).toBeUndefined();
+  expect(capture.track.samples.at(-1)?.cadenceRpm).toBe(80);
+  run.command("release", 2000);
+  run.ingest({ type: "trainer.data", tS: 0, powerW: 0, cadenceRpm: 0 }, 2000);
+  run.command("start", 2000, secondId);
+  run.advance(3000);
+  expect(run.command("finish", 3000, secondId)).toMatchObject({
+    kind: "finished",
+    capture: { kind: "local_only", reason: "invalid_input" },
   });
-  setTime(1100);
-  recorder.sample(1);
-  recorder.ingest({ type: "trainer.data", tS: 0, cadenceRpm: 0 });
-  setTime(2100);
-  const ride = recorder.finish(2);
-  expect(ride.samples[0]?.hrBpm).toBe(120);
-  expect(ride.samples[1]?.powerW).toBeUndefined();
-  expect(ride.samples[1]?.hrBpm).toBeUndefined();
-  expect(ride.samples[2]?.powerW).toBeUndefined();
-  expect(ride.samples[2]?.cadenceRpm).toBe(0);
 });
 
-it("rejects a capture with no trainer readings and a nonfinite baseline", () => {
-  const { recorder, setTime } = setup();
-  expect(() => {
-    recorder.start(Number.POSITIVE_INFINITY);
-  }).toThrow("gültiger Fahrtstand");
-  recorder.start(0);
-  setTime(1100);
-  expect(() => recorder.finish(10)).toThrow("leer oder ungültig");
+it("keeps future windows local after the lifetime horizon, without resetting the running engine", () => {
+  const run = setup();
+  run.advance(MAX_LOCAL_RIDE_MS + 1);
+  const tS = run.engine.snapshot().tS;
+  run.ingest({ type: "trainer.data", tS: 0, powerW: 0, cadenceRpm: 0 }, MAX_LOCAL_RIDE_MS + 1);
+  run.command("start", MAX_LOCAL_RIDE_MS + 1);
+  run.advance(MAX_LOCAL_RIDE_MS + 1001);
+  const result = run.command("finish", MAX_LOCAL_RIDE_MS + 1001);
+  expect(result).toMatchObject({
+    kind: "finished",
+    capture: { kind: "local_only", reason: "journal_age" },
+  });
+  expect(run.engine.snapshot().tS).toBeGreaterThan(tS);
 });
 
-it("rejects nonfinite raw sensor data and nonfinite recording time with a usable message", () => {
-  const { recorder, setTime } = setup();
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: Number.NaN });
-  expect(() => {
-    recorder.start(0);
-  }).toThrow("Messwerte oder Zeit");
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: 0 });
-  recorder.start(0);
-  setTime(Number.POSITIVE_INFINITY);
-  expect(() => {
-    recorder.sample(1);
-  }).toThrow("Zeit oder Distanz");
+it("invalidates only the bad raw channel, preserving an omitted but still fresh counterpart", () => {
+  const run = setup();
+  run.command("start", 0);
+  run.ingest({ type: "trainer.data", tS: 0, powerW: 2500 }, 1000);
+  run.advance(2000);
+  const capture = local(run.command("finish", 2000));
+  expect(capture.reason).toBe("invalid_input");
+  expect(capture.track.samples.at(-1)).toMatchObject({ cadenceRpm: 90, gap: true });
+  expect(capture.track.samples.at(-1)?.powerW).toBeUndefined();
 });
 
-it("recovers from an overlong recording only after explicit discard, without leaking old samples", () => {
-  const { recorder, setTime } = setup();
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: 20, cadenceRpm: 30 });
-  recorder.start(0);
-  setTime(1100);
-  recorder.sample(10);
-  setTime(100 + MAX_LOCAL_RIDE_MS + 1);
-  expect(() => {
-    recorder.sample(20);
-  }).toThrow("Maximal 6 Stunden");
-  expect(() => recorder.finish(20)).toThrow("Maximal 6 Stunden");
-  expect(() => {
-    recorder.start(20);
-  }).toThrow("bereits");
-  expect(recorder.state().kind).toBe("recording");
-  recorder.discard();
-  expect(recorder.state().kind).toBe("idle");
-  recorder.ingest({ type: "trainer.data", tS: 0, powerW: 0, cadenceRpm: 0 });
-  recorder.start(20);
-  setTime(100 + MAX_LOCAL_RIDE_MS + 1001);
-  const ride = recorder.finish(21);
-  expect(ride.samples.map((point) => point.elapsedMs)).toEqual([0, 1000]);
-  expect(ride.samples.map((point) => point.distanceM)).toEqual([0, 1]);
-  recorder.discard();
-  expect(recorder.state()).toEqual({ kind: "completed", ride });
+it("rejects early/overlong completion without freeing active data", () => {
+  const run = setup();
+  run.command("start", 0);
+  expect(run.command("finish", 999).kind).toBe("failed");
+  expect(run.command("finish", MAX_LOCAL_RIDE_MS + 1).kind).toBe("failed");
+  expect(run.recorder.view(MAX_LOCAL_RIDE_MS + 1).kind).toBe("recording");
+  expect(run.command("discard", MAX_LOCAL_RIDE_MS + 1).kind).toBe("state");
 });

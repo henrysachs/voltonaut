@@ -41,6 +41,7 @@ function createDomDocument(source: DocumentQuerySource): AppDocument {
 interface EngineWorkerChannel {
   readonly send: (message: EngineWorkerRequest) => void;
   readonly addMessageListener: (listener: (message: EngineWorkerResponse) => void) => () => void;
+  readonly subscribeFailure: (listener: (message: string) => void) => () => void;
 }
 
 function createEngineWorkerChannel(
@@ -48,6 +49,19 @@ function createEngineWorkerChannel(
   worker: Worker,
 ): EngineWorkerChannel {
   return {
+    subscribeFailure: (listener) => {
+      const handler = (): void => {
+        listener("Engine-Worker ausgefallen. Ungespeicherte Aufnahme möglicherweise verloren.");
+      };
+
+      worker.addEventListener("error", handler);
+      worker.addEventListener("messageerror", handler);
+
+      return () => {
+        worker.removeEventListener("error", handler);
+        worker.removeEventListener("messageerror", handler);
+      };
+    },
     send: (message) => {
       // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage has no targetOrigin parameter; that rule only applies to window messaging.
       worker.postMessage(message);
@@ -78,6 +92,7 @@ function createWorkerLink(
 
   return createEngineLink(
     {
+      subscribeFailure: channel.subscribeFailure,
       postMessage: (message) => {
         channel.send(message);
       },
@@ -125,27 +140,25 @@ async function start(): Promise<void> {
   const { initialProfile: profile } = await profileReady;
 
   // Parameters are frozen at ride start; profile edits apply to the next ride.
-  link.init({ routeId: APP_ROUTE_ID, profile, clockScale });
+  link.init({ routeId: APP_ROUTE_ID, profile, clockScale, source: simMode ? "sim" : "ble" });
 
-  const recordEvent = setupRidePresentation({
-    source: simMode ? "sim" : "ble",
+  setupRidePresentation({
     routeId: APP_ROUTE_ID,
-    clockScale,
     profile,
     snapshot: () => link.latestSnapshot(),
     sceneHost: document.querySelector("#ride-scene"),
     debug: params.get("debug") === "1",
+    recording: link.recording,
   });
 
   const forwardEvent = (event: DeviceEvent): void => {
-    recordEvent(event);
     link.ingest(event);
   };
 
   bus.subscribe("trainer.data", forwardEvent);
   bus.subscribe("hr.data", forwardEvent);
   bus.subscribe("controller.button", forwardEvent);
-  bus.subscribe("device.status", recordEvent);
+  bus.subscribe("device.status", forwardEvent);
 
   startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupKeyboard(bus);

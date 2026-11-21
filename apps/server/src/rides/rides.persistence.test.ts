@@ -28,7 +28,7 @@ async function writeBeforeRestart(path: string) {
     const ride = recording();
 
     const upload = await request(httpServerOf(first.app))
-      .post("/v1/rides")
+      .post("/v2/rides")
       .set(bearer(session.sessionToken))
       .send(ride)
       .expect(200);
@@ -63,13 +63,13 @@ it("keeps the original receipt, immutable recording, profile and owner after SQL
 
     try {
       const retry = await request(httpServerOf(second.app))
-        .post("/v1/rides")
+        .post("/v2/rides")
         .set(bearer(session.sessionToken))
         .send(ride)
         .expect(200);
 
       const detail = await request(httpServerOf(second.app))
-        .get(`/v1/rides/${ride.rideId}`)
+        .get(`/v2/rides/${ride.rideId}`)
         .set(bearer(session.sessionToken))
         .expect(200);
 
@@ -108,7 +108,7 @@ it("rate limits uploads per account, including retries, without blocking another
     await Promise.all(
       Array.from({ length: 30 }, () =>
         request(httpServerOf(app))
-          .post("/v1/rides")
+          .post("/v2/rides")
           .set(bearer(owner.sessionToken))
           .send(ride)
           .expect(200),
@@ -116,7 +116,7 @@ it("rate limits uploads per account, including retries, without blocking another
     );
 
     const blocked = await request(httpServerOf(app))
-      .post("/v1/rides")
+      .post("/v2/rides")
       .set(bearer(owner.sessionToken))
       .send(ride)
       .expect(429);
@@ -125,7 +125,7 @@ it("rate limits uploads per account, including retries, without blocking another
     expect(Number(blocked.headers["retry-after"])).toBeGreaterThan(0);
 
     const independent = await request(httpServerOf(app))
-      .post("/v1/rides")
+      .post("/v2/rides")
       .set(bearer(other.sessionToken))
       .send(recording())
       .expect(200);

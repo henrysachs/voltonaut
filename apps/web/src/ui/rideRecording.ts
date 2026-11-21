@@ -1,24 +1,36 @@
-import type { CompletedLocalRide } from "@voltonaut/shared";
+import {
+  archivedRideTrack,
+  type ArchivedRide,
+  type CapturedRide,
+  type RideTrack,
+} from "@voltonaut/shared";
 
-import type { RideRecorder } from "../game/rideRecorder.js";
+import type { CaptureView, RecordingControls } from "../game/rideCaptureProtocol.js";
 
 interface RecordingArchive {
-  readonly list: () => Promise<readonly CompletedLocalRide[]>;
-  readonly save: (ride: CompletedLocalRide) => Promise<void>;
+  readonly list: () => Promise<readonly ArchivedRide[]>;
+  readonly save: (ride: CapturedRide) => Promise<void>;
 }
 
 interface RecordingOptions {
-  readonly recorder: RideRecorder;
+  readonly recorder: RecordingControls;
   readonly loadStore: () => Promise<RecordingArchive>;
-  readonly distanceM: () => number | undefined;
-  readonly exportRide: (ride: CompletedLocalRide) => {
-    readonly filename: string;
-    readonly xml: string;
-  };
+  readonly exportRide: (ride: RideTrack) => { readonly filename: string; readonly xml: string };
 }
 
 function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : "Aufnahme fehlgeschlagen.";
+}
+
+function archiveId(ride: ArchivedRide): string {
+  return ride.kind === "local_only" ? ride.track.rideId : ride.recording.rideId;
+}
+
+function button(text: string): HTMLButtonElement {
+  const element = document.createElement("button");
+  element.textContent = text;
+
+  return element;
 }
 
 function download(file: { readonly filename: string; readonly xml: string }): void {
@@ -34,91 +46,116 @@ function download(file: { readonly filename: string; readonly xml: string }): vo
   }, 1000);
 }
 
-function button(text: string): HTMLButtonElement {
-  const element = document.createElement("button");
-  element.textContent = text;
-
-  return element;
-}
-
 class RecordingPanel {
-  readonly #options: RecordingOptions;
   readonly #status = document.createElement("p");
   readonly #start = button("Aufnahme starten");
   readonly #finish = button("Aufnahme beenden und speichern");
   readonly #discard = button("Laufende Aufnahme verwerfen");
   readonly #retry = button("Speichern erneut versuchen");
+  readonly #continue = button("Mit heruntergeladener TCX fortfahren");
   readonly #history = document.createElement("ul");
   #busy = false;
-  #stored: readonly CompletedLocalRide[] = [];
-  #securedRideId: string | undefined;
+  #stored: readonly ArchivedRide[] = [];
+  #completed: CapturedRide | undefined;
+  #saveFailed = false;
+  #downloadedId: string | undefined;
+  #lastRecordingStatus: string | undefined;
 
-  constructor(options: Readonly<RecordingOptions>) {
-    this.#options = options;
-  }
+  constructor(private readonly options: RecordingOptions) {}
 
   mount(): void {
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Browser owns BeforeUnloadEvent; preventing navigation requires its native contract.
     window.addEventListener("beforeunload", (event) => {
-      const state = this.#options.recorder.state();
+      const state = this.options.recorder.state();
 
-      if (
-        state.kind === "recording" ||
-        (state.kind === "completed" && state.ride.rideId !== this.#securedRideId)
-      ) {
+      if (state.kind === "recording" || state.kind === "completed" || this.#completed !== undefined)
         event.preventDefault();
-      }
     });
     this.#status.setAttribute("role", "status");
     this.#status.dataset["testid"] = "recording-status";
     this.#status.textContent = "Bereit. Aufnahme wird nur beim Beenden gespeichert.";
-    this.#finish.disabled = true;
-    this.#discard.disabled = true;
-    this.#retry.hidden = true;
     this.#history.setAttribute("aria-label", "Lokale Fahrten");
     document
       .querySelector("#ride-recording")
-      ?.append(this.#start, this.#finish, this.#discard, this.#retry, this.#status, this.#history);
+      ?.append(
+        this.#start,
+        this.#finish,
+        this.#discard,
+        this.#retry,
+        this.#continue,
+        this.#status,
+        this.#history,
+      );
     this.#start.addEventListener("click", () => {
-      this.start();
+      void this.start();
     });
     this.#finish.addEventListener("click", () => {
-      this.finish();
+      void this.finish();
     });
     this.#discard.addEventListener("click", () => {
-      this.discard();
+      void this.discard();
     });
     this.#retry.addEventListener("click", () => {
       void this.save();
     });
-    setInterval(() => {
-      this.sample();
-    }, 250);
+    this.#continue.addEventListener("click", () => {
+      void this.continueAfterDownload();
+    });
+    this.options.recorder.subscribe((view) => {
+      this.update(view);
+    });
+    this.controls();
     void this.load();
+  }
+
+  private update(view: CaptureView): void {
+    this.controls();
+
+    if (view.kind === "unavailable") this.#status.textContent = view.message;
+    else if (view.kind === "recording") {
+      const status = `Aufnahme läuft. Echte Zeit, virtuelle Distanz. ${view.availability.kind === "local_only" ? `Nur lokaler TCX-Export (${view.availability.reason}). Vollständiges Journal nicht verfügbar; neue Aufnahmen bleiben in dieser Sitzung lokal.` : "Ohne Aufnahmepause."}`;
+
+      if (status !== this.#lastRecordingStatus) {
+        this.#lastRecordingStatus = status;
+        this.#status.textContent = status;
+      }
+    }
+  }
+
+  private controls(): void {
+    const state = this.options.recorder.state();
+    this.#start.disabled = this.#busy || state.kind !== "idle" || this.#completed !== undefined;
+    this.#finish.disabled = this.#busy || state.kind !== "recording";
+    this.#discard.disabled = this.#busy || state.kind !== "recording";
+    this.#retry.hidden = !this.#saveFailed;
+    this.#retry.disabled = this.#busy;
+    this.#continue.hidden = this.#completed === undefined || this.#downloadedId === undefined;
+    this.#continue.disabled = this.#busy;
   }
 
   private async load(): Promise<void> {
     try {
-      this.#stored = await (await this.#options.loadStore()).list();
+      this.#stored = await (await this.options.loadStore()).list();
       this.render();
     } catch (error) {
       this.#status.textContent = `${errorText(error)} Aufnahme und TCX im Tab bleiben möglich.`;
     }
   }
 
-  private rideRow(ride: CompletedLocalRide): HTMLLIElement {
+  private rideRow(ride: ArchivedRide, track: RideTrack): HTMLLIElement {
     const row = document.createElement("li");
-    const last = ride.samples.at(-1);
+    const last = track.samples.at(-1);
     const label = document.createElement("p");
-    label.textContent = `${ride.metadata.source === "sim" ? "Simulation" : "BLE"} · ${ride.startedAt} · ${Math.round((last?.elapsedMs ?? 0) / 1000)} s · ${Math.round(last?.distanceM ?? 0)} m virtuell`;
+    label.textContent = `${track.metadata.source === "sim" ? "Simulation" : "BLE"} · ${track.startedAt} · ${Math.round((last?.elapsedMs ?? 0) / 1000)} s · ${Math.round(last?.distanceM ?? 0)} m virtuell${ride.kind === "local_only" ? ` · Nur lokal (${ride.reason}), kein vollständiges Journal` : ride.kind === "legacy" ? " · Historische Aufnahme ohne Journal" : " · Journal, nicht servergeprüft"}`;
     const exportButton = button("TCX herunterladen");
     exportButton.addEventListener("click", () => {
-      download(this.#options.exportRide(ride));
-      const state = this.#options.recorder.state();
+      download(this.options.exportRide(track));
 
-      if (state.kind === "completed" && state.ride.rideId === ride.rideId) {
-        this.#securedRideId = ride.rideId;
-        this.#start.disabled = this.#busy;
+      if (this.#completed !== undefined && archiveId(this.#completed) === track.rideId) {
+        this.#downloadedId = track.rideId;
+        this.#status.textContent =
+          "TCX-Download angefordert. Datei prüfen; danach ausdrücklich mit heruntergeladener TCX fortfahren oder Speichern erneut versuchen.";
+        this.controls();
       }
     });
     row.append(label, exportButton);
@@ -127,119 +164,135 @@ class RecordingPanel {
   }
 
   private render(): void {
-    this.#history.replaceChildren();
-    const rides = new Map(this.#stored.map((ride) => [ride.rideId, ride]));
-    const state = this.#options.recorder.state();
+    const rides = new Map<string, { readonly ride: ArchivedRide; readonly track: RideTrack }>();
 
-    if (state.kind === "completed") {
-      rides.set(state.ride.rideId, state.ride);
+    for (const ride of this.#stored) {
+      const track = archivedRideTrack(ride);
+      rides.set(track.rideId, { ride, track });
     }
 
-    for (const ride of [...rides.values()].toSorted((left, right) =>
-      right.startedAt.localeCompare(left.startedAt),
-    )) {
-      this.#history.append(this.rideRow(ride));
+    if (this.#completed !== undefined) {
+      const track = archivedRideTrack(this.#completed);
+      rides.set(track.rideId, { ride: this.#completed, track });
     }
+
+    this.#history.replaceChildren(
+      ...[...rides.values()]
+        .toSorted((left, right) => right.track.startedAt.localeCompare(left.track.startedAt))
+        .map(({ ride, track }) => this.rideRow(ride, track)),
+    );
+    this.controls();
   }
 
   private async save(): Promise<void> {
-    const state = this.#options.recorder.state();
+    const capture = this.#completed;
 
-    if (this.#busy || state.kind !== "completed") {
-      return;
-    }
-
+    if (this.#busy || capture === undefined) return;
     this.#busy = true;
-    this.#start.disabled = true;
-    this.#retry.hidden = true;
+    this.#saveFailed = false;
+    this.controls();
     this.#status.textContent = "Lokal speichern …";
 
     try {
-      const store = await this.#options.loadStore();
-      await store.save(state.ride);
-      this.#securedRideId = state.ride.rideId;
-      this.#stored = await store.list();
-      this.#status.textContent = "Lokal gespeichert. Nicht servergeprüft, keine Belohnung.";
-      this.#start.disabled = false;
+      const store = await this.options.loadStore();
+      await store.save(capture);
+      await this.options.recorder.release(archiveId(capture));
+      this.#stored = this.#stored
+        .filter((ride) => archiveId(ride) !== archiveId(capture))
+        .concat(capture);
+      this.#completed = undefined;
+      this.#status.textContent = `Lokal gespeichert. Nicht servergeprüft, keine Belohnung.${capture.kind === "local_only" ? ` Nur lokal (${capture.reason}).` : ""}`;
+      void this.load();
     } catch (error) {
-      this.#status.textContent = `${errorText(error)} Aufnahme bleibt in diesem Tab. Vor neuer Aufnahme TCX herunterladen.`;
-      this.#retry.hidden = false;
+      this.#saveFailed = this.#completed !== undefined;
+      this.#status.textContent = `${errorText(error)} Aufnahme bleibt in diesem Tab. Vor neuer Aufnahme TCX herunterladen und ausdrücklich fortfahren.`;
     } finally {
       this.#busy = false;
-      this.#start.disabled = this.#securedRideId !== state.ride.rideId;
       this.render();
     }
   }
 
-  private distanceM(): number {
-    const distanceM = this.#options.distanceM();
+  private async start(): Promise<void> {
+    if (this.#busy) return;
+    this.#busy = true;
+    this.#lastRecordingStatus = undefined;
+    this.controls();
 
-    if (distanceM === undefined) {
-      throw new Error("Noch kein Fahrtstand verfügbar. Kurz warten.");
+    try {
+      await this.options.recorder.start();
+      this.#downloadedId = undefined;
+    } catch (error) {
+      this.#status.textContent = errorText(error);
+    } finally {
+      this.#busy = false;
+      this.controls();
     }
-
-    return distanceM;
   }
 
-  private start(): void {
+  private async finish(): Promise<void> {
+    if (this.#busy) return;
+    this.#busy = true;
+    this.controls();
+
     try {
-      this.#options.recorder.start(this.distanceM());
-      this.#start.disabled = true;
-      this.#finish.disabled = false;
-      this.#discard.disabled = false;
-      this.#retry.hidden = true;
+      this.#completed = await this.options.recorder.finish();
+      this.render();
+    } catch (error) {
+      this.#status.textContent = errorText(error);
+    } finally {
+      this.#busy = false;
+      this.controls();
+    }
+
+    if (this.#completed !== undefined) await this.save();
+  }
+
+  private async continueAfterDownload(): Promise<void> {
+    const capture = this.#completed;
+
+    if (this.#busy || capture === undefined || this.#downloadedId !== archiveId(capture)) return;
+    this.#busy = true;
+    this.controls();
+
+    try {
+      await this.options.recorder.release(this.#downloadedId);
+      this.#completed = undefined;
+      this.#saveFailed = false;
+      this.#downloadedId = undefined;
       this.#status.textContent =
-        "Aufnahme läuft. Echte Zeit, virtuelle Distanz. Ohne Aufnahmepause.";
+        "Ungespeicherten Abschluss nach ausdrücklicher TCX-Entscheidung freigegeben.";
+    } catch (error) {
+      this.#status.textContent = errorText(error);
+    } finally {
+      this.#busy = false;
       this.render();
-    } catch (error) {
-      this.#status.textContent = errorText(error);
     }
   }
 
-  private finish(): void {
-    try {
-      this.#options.recorder.finish(this.distanceM());
-      this.#finish.disabled = true;
-      this.#discard.disabled = true;
-      this.render();
-      void this.save();
-    } catch (error) {
-      this.#status.textContent = errorText(error);
-    }
-  }
-
-  private sample(): void {
-    try {
-      const distanceM = this.#options.distanceM();
-
-      if (distanceM !== undefined) {
-        this.#options.recorder.sample(distanceM);
-      }
-    } catch (error) {
-      this.#status.textContent = errorText(error);
-    }
-  }
-
-  private discard(): void {
+  private async discard(): Promise<void> {
     if (
-      this.#options.recorder.state().kind !== "recording" ||
+      this.#busy ||
       !window.confirm(
-        "Ungespeicherte Aufnahme wirklich verwerfen? Gespeicherte Fahrten bleiben erhalten.",
+        "Ungespeicherte Aufnahme wirklich verwerfen? Gespeicherte Fahrten bleiben erhalten. Vorlaufdaten eines vorhandenen Journals bleiben ebenfalls erhalten.",
       )
-    ) {
+    )
       return;
-    }
+    this.#busy = true;
+    this.controls();
 
-    this.#options.recorder.discard();
-    this.#start.disabled = false;
-    this.#finish.disabled = true;
-    this.#discard.disabled = true;
-    this.#status.textContent =
-      "Laufende Aufnahme verworfen. Gespeicherte Fahrten bleiben erhalten.";
+    try {
+      await this.options.recorder.discard();
+      this.#status.textContent =
+        "Laufende Aufnahme verworfen. Gespeicherte Fahrten bleiben erhalten.";
+    } catch (error) {
+      this.#status.textContent = errorText(error);
+    } finally {
+      this.#busy = false;
+      this.controls();
+    }
   }
 }
 
-export function mountRideRecording(options: Readonly<RecordingOptions>): void {
-  const panel = new RecordingPanel(options);
-  panel.mount();
+export function mountRideRecording(options: RecordingOptions): void {
+  new RecordingPanel(options).mount();
 }

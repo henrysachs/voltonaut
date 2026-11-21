@@ -12,6 +12,7 @@ import {
   recordReplay as record,
   normalReplay as normal,
   replayed,
+  windowFailures,
 } from "../testing/replay.spec.js";
 
 it("proves a pose cannot preserve hidden fractional accumulator state", () => {
@@ -82,7 +83,7 @@ it("reproduces complete fractional history, partial inputs, shifts and outputs",
   const result = replayed(ride);
   expect(result.summary.distanceM).toBe(ride.observations.at(-1)?.snapshot.distanceM);
   expect(result.summary.energyKj).toBeGreaterThan(0);
-  expect(result.eligibility.status).toBe("ineligible");
+  expect(result.source.window.kind).toBe("blocked");
 });
 
 it("arms first wake without inventing physics time and excludes warmup from window", () => {
@@ -139,7 +140,7 @@ it("does not clear held engine inputs on a disconnect marker; reports ineligibil
 
   const result = replayed(ride);
   expect(result.summary.energyKj).toBeCloseTo(0.25, 12);
-  expect(result.eligibility.reasons).toContain("trainer_disconnect");
+  expect(windowFailures(ride)).toContain("trainer_disconnect");
 });
 
 it("keeps V2 incomplete and unknown revisions unverified", () => {
@@ -220,9 +221,10 @@ it("replays scale 20 simulation without making it export eligible", () => {
   );
 
   const result = replayed({ ...ride, initialization: { ...ride.initialization, source: "sim" } });
-  expect(result.eligibility.reasons).toEqual(
-    expect.arrayContaining(["sim", "clock_scale", "clock_skipped"]),
-  );
+  expect(result.source.window.kind).toBe("blocked");
+  expect(
+    windowFailures({ ...ride, initialization: { ...ride.initialization, source: "sim" } }),
+  ).toEqual(expect.arrayContaining(["sim", "clock_scale", "clock_skipped"]));
 });
 
 function patchFinish(

@@ -1,90 +1,91 @@
-import type { RecordingV2 } from "@voltonaut/shared";
+import type {
+  RecordingEntryV2,
+  RecordingV2,
+  SourceAssessment,
+  WindowFailure,
+} from "@voltonaut/shared";
 
-export type ReplayIneligibilityReason =
-  | "capture_not_verified"
-  | "incomplete_journal"
-  | "sim"
-  | "clock_scale"
-  | "trainer_disconnect"
-  | "trainer_not_ready"
-  | "stale_trainer"
-  | "delayed_capture"
-  | "gap"
-  | "clock_skipped";
+class WindowAssessment {
+  private readonly reasons = new Set<WindowFailure>();
+  private ready = false;
+  private powerAtMs: number | undefined;
+  private cadenceAtMs: number | undefined;
+  private inWindow = false;
+  private lastBoundaryMs: number | undefined;
 
-export interface ReplayEligibility {
-  readonly status: "ineligible";
-  readonly reasons: readonly ReplayIneligibilityReason[];
-}
+  private check(atMs: number): void {
+    if (!this.ready) this.reasons.add("trainer_not_ready");
 
-function metadataReasons(
-  recording: RecordingV2,
-  evidence: { readonly staleTrainer: boolean; readonly clockSkipped: boolean },
-): Set<ReplayIneligibilityReason> {
-  const reasons = new Set<ReplayIneligibilityReason>(["capture_not_verified"]);
+    if (
+      this.powerAtMs === undefined ||
+      this.cadenceAtMs === undefined ||
+      atMs - this.powerAtMs > 2500 ||
+      atMs - this.cadenceAtMs > 2500
+    )
+      this.reasons.add("stale_trainer");
+  }
 
-  if (recording.journalState !== "complete") reasons.add("incomplete_journal");
+  ingest(entry: RecordingEntryV2): void {
+    const atMs = entry[1];
 
-  if (recording.initialization.source === "sim") reasons.add("sim");
+    if (this.inWindow) this.check(atMs);
 
-  if (recording.initialization.clockScale !== 1) reasons.add("clock_scale");
-
-  if (evidence.staleTrainer) reasons.add("stale_trainer");
-
-  if (evidence.clockSkipped) reasons.add("clock_skipped");
-
-  if (recording.observations.some((observation) => observation.gap)) reasons.add("gap");
-
-  return reasons;
-}
-
-/** Local consistency is not permission to send an activity to an external provider. */
-export function recordingV2Eligibility(
-  recording: RecordingV2,
-  evidence: { readonly staleTrainer: boolean; readonly clockSkipped: boolean },
-): ReplayEligibility {
-  const reasons = metadataReasons(recording, evidence);
-  let ready = false;
-  let powerAtMs: number | undefined;
-  let cadenceAtMs: number | undefined;
-  let lastBoundaryMs: number | undefined;
-
-  for (const entry of recording.entries) {
     if (entry[2] === "status" && entry[3] === "trainer") {
-      ready = entry[4] === "ready";
+      this.ready = entry[4] === "ready";
 
-      if (!ready) reasons.add("trainer_disconnect");
-    }
+      if (!this.ready) {
+        this.powerAtMs = undefined;
+        this.cadenceAtMs = undefined;
 
-    if (entry[2] === "advance") {
-      if (!ready) reasons.add("trainer_not_ready");
+        if (this.inWindow) this.reasons.add("trainer_disconnect");
+      }
+    } else if (entry[2] === "trainer") {
+      if (entry[3] !== null) this.powerAtMs = atMs;
 
-      if (entry[3] > 2.5) reasons.add("gap");
-
-      if (
-        powerAtMs === undefined ||
-        cadenceAtMs === undefined ||
-        entry[1] - powerAtMs > 2500 ||
-        entry[1] - cadenceAtMs > 2500
-      )
-        reasons.add("stale_trainer");
-    }
-
-    if (entry[2] === "trainer") {
-      if (entry[3] !== null) powerAtMs = entry[1];
-
-      if (entry[4] !== null) cadenceAtMs = entry[1];
-    }
-
-    if (entry[2] === "boundary") {
-      if (entry[3] === "start" && entry[1] !== recording.initialization.initializedWorkerMs) {
-        reasons.add("delayed_capture");
+      if (entry[4] !== null) this.cadenceAtMs = atMs;
+    } else if (entry[2] === "advance" && this.inWindow && entry[3] > 2.5) {
+      this.reasons.add("gap");
+    } else if (entry[2] === "boundary") {
+      if (entry[3] === "start") {
+        this.inWindow = true;
+        this.check(atMs);
       }
 
-      if (lastBoundaryMs !== undefined && entry[1] - lastBoundaryMs > 2500) reasons.add("gap");
-      lastBoundaryMs = entry[1];
+      if (this.lastBoundaryMs !== undefined && atMs - this.lastBoundaryMs > 2500)
+        this.reasons.add("gap");
+      this.lastBoundaryMs = atMs;
     }
   }
 
-  return { status: "ineligible", reasons: [...reasons] };
+  finish(recording: RecordingV2, clockSkipped: boolean): SourceAssessment {
+    if (recording.initialization.source === "sim") this.reasons.add("sim");
+
+    if (recording.initialization.clockScale !== 1) this.reasons.add("clock_scale");
+
+    if (clockSkipped) this.reasons.add("clock_skipped");
+
+    if (recording.observations.some((observation) => observation.gap)) this.reasons.add("gap");
+    const [first, ...rest] = this.reasons;
+
+    return {
+      assurance: "client_declared",
+      declaredSource: recording.initialization.source,
+      window:
+        first === undefined
+          ? { kind: "continuous" }
+          : { kind: "blocked", reasons: [first, ...rest] },
+    };
+  }
+}
+
+/** Declared source quality only; never hardware authentication or permission to send. */
+export function recordingV2Eligibility(
+  recording: RecordingV2,
+  evidence: { readonly clockSkipped: boolean },
+): SourceAssessment {
+  const assessment = new WindowAssessment();
+
+  for (const entry of recording.entries) assessment.ingest(entry);
+
+  return assessment.finish(recording, evidence.clockSkipped);
 }

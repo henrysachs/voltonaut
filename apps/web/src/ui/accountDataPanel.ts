@@ -1,6 +1,25 @@
 import type { AccountSync } from "../sync/accountSync.js";
 import type { AccountDataView, OutboxItem } from "../sync/accountDataView.js";
 import type { SyncFailure } from "../sync/privateAuthTransport.js";
+import type { RideAssessment } from "@voltonaut/shared";
+
+function assessmentText(assessment: RideAssessment): string {
+  switch (assessment.status) {
+    case "replayed":
+      return `Nachgerechnet, Quelle Selbstauskunft. ${assessment.source.window.kind === "continuous" ? "Kontinuierliches Fenster" : "Eingeschränktes Fenster"}; kein Hardwarebeweis, keine Belohnung.`;
+    case "rejected":
+      return "Nachrechnung abgelehnt: Beobachtungen stimmen nicht überein. Kein Strava-Export, keine Belohnung.";
+    case "unverified":
+      return assessment.reason === "legacy_missing_replay"
+        ? "V1 ungeprüft, keine Belohnung."
+        : "Ungeprüft: Journal unvollständig oder Revision unbekannt. Kein Strava-Export, keine Belohnung.";
+    default: {
+      const exhaustive: never = assessment;
+
+      return exhaustive;
+    }
+  }
+}
 
 const failures: Readonly<Record<Exclude<SyncFailure, "superseded">, string>> = {
   reauth: "Anmeldung abgelaufen. Abmelden und mit demselben Konto erneut anmelden.",
@@ -34,7 +53,7 @@ function outboxText(item: OutboxItem): string {
 
   switch (state.kind) {
     case "stored":
-      return `${name}: Auf Server gespeichert.${item.kind === "ride" ? " V1 ungeprüft, keine Belohnung." : ""}`;
+      return `${name}: Auf Server gespeichert.${"assessment" in state.receipt ? ` ${assessmentText(state.receipt.assessment)}` : ""}`;
     case "sending":
       return `${name}: Übertragung begonnen, noch kein dauerhafter Beleg. Nach Unterbrechung idempotent wiederholbar.`;
     case "queued":
@@ -126,7 +145,7 @@ function historyPanel(view: AccountView, sync: Commands): HTMLElement {
 
   for (const ride of view.history.value.rides) {
     const item = document.createElement("li");
-    item.textContent = `${ride.startedAt} · ${(ride.distanceM / 1000).toFixed(2)} km · ${(ride.durationMs / 1000).toFixed(0)} s · ${ride.source === "sim" ? "Simulation" : "BLE"} · V1 ungeprüft · ${ride.rideId}`;
+    item.textContent = `${ride.startedAt} · ${(ride.distanceM / 1000).toFixed(2)} km · ${(ride.durationMs / 1000).toFixed(0)} s · ${ride.source === "sim" ? "Simulation" : "BLE"} · ${assessmentText(ride.assessment)} · ${ride.rideId}`;
     list.append(item);
   }
 
@@ -142,6 +161,17 @@ function historyPanel(view: AccountView, sync: Commands): HTMLElement {
   return host;
 }
 
+function claimButton(view: AccountView, sync: Commands, rideId: string): HTMLButtonElement {
+  return button("Fahrt diesem Konto zuordnen und synchronisieren", () => {
+    if (
+      window.confirm(
+        `Diese lokale Fahrtkopie unwiderruflich ${view.user.email} zuordnen und synchronisieren? Journalaufnahmen übertragen dabei auch Messwerte seit Sitzungsbeginn, einschließlich verworfener Fenster. TCX und Strava exportieren nur das gewählte Fenster. Die Aufnahme selbst enthält keinen nachgewiesenen Kontobesitzer.`,
+      )
+    )
+      void sync.claim(rideId);
+  });
+}
+
 function localPanel(view: AccountView, sync: Commands): HTMLElement {
   const host = document.createElement("div");
   const title = document.createElement("h3");
@@ -149,7 +179,7 @@ function localPanel(view: AccountView, sync: Commands): HTMLElement {
   host.append(title);
   host.append(
     paragraph(
-      "Das lokale V1-Archiv enthält keinen nachgewiesenen Aufnahme-Eigentümer. Erst Ihre Bestätigung ordnet eine unveränderliche Kopie diesem Konto zu. Keine automatische Zuordnung oder Strava-Veröffentlichung.",
+      "Das lokale Archiv enthält keinen nachgewiesenen Aufnahme-Eigentümer. Erst Ihre Bestätigung ordnet eine unveränderliche Kopie diesem Konto zu. Keine automatische Zuordnung oder Strava-Veröffentlichung.",
     ),
   );
 
@@ -162,14 +192,18 @@ function localPanel(view: AccountView, sync: Commands): HTMLElement {
       ),
     );
 
-    const claim = button("Fahrt diesem Konto zuordnen und synchronisieren", () => {
-      if (
-        window.confirm(
-          `Diese lokale Fahrtkopie unwiderruflich ${view.user.email} zuordnen und synchronisieren? Die Aufnahme selbst enthält keinen nachgewiesenen Kontobesitzer.`,
-        )
-      )
-        void sync.claim(ride.rideId);
-    });
+    if (ride.kind === "local_only") {
+      item.append(
+        paragraph(
+          "Nur lokaler Track: vollständiges Journal nicht verfügbar. TCX bleibt lokal möglich; keine Kontosynchronisierung.",
+        ),
+      );
+      host.append(item);
+
+      continue;
+    }
+
+    const claim = claimButton(view, sync, ride.rideId);
 
     claim.disabled =
       view.outbox.kind !== "ready" ||

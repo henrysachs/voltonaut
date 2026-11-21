@@ -274,11 +274,11 @@ Zuordnung der früheren Kurznamen: `devices/` → `packages/ble`, `sim/` → `pa
 flowchart LR
   subgraph Client[Browser-Client]
     G[game/ vorläufige XP/Volts] --> SY[sync/ Cache + Outbox]
-    E[engine] -- RideRecording 1 Hz --> SY
+    E[Engine-Worker] -- bestätigter Aufnahmeabschluss --> SY
     NET[net/ Live-Client]
     E -- RideSnapshot --> NET
   end
-  SY -- REST /v1 Bearer --> API
+  SY -- REST Bearer --> API
   NET -- WSS /v1/live --> LIVE
   subgraph Server[Hetzner-VPS: NestJS + Drizzle]
     API[auth · accounts · inventory · economy · rides · progression · catalog]
@@ -289,11 +289,11 @@ flowchart LR
 ```
 
 - `sync/` (Client) besitzt den lokalen Spiegel von `/v1/me` und die Outbox; alle anderen Client-Module lesen daraus. Ohne Server/Account: Gastmodus, nur Cache + Outbox.
-- Implementiert ist zusätzlich die lokale Aufnahme nach [E10-01](specs/E10-01-local-ride-recording-tcx.md). `game` erfasst echte monotone Zeit und rohe Messwerte. `sync` speichert bis zu 20 abgeschlossene Fahrten in `voltonaut-local-rides`, unabhängig vom Profilcache. `ui` fordert einen TCX-Download ausdrücklich an. Aufnahmeende stoppt nicht die Worker-Physik. Das ist keine Outbox und keine serverseitige Fahrthistorie.
-- [E5-07](specs/E5-07-owned-profile-rides.md) ergänzt getrennt davon authentifizierte APIs für das eigene Profil und dauerhafte V1-Aufnahmen. `accounts` und `rides` besitzen ihre Tabellen. Der Server speichert V1 ausschließlich als `unverified/legacy_missing_replay`, ohne Physikprüfung oder Belohnung. [E5-09](specs/E5-09-account-bound-sync.md) verbindet diese APIs mit dem Browser. `applicationSession` erteilt tokenlose, origin- und generationsgebundene Fähigkeiten. `accountSync` besitzt den aktuellen Kontospiegel und die separate IndexedDB-Outbox. Die konkrete Tabellenverdrahtung steht in `08-backend.md`.
+- [E10-04](specs/E10-04-complete-ride-delivery.md) verlegt die Aufnahme aus E10-01 in den vorhandenen Engine-Worker. Er hält Journal und ausgewähltes Fenster getrennt und bestätigt Grenzen in Actor-Reihenfolge. Aufnahmebefehle verändern weder Advances noch Pose. `sync` speichert bis zu 20 Abschlüsse in `voltonaut-local-rides`: normale rohe V2-Journale, unveränderte historische V1-Daten oder ausdrücklich lokale Tracks nach Journalverlust. Ein Abschluss bleibt bis Archivcommit oder ausdrücklicher Nutzerentscheidung gesperrt. TCX braucht weder Konto noch Netzwerk.
+- `/v2/rides` ersetzt den bisherigen Fahrtenpfad vollständig. `rides` hält unveränderliche Nutzlast, Beleg, vollständige Nachrechnung und servereigene TCX-Bytes. Historische V1-Daten bleiben `unverified/legacy_missing_replay`; sie werden nicht nachträglich aufgewertet. [E5-09](specs/E5-09-account-bound-sync.md) behält eine ausdrückliche Kontozuordnung und eine einzige IndexedDB-Outbox. `applicationSession` erteilt tokenlose, origin- und generationsgebundene Fähigkeiten. `accountSync` besitzt nur den Kontospiegel und diese Outbox. Strava besitzt getrennt seine Verbindung und dauerhaften serverseitigen Versandaufträge.
 - Auth-Ziel laut [ADR-013](decisions/ADR-013-cloudflare-access-oidc.md): Cloudflare Access als OIDC-Broker, keine Proxy-Sperre vor Webseite oder API. Der Server besitzt stabile Accounts, Identitätszuordnungen und eigene Bearer-Sessions. Login startet nur nach Nutzerklick; anonyme Fahrt benötigt weder Storage noch Netzwerk. [E5-06](specs/E5-06-oidc-server-login.md) liefert den serverseitigen Codeflow und die browsergebundene Einmalübergabe. [E5-08](specs/E5-08-browser-oidc-session.md) ergänzt das Browserkonto. `sync` besitzt Session, HTTP und optionale Persistenz; `ui` erhält nur Status und servervalidierte Nutzer. Zusätzliche Identitätsverknüpfungen und echter Pilot bleiben offen.
 - Access-App und begrenzte Pilot-Policy sind separat eingerichtet, siehe [E5-04](specs/E5-04-access-oidc-pilot-setup.md). Das ersetzt keinen echten Anbieterpilot.
-- [E10-02](specs/E10-02-replay-consistency.md) definiert additiv ein V2-Journal ab Engine-Initialisierung und eine reine Server-Nachrechnung. Aufnahmegrenzen werden in Worker-Reihenfolge bestätigt. Öffentliche Snapshots allein enthalten keinen vollständigen Wiederanlaufzustand. Browsererfassung und V2-HTTP-Annahme sind noch nicht angeschlossen. Replay-Konsistenz beweist keine Hardwareherkunft.
+- [E10-02](specs/E10-02-replay-consistency.md) definiert das V2-Journal ab Engine-Initialisierung. E10-04 verbindet Worker-Erfassung, API und ausdrückliche Strava-Auslieferung. Die Quellenrichtlinie bleibt standardmäßig deaktiviert. `declared_ble_v1` ist eine explizite BLE-Selbstauskunft, kein Hardwareattest und keine Belohnungsfreigabe. Die gebaute Gesamtstrecke ist gegen lokale Anbieter und native GATT-Fakes softwaregeprüft. Echte Hardware, Anbieterzustimmung und Produktion bleiben getrennte Abnahmen.
 - `net/` liest `RideSnapshot` (sendet eigene Distanz 2–4 Hz) und besitzt `RemoteRider[]`; world/avatar rendern Remote-Fahrer nur daraus. Für Windschatten hinter Remote-Fahrern reicht `net/` deren Distanz/Versatz als Engine-Input weiter (v2).
 - `packages/engine`, `packages/rules`, `packages/shared` enthalten Code, den Client **und** Server nutzen: Physik, Gänge, Bots/Drafting, Level-Tabelle, Badge-Prädikate, Item-Katalog, Zod-API-Schemas. So rechnet der Server Fahrten mit derselben Logik nach. So rechnet der Server Fahrten mit derselben Logik nach.
 - Details: `08-backend.md`, ADR-004, ADR-005.

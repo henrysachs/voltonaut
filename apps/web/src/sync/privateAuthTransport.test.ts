@@ -4,6 +4,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { privateAuthTransport } from "./privateAuthTransport.js";
 import { localRide } from "./testdata/localRide.js";
+import { journalRide } from "./testdata/journal.js";
 
 const cleanup = new Set<() => Promise<void>>();
 
@@ -126,4 +127,28 @@ it("accepts only a valid stored receipt for the exact canonical ride ID", async 
     JSON.stringify({ ...receipt, rideId: localRide.rideId }),
   );
   await expect(f.lease.upload(localRide)).resolves.toMatchObject({ rideId: localRide.rideId });
+});
+
+it("uses only canonical v2 ride routes for raw journals, history and detail", async () => {
+  const f = await fixture();
+  const assessment = { status: "unverified", reason: "unknown_revision" };
+  f.reply(
+    200,
+    "application/json",
+    JSON.stringify({ rideId: journalRide.rideId, storage: "stored", assessment }),
+  );
+  await expect(f.lease.upload(journalRide)).resolves.toMatchObject({ rideId: journalRide.rideId });
+  f.reply(200, "application/json", JSON.stringify({ rides: [], nextCursor: null }));
+  await f.lease.history(null);
+  await f.lease.history(journalRide.rideId.toUpperCase());
+  f.reply(200, "application/json", JSON.stringify({ recording: journalRide, assessment }));
+  await expect(f.lease.detail(journalRide.rideId)).resolves.toMatchObject({
+    recording: journalRide,
+  });
+  expect(f.calls).toEqual([
+    "/v2/rides:Bearer private-token",
+    "/v2/rides:Bearer private-token",
+    `/v2/rides?cursor=${journalRide.rideId}:Bearer private-token`,
+    `/v2/rides/${journalRide.rideId}:Bearer private-token`,
+  ]);
 });

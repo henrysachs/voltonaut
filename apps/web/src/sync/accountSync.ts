@@ -1,4 +1,4 @@
-import { RideUploadSchema, type CompletedLocalRide } from "@voltonaut/shared";
+import { archivedRideTrack, RideUploadSchema, type ArchivedRide } from "@voltonaut/shared";
 
 import {
   historyCursor,
@@ -26,7 +26,7 @@ export class AccountSync {
   readonly #pending = new Map<number, "manual" | "resume">();
   #view: AccountDataView = { kind: "guest" };
   #lease: AccountLease | undefined;
-  #archive: readonly CompletedLocalRide[] = [];
+  #archive: readonly ArchivedRide[] = [];
   #reauth = false;
 
   constructor(options: SyncOptions) {
@@ -157,12 +157,12 @@ export class AccountSync {
     const lease = this.#lease;
 
     if (lease === undefined) return;
-    const ride = this.#archive.find((item) => item.rideId === rideId);
+    const ride = this.#archive.find((item) => archivedRideTrack(item).rideId === rideId);
 
-    if (ride === undefined) return;
+    if (ride === undefined || ride.kind === "local_only") return;
     await this.queue(
       lease,
-      newOutboxRow(lease, RideUploadSchema.parse(ride), this.#options.nowMs()),
+      newOutboxRow(lease, RideUploadSchema.parse(ride.recording), this.#options.nowMs()),
     );
   }
 

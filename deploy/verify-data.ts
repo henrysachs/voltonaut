@@ -123,8 +123,8 @@ if (process.argv[2] === "seed") {
   save("ride-id", ride.rideId);
   save("ride", JSON.stringify(ride));
   save("profile", await request("/v1/me/profile", owner.token, "PUT", JSON.stringify(profile)));
-  save("receipt", await request("/v1/rides", owner.token, "POST", JSON.stringify(ride)));
-  save("detail", await request(`/v1/rides/${ride.rideId}`, owner.token, "GET"));
+  save("receipt", await request("/v2/rides", owner.token, "POST", JSON.stringify(ride)));
+  save("detail", await request(`/v2/rides/${ride.rideId}`, owner.token, "GET"));
   await Promise.all(
     [owner.token, other.token].map(async (token, index) => {
       save(`me-${index}`, await request("/v1/me", token, "GET"));
@@ -142,16 +142,16 @@ if (process.argv[2] === "seed") {
     }),
   );
   assert.equal(await request("/v1/me/profile", token, "GET"), read("profile"));
-  assert.equal(await request(`/v1/rides/${rideId}`, token, "GET"), read("detail"));
-  assert.equal(await request("/v1/rides", token, "POST", ride), read("receipt"));
+  assert.equal(await request(`/v2/rides/${rideId}`, token, "GET"), read("detail"));
+  assert.equal(await request("/v2/rides", token, "POST", ride), read("receipt"));
   await request(
-    "/v1/rides",
+    "/v2/rides",
     token,
     "POST",
     ride.replace(/"startedAt":"[^"]+"/u, '"startedAt":"2026-01-01T00:00:00.000Z"'),
     409,
   );
-  await request(`/v1/rides/${rideId}`, otherToken, "GET", undefined, 404);
+  await request(`/v2/rides/${rideId}`, otherToken, "GET", undefined, 404);
   const accounts = db.prepare("SELECT count(*) AS n FROM users").get();
   assert.ok(accounts);
   assert.equal(accounts["n"], 2);

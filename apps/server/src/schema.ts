@@ -12,3 +12,5 @@ export const rides = ridesTables.rides;
 export const stravaTables = createStravaTables(users.id);
 export const stravaTransactions = stravaTables.transactions;
 export const stravaConnections = stravaTables.connections;
+export const stravaDeliveries = stravaTables.deliveries;
+export const stravaRateBudget = stravaTables.rateBudget;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { serializeRideTcx, rideTcxFilename } from "./rideTcx.js";
+import { serializeRideTcx, rideTcxFilename } from "@voltonaut/shared";
 import { localRide } from "./testdata/localRide.js";
 
 describe("TCX export", () => {

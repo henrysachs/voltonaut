@@ -29,6 +29,20 @@
       "when": 1795190268028,
       "tag": "0003_strava_connection",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795222084773,
+      "tag": "0004_replayed_ride_exports",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795229379793,
+      "tag": "0005_strava_delivery",
+      "breakpoints": true
     }
   ]
 }

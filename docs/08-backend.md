@@ -59,21 +59,26 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 
 ## Datenmodell (Skizze)
 
-### Implementierter Teilschritt E5-07
+### Eigene Profile und Fahrtenannahme
 
-[E5-07](specs/E5-07-owned-profile-rides.md) implementiert ausschließlich das eigene Fahrerprofil und dauerhafte lokale V1-Aufnahmen. Die folgenden SQL- und API-Skizzen bleiben der weitergehende Zielstand.
+[E5-07](specs/E5-07-owned-profile-rides.md) liefert eigene Profile und historische V1-Aufnahmen. Die API-Einheit aus [E10-04](specs/E10-04-complete-ride-delivery.md) ergänzt die Journalannahme. Die folgenden SQL- und API-Skizzen bleiben der weitergehende Zielstand.
 
 - `GET /v1/me/profile` liefert `missing` oder `present` mit Profil und UTC-Änderungszeit. `PUT` validiert Profil und Fahrrad strikt.
-- `POST /v1/rides` akzeptiert `CompletedLocalRideSchema` als unkomprimiertes JSON bis 8 MiB. Schemafehler liefern 422, ungültiges JSON weiterhin 400, zu große Bodies 413. Komprimierte Bodies werden mit 415 abgelehnt. Fehlermeldungen enthalten keine rohe Nutzlast.
-- Alle gespeicherten V1-Aufnahmen haben ausschließlich `assessment: {status:'unverified',reason:'legacy_missing_replay'}`. Ohne vollständigen Physik-Anfangszustand und Ereignisse gibt es keine Replay-Prüfung, Belohnung oder Annahme als geprüfte Fahrt.
+- `POST /v2/rides` akzeptiert das rohe `RideRecording`: Journalversion 2 oder historische Version 1, ohne Archivwrapper. `/v1/rides` entfällt ohne Weiterleitung. Unkomprimiertes JSON bleibt auf 8 MiB begrenzt. Schemafehler liefern 422, ungültiges JSON 400, zu große Bodies 413 und komprimierte Bodies 415. Fehlermeldungen enthalten keine rohe Nutzlast.
+- Historische V1-Aufnahmen behalten `assessment: {status:'unverified',reason:'legacy_missing_replay'}` und ihre ursprünglichen Belege. Vollständige bekannte Journale werden ab Initialisierung nachgerechnet. Unvollständige Journale und unbekannte Revisionen bleiben `unverified`; abweichende Beobachtungen ergeben `rejected/observation_mismatch`. Keine dieser Bewertungen vergibt Belohnungen.
+- Quellenqualität gilt nur am Fensterstart und innerhalb des Fensters. Der Server erhält Bereitschaft und rohe Kanalfrische aus dem gesamten Präfix. Frische Daten nach einer Lücke heilen die Lücke nicht. Alte Vorlauffehler blockieren ein wieder gesundes Fenster nicht.
+- Nutzlast, Hash, Bewertung, Beleg, Zusammenfassung und TCX samt Hash und `tcx-1` werden atomar gespeichert. Nachrechnung und Projektion laufen vor der kurzen Schreibtransaktion. Identische eigene Wiederholungen lesen den gespeicherten Beleg vor einer erneuten Nachrechnung. Nicht nachgerechnete Fahrten erhalten keinen TCX-Export auf dem Server.
+- Eine strukturell gültige, aber nicht sicher projizierbare Beobachtung liefert 422 statt 500. Das betrifft etwa fallende virtuelle Distanz oder Werte außerhalb der Trackgrenzen. Ein projizierbarer Beobachtungswiderspruch kann dagegen als `rejected` gespeichert werden. Die Grenzen für sechs Stunden und 8 MiB bleiben unverändert; ein vollständiges Sechs-Stunden-Journal passt nicht zwangsläufig in das Bytebudget.
 - Globale UUID-Eindeutigkeit, kanonische geparste Nutzlast, SHA-256 und ursprünglicher Beleg liegen in derselben SQLite-Transaktion. Erstupload und identische Wiederholung liefern HTTP 200 mit demselben gespeicherten Beleg. Eine abweichende Nutzlast liefert 409 `ride_id_conflict`. Eine fremde UUID liefert auch beim Upload 404.
 - Das gemeinsame `RideIdSchema` normalisiert UUIDs beim API-Upload, Detailpfad und Cursor auf Kleinschreibung, vor Hash und Speicherung. Lokale V1-Dateien und Auth-Identifikatoren werden nicht umgeschrieben. Ein Route-Guard prüft den Medientyp vor der Zod-Bodyvalidierung. `text/plain` liefert 415, gültiges JSON mit Charset bleibt erlaubt.
-- `GET /v1/rides/:rideId` liefert eigene Aufnahme und aktuelle Bewertung. Die Liste enthält keine Samples, ist auf 20 Einträge voreingestellt und auf 50 begrenzt. Cursor und Sortierung verwenden aufsteigende UUIDs, nicht die Aufnahmezeit.
+- `GET /v2/rides/:rideId` liefert eigene Aufnahme und gespeicherte Bewertung. `GET /v2/rides` enthält keine Samples, ist auf 20 Einträge voreingestellt und auf 50 begrenzt. Cursor und Sortierung verwenden aufsteigende UUIDs, nicht die Aufnahmezeit.
 - Jeder Zugriff ist an `SessionPrincipal.userId` gebunden. `GET /v1/me` bleibt Auth-Verantwortung. Es gibt keine automatische Löschung. Uploads sind pro Account auf 30 Anfragen pro Minute begrenzt, auch bei Wiederholungen.
 
 Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)` und `createRidesTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und beide Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an `AccountsModule.register` und `RidesModule.register`. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
 
-Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. Die Migrationen `0000` bis `0002` bleiben unverändert. Strava ergänzt ausschließlich `0003`. Der Browser verwendet die Fahrtendpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
+Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. `0003` ergänzt Strava-Verbindungen. Die additive `0004_replayed_ride_exports.sql` ergänzt Zusammenfassung und Exportspalten, ohne bestehende Nutzlasten, Hashes oder Belege umzuschreiben. Die Migrationen `0000` bis `0003` bleiben unverändert. Der Browser verwendet die Fahrtendpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
+
+`RidesService.loadOwnStravaSource(userId, rideId)` liest synchron eigene gespeicherte Exportbytes. `RIDE_SOURCE_POLICY` ist standardmäßig `disabled`. Nur die ausdrückliche Einstellung `declared_ble_v1` erlaubt ein nachgerechnetes, kontinuierliches, als BLE deklariertes Fenster. Sim, Skalierung und Qualitätsfehler bleiben gesperrt. Die Antwort bezeichnet die Quelle als `client_declared`, nicht als Hardwareattest. Eine vollständig erfundene konsistente BLE-Selbstauskunft ist damit nicht erkennbar. Reale Aktivierung bleibt gesondert offen. Das Lesen der Quelle führt weder einen weiteren Physiklauf noch einen Anbieteraufruf aus.
 
 ```sql
 users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at)
@@ -109,9 +114,9 @@ PUT  /v1/me/profile             RiderProfile                      → profile   
 PUT  /v1/me/avatar              AvatarConfig                      → avatar           (nur Items aus dem Inventar)
 GET  /v1/catalog                                                  → { items[], levels[], version }   (öffentlich, cachebar)
 POST /v1/shop/purchase          { itemId, expectedPriceVolts }    → { voltsBalance, inventoryItem } | 409 insufficient_volts | 409 already_owned
-POST /v1/rides                  RideUpload (gzip)                 → { status, xpAwarded, voltsAwarded, newBadges[], newPbs[], levelUp? }
+POST /v2/rides                  RideRecording (JSON)              → { rideId, storage:'stored', assessment }
                                 (idempotent: gleiche rideId → gleiche Antwort)
-GET  /v1/rides?cursor=…                                           → { rides: RideSummary[], nextCursor }
+GET  /v2/rides?cursor=…                                           → { rides: RideSummary[], nextCursor }
 GET  /v1/me/export                                                → JSON aller eigenen Daten
 DELETE /v1/me                                                     → 202 (Account-Löschung)
 WS   /v1/live                   erster Frame { t:'auth', sessionToken } → Räume (s. u.)
@@ -137,23 +142,33 @@ Vor einem echten Deploy müssen Proxy- und Zugriffslogs Callback-Queries auslass
 
 `users.id` bleibt der Eigentümer von Fahrten, Inventar und Progression. Nur `(issuer, subject)` identifiziert einen externen Login. E-Mail-Gleichheit verknüpft keine Accounts. Bei einer Kollision ist der bestehende Account nachzuweisen. Zusätzliche Identitäten verlangen eine angemeldete Session, frische Reauthentifizierung und beide Besitznachweise; die letzte Login-Methode darf nicht entfernt werden. Issuer-/Subject-Stabilität wird im Pilot geprüft. Strava-OAuth erteilt separat Uploadrechte, niemals durch den Broker-Login.
 
-### Serverseitige Strava-Verbindung aus E10-03
+### Strava-Verbindung und ausdrückliche Auslieferung
 
-[E10-03](specs/E10-03-strava-connection.md) implementiert ausschließlich die Verbindung mit Strava. `STRAVA_MODE` ist standardmäßig `disabled`. `enabled` verlangt `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` und `STRAVA_TOKEN_KEY`. Der Callback ist die kanonische API-Adresse mit Pfad `/v1/strava/callback`. Produktion verlangt HTTPS. Der Schlüssel enthält genau 32 Byte, kodiert als 64 kleingeschriebene Hexzeichen oder kanonisches Base64. Werte bleiben privat auf dem Server.
+[E10-03](specs/E10-03-strava-connection.md) liefert die Verbindung. [E10-04](specs/E10-04-complete-ride-delivery.md) ergänzt Browserbedienung und dauerhafte Uploadaufträge. `STRAVA_MODE` ist standardmäßig `disabled`. `enabled` verlangt `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` und `STRAVA_TOKEN_KEY`. Der Callback ist die kanonische API-Adresse mit Pfad `/v1/strava/callback`. Produktion verlangt HTTPS. Der Schlüssel enthält genau 32 Byte, kodiert als 64 kleingeschriebene Hexzeichen oder kanonisches Base64. Werte bleiben privat auf dem Server.
 
-| Route                           | Vertrag                                                                                                 |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET /v1/strava/connection`     | Eigener Status mit gültigem Bearer, ohne Zugangsdaten.                                                  |
-| `POST /v1/strava/connect-start` | Bearer, exakter `CLIENT_ORIGIN` und `{action:'connect'}` starten eine browsergebundene Transaktion.     |
-| `GET /v1/strava/callback`       | Öffentlicher Callback prüft einmaligen State und Browsercookie vor dem Anbieteraufruf.                  |
-| `POST /v1/strava/confirm`       | Derselbe Eigentümer bestätigt `{code}` mit frischem Bearer, passendem Browsercookie und exaktem Origin. |
-| `POST /v1/strava/disconnect`    | Bearer, exakter Origin und `{action:'disconnect'}` sperren lokal und fordern den Anbieterwiderruf an.   |
+| Route                           | Vertrag                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `GET /v1/strava/connection`     | Eigener Status mit gültigem Bearer, ohne Zugangsdaten.                                                             |
+| `POST /v1/strava/connect-start` | Bearer, exakter `CLIENT_ORIGIN` und `{action:'connect',channel:<UUID>}` starten eine browsergebundene Transaktion. |
+| `GET /v1/strava/callback`       | Öffentlicher Callback prüft einmaligen State und Browsercookie vor dem Anbieteraufruf.                             |
+| `POST /v1/strava/confirm`       | Derselbe Eigentümer bestätigt `{code}` mit frischem Bearer, passendem Browsercookie und exaktem Origin.            |
+| `POST /v1/strava/disconnect`    | Bearer, exakter Origin und `{action:'disconnect'}` sperren lokal und fordern den Anbieterwiderruf an.              |
+| `GET /v1/strava/rides/:rideId`  | Eigene Fahrt liefert Sperrgrund, vollständiges Einwilligungsangebot oder vorhandenen Auftrag.                      |
+| `POST /v1/strava/rides/:rideId` | Bearer, exakter Origin und `{action:'upload',consent}` erzeugen höchstens einen Auftrag je Fahrt.                  |
 
 Transaktionen gelten fünf Minuten, Übergaben 60 Sekunden. Der Callback speichert Zugangsdaten zunächst unbestätigt. Erst die Bestätigung aktiviert die Verbindung. Ein anderes Konto verbraucht die Übergabe nicht. Ein Strava-Athlet gehört höchstens einem Voltonaut-Account. Es gibt keinen automatischen Transfer.
 
 `strava/` besitzt Transaktionen, Verbindungen und AES-256-GCM-Chiffrate aus Migration `0003`. Eigentümer, Athlet und Schlüsselversion sind authentifiziert gebunden. Status und Antworten enthalten keine Tokens. Trennen setzt vor dem Netzwerkaufruf dauerhaft `revocation_pending`. Nur bestätigtes HTTP 200 des Widerrufs entfernt das Chiffrat. Fehler oder Timeout erhalten die Sperre und erlauben einen erneuten ausdrücklichen Widerruf.
 
-`STRAVA_TEST_PROVIDER_ORIGIN` ist ausschließlich für Loopback-Protokollanbieter in Entwicklung und Test erlaubt. Produktion lehnt diese Einstellung ab. `mise exec -- node serververification.mjs` prüft den kompilierten Server, Browser-CORS, Kontowechsel, verschlüsselte Persistenz und Widerruf über Prozessneustarts. Der Beleg liegt in `docs/research/strava-local-verification.json`. Es gibt keine Webintegration, Uploadroute, Tokenaktualisierung oder Webhooks. Echte Zustimmung, Callbackfreigabe, Proxylogs, Schlüsselbetrieb und Datenschutz bleiben vor einer Produktionsaktivierung zu prüfen.
+Die additive Migration `0005_strava_delivery` erhält vorhandene verschlüsselte Verbindungen und ergänzt eindeutige Verbindungsgenerationen, Tokenrevisionen und koordinierte Credentialarbeit. `strava_deliveries` speichert Auftrag, Einwilligung, Versandzustand und bekannte Anbieterbelege. `strava_rate_budget` koordiniert das appweite Budget auch über Prozessneustarts. Die historischen Migrationen `0000` bis `0004` bleiben unverändert.
+
+Eine Einwilligung bindet Fahrt, Nutzlast- und Exporthash, `tcx-1`, Zielathlet, Verbindungsgeneration, Quellenrichtlinie und Hinweisrevision. Der Scheduler prüft diese Bindungen unmittelbar vor dem einmaligen Dispatchcommit. `preparing` darf nach Ablauf übernommen werden. Nach dem Dispatchcommit bleibt ein verlorenes POST-Ergebnis dagegen `submission_unknown` und wird nicht erneut versendet. Eine bekannte Upload-ID bleibt bei Pollfehlern, Trennen und Neustart erhalten. Eine unklare Tokenrotation sperrt weitere Credentialarbeit, statt einen alten Refresh-Token erneut zu verwenden.
+
+Der Anbieter erhält ausschließlich gespeicherte servereigene TCX-Bytes mit `sport_type=VirtualRide`, `trainer=1`, stabiler `external_id` und `visibility=only_me`. Erst ein bestätigter Verarbeitungspoll mit Activity-ID bedeutet Erfolg. Die Sichtbarkeitsanforderung ist kein Nachweis der tatsächlichen Sichtbarkeit beim echten Anbieter. HTTP 201 allein bleibt Verarbeitung. Sim und beschleunigte Quellen erzeugen kein Versandangebot.
+
+Die Browseroberfläche öffnet nach Nutzerklick eine speicherfreie Bridge mit nativem BroadcastChannel. Das Elternfenster hält den ursprünglichen Bearer auch ohne Sessionpersistenz. Callback und Bestätigung verlangen weiterhin das ursprüngliche HttpOnly-Cookie. Kontowechsel widerruft die lokale Fähigkeit. Die gebaute Finishseite entfernt Querywerte inline vor der ersten Skriptanforderung. Popup und Finishseite haben keinen nativen Opener.
+
+`STRAVA_TEST_PROVIDER_ORIGIN` ist ausschließlich für Loopback-Protokollanbieter in Entwicklung und Test erlaubt. Produktion lehnt diese Einstellung ab. `mise exec -- node scripts/ride-delivery-integration/verify.mjs` prüft die gebaute Gesamtstrecke mit tatsächlicher Aufnahme, kompiliertem Server und lokalen Anbietern. `mise exec -- node serververification.mjs` bleibt der ergänzende Servernachweis. Echte Zustimmung, Callbackfreigabe, Proxylogs, Schlüsselbetrieb, Sichtbarkeit und Datenschutz bleiben vor einer Produktionsaktivierung zu prüfen. Webhooks sind nicht implementiert.
 
 ```ts
 // packages/shared/src/api/rides.ts (Zod-Schema, Typ per z.infer)
@@ -182,7 +197,7 @@ interface RideUpload {
 
 ## Plausibilitätsprüfung / Anti-Cheat-Grundlagen
 
-[E10-02](specs/E10-02-replay-consistency.md) implementiert separat eine reine V2-Nachrechnung mit vollständigem Initialisierungsjournal. `assessRecordingV2` liefert ausschließlich `unverified`, `rejected` oder `replayed`. Das Ergebnis vergibt weder Belohnungen noch Exportrechte. Die V1-API bleibt unverändert. Die folgenden 3-Prozent- und Annahmeregeln sind weiterhin Zielskizzen, nicht die V2-Prüfung. V2 vergleicht diskrete Werte und Enginezeiten exakt und übrige Messwerte mit enger numerischer Toleranz.
+[E10-02](specs/E10-02-replay-consistency.md) implementiert eine reine V2-Nachrechnung mit vollständigem Initialisierungsjournal. `assessRecordingV2` liefert ausschließlich `unverified`, `rejected` oder `replayed`. E10-04 verwendet diese Nachrechnung im kanonischen `/v2/rides`-Pfad. Konsistenz und Quellenrichtlinie bleiben getrennt. Die folgenden 3-Prozent- und Annahmeregeln sind weiterhin Zielskizzen, nicht die V2-Prüfung. V2 vergleicht diskrete Werte und Enginezeiten exakt und übrige Messwerte mit enger numerischer Toleranz.
 
 Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 
@@ -245,6 +260,14 @@ type ServerMsg =
 Client interpoliert Remote-Fahrer ~250 ms in der Vergangenheit; Positionen nur als Distanz entlang der Route. Limits: 50 Fahrer/Raum, 10 Nachrichten/s, 1 KB/Nachricht.
 
 ## Deployment auf den Hetzner-VPS (in E0 dokumentiert; echtes Deploy = optionale Aufgabe E0-opt)
+
+### Prozessende und offene Verbindungen
+
+Der Bootstrap aktiviert Nests `forceCloseConnections` und Shutdown-Hooks. Bei SIGTERM schließt der Express-Adapter alle erfassten TCP-Verbindungen, auch aktive Requests. Damit blockieren Verbindungen ohne HTTP-Bytes keinen Neustart. Das ist kein Drain laufender HTTP-Antworten. Eine Antwort kann nach einem erfolgreichen Datenbankcommit verloren gehen. Wiederholungen derselben Fahrt lesen weiterhin den unveränderlichen gespeicherten Beleg.
+
+Nest führt die Modulabbau-Hooks vor dem HTTP-Adapterabbau aus. Der Strava-Scheduler signalisiert dabei den Abbruch und wartet auf seine laufende Arbeit. Dauerhafte Versandzustände bleiben maßgeblich. Ein unbekanntes POST-Ergebnis erlaubt keinen erneuten Versand. Bekannte Upload-IDs bleiben für spätere Polls erhalten. Der Prozessregressionstest startet den tatsächlichen kompilierten Bootstrap mit lokaler OIDC-Konfiguration und hält beim SIGTERM eine TCP-Verbindung ohne Nutzdaten offen.
+
+### Bereitstellung
 
 Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB frei. Auf dem VPS läuft bereits Financensor (Docker Compose); `financensor-traefik-1` (`traefik:v3.6`) belegt Ports 80/443. Deshalb kein Caddy und kein systemd – der Server kommt als Container hinter diesen Traefik (ADR-004). SSH-Deploy-Zugang ist eingerichtet: DNS-A-Record `api.voltonaut.stammkneipe.dev` → VPS-IP, **unproxied** (damit Traefiks `letsencrypt`-Resolver das Zertifikat direkt zieht), Deploy-Secrets und `DEPLOY_USER` im GitHub-Environment `production`.
 

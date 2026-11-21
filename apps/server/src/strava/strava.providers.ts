@@ -1,0 +1,27 @@
+import { SERVER_CONFIG } from "../config.module.js";
+import type { ServerConfig } from "../config.module.js";
+import { StravaService } from "./strava.service.js";
+import { StravaStore } from "./strava.store.js";
+import { StravaProvider } from "./strava.provider.js";
+import { StravaOriginGuard } from "./strava.browser.js";
+import { StravaDeliveryStore } from "./strava.delivery-store.js";
+import { StravaDeliveryService } from "./strava.delivery.js";
+import { StravaScheduler } from "./strava.scheduler.js";
+import { StravaRateStore } from "./strava.rate-store.js";
+import { StravaCredentialStore } from "./strava.credential-store.js";
+
+export const STRAVA_PROVIDERS = [
+  StravaService,
+  StravaStore,
+  StravaCredentialStore,
+  StravaDeliveryStore,
+  StravaDeliveryService,
+  StravaScheduler,
+  StravaRateStore,
+  StravaOriginGuard,
+  {
+    provide: StravaProvider,
+    inject: [SERVER_CONFIG],
+    useFactory: (config: ServerConfig) => new StravaProvider(config.strava),
+  },
+];

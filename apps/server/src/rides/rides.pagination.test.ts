@@ -21,7 +21,7 @@ it("defaults to 20 summaries and returns stable UUID-ordered cursor pages", asyn
     await Promise.all(
       rides.map((ride) =>
         request(httpServerOf(app))
-          .post("/v1/rides")
+          .post("/v2/rides")
           .set(bearer(owner.sessionToken))
           .send(ride)
           .expect(200),
@@ -29,7 +29,7 @@ it("defaults to 20 summaries and returns stable UUID-ordered cursor pages", asyn
     );
 
     const first = await request(httpServerOf(app))
-      .get("/v1/rides")
+      .get("/v2/rides")
       .set(bearer(owner.sessionToken))
       .expect(200);
 
@@ -39,7 +39,7 @@ it("defaults to 20 summaries and returns stable UUID-ordered cursor pages", asyn
     expect(page.nextCursor).toBe(page.rides.at(-1)?.rideId);
 
     const second = await request(httpServerOf(app))
-      .get(`/v1/rides?cursor=${page.nextCursor}`)
+      .get(`/v2/rides?cursor=${page.nextCursor}`)
       .set(bearer(owner.sessionToken))
       .expect(200);
 
@@ -52,7 +52,7 @@ it("defaults to 20 summaries and returns stable UUID-ordered cursor pages", asyn
     );
 
     const maximum = await request(httpServerOf(app))
-      .get("/v1/rides?limit=50")
+      .get("/v2/rides?limit=50")
       .set(bearer(owner.sessionToken))
       .expect(200);
 

@@ -1,9 +1,32 @@
+/// <reference types="node" />
 import { readFile } from "node:fs/promises";
 import { expect, test, type Download, type Page } from "@playwright/test";
-import { MAX_LOCAL_RIDE_MS, type CompletedLocalRide } from "@voltonaut/shared";
+import type { CapturedRide, CompletedLocalRide } from "@voltonaut/shared";
 
 import { localRide } from "../src/sync/testdata/localRide.js";
 import { openGameMenu } from "./helpers/gameMenu.js";
+
+const localCapture = {
+  kind: "local_only",
+  reason: "journal_age",
+  track: {
+    rideId: localRide.rideId,
+    startedAt: localRide.startedAt,
+    metadata: localRide.metadata,
+    samples: localRide.samples,
+  },
+} satisfies CapturedRide;
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the page fixture and its browser injection API.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "bluetooth", {
+      get() {
+        throw new Error("Native Bluetooth forbidden in recording Sim checks");
+      },
+    });
+  });
+});
 
 async function downloadText(download: Readonly<Download>): Promise<string> {
   const path = await download.path();
@@ -133,12 +156,13 @@ test("records real time, explicitly downloads TCX and reloads the same saved byt
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("rejects an empty capture without creating a saved ride", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByTestId("hud-warning")).toHaveText("No trainer data");
+  await page.goto("/?sim=1");
+  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("Aufnahme läuft.");
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
+  await page.waitForTimeout(150);
   await expect(page.getByTestId("recording-status")).toContainText("leer oder ungültig");
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(0);
 });
@@ -174,6 +198,16 @@ test("full local storage preserves existing rides and offers the unsaved downloa
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(
     21,
   );
+  const pendingDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "TCX herunterladen", exact: true }).first().click();
+  const unsavedDownload = await pendingDownload;
+  await unsavedDownload.saveAs(test.info().outputPath("unsaved-full-archive.tcx"));
+  expect(await downloadText(unsavedDownload)).toContain("Voltonaut simulation");
+  await expect(page.getByRole("button", { name: "Aufnahme starten", exact: true })).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Mit heruntergeladener TCX fortfahren", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: "Aufnahme starten", exact: true })).toBeEnabled();
   await page.reload();
   await openGameMenu(page, "Aufnahmen");
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(
@@ -181,7 +215,7 @@ test("full local storage preserves existing rides and offers the unsaved downloa
   );
 });
 
-async function exerciseRideDatabase(seed: CompletedLocalRide) {
+async function exerciseRideDatabase(seed: CapturedRide) {
   const { openRideDatabase } = await import("../src/sync/rideDatabase.js");
   const { createRideStore } = await import("../src/sync/rideStore.js");
   const store = createRideStore(await openRideDatabase(indexedDB));
@@ -190,7 +224,10 @@ async function exerciseRideDatabase(seed: CompletedLocalRide) {
   let conflict = "";
 
   try {
-    await store.save({ ...seed, metadata: { ...seed.metadata, routeRevision: "other" } });
+    const changed: CapturedRide =
+      seed.kind === "local_only" ? { ...seed, reason: "invalid_input" } : seed;
+
+    await store.save(changed);
   } catch (error) {
     conflict = error instanceof Error ? error.message : "unexpected failure";
   }
@@ -203,8 +240,8 @@ test("the actual IndexedDB adapter is idempotent and rejects a conflicting ride 
   page,
 }) => {
   await page.goto("/?sim=1");
-  const result = await page.evaluate(exerciseRideDatabase, localRide);
-  expect(result.rides).toEqual([localRide]);
+  const result = await page.evaluate(exerciseRideDatabase, localCapture);
+  expect(result.rides).toEqual([localCapture]);
   expect(result.conflict).toBe("Fahrt-ID bereits mit anderen Daten vorhanden.");
 });
 
@@ -219,10 +256,9 @@ function respondToNextConfirmation(page: Readonly<Page>, response: "accept" | "d
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
-test("confirmation recovers an overlong recording without reload or loss of saved rides", async ({
+test("confirmation discards only the active window without reload or loss of saved rides", async ({
   page,
 }) => {
-  await page.clock.install();
   await page.goto("/?sim=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await openGameMenu(page, "Aufnahmen");
@@ -232,16 +268,13 @@ test("confirmation recovers an overlong recording without reload or loss of save
   const exports = page.getByRole("button", { name: "TCX herunterladen", exact: true });
   const status = page.getByTestId("recording-status");
   await start.click();
-  await page.clock.fastForward(1200);
+  await page.waitForTimeout(1200);
   await finish.click();
   await expect(status).toContainText("Lokal gespeichert");
   const originalDownload = page.waitForEvent("download");
   await exports.click();
   const savedXml = await downloadText(await originalDownload);
   await start.click();
-  await page.clock.fastForward(MAX_LOCAL_RIDE_MS + 1);
-  await finish.click();
-  await expect(status).toContainText("Maximal 6 Stunden");
   respondToNextConfirmation(page, "dismiss");
   await discard.click();
   await expect(start).toBeDisabled();
@@ -257,7 +290,7 @@ test("confirmation recovers an overlong recording without reload or loss of save
   await exports.click();
   expect(await downloadText(await preservedDownload)).toBe(savedXml);
   await start.click();
-  await page.clock.fastForward(1200);
+  await page.waitForTimeout(1200);
   await finish.click();
   await expect(status).toContainText("Lokal gespeichert");
   await expect(exports).toHaveCount(2);

@@ -1,31 +1,23 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { expect, it } from "vitest";
-import { z } from "zod";
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
+import { legacyFolder } from "./strava-migrations.spec.js";
 
-function legacyFolder(directory: string, count: number): string {
-  const source = resolve("apps/server/drizzle");
-  const destination = join(directory, "legacy");
+function legacyAuth(client: Readonly<Database.Database>) {
+  client.exec(
+    "INSERT INTO users VALUES ('existing', 'existing@example.com', 123, NULL); INSERT INTO sessions VALUES ('existing-session', 'existing', 123, 123, 9999999999999, NULL)",
+  );
 
-  const journal = z
-    .object({ entries: z.array(z.object({ tag: z.string() }).passthrough()) })
-    .passthrough()
-    .parse(JSON.parse(readFileSync(join(source, "meta/_journal.json"), "utf8")));
-
-  const entries = journal.entries.slice(0, count);
-  mkdirSync(join(destination, "meta"), { recursive: true });
-
-  for (const entry of entries)
-    copyFileSync(join(source, `${entry.tag}.sql`), join(destination, `${entry.tag}.sql`));
-  writeFileSync(join(destination, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
-
-  return destination;
+  return {
+    users: client.prepare("SELECT * FROM users").all(),
+    sessions: client.prepare("SELECT * FROM sessions").all(),
+  };
 }
 
 it.each([1, 2, 3])(
@@ -37,21 +29,14 @@ it.each([1, 2, 3])(
     try {
       const client = new Database(path);
       migrate(drizzle(client), { migrationsFolder: legacyFolder(directory, count) });
-      client.exec(
-        "INSERT INTO users VALUES ('existing', 'existing@example.com', 123, NULL); INSERT INTO sessions VALUES ('existing-session', 'existing', 123, 123, 9999999999999, NULL)",
-      );
-
-      const auth = {
-        users: client.prepare("SELECT * FROM users").all(),
-        sessions: client.prepare("SELECT * FROM sessions").all(),
-      };
+      const auth = legacyAuth(client);
 
       client.close();
       const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
       const db = createDatabase(config);
       expect(db.$client.prepare("SELECT * FROM users").all()).toEqual(auth.users);
       expect(db.$client.prepare("SELECT * FROM sessions").all()).toEqual(auth.sessions);
-      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(4);
+      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(6);
       expect(db.$client.prepare("PRAGMA foreign_key_list(strava_connections)").all()).toMatchObject(
         [{ table: "users", from: "user_id", to: "id" }],
       );
@@ -60,7 +45,9 @@ it.each([1, 2, 3])(
       ).toMatchObject([{ table: "users", from: "user_id", to: "id" }]);
       expect(() =>
         db.$client
-          .prepare("INSERT INTO strava_transactions VALUES ('hash', 'orphan', 'binding', 1, NULL)")
+          .prepare(
+            "INSERT INTO strava_transactions(state_hash,user_id,binding_hash,expires_at,claimed_at) VALUES ('hash', 'orphan', 'binding', 1, NULL)",
+          )
           .run(),
       ).toThrow("FOREIGN KEY");
       db.$client
@@ -100,7 +87,18 @@ it("keeps existing profiles and rides byte-identical across the additive migrati
     client.close();
     const db = createDatabase(testServerConfig({ database: { path, migrationsDir: "drizzle" } }));
     expect(db.$client.prepare("SELECT * FROM profiles").all()).toEqual(before.profiles);
-    expect(db.$client.prepare("SELECT * FROM rides").all()).toEqual(before.rides);
+    expect(
+      db.$client
+        .prepare(
+          "SELECT id, user_id, payload_json, payload_hash, receipt_json, assessment_json, started_at, uploaded_at, duration_ms, distance_m, source FROM rides",
+        )
+        .all(),
+    ).toEqual(before.rides);
+    expect(
+      db.$client
+        .prepare("SELECT summary_json, export_tcx, export_hash, export_version FROM rides")
+        .all(),
+    ).toEqual([{ summary_json: null, export_tcx: null, export_hash: null, export_version: null }]);
     db.$client.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });
