@@ -131,8 +131,9 @@ test("records real time, explicitly downloads TCX and reloads the same saved byt
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("rejects an empty capture without creating a saved ride", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByTestId("hud-gear")).toHaveText("12");
+  await expect(page.getByTestId("hud-warning")).toHaveText("No trainer data");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
+  await expect(page.getByTestId("recording-status")).toContainText("Aufnahme läuft.");
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("leer oder ungültig");
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(0);
