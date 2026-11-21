@@ -5,7 +5,7 @@ import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDev
 
 import type { AppDocument } from "./app.js";
 import { startApp } from "./app.js";
-import type { EngineLink } from "./game/engine-link.js";
+import type { EngineLink, EngineLinkCallbacks } from "./game/engine-link.js";
 import { createEngineLink } from "./game/engine-link.js";
 import type { EngineWorkerRequest, EngineWorkerResponse } from "./game/engineWorkerCore.js";
 import { createConnectionMonitor, type ConnectionMonitor } from "./game/connectionMonitor.js";
@@ -66,21 +66,26 @@ function createEngineWorkerChannel(
   };
 }
 
-function createWorkerLink(): EngineLink {
+function createWorkerLink(
+  callbacks: Pick<EngineLinkCallbacks, "onCommands" | "onSnapshot">,
+): EngineLink {
   const worker = new Worker(new URL("./game/engine-worker.ts", import.meta.url), {
     type: "module",
   });
 
   const channel = createEngineWorkerChannel(worker);
 
-  return createEngineLink({
-    postMessage: (message) => {
-      channel.send(message);
+  return createEngineLink(
+    {
+      postMessage: (message) => {
+        channel.send(message);
+      },
+      subscribe: (listener) => {
+        return channel.addMessageListener(listener);
+      },
     },
-    subscribe: (listener) => {
-      return channel.addMessageListener(listener);
-    },
-  });
+    callbacks,
+  );
 }
 
 function startHud(
@@ -109,7 +114,11 @@ async function start(): Promise<void> {
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
   const bus = createEventBus();
 
-  const link = createWorkerLink();
+  const devices = simMode
+    ? setupSimDevices(bus, clockScale)
+    : setupBluetoothDevices(bus, clockScale);
+
+  const link = createWorkerLink(devices ?? {});
   const connection = createConnectionMonitor(bus);
 
   const { initialProfile: profile } = await profileReady;
@@ -140,11 +149,7 @@ async function start(): Promise<void> {
   startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupKeyboard(bus);
 
-  if (simMode) {
-    setupSimDevices(bus, clockScale);
-  } else {
-    setupBluetoothDevices(bus);
-  }
+  devices?.mount();
 }
 
 await start();

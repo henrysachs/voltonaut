@@ -3,6 +3,8 @@ import type { DeviceAdapter, EventBus } from "@voltonaut/shared";
 import type { SimClock } from "./clock.js";
 import type { SimScript } from "./sample.js";
 import type { TickSource } from "./tick.js";
+import { createSimTrainerControl } from "../ftms/controlSim.js";
+import type { TrainerControl } from "../ftms/control.js";
 
 export interface FakeTrainerOptions {
   readonly bus: EventBus;
@@ -13,12 +15,14 @@ export interface FakeTrainerOptions {
 }
 
 export interface FakeTrainer extends DeviceAdapter {
+  readonly control: TrainerControl;
   gearIndex(): number;
 }
 
 export function createFakeTrainer(options: FakeTrainerOptions): FakeTrainer {
   const { bus, clock, ticker, samples } = options;
   const id = options.id ?? "sim-trainer";
+  const simulation = createSimTrainerControl(clock, ticker);
   let status: "disconnected" | "ready" = "disconnected";
   let stopTick: (() => void) | undefined;
   let sampleIndex = 0;
@@ -32,12 +36,15 @@ export function createFakeTrainer(options: FakeTrainerOptions): FakeTrainer {
   return {
     kind: "trainer",
     id,
+    control: simulation.control,
     connect() {
+      simulation.connect();
       publishStatus("ready");
       stopTick = ticker.start(() => {
         const sample = samples[sampleIndex] ?? samples[0];
         sampleIndex = (sampleIndex + 1) % samples.length;
         gearIndex = sample.gearIndex;
+        simulation.control.observeCadence(sample.cadenceRpm);
         bus.publish({
           type: "trainer.data",
           tS: clock.nowS(),
@@ -49,6 +56,7 @@ export function createFakeTrainer(options: FakeTrainerOptions): FakeTrainer {
       return Promise.resolve();
     },
     disconnect() {
+      simulation.control.detach();
       stopTick?.();
       stopTick = undefined;
       publishStatus("disconnected");

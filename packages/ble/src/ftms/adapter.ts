@@ -3,8 +3,7 @@
  * it reads the Fitness Machine Feature (0x2ACC), logs the raw machine dword,
  * and subscribes Indoor Bike Data (0x2AD2). Devices without 0x2AD2 fall back
  * to the read-only Cycling Power Service session ("passives Spiel",
- * docs/02-bluetooth.md section 2). No control-point writes from the game; the
- * 0x2AD9 encoder is E2.
+ * docs/02-bluetooth.md section 2). Control remains inactive until explicit enable.
  */
 
 import type { DeviceEvent, EventBus } from "@voltonaut/shared";
@@ -16,12 +15,12 @@ import {
   type BleDeviceAdapter,
 } from "../adapterShell.js";
 import { createCpsTrainerSession, type CpsTrainerSession } from "../cps/adapter.js";
-import type { ByteReader } from "../bytes.js";
 import { createCell, type Cell } from "../cell.js";
 import type { SimClock, TickSource, Unsubscribe } from "../sim/index.js";
 import type { BleTransport, GattProfile, ScanOptions } from "../transport.js";
 import { parseFitnessMachineFeature, type FitnessMachineFeature } from "./feature.js";
 import { parseIndoorBikeData } from "./parse.js";
+import { createFtmsControl, type TrainerControl } from "./control.js";
 import {
   CYCLING_POWER_MEASUREMENT,
   CYCLING_POWER_SERVICE,
@@ -41,6 +40,7 @@ export interface TrainerAdapterOptions {
 export type TrainerProtocol = "ftms" | "cps" | "none";
 
 export interface TrainerAdapter extends BleDeviceAdapter {
+  readonly control: TrainerControl;
   /** Which session flavor the last connect selected. */
   readonly protocol: () => TrainerProtocol;
   /** Parsed 0x2ACC features; undefined before a successful FTMS connect. */
@@ -54,6 +54,7 @@ const SCAN: ScanOptions = {
 };
 
 interface TrainerSessionState {
+  readonly control: ReturnType<typeof createFtmsControl>;
   readonly bus: EventBus;
   readonly clock: SimClock;
   readonly transport: BleTransport;
@@ -75,7 +76,10 @@ function findCharacteristic(
   );
 }
 
-function onIndoorBikeData(state: TrainerSessionState, data: ByteReader): void {
+function onIndoorBikeData(
+  state: TrainerSessionState,
+  data: Parameters<typeof parseIndoorBikeData>[0],
+): void {
   const parsed = parseIndoorBikeData(data);
 
   if (!parsed.ok) {
@@ -83,6 +87,8 @@ function onIndoorBikeData(state: TrainerSessionState, data: ByteReader): void {
   }
 
   const sample = parsed.value;
+
+  if (sample.cadenceRpm !== undefined) state.control.observeCadence(sample.cadenceRpm);
   const tS = state.clock.nowS();
 
   const event: DeviceEvent = {
@@ -126,21 +132,37 @@ async function readFeatures(
 
 async function startFtmsSession(
   state: TrainerSessionState,
+  profile: GattProfile,
   signal: SessionCancellation,
 ): Promise<void> {
   await readFeatures(state, signal);
   signal.throwIfAborted();
   state.notifications.get()?.();
-  state.notifications.set(
-    await state.transport.subscribe(
-      { serviceUuid: FITNESS_MACHINE_SERVICE, characteristicUuid: INDOOR_BIKE_DATA },
-      (data: ByteReader) => {
-        onIndoorBikeData(state, data);
-      },
-    ),
+
+  const stop = await state.transport.subscribe(
+    { serviceUuid: FITNESS_MACHINE_SERVICE, characteristicUuid: INDOOR_BIKE_DATA },
+    (data) => {
+      try {
+        signal.throwIfAborted();
+      } catch {
+        // Stale native callback belongs to the disconnected generation.
+        return;
+      }
+
+      onIndoorBikeData(state, data);
+    },
   );
-  signal.throwIfAborted();
+
+  try {
+    signal.throwIfAborted();
+  } catch (error) {
+    stop();
+    throw error;
+  }
+
+  state.notifications.set(stop);
   state.protocol.set("ftms");
+  state.control.attach(profile, state.features.get());
 }
 
 async function selectSession(
@@ -149,7 +171,7 @@ async function selectSession(
   signal: SessionCancellation,
 ): Promise<void> {
   if (findCharacteristic(profile, FITNESS_MACHINE_SERVICE, INDOOR_BIKE_DATA)) {
-    await startFtmsSession(state, signal);
+    await startFtmsSession(state, profile, signal);
 
     return;
   }
@@ -172,18 +194,23 @@ async function selectSession(
   throw new Error("no FTMS or cycling power service on the selected device");
 }
 
-export function createTrainerAdapter(options: TrainerAdapterOptions): TrainerAdapter {
-  const { bus, clock, ticker, transport } = options;
-
-  const state: TrainerSessionState = {
-    bus,
-    clock,
-    transport,
+function createSessionState(options: TrainerAdapterOptions): TrainerSessionState {
+  return {
+    control: createFtmsControl(options),
+    bus: options.bus,
+    clock: options.clock,
+    transport: options.transport,
     notifications: createCell<Unsubscribe>(),
     features: createCell<FitnessMachineFeature>(),
     protocol: createCell<TrainerProtocol>("none"),
     cpsSession: createCell<CpsTrainerSession>(),
   };
+}
+
+export function createTrainerAdapter(options: TrainerAdapterOptions): TrainerAdapter {
+  const { bus, clock, ticker, transport } = options;
+  const state = createSessionState(options);
+  const { control } = state;
 
   const startSession: ReconnectingAdapterOptions["startSession"] = async (
     publish,
@@ -209,6 +236,7 @@ export function createTrainerAdapter(options: TrainerAdapterOptions): TrainerAda
     transport,
     startSession,
     stopSession: () => {
+      control.detach();
       state.notifications.get()?.();
       state.notifications.set(undefined);
       state.cpsSession.get()?.stop();
@@ -218,6 +246,7 @@ export function createTrainerAdapter(options: TrainerAdapterOptions): TrainerAda
 
   return {
     ...adapter,
+    control,
     protocol: () => state.protocol.get(),
     features: () => state.features.get(),
   };

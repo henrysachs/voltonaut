@@ -150,7 +150,7 @@ Die Monotonie „höherer Gang, höherer Grade“ gilt bei Strategie A auf flach
 
 ## 5. Trainer-Kontroll-Lebenszyklus
 
-`connect → enable indications 0x2AD9 + notify 0x2AD2/0x2ADA → read 0x2ACC → 0x00 Request Control → 0x07 Start → loop(0x11 …)`. Bei Status `0xFF` (Control Permission Lost) oder Response `0x05`: Status `reconnecting`, nach 2 s erneut `0x00`. Nie `0x01 Reset` im Normalbetrieb.
+Verbinden liest `0x2ACC` und abonniert `0x2AD2`, bleibt aber passiv. Erst ausdrückliche Freigabe im Geräte-Overlay: `indications 0x2AD9 (+ status 0x2ADA falls vorhanden) → 0x00 Request Control ACK → 0x07 Start ACK → 0x11 neutral ACK → loop(0x11 Engine-Ziele)`. E2-03 ersetzt den ursprünglich geplanten automatischen 2-s-Rechte-Retry: Rechteverlust oder unbestätigte Verfahren sperren Steuerung bis zu einer neuen GATT-Verbindung und ausdrücklicher Freigabe. Daten-Reconnect setzt keine alten Widerstandsziele fort. Nie `0x01 Reset`; Einzelheiten und Stop-Grenzen in `02-bluetooth.md#e2-03-rollenschaltung`.
 
 ## 6. Tests (Details: `10-testing.md`)
 
