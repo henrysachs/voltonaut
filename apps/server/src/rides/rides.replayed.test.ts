@@ -94,10 +94,12 @@ it("keeps full 20Hz route/lap outputs through the real HTTP admission", async ()
       .send(ride)
       .expect(200);
 
-    expect(RideReceiptSchema.parse(bodyOf(response)).assessment).toEqual(replayed(ride));
-    expect(replayed(ride).summary.distanceM).toBeGreaterThan(TEST_LOOP.lengthM);
-    expect(replayed(ride).summary.laps).toBe(1);
-    expect(replayed(ride).source.window).toEqual({ kind: "continuous" });
+    const expectedAssessment = replayed(ride);
+
+    expect(RideReceiptSchema.parse(bodyOf(response)).assessment).toEqual(expectedAssessment);
+    expect(expectedAssessment.summary.distanceM).toBeGreaterThan(TEST_LOOP.lengthM);
+    expect(expectedAssessment.summary.laps).toBe(1);
+    expect(expectedAssessment.source.window).toEqual({ kind: "continuous" });
   } finally {
     await test.app.close();
   }
