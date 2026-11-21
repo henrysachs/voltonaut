@@ -22,3 +22,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [016](ADR-016-server-engine-replay.md) | Öffentliche Engine für reine Server-Nachrechnung | Gewählt für E10-02 |
 | [017](ADR-017-strava-connection.md) | Strava-Verbindung und verschlüsselte Zugangsdaten | Serverseitiger Teilschnitt integriert; echter Pilot offen |
 | [018](ADR-018-actor-recording-and-explicit-delivery.md) | Actor-Aufnahme und ausdrückliche Strava-Auslieferung | Gewählte Softwareform für E10-04 |
+| [019](ADR-019-render-worker-isolation.md) | WebGL im getrennten Render-Worker | Softwaregeprüft für E4-04; Hardware-FPS offen |

@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test.use({ launchOptions: { args: ["--disable-webgl"] } });
+import { renderWorkerPrelude } from "./render-worker.helpers.js";
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("keeps the HUD and keyboard ride usable without WebGL", async ({ page }) => {
+  await renderWorkerPrelude(page, "OffscreenCanvas.prototype.getContext = () => null;");
   await page.goto("/?sim=1&clock=fast");
   await expect(page.getByRole("region", { name: "Ride world" }).getByRole("status")).toContainText(
     "3D unavailable",
