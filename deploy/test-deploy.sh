@@ -10,16 +10,12 @@ export TEST_ROOT="$temporary" PATH="$temporary/bin:$PATH"
 export VOLTONAUT_STATE_DIR="$temporary/state" VOLTONAUT_HEALTH_ATTEMPTS=1
 export VOLTONAUT_COMPOSE_FILE="$(dirname "$DEPLOY_SCRIPT")/compose.yaml"
 export VOLTONAUT_ENV_FILE="$temporary/deploy.env"
-unset VOLTONAUT_IMAGE VOLTONAUT_TAG
+unset VOLTONAUT_IMAGE VOLTONAUT_TAG VOLTONAUT_BACKUP_FILE
 unset AUTH_MODE CLIENT_ORIGIN OIDC_ISSUER OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_REDIRECT_URI
 unset LITESTREAM_BUCKET LITESTREAM_ENDPOINT LITESTREAM_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY
 cat >"$temporary/base.env" <<ENV
 AUTH_MODE=disabled
 CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev
-LITESTREAM_ENDPOINT=https://storage.example.invalid
-LITESTREAM_BUCKET=$(basename "$temporary")
-LITESTREAM_ACCESS_KEY_ID=$(basename "$temporary")
-LITESTREAM_SECRET_ACCESS_KEY=$(basename "$temporary")
 ENV
 chmod 600 "$temporary/base.env"
 
@@ -65,7 +61,41 @@ reset_state() {
   rm -f "$temporary/active"
   : >"$temporary/commands"
   cp "$temporary/base.env" "$VOLTONAUT_ENV_FILE"
-  unset MISSING_IMAGE UNHEALTHY_TAG FAIL_UP_TAG LOCAL_IMAGE OFFLINE_REGISTRY VOLTONAUT_IMAGE
+  unset MISSING_IMAGE UNHEALTHY_TAG FAIL_UP_TAG LOCAL_IMAGE OFFLINE_REGISTRY VOLTONAUT_IMAGE VOLTONAUT_BACKUP_FILE
+}
+
+base_without_backup() {
+  reset_state
+  local services
+  services="$(VOLTONAUT_TAG=proof "$REAL_DOCKER" compose --env-file "$VOLTONAUT_ENV_FILE" \
+    -f "$VOLTONAUT_COMPOSE_FILE" config --services)"
+  test "$services" = server
+  bash "$DEPLOY_SCRIPT" deploy without-backup >"$temporary/output"
+  expect_tag current without-backup
+  echo 'Base Compose and release passed without backup credentials or sidecar.'
+}
+
+optional_backup_requires_credentials() {
+  local key
+  for key in LITESTREAM_ENDPOINT LITESTREAM_BUCKET LITESTREAM_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY; do
+    reset_state
+    export VOLTONAUT_BACKUP_FILE="$(dirname "$DEPLOY_SCRIPT")/compose.backup.yaml"
+    printf '\nLITESTREAM_ENDPOINT=https://storage.example.invalid\nLITESTREAM_BUCKET=release-proof\nLITESTREAM_ACCESS_KEY_ID=release-proof\nLITESTREAM_SECRET_ACCESS_KEY=release-proof\n' >>"$VOLTONAUT_ENV_FILE"
+    sed "/^$key=/d" "$VOLTONAUT_ENV_FILE" >"$temporary/missing.env"
+    mv "$temporary/missing.env" "$VOLTONAUT_ENV_FILE"
+    expect_failure deploy missing-backup-value
+    expect_tag current ''
+    if grep -Eq ' (up|pull) ' "$temporary/commands"; then
+      echo 'missing backup credentials must fail before starting or pulling a release' >&2
+      return 1
+    fi
+  done
+  reset_state
+  export VOLTONAUT_BACKUP_FILE="$(dirname "$DEPLOY_SCRIPT")/compose.backup.yaml"
+  printf '\nLITESTREAM_ENDPOINT=https://storage.example.invalid\nLITESTREAM_BUCKET=release-proof\nLITESTREAM_ACCESS_KEY_ID=release-proof\nLITESTREAM_SECRET_ACCESS_KEY=release-proof\n' >>"$VOLTONAUT_ENV_FILE"
+  bash "$DEPLOY_SCRIPT" deploy with-backup >"$temporary/output"
+  expect_tag current with-backup
+  reset_state
 }
 
 expect_failure() {
@@ -120,9 +150,13 @@ selects_local_image() {
 case "${1:-all}" in
   first-deploy) first_deploy_stops; exit ;;
   image-selection) selects_local_image; exit ;;
+  base-no-backup) base_without_backup; exit ;;
   all) ;;
   *) exit 2 ;;
 esac
+
+base_without_backup
+optional_backup_requires_credentials
 
 reset_state
 expect_failure rollback

@@ -4,6 +4,8 @@ Server auf Henrys **vorhandenem Hetzner-VPS** (ADR-004). Er ist **autoritativ** 
 
 ## Stack (entschieden)
 
+Für den aktuellen Produktionsauftrag gilt [ADR-020](decisions/ADR-020-explicit-production-provisioning.md): persistentes SQLite ohne Backup. Die Litestream-Angaben beschreiben die weiterhin optionale Variante, keine aktive Sicherung.
+
 Auth-Ziel seit Henrys Entscheidung vom 20.11.2026 ist [Cloudflare Access als OIDC-Broker](decisions/ADR-013-cloudflare-access-oidc.md). Die Account- und Sessiongrundlage ist auf `main`. [E5-06](specs/E5-06-oidc-server-login.md) implementiert den Server-Codeflow mit `openid-client` und einem lokalen signierenden Testprovider. [E5-08](specs/E5-08-browser-oidc-session.md) ergänzt das Browserkonto mit lokalem Browsernachweis. Die externe Pilot-App ist getrennt eingerichtet. Identitätsverwaltung, echter Anbieterlogin und Produktionsbetrieb sind damit nicht nachgewiesen. Die übrigen Tabellen und API-Skizzen beschreiben den Zielstand.
 
 App und begrenzte Pilot-Policy sind nach Freigabe eingerichtet, siehe [E5-04](specs/E5-04-access-oidc-pilot-setup.md). Die Cloudflare-Account-API meldet `Teams Free Base`, aber keine bestätigten freien Seats.
@@ -271,14 +273,14 @@ Nest führt die Modulabbau-Hooks vor dem HTTP-Adapterabbau aus. Der Strava-Sched
 
 Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB frei. Auf dem VPS läuft bereits Financensor (Docker Compose); `financensor-traefik-1` (`traefik:v3.6`) belegt Ports 80/443. Deshalb kein Caddy und kein systemd – der Server kommt als Container hinter diesen Traefik (ADR-004). SSH-Deploy-Zugang ist eingerichtet: DNS-A-Record `api.voltonaut.stammkneipe.dev` → VPS-IP, **unproxied** (damit Traefiks `letsencrypt`-Resolver das Zertifikat direkt zieht), Deploy-Secrets und `DEPLOY_USER` im GitHub-Environment `production`.
 
-Stand 20.11.2026 ist keine Voltonaut-API bereitgestellt; `/srv/voltonaut` existiert noch nicht. `SERVER_DEPLOY_ENABLED=false` bleibt bestehen. Vor einer Freigabe fehlen die Übergabe der Auth-Produktionskonfiguration an den Container, ein eingerichtetes externes Backup-Ziel und ein Restore-Nachweis. Die folgenden Schritte beschreiben den vorbereiteten Deploy, keinen laufenden Dienst.
+Am 21.11.2026 genehmigt Henry den Produktionsdeploy und einen einmaligen Provisionierungs-Workflow für die bestehenden OIDC-Secrets. Er entscheidet ausdrücklich gegen ein Backup. [ADR-020](decisions/ADR-020-explicit-production-provisioning.md) ersetzt die bisherige verpflichtende S3-Startvoraussetzung durch ein optionales Overlay. Persistentes SQLite bleibt bestehen. Ohne Backup gibt es keinen zugesagten Offhost-Restore. Den tatsächlichen Release- und Prüfstand hält [E0-04](specs/E0-04-production-rollout.md) fest.
 
 1. CI (`deploy-server.yml`, nur nach grünem `mise run check` auf `main`, Grep `vars.SERVER_DEPLOY_ENABLED`): Docker-Image lokal bauen (`docker build -f deploy/Dockerfile`, Tag = Git-SHA, Node-Pin 24.22.3 im Image) und per SSH über die Pipe übertragen (`docker save | ssh "gunzip | docker load"`) – **kein** Registry-Push, daher wird auch kein GHCR-Token gebraucht; ein späterer Wechsel auf `ghcr.io/henrysachs/voltonaut-server` bleibt möglich (dann `docker compose pull` im Skript).
 2. Per SSH `deploy/` nach `/srv/voltonaut` übertragen und `deploy.sh deploy <tag>` ausführen: `docker compose up -d` mit neuem Tag, danach `curl -f https://api.voltonaut.stammkneipe.dev/healthz`; bei Fehler automatischer Rollback auf das in `state/previous-tag` gemerkte vorherige Image-Tag.
 3. Umsetzung (im Repo unter `deploy/`; Netz `financensor_default` und Certresolver `letsencrypt` sind bereits aus der Financensor-Compose ablesbar und eingetragen):
    - `Dockerfile`: Multi-Stage-Build, `pnpm --filter @voltonaut/server deploy --prod` erzeugt das Standalone-Bundle (dist + prod-Node-Modules).
    - `compose.yaml`: Dienst `server` (lokales Image `voltonaut-server:<tag>`, Host-Env `0.0.0.0`, SQLite-Volume, Traefik-Labels: Host-Rule `api.voltonaut.stammkneipe.dev`, Entrypoint `websecure`, Certresolver `letsencrypt`, Service-Port 3000, Healthcheck per Node-fetch auf `/healthz`).
-   - Dienst `litestream`: vorbereitetes Sidecar (`litestream/litestream:0.5.18`, exakt gepinnt), teilt das SQLite-Volume. Ein externes Replikationsziel und Zugangsdaten aus `deploy.env` sind noch einzurichten (nie im Repo).
+   - Dienst `litestream`: ausschließlich über `compose.backup.yaml` und `VOLTONAUT_BACKUP_FILE` ausdrücklich wählbar. Im aktuellen Produktionsauftrag nicht aktiv. Der optionale Modus verlangt weiterhin echte Ziel- und Zugangsdaten sowie erfolgreiche Replikations-Healthchecks.
    - Kein eigener Proxy, keine Bindung an Port 80/443.
    - Zusätzliches Observability-/Prometheus-Netz bleibt **E0-opt** (ADR-010, `11-observability.md`); OTLP-Traces und interne `/metrics` sind bewusst noch nicht verdrahtet.
 4. Node läuft im Image (dieselbe per mise gepinnte Version), nicht als Host-Paket. Caddy-Config und systemd-Unit sind aus dem Repo entfernt.
@@ -288,7 +290,7 @@ Stand 20.11.2026 ist keine Voltonaut-API bereitgestellt; `/srv/voltonaut` existi
 
 - CORS im OIDC-Modus: exakt der konfigurierte `CLIENT_ORIGIN`, mit Credentials und gleicher Site für Web und API. Lokal derselbe Loopback-Hostname. Kein produktiver Login von Pages-Aliasen. Rate-Limits pro IP und Account (`@nestjs/throttler`), besonders auf `/auth/*`.
 - Anwendungssession-Token nur gehasht speichern (SHA-256). Anwendungssessions gelten standardmäßig 30 Tage gleitend, OIDC-Transaktionen fünf Minuten und SPA-Übergaben 60 Sekunden (E5-06). Transaktionen und Übergaben sind einmalig und browsergebunden. Protokollprüfung durch die OIDC-Bibliothek, keine Token oder Secrets in URL, Logs oder Frontend-Bundle (ADR-013).
-- OIDC-Client-Secret nur serverseitig nach gesonderter enger Freigabe oder Henrys eigener Einrichtung. Die bestehende Freigabe für Deploy-Secrets erlaubt keinen Zugriff auf bestehende OIDC-Secrets. Keine Tokens im Chat anfordern.
+- OIDC-Client-Secret nur serverseitig. Henrys konkrete Freigabe vom 21.11.2026 erlaubt die einmalige sichere Übergabe der bestehenden GitHub-Produktionssecrets per Workflow nach ADR-020. Das erlaubt weder Secret-Ausgabe noch blinde Rotation oder Überschreiben vorhandener Konfiguration. Keine Tokens im Chat anfordern.
 - Secrets (Mail-API-Keys, Deploy-SSH-Key, Cloudflare-Token) nie im Repo; Deploy-Workflow erst nach Henrys Freigabe.
 - Datenschutz: E-Mail + Fahrtdaten = personenbezogen → Export/Löschung von Anfang an, Datenschutzhinweis im Client.
 - Monitoring: `/healthz` öffentlich; strukturierte Logs, interne `/metrics` und OTel-Traces laut `11-observability.md` (ADR-010). `/metrics` nie über Traefik.

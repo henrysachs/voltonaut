@@ -17,7 +17,11 @@ usage() {
 }
 
 compose() {
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  local files=(-f "$COMPOSE_FILE")
+  if [ -n "${VOLTONAUT_BACKUP_FILE:-}" ]; then
+    files+=(-f "$VOLTONAUT_BACKUP_FILE")
+  fi
+  docker compose --env-file "$ENV_FILE" "${files[@]}" "$@"
 }
 
 read_state() {
