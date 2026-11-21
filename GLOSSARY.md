@@ -29,3 +29,15 @@ _Vermeiden_: TCX-Download oder Kontozuordnung als Uploadzustimmung.
 **Unklare Strava-Auslieferung**:
 Ein Versand, dessen Annahme durch Strava nicht sicher bekannt ist. Er ist weder bestätigter Erfolg noch sicher gescheitert.
 _Vermeiden_: fehlgeschlagen als Grund für automatischen Neuversand.
+
+**Mitgliedsstufe**:
+Die manuell vergebbare Einstufung eines Kontos als Normal, Premium oder Pro. Eine Stufe allein verspricht noch keinen Preis oder unterschiedliche Spielrechte.
+_Vermeiden_: Adminrolle als höhere Mitgliedsstufe.
+
+**VIP-Kennzeichen**:
+Eine zusätzliche Auszeichnung eines Kontos, unabhängig von seiner Mitgliedsstufe. VIP verleiht keine Verwaltungsberechtigung.
+_Vermeiden_: VIP als Ersatz für Premium, Pro oder Administrator.
+
+**Adminberechtigung**:
+Die ausdrücklich vergebene Erlaubnis, Mitgliedsstufen und VIP-Kennzeichen bestehender Konten zu verwalten. Sie entsteht weder durch einen Kauf noch durch VIP oder den ersten Login.
+_Vermeiden_: zahlender Nutzer als gleichbedeutend mit Administrator.

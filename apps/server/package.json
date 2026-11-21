@@ -12,6 +12,7 @@
     "dev": "vite build --mode development && node dist/main.js",
     "build": "vite build --mode production",
     "start": "node dist/main.js",
+    "admin": "node dist/main.js admin",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
