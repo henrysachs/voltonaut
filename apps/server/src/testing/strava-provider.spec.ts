@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { z } from "zod";
+import { LocalStravaResources } from "./strava-resources.spec.js";
 
 interface ProviderRequest {
   readonly url?: string | undefined;
@@ -13,6 +14,7 @@ interface ProviderRequest {
 interface ProviderResponse {
   readonly writeHead: (status: number, headers?: Readonly<Record<string, string>>) => void;
   readonly end: (data?: string) => void;
+  readonly destroy: () => void;
 }
 
 interface ProviderControl {
@@ -39,6 +41,7 @@ interface ProviderControl {
 /** Local protocol peer. No real credentials, API calls or test-runner dependencies. */
 export class LocalStravaProvider {
   public origin = "";
+  public readonly resources = new LocalStravaResources();
   public readonly control: ProviderControl = {
     athleteId: 42,
     scope: "activity:write",
@@ -52,7 +55,6 @@ export class LocalStravaProvider {
     tokenGate: undefined,
   };
   private readonly codes = new Set<string>();
-  private readonly refreshTokens = new Set<string>();
   private readonly issuedTokens = new Set<string>();
   private readonly clientId: string;
   private readonly clientSecret: string;
@@ -94,6 +96,15 @@ export class LocalStravaProvider {
 
     if (url.pathname === "/oauth/authorize" && req.method === "GET") {
       this.authorize(url, res);
+
+      return;
+    }
+
+    if (
+      url.pathname === "/api/v3/uploads" ||
+      /^\/api\/v3\/uploads\/[1-9]\d*$/u.test(url.pathname)
+    ) {
+      await this.resources.handle(req, res);
 
       return;
     }
@@ -186,9 +197,14 @@ export class LocalStravaProvider {
   ): Promise<void> {
     this.control.tokenCalls += 1;
 
+    if (body.get("grant_type") === "refresh_token" && this.validClient(body)) {
+      await this.resources.refresh(body, res);
+
+      return;
+    }
+
     if (
-      body.get("client_id") !== this.clientId ||
-      body.get("client_secret") !== this.clientSecret ||
+      !this.validClient(body) ||
       body.get("grant_type") !== "authorization_code" ||
       !this.codes.delete(body.get("code") ?? "")
     ) {
@@ -205,9 +221,9 @@ export class LocalStravaProvider {
     if (this.tokenFault(res)) return;
     const refreshToken = randomBytes(32).toString("hex");
     const accessToken = randomBytes(32).toString("hex");
-    this.refreshTokens.add(refreshToken);
     this.issuedTokens.add(refreshToken);
     this.issuedTokens.add(accessToken);
+    this.resources.authorize(accessToken, refreshToken);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
@@ -235,8 +251,7 @@ export class LocalStravaProvider {
     if (
       authorization !==
         `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64")}` ||
-      body.get("token_type_hint") !== "refresh_token" ||
-      !this.refreshTokens.has(body.get("token") ?? "")
+      body.get("token_type_hint") !== "refresh_token"
     ) {
       res.writeHead(401);
       res.end();
@@ -253,7 +268,15 @@ export class LocalStravaProvider {
       return;
     }
 
+    this.resources.revoke(body.get("token") ?? "");
+
     res.writeHead(200);
     res.end();
+  }
+
+  private validClient(body: Readonly<URLSearchParams>): boolean {
+    return (
+      body.get("client_id") === this.clientId && body.get("client_secret") === this.clientSecret
+    );
   }
 }

@@ -77,7 +77,7 @@ export async function startStrava(context: StravaApp, token = context.owner.sess
     .post("/v1/strava/connect-start")
     .set(bearer(token))
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect" })
+    .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
     .expect(200);
 
   const cookies = z.array(z.string()).parse(response.headers["set-cookie"]);

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      const takeStravaFinishQuery = (() => {
+        let query = window.location.search;
+        window.history.replaceState(null, "", window.location.pathname);
+        return () => {
+          const captured = query;
+          query = "";
+          return captured;
+        };
+      })();
+    </script>
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strava bestätigen</title>
+  </head>
+  <body>
+    <main>
+      <h1>Strava bestätigen</h1>
+      <p id="strava-finish-status" role="status">Rücksprung wird geprüft …</p>
+    </main>
+    <script type="module" src="../../src/stravaFinishPage.ts"></script>
+  </body>
+</html>

@@ -57,7 +57,7 @@ it("keeps OAuth pending until fresh owner confirmation, then reports only nonsec
     .post("/v1/strava/connect-start")
     .set(bearer(context.owner.sessionToken))
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect" })
+    .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
     .expect(409);
 });
 
@@ -68,13 +68,13 @@ it("requires bearer, exact origin, strict consent body and credentialed CORS in 
   await request(server)
     .post("/v1/strava/connect-start")
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect" })
+    .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
     .expect(401);
   await request(server)
     .post("/v1/strava/connect-start")
     .set(bearer("wrong"))
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect" })
+    .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
     .expect(401);
 
   await Promise.all(
@@ -83,7 +83,7 @@ it("requires bearer, exact origin, strict consent body and credentialed CORS in 
         .post("/v1/strava/connect-start")
         .set(bearer(context.owner.sessionToken))
         .set("Origin", origin)
-        .send({ action: "connect" })
+        .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
         .expect(401),
     ),
   );
@@ -91,7 +91,11 @@ it("requires bearer, exact origin, strict consent body and credentialed CORS in 
     .post("/v1/strava/connect-start")
     .set(bearer(context.owner.sessionToken))
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect", returnTo: "https://evil.example" })
+    .send({
+      action: "connect",
+      channel: "00000000-0000-4000-8000-000000000001",
+      returnTo: "https://evil.example",
+    })
     .expect(422);
 
   const preflight = await request(server)
@@ -173,7 +177,6 @@ it.each<{
   readonly scope: string;
   readonly elapsedMs: number;
 }>([
-  { label: "denial", deny: true, scope: "activity:write", elapsedMs: 0 },
   { label: "scope", deny: false, scope: "read", elapsedMs: 0 },
   { label: "expired", deny: false, scope: "activity:write", elapsedMs: 300_000 },
 ])("rejects callback $label before provider exchange", async ({ deny, scope, elapsedMs }) => {

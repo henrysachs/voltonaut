@@ -10,12 +10,15 @@ import {
   Res,
   HttpCode,
   UseGuards,
+  Param,
 } from "@nestjs/common";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import {
   StravaStartRequestSchema,
   StravaConfirmRequestSchema,
   StravaDisconnectRequestSchema,
+  RideIdSchema,
+  StravaUploadRequestSchema,
 } from "@voltonaut/shared";
 import type {
   StravaStartRequest,
@@ -23,6 +26,9 @@ import type {
   StravaDisconnectRequest,
   StravaStatus,
   StravaStartResponse,
+  StravaRideView,
+  StravaDelivery,
+  StravaUploadRequest,
 } from "@voltonaut/shared";
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe.js";
 import { CurrentSession, Public } from "../auth/auth-request.js";
@@ -35,6 +41,7 @@ import {
 } from "../auth/rate-limits.js";
 import { StravaService } from "./strava.service.js";
 import { StravaOriginGuard } from "./strava.browser.js";
+import { StravaDeliveryService } from "./strava.delivery.js";
 
 interface StravaResponse {
   readonly setHeader: (name: string, value: string) => void;
@@ -46,7 +53,31 @@ interface StravaResponse {
 @Throttle({ [SESSION_IP_THROTTLER]: {} })
 @SkipThrottle({ [MAGIC_LINK_EMAIL_THROTTLER]: true, [MAGIC_LINK_IP_THROTTLER]: true })
 export class StravaController {
-  public constructor(@Inject(StravaService) private readonly strava: Readonly<StravaService>) {}
+  public constructor(
+    @Inject(StravaService) private readonly strava: Readonly<StravaService>,
+    @Inject(StravaDeliveryService) private readonly deliveries: Readonly<StravaDeliveryService>,
+  ) {}
+
+  @Get("rides/:rideId")
+  @Header("Cache-Control", "no-store")
+  public ride(
+    @CurrentSession() session: SessionPrincipal,
+    @Param("rideId", new ZodValidationPipe(RideIdSchema)) rideId: string,
+  ): StravaRideView {
+    return this.deliveries.view(session.userId, rideId);
+  }
+
+  @Post("rides/:rideId")
+  @Header("Cache-Control", "no-store")
+  @HttpCode(200)
+  @UseGuards(StravaOriginGuard)
+  public upload(
+    @CurrentSession() session: SessionPrincipal,
+    @Param("rideId", new ZodValidationPipe(RideIdSchema)) rideId: string,
+    @Body(new ZodValidationPipe(StravaUploadRequestSchema)) body: StravaUploadRequest,
+  ): StravaDelivery {
+    return this.deliveries.request(session.userId, rideId, body.consent);
+  }
 
   @Get("connection")
   @Header("Cache-Control", "no-store")
@@ -61,10 +92,10 @@ export class StravaController {
   @UseGuards(StravaOriginGuard)
   public start(
     @CurrentSession() session: SessionPrincipal,
-    @Body(new ZodValidationPipe(StravaStartRequestSchema)) _body: StravaStartRequest,
+    @Body(new ZodValidationPipe(StravaStartRequestSchema)) body: StravaStartRequest,
     @Res({ passthrough: true }) res: StravaResponse,
   ): StravaStartResponse {
-    const result = this.strava.start(session.userId);
+    const result = this.strava.start(session.userId, body.channel);
     res.setHeader("Set-Cookie", result.cookie);
 
     return { authorizationUrl: result.authorizationUrl };

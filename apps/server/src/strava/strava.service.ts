@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { StravaChannelSchema } from "@voltonaut/shared";
 import type { StravaStatus } from "@voltonaut/shared";
 import { SERVER_CONFIG, CLOCK } from "../config.module.js";
 import type { ServerConfig, Clock } from "../config.module.js";
@@ -7,6 +8,8 @@ import { StravaProvider } from "./strava.provider.js";
 import { StravaStore } from "./strava.store.js";
 import { stravaCallbackUrl, stravaBinding, stravaCookie } from "./strava.browser.js";
 import { decryptTokens, encryptTokens } from "./strava.crypto.js";
+import { StravaDeliveryStore } from "./strava.delivery-store.js";
+import { StravaCredentialStore } from "./strava.credential-store.js";
 
 @Injectable()
 export class StravaService {
@@ -15,6 +18,8 @@ export class StravaService {
     @Inject(SERVER_CONFIG) private readonly config: ServerConfig,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(StravaProvider) private readonly provider: Readonly<StravaProvider>,
+    @Inject(StravaDeliveryStore) private readonly deliveries: Readonly<StravaDeliveryStore>,
+    @Inject(StravaCredentialStore) private readonly credentials: Readonly<StravaCredentialStore>,
   ) {}
 
   public status(userId: string): StravaStatus {
@@ -38,6 +43,13 @@ export class StravaService {
       return { status: "pending", confirmBy: new Date(row.confirmBy).toISOString() };
     }
 
+    if (row.credentialState === "refreshing") return { status: "refreshing" };
+
+    if (row.credentialState === "uncertain") return { status: "credentials_uncertain" };
+
+    if (row.credentialState === "reauthorization_required")
+      return { status: "reauthorization_required" };
+
     return {
       status: "connected",
       athleteId: row.athleteId,
@@ -46,7 +58,7 @@ export class StravaService {
     };
   }
 
-  public start(userId: string) {
+  public start(userId: string, channel: string) {
     const config = this.provider.enabledConfig();
     const state = createToken();
     const binding = createToken();
@@ -56,6 +68,7 @@ export class StravaService {
         userId,
         bindingHash: hashToken(binding),
         expiresAt: this.clock.nowMs() + 300_000,
+        channel: StravaChannelSchema.parse(channel),
       },
       this.clock.nowMs(),
     );
@@ -77,6 +90,15 @@ export class StravaService {
     );
 
     try {
+      const finish = new URL("/strava/finish", this.config.clientOrigin);
+      finish.searchParams.set("channel", StravaChannelSchema.parse(row.channel));
+
+      if (callback.denied) {
+        finish.searchParams.set("result", "denied");
+
+        return finish.href;
+      }
+
       const grant = await this.provider.exchange(callback.authorization(), this.clock.nowMs());
       const handoff = createToken();
       this.store.pending(
@@ -85,6 +107,7 @@ export class StravaService {
           userId: row.userId,
           athleteId: grant.athleteId,
           status: "pending",
+          generation: crypto.randomUUID(),
           encryptedTokens: encryptTokens(
             grant.tokens,
             config.tokenKey,
@@ -99,7 +122,6 @@ export class StravaService {
         },
         this.clock.nowMs(),
       );
-      const finish = new URL("/strava/finish", this.config.clientOrigin);
       finish.searchParams.set("code", handoff);
 
       return finish.href;
@@ -123,18 +145,19 @@ export class StravaService {
 
   public async disconnect(userId: string): Promise<StravaStatus> {
     const config = this.provider.enabledConfig();
-    const row = this.store.blockAndClaimRevocation(userId, this.clock.nowMs());
+    const row = this.credentials.blockAndClaimRevocation(userId, this.clock.nowMs());
+    this.deliveries.stop(userId, "disconnect", this.clock.nowMs());
 
     if (row === undefined) return this.status(userId);
 
     try {
       const tokens = decryptTokens(row.encryptedTokens, config.tokenKey, userId, row.athleteId);
 
-      if (await this.provider.revoke(tokens.refreshToken)) this.store.revoked(row);
+      if (await this.provider.revoke(tokens.refreshToken)) this.credentials.revoked(row);
     } catch {
       return { status: "revocation_pending" };
     } finally {
-      this.store.releaseRevocation(row);
+      this.credentials.releaseWork(row);
     }
 
     return this.status(userId);

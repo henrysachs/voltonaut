@@ -35,7 +35,7 @@ it("keeps default-disabled authenticated status honest and rejects grant start",
       .post("/v1/strava/connect-start")
       .set(bearer(user.sessionToken))
       .set("Origin", "http://localhost:5173")
-      .send({ action: "connect" })
+      .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
       .expect(404);
   } finally {
     await app.close();
@@ -115,7 +115,7 @@ it("reserves capacity while callback HTTP is in flight and disconnect prevents l
   const insertUser = db.$client.prepare("INSERT INTO users VALUES (?, ?, 0, NULL)");
 
   const insertTransaction = db.$client.prepare(
-    "INSERT INTO strava_transactions VALUES (?, ?, 'binding', ?, NULL)",
+    "INSERT INTO strava_transactions(state_hash,user_id,binding_hash,expires_at,claimed_at) VALUES (?, ?, 'binding', ?, NULL)",
   );
 
   db.transaction(() => {
@@ -128,7 +128,7 @@ it("reserves capacity while callback HTTP is in flight and disconnect prevents l
     .post("/v1/strava/connect-start")
     .set(bearer(context.other.sessionToken))
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect" })
+    .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
     .expect(429);
   expect(bodyOf(await disconnectStrava(context).expect(200))).toEqual({ status: "disconnected" });
   gate.release();
@@ -144,14 +144,14 @@ it("commits bounded cleanup even when capacity still rejects the new start", asy
   );
   db.$client
     .prepare(
-      "INSERT INTO strava_transactions SELECT id, id, 'binding', CASE WHEN rowid<=102 THEN ? ELSE ? END, NULL FROM users WHERE id LIKE 'load-%'",
+      "INSERT INTO strava_transactions(state_hash,user_id,binding_hash,expires_at,claimed_at) SELECT id, id, 'binding', CASE WHEN rowid<=102 THEN ? ELSE ? END, NULL FROM users WHERE id LIKE 'load-%'",
     )
     .run(context.time.nowMs - 1, context.time.nowMs + 600_000);
   await request(httpServerOf(context.app))
     .post("/v1/strava/connect-start")
     .set(bearer(context.owner.sessionToken))
     .set("Origin", STRAVA_ORIGIN)
-    .send({ action: "connect" })
+    .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
     .expect(429);
   expect(
     z

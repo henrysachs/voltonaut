@@ -7,6 +7,7 @@ import { mountAccountPanel } from "./ui/accountPanel.js";
 import { privateAuthTransport } from "./sync/privateAuthTransport.js";
 import type { ProfileBootstrap } from "./profileBootstrap.js";
 import { setupBrowserAccountData } from "./browserAccountData.js";
+import { setupBrowserStrava } from "./browserStrava.js";
 
 declare global {
   interface ImportMeta {
@@ -45,7 +46,8 @@ export function setupBrowserAccount(
     });
 
     mountAccountPanel(session);
-    void setupBrowserAccountData(session, profile);
+    const accounts = setupBrowserAccountData(session, profile);
+    void setupBrowserStrava(session, accounts);
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
     else if (handoff.kind === "none") void session.restore();

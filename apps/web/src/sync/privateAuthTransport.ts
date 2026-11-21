@@ -6,12 +6,25 @@ import {
   RideListSchema,
   RideReceiptSchema,
   RideUploadSchema,
+  StravaStatusSchema,
+  StravaStartRequestSchema,
+  StravaStartResponseSchema,
+  StravaConfirmRequestSchema,
+  StravaDisconnectRequestSchema,
+  StravaRideViewSchema,
+  StravaUploadRequestSchema,
+  StravaDeliverySchema,
   type ProfileInput,
   type ProfileState,
   type RideDetail,
   type RideList,
   type RideReceipt,
   type RideUpload,
+  type StravaStatus,
+  type StravaStartResponse,
+  type StravaRideView,
+  type StravaConsent,
+  type StravaDelivery,
 } from "@voltonaut/shared";
 import type { ProfileWriteLease } from "./profile-store.js";
 
@@ -40,6 +53,16 @@ export interface AccountLease extends ProfileWriteLease {
   readonly history: (cursor: string | null) => Promise<RideList>;
   readonly detail: (rideId: string) => Promise<RideDetail>;
   readonly upload: (ride: RideUpload) => Promise<RideReceipt>;
+  readonly strava: StravaLease;
+}
+
+export interface StravaLease {
+  readonly status: () => Promise<StravaStatus>;
+  readonly start: (channel: string) => Promise<StravaStartResponse>;
+  readonly confirm: (code: string) => Promise<StravaStatus>;
+  readonly disconnect: () => Promise<StravaStatus>;
+  readonly ride: (rideId: string) => Promise<StravaRideView>;
+  readonly upload: (consent: StravaConsent) => Promise<StravaDelivery>;
 }
 
 interface LeaseAuthorization {
@@ -73,6 +96,47 @@ interface ResponseSchema<T> {
   readonly parse: (...input: readonly [Parameters<typeof ProfileStateSchema.parse>[0]]) => T;
 }
 
+function stravaLease(request: ReturnType<typeof authorizedRequest>): StravaLease {
+  return {
+    status: () => request("/v1/strava/connection", StravaStatusSchema, undefined, "include"),
+    start: (channel) =>
+      request(
+        "/v1/strava/connect-start",
+        StravaStartResponseSchema,
+        JSON.stringify(StravaStartRequestSchema.parse({ action: "connect", channel })),
+        "include",
+      ),
+    confirm: (code) =>
+      request(
+        "/v1/strava/confirm",
+        StravaStatusSchema,
+        JSON.stringify(StravaConfirmRequestSchema.parse({ code })),
+        "include",
+      ),
+    disconnect: () =>
+      request(
+        "/v1/strava/disconnect",
+        StravaStatusSchema,
+        JSON.stringify(StravaDisconnectRequestSchema.parse({ action: "disconnect" })),
+        "include",
+      ),
+    ride: (rideId) =>
+      request(
+        `/v1/strava/rides/${RideIdSchema.parse(rideId)}`,
+        StravaRideViewSchema,
+        undefined,
+        "include",
+      ),
+    upload: (consent) =>
+      request(
+        `/v1/strava/rides/${RideIdSchema.parse(consent.rideId)}`,
+        StravaDeliverySchema,
+        JSON.stringify(StravaUploadRequestSchema.parse({ action: "upload", consent })),
+        "include",
+      ),
+  };
+}
+
 export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
   return {
     authorize(authorization) {
@@ -84,6 +148,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         generation: authorization.generation,
         signal: authorization.signal,
         current: authorization.current,
+        strava: stravaLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>
           request(
@@ -115,6 +180,7 @@ function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization)
     path: string,
     schema: ResponseSchema<T>,
     body?: string,
+    credentials: "omit" | "include" = "omit",
   ): Promise<T> {
     if (!authorization.current()) throw new PrivateRequestError("superseded");
 
@@ -128,7 +194,7 @@ function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization)
         body: body ?? null,
         signal: AbortSignal.any([authorization.signal, AbortSignal.timeout(8000)]),
         cache: "no-store",
-        credentials: "omit",
+        credentials,
         redirect: "error",
       });
 
