@@ -1,5 +1,5 @@
 import type { RideSnapshot } from "@voltonaut/engine";
-import { createRoute, TEST_ROUTES } from "@voltonaut/engine";
+import { TEST_ROUTES } from "@voltonaut/engine";
 import type { DeviceEvent, LocalRideMetadata } from "@voltonaut/shared";
 
 import { setupRideRecording } from "./rideRecording.js";
@@ -38,7 +38,7 @@ export function setupRidePresentation(
   if (options.sceneHost instanceof HTMLElement && routeData !== undefined) {
     startRideScene({
       host: options.sceneHost,
-      route: createRoute(routeData),
+      routeId: options.routeId,
       snapshot: options.snapshot,
       wheelCircM: options.profile.bike.wheelCircM,
       debug: options.debug,

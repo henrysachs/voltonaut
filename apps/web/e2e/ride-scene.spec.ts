@@ -1,5 +1,11 @@
 import { expect, test, type ConsoleMessage } from "@playwright/test";
 
+import {
+  captureRenderWorker,
+  LOSE_RENDER_CONTEXT,
+  renderWorkerPrelude,
+} from "./render-worker.helpers.js";
+
 interface AttributeSource {
   readonly getAttribute: (name: string) => Promise<string | null>;
 }
@@ -83,22 +89,30 @@ test("rides the lake and forest at normal speed", async ({ page }, testInfo) => 
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("releases a lost WebGL context without stopping the ride", async ({ page }) => {
+  await captureRenderWorker(page);
+  await renderWorkerPrelude(page, LOSE_RENDER_CONTEXT);
   await page.goto("/?sim=1&clock=fast&debug=1");
   const debug = page.getByLabel("Render diagnostics");
 
   await expect.poll(() => diagnostic(debug, "calls")).toBeGreaterThan(0);
+  const distanceBeforeLoss = await page.getByTestId("hud-distance").textContent();
+
   await page.evaluate(() => {
-    document
-      .querySelector("canvas")
-      ?.getContext("webgl2")
-      ?.getExtension("WEBGL_lose_context")
-      ?.loseContext();
+    window.dispatchEvent(new Event("test-lose-render-context"));
   });
-  await expect(page.getByRole("region", { name: "Ride world" }).getByRole("status")).toContainText(
-    "3D unavailable",
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "Ride world" })
+      .getByRole("status")
+      .filter({ hasText: "3D unavailable" }),
+  ).toHaveText("3D unavailable. Your ride, devices and HUD still work.");
   await expect(page.getByLabel("3D ride scene")).toHaveCount(0);
   await expect(page.getByLabel("Render diagnostics")).toHaveCount(0);
   await page.keyboard.press("ArrowUp");
   await expect(page.getByTestId("hud-gear")).toHaveText("13");
+  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await expect
+    .poll(() => page.getByTestId("hud-distance").textContent())
+    .not.toBe(distanceBeforeLoss);
+  await expect(page.locator("body")).toHaveAttribute("data-render-terminations", "1");
 });
