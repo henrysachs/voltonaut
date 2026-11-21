@@ -94,12 +94,14 @@ function observeRenderReplies(): void {
       if (options?.name !== "ride-render") return;
       const seen = new Set<RenderReply["type"]>();
 
+      performance.mark("FIRST-FRAME-PIPELINE constructed");
       console.warn("FIRST-FRAME-PIPELINE", performance.now(), "constructed");
       this.addEventListener("message", (event: Readonly<{ data: RenderReply }>) => {
         const { type } = event.data;
 
         if (seen.has(type)) return;
         seen.add(type);
+        performance.mark(`FIRST-FRAME-PIPELINE ${type}`);
         console.warn("FIRST-FRAME-PIPELINE", performance.now(), type);
       });
     }
@@ -121,7 +123,7 @@ export async function startNativeCapture(
 
   await session.send("Tracing.start", {
     categories:
-      "toplevel,devtools.timeline,v8,v8.execute,blink,gpu,disabled-by-default-v8.cpu_profiler,disabled-by-default-devtools.timeline",
+      "toplevel,devtools.timeline,v8,v8.execute,blink,gpu,blink.user_timing,disabled-by-default-v8.cpu_profiler,disabled-by-default-devtools.timeline",
     options: "sampling-frequency=1000",
     transferMode: "ReturnAsStream",
   });
@@ -134,7 +136,7 @@ export async function startNativeCapture(
       `${JSON.stringify({
         event: "native-first-frame-run",
         title: testInfo.title,
-        status: testInfo.status,
+        verdict: "see-final-playwright-result",
         architecture: process.arch,
         observations,
       })}\n`,
