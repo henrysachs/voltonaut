@@ -2,9 +2,9 @@
 
 Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz. Läuft komplett im Browser (Chrome/Edge am Laptop), spricht per Web Bluetooth direkt mit Rollentrainer, Pulsgurt und Schalt-Controllern Web-App auf Cloudflare Pages, Solo-Fahrten funktionieren ohne Server; Accounts, Freischaltungen, Volts und Gruppenfahrten laufen über einen eigenen Server (TypeScript/NestJS auf einem Hetzner-VPS, ADR-004/005).
 
-> **Status:** Gastfahrt, Sim-Modus, lesendes BLE, 3D-Landschaft und lokale Aufnahme mit TCX-Export sind implementiert. Browserkonto, kontogebundener manueller Sync, Replay-Prüfkern und serverseitige Strava-Verbindung sind lokal geprüft. Play-Tasten und Handshake sind durch echte Mitschnitte belegt. Produktions-API, V2-Aufzeichnung, Strava-Fahrtupload und gemeinsame Hardwarefahrt bleiben offen. Die [Integrationsspec](docs/specs/E0-04-current-implementation-integration.md) dokumentiert den zusammengeführten Stand.
+> **Status:** Web und API sind auf `916edbb` [produktiv bereitgestellt](docs/specs/E0-04-production-rollout.md). Ingame-Menü, V2-Aufnahmen, TCX-Export, Browserkonto und kontogebundener manueller Sync sind implementiert und softwaregeprüft. Die Rollenschaltung ist vom Play-Tastendruck über den Engine-Worker bis zum bestätigten FTMS-Kommando softwaregeprüft. Gemeinsame Hardwarefahrt und persönlicher OIDC-Pilot bleiben offen. Strava ist in diesem Release noch deaktiviert. Der sporadische Renderstartfehler [#26](https://github.com/henrysachs/voltonaut/issues/26) bleibt offen.
 
-Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) zeigt den bisherigen Landschaftsstand. Aufnahme und neue Serverfunktionen sind noch nicht öffentlich bereitgestellt.
+Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) lässt sich ohne Hardware und Konto fahren. Aufnahme und TCX funktionieren auch als Gast. Die [Produktions-API](https://api.voltonaut.stammkneipe.dev/healthz) läuft mit persistentem SQLite, auf Henrys ausdrücklichen Wunsch ohne Backup.
 
 ## Vision in drei Sätzen
 
