@@ -1,8 +1,33 @@
-import { expect, test } from "@playwright/test";
+import { expect, test as base } from "@playwright/test";
 import { openGameMenu } from "./helpers/gameMenu.js";
 import { bluetoothFakeScript } from "./helpers/bluetooth.js";
 import { reportMenuFailure } from "./helpers/menuFailure.js";
 import type { FirstDrawPoll } from "./helpers/menuFailure.js";
+import { retainNativeFailureImage, startNativeCapture } from "./helpers/nativeFirstFrame.js";
+
+const test = base.extend<{ nativeCapture: void }>({
+  nativeCapture: [
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the page, use callback and test information fixtures.
+    async ({ page }, use, testInfo) => {
+      if (testInfo.title !== "menu keeps world and HUD moving") {
+        await use();
+
+        return;
+      }
+
+      const stopCapture = await startNativeCapture(page, testInfo);
+
+      try {
+        await use();
+      } finally {
+        await stopCapture();
+
+        if (testInfo.status !== "passed") await retainNativeFailureImage(page, testInfo);
+      }
+    },
+    { auto: true },
+  ],
+});
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("ride menu exposes existing profile, recordings and account without body scroll", async ({
