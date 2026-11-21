@@ -23,7 +23,7 @@ function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
 export async function setupBrowserAccountData(
   session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>,
   profile: () => Promise<ProfileBootstrap>,
-): Promise<void> {
+): Promise<AccountSync> {
   const localProfile = await profile();
   const outbox = lazyResource(openAccountOutbox);
   const archive = lazyResource(() => openRideDatabase(indexedDB));
@@ -40,4 +40,6 @@ export async function setupBrowserAccountData(
   window.addEventListener("online", () => {
     void sync.retry("resume");
   });
+
+  return sync;
 }

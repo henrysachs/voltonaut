@@ -44,7 +44,10 @@
       };
     }
     document.querySelector("#start").onclick = async () => {
-      const value = await command("connect-start", { action: "connect" });
+      const value = await command("connect-start", {
+        action: "connect",
+        channel: crypto.randomUUID(),
+      });
       document.querySelector("#authorize").href = value.authorizationUrl;
     };
     document.querySelector("#confirm").onclick = () => command("confirm", { code: handoff });

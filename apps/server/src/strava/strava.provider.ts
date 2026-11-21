@@ -2,6 +2,23 @@ import { z } from "zod";
 import type { StravaConfig } from "./strava.config.js";
 import { StravaTokensSchema } from "./strava.crypto.js";
 import { ApiError } from "../api-error.js";
+import { uploadReceipt, uploadState } from "./strava.upload-provider.js";
+import type { SubmitResult, PollResult, RefreshResult } from "./strava.upload-provider.js";
+import type { StravaReceipt } from "@voltonaut/shared";
+import { boundedBody, isJsonResponse, stravaMultipart } from "./strava.provider-http.js";
+
+const RefreshResponseSchema = z.object({
+  token_type: z.literal("Bearer"),
+  access_token: StravaTokensSchema.shape.accessToken,
+  refresh_token: StravaTokensSchema.shape.refreshToken,
+  expires_at: z.number().int().positive().max(253402300799),
+});
+
+interface ResourceInput {
+  readonly accessToken: string;
+  readonly signal: Readonly<AbortSignal>;
+  readonly onHeaders: (headers: Readonly<Headers>, status: number) => void;
+}
 
 const TokenResponseSchema = z.object({
   token_type: z.literal("Bearer"),
@@ -31,33 +48,6 @@ export function stravaConflict(): ApiError {
 
 export function stravaCapacityExceeded(): ApiError {
   return new ApiError(429, "rate_limited", "too many connection attempts");
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Native Response owns a mutable stream reader; this boundary consumes it once.
-async function boundedBody(response: Readonly<Response>): Promise<string> {
-  const reader = response.body?.getReader();
-
-  if (reader === undefined) return "";
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-
-  try {
-    for (;;) {
-      // oxlint-disable-next-line no-await-in-loop -- Bounded response streams must be read sequentially to enforce the byte limit.
-      const item = await reader.read();
-
-      if (item.done) break;
-      const chunk = z.instanceof(Uint8Array).parse(item.value);
-      length += chunk.byteLength;
-
-      if (length > 16_384) throw invalidStrava();
-      chunks.push(chunk);
-    }
-
-    return Buffer.concat(chunks).toString("utf8");
-  } finally {
-    await reader.cancel();
-  }
 }
 
 export class StravaProvider {
@@ -98,7 +88,7 @@ export class StravaProvider {
         }),
       });
 
-      if (response.status !== 200) {
+      if (response.status !== 200 || !isJsonResponse(response)) {
         await response.body?.cancel();
         throw invalidStrava();
       }
@@ -137,6 +127,153 @@ export class StravaProvider {
       return response.status === 200;
     } catch {
       return false;
+    }
+  }
+
+  public async refresh(
+    refreshToken: string,
+    nowMs: number,
+    signal: Readonly<AbortSignal>,
+  ): Promise<RefreshResult> {
+    const config = this.enabledConfig();
+
+    try {
+      const response = await fetch(new URL("/oauth/token", config.providerOrigin), {
+        method: "POST",
+        redirect: "error",
+        signal,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        }),
+      });
+
+      if (response.status === 400 || response.status === 401) {
+        await response.body?.cancel();
+
+        return { kind: "refused" };
+      }
+
+      if (response.status !== 200 || !isJsonResponse(response)) {
+        await response.body?.cancel();
+
+        return { kind: "unknown" };
+      }
+
+      const token = RefreshResponseSchema.parse(JSON.parse(await boundedBody(response)));
+
+      if (token.expires_at * 1000 <= nowMs) return { kind: "unknown" };
+
+      return {
+        kind: "refreshed",
+        tokens: { accessToken: token.access_token, refreshToken: token.refresh_token },
+        accessExpiresAt: token.expires_at * 1000,
+      };
+    } catch {
+      return { kind: "unknown" };
+    }
+  }
+
+  public async submit(
+    input: ResourceInput & { readonly tcx: string; readonly externalId: string },
+  ): Promise<SubmitResult> {
+    const form = stravaMultipart(input.tcx, input.externalId);
+
+    try {
+      const response = await fetch(
+        new URL("/api/v3/uploads", this.enabledConfig().providerOrigin),
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "application/json" },
+          body: form,
+          signal: input.signal,
+          redirect: "error",
+        },
+      );
+
+      input.onHeaders(response.headers, response.status);
+
+      if ([400, 401, 403, 429].includes(response.status)) {
+        await response.body?.cancel();
+
+        return {
+          kind: "refused",
+          reason:
+            response.status === 429
+              ? "rate_limit"
+              : response.status === 400
+                ? "file"
+                : "authorization",
+        };
+      }
+
+      if (response.status !== 201 || !isJsonResponse(response)) {
+        await response.body?.cancel();
+
+        return { kind: "unknown", reason: "protocol" };
+      }
+
+      const body = await boundedBody(response);
+      const receipt = uploadReceipt(body, input.externalId);
+
+      if (receipt === undefined) return { kind: "unknown", reason: "protocol" };
+
+      return { kind: "known", receipt, state: uploadState(body) ?? { kind: "processing" } };
+    } catch {
+      return { kind: "unknown", reason: "response_lost" };
+    }
+  }
+
+  public async poll(
+    input: ResourceInput & { readonly receipt: StravaReceipt },
+  ): Promise<PollResult> {
+    try {
+      const response = await fetch(
+        new URL(`/api/v3/uploads/${input.receipt.uploadId}`, this.enabledConfig().providerOrigin),
+        {
+          headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "application/json" },
+          signal: input.signal,
+          redirect: "error",
+        },
+      );
+
+      input.onHeaders(response.headers, response.status);
+
+      if (response.status !== 200) {
+        await response.body?.cancel();
+
+        return {
+          kind: "deferred",
+          reason:
+            response.status === 401
+              ? "authorization"
+              : response.status === 429
+                ? "rate_limit"
+                : "network",
+        };
+      }
+
+      if (!isJsonResponse(response)) {
+        await response.body?.cancel();
+
+        return { kind: "deferred", reason: "protocol" };
+      }
+
+      const body = await boundedBody(response);
+      const receipt = uploadReceipt(body, input.receipt.externalId);
+      const state = uploadState(body);
+
+      return receipt?.uploadId === input.receipt.uploadId && state !== undefined
+        ? { kind: "observed", state }
+        : { kind: "deferred", reason: "protocol" };
+    } catch {
+      return { kind: "deferred", reason: "network" };
     }
   }
 

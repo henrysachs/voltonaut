@@ -1,4 +1,5 @@
 import request from "supertest";
+import { z } from "zod";
 import { expect, it } from "vitest";
 import { StravaStatusSchema } from "@voltonaut/shared";
 import {
@@ -102,4 +103,28 @@ it("enforces connection-state and owner constraints in SQLite", async () => {
   expect(StravaStatusSchema.safeParse({ status: "disconnected", athleteId: "42" }).success).toBe(
     false,
   );
+});
+
+it("returns a denied flow only to its fixed channel after original state and cookie checks", async () => {
+  const context = await setupStrava();
+  context.provider.control.deny = true;
+  const flow = await startStrava(context);
+  await request(httpServerOf(context.app)).get(flow.callback).expect(401);
+
+  const response = await request(httpServerOf(context.app))
+    .get(flow.callback)
+    .set("Cookie", flow.cookie)
+    .expect(302);
+
+  const location = new URL(z.string().parse(response.headers["location"]));
+  expect(location.origin).toBe(STRAVA_ORIGIN);
+  expect(location.pathname).toBe("/strava/finish");
+  expect(Object.fromEntries(location.searchParams)).toEqual({
+    channel: "00000000-0000-4000-8000-000000000001",
+    result: "denied",
+  });
+  expect(context.provider.control.tokenCalls).toBe(0);
+  expect(
+    getDatabase(context.app).$client.prepare("SELECT * FROM strava_connections").all(),
+  ).toEqual([]);
 });

@@ -97,6 +97,7 @@ async function claim(
   const click = item.getByRole("button").click();
   const prompt = await dialog;
   expect(prompt.message()).toContain(email);
+  expect(prompt.message()).toContain("Messwerte seit Sitzungsbeginn");
   await prompt.accept();
   await click;
 }

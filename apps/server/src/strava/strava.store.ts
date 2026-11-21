@@ -11,18 +11,18 @@ type NewTransaction = Readonly<StravaTables["transactions"]["$inferInsert"]>;
 
 type NewConnection = Readonly<StravaTables["connections"]["$inferInsert"]>;
 
-type Connection = Readonly<StravaTables["connections"]["$inferSelect"]>;
+export type StravaConnection = Readonly<StravaTables["connections"]["$inferSelect"]>;
 
 @Injectable()
 export class StravaStore {
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle metadata is passed unchanged through DI.
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle metadata passes unchanged through DI.
     @Inject(STRAVA_TABLES) private readonly tables: StravaTables,
   ) {}
 
-  public connection(userId: string) {
+  public connection(userId: string): StravaConnection | undefined {
     const table = this.tables.connections;
 
     return this.db.select().from(table).where(eq(table.userId, userId)).get();
@@ -164,63 +164,5 @@ export class StravaStore {
       },
       { behavior: "immediate" },
     );
-  }
-
-  public blockAndClaimRevocation(userId: string, nowMs: number) {
-    const { connections, transactions } = this.tables;
-
-    return this.db.transaction(
-      () => {
-        this.db.delete(transactions).where(eq(transactions.userId, userId)).run();
-        this.db
-          .update(connections)
-          .set({
-            status: "revocation_pending",
-            handoffHash: null,
-            bindingHash: null,
-            confirmBy: null,
-          })
-          .where(eq(connections.userId, userId))
-          .run();
-
-        return this.db
-          .update(connections)
-          .set({ revokeLeaseUntil: nowMs + 10_000 })
-          .where(and(eq(connections.userId, userId), lte(connections.revokeLeaseUntil, nowMs)))
-          .returning()
-          .get();
-      },
-      { behavior: "immediate" },
-    );
-  }
-
-  public revoked(row: Connection): void {
-    const table = this.tables.connections;
-    this.db
-      .delete(table)
-      .where(
-        and(
-          eq(table.userId, row.userId),
-          eq(table.encryptedTokens, row.encryptedTokens),
-          eq(table.status, "revocation_pending"),
-          eq(table.revokeLeaseUntil, row.revokeLeaseUntil),
-        ),
-      )
-      .run();
-  }
-
-  public releaseRevocation(row: Connection): void {
-    const table = this.tables.connections;
-    this.db
-      .update(table)
-      .set({ revokeLeaseUntil: 0 })
-      .where(
-        and(
-          eq(table.userId, row.userId),
-          eq(table.encryptedTokens, row.encryptedTokens),
-          eq(table.revokeLeaseUntil, row.revokeLeaseUntil),
-        ),
-      )
-      .run();
   }
 }

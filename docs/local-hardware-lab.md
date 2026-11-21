@@ -22,9 +22,11 @@ Die folgenden Menüpfade gelten erst nach dem lokalen Rollout des Ingame-Menüs.
 
 Im kombinierten Menü-Stand laufen Welt und Fahrer im Render-Worker. Das Ingame-Menü hält Profil, Aufnahmen und Konto in Overlays. Fahrt und Geräte laufen beim Öffnen weiter. **Geräte verbinden** öffnet den Gerätedialog. Der Trainer bleibt nach dem Verbinden zunächst lesend; Widerstandssteuerung braucht eine eigene Freigabe.
 
-Anmeldung erfolgt ausdrücklich über **Menü → Konto → Anmelden** als lokaler Testnutzer `tester@voltonaut.local`. Der Provider signiert echte Testtokens, ist aber keine Cloudflare-Anmeldung. Der Strava-Server verwendet ausschließlich einen lokalen Protokoll-Fake. Browserverbindung und Fahrt-Upload werden getrennt entwickelt; der Menü-Platzhalter ist keine fertige Uploadfunktion. Ein echter Strava-Pilot braucht gesonderte Zustimmung. Keine echten Provider-Zugangsdaten werden verwendet.
+Anmeldung erfolgt ausdrücklich über **Menü → Konto → Anmelden** als lokaler Testnutzer `tester@voltonaut.local`. Der Provider signiert echte Testtokens, ist aber keine Cloudflare-Anmeldung. Die Software aus E10-04 ergänzt unter **Strava** Verbindung und ausdrückliche Einzelfahrtfreigabe. Nach ihrem getrennt gemeldeten Rollout verwendet der lokale Server weiterhin ausschließlich einen Protokoll-Fake. Ein echter Strava-Pilot braucht gesonderte Zustimmung. Keine echten Provider-Zugangsdaten werden verwendet.
 
 Lokale Aufnahme und TCX funktionieren ohne Anmeldung. Replay-Prüfung ist kein Hardwareattest. Ob Worker-Aufzeichnung, V2-Annahme oder Strava-Auslieferung bereits bereitgestellt sind, nennt die jeweilige Statusmeldung getrennt. Testzahlen und vorbereitete Module ersetzen diesen Nachweis nicht.
+
+Journalaufnahmen enthalten für die Servernachrechnung auch Vorlaufdaten seit Sitzungsbeginn einschließlich verworfener Fenster. Die Kontozuordnung weist vor der Übertragung darauf hin. TCX und Strava exportieren nur das gewählte Fenster. Mengen- oder Bytegrenzen können das Journal vor sechs Stunden beenden. Dann bleiben lokale Aufnahme und TCX möglich, aber kein nachrechenbarer Fahrtupload.
 
 ## Rollenschaltung und Hardwareabnahme
 

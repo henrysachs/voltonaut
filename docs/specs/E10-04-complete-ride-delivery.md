@@ -2,7 +2,7 @@
 
 - **Auftrag:** Henry beauftragt nach PR #19 die zuletzt offenen Arbeiten. Gemeint sind Worker-Aufzeichnung, API-Annahme, Strava-Fahrtupload und das Lastproblem aus Issue #20. Nicht die gesamte weitere Roadmap.
 - **Basis:** `bdf5dd3bac5e1adf833dbd5116b14a29d829035a`.
-- **Status:** Architekturvergleich entschieden. Verifikationsaufbau vor Featurecode. Noch keine neue Produktfunktion implementiert.
+- **Status:** Implementiert. Gesamtstrecke am gebauten Artefakt gegen lokale Anbieter geprüft und unabhängig freigegeben. Lokales Gesamtgate und Build grün. Exakte Commit-CI und Bereitstellung sind getrennte Lieferungsschritte. Hardware und echter Anbieterpilot bleiben offen.
 - **Module:** `shared`-Aufnahmeverträge, Web-Worker und lokale Aufnahme, `sync`, Oberfläche, Server `rides` und `strava`. Die Lastuntersuchung arbeitet getrennt am vorhandenen Rendering- und Timerpfad.
 
 ## Ziel und Abgrenzung
@@ -15,18 +15,18 @@ Echte Funkfahrt, Trainer-Widerstandsabnahme, persönliche Anbieterzustimmung und
 
 ## Abnahmekriterien
 
-- [ ] AK1 – Ein Worker-Besitzer erfasst Initialisierung, Eingaben, tatsächliche Advances, geordnete Ausgaben und atomar bestätigte Aufnahmegrenzen. Kein aus Snapshots geratener Anfangszustand.
-- [ ] AK2 – Journal-Lebensdauer und ausgewähltes Aufnahmefenster sind getrennt. Ein späterer Aufnahmestart verwirft den Warmzustandspräfix nicht und zählt dessen Strecke oder Zeit nicht zur Fahrt.
-- [ ] AK3 – Mengen-, Byte-, Zeit- und Abbruchgrenzen ergeben konkrete vollständige oder unvollständige Zustände. Ein übergelaufenes Journal wird nicht nachträglich als vollständig bezeichnet. Die Oberfläche erklärt die Einschränkung.
-- [ ] AK4 – Ein kanonischer Archiv- und Annahmepfad erhält vorhandene Fahrten. Neue Eingaben werden an HTTP- und Speichergrenzen geparst. Keine unnötigen parallelen APIs oder verlorenen lokalen Datensätze.
-- [ ] AK5 – Serverannahme prüft Eigentümer, unveränderliche Nutzlast, Revision, vollständige Nachrechnung und ehrliche Quellenpolitik. Gleiche Fahrt wiederholen ist idempotent. Fremde IDs oder abweichende Wiederholung sind keine Überschreibung.
-- [ ] AK6 – Die Strava-Oberfläche verbindet und trennt ausdrücklich. Übergaben werden sofort aus der URL entfernt und bleiben an Konto und Browser gebunden. Tokens verlassen das Servermodul nicht.
-- [ ] AK7 – Ein Uploadauftrag bindet eigene gespeicherte Fahrt, Einwilligung, Zielathlet, Verbindungsgeneration und Exportversion. Deklarierter Sim, fehlende Einwilligung, fremde Fahrten und unzulässige Journale erzeugen keinen Anbieterupload. Eine vollständig erfundene konsistente BLE-Selbstauskunft wird nicht als erkennbar behauptet.
-- [ ] AK8 – Tokenrotation, Widerruf, Parallelität und Neustart erhalten konsistente dauerhafte Zustände. Ein unklarer POST oder verlorener Refresh-Response wird nicht blind wiederholt. Bekannte Upload-IDs bleiben beim Polling erhalten.
-- [ ] AK9 – Multipart verwendet einen servererzeugten TCX-Export, `sport_type=VirtualRide`, `trainer=1` und die restriktive Sichtbarkeitsanforderung. Keine erfundenen GPS-Daten oder Fremdhersteller. Anbieterfehler werden nicht als HTML angezeigt. Erst bestätigte fertige Verarbeitung heißt Erfolg.
-- [ ] AK10 – Ein ausführbarer Browsernachweis gegen echte Adapter mit nativen GATT-Fakes, tatsächlichen Worker, kompilierten API-Prozess und lokale signierende Testanbieter besteht. Kontowechsel, Offlinebetrieb, Reload, Neustart und verlorene Antworten haben eigene Gegenproben.
-- [ ] AK11 – Issue #20 wird anhand eines tatsächlich roten Laufs eingegrenzt. Eine Korrektur erhält Assertions, Zeitgrenzen, Sim-Uhr, Datenfrische und Weltqualität. Eine bloße Ressourcenmitigation oder ein grüner Wiederholungslauf gilt nicht als App-Reparatur.
-- [ ] AK12 – Jede Lieferung besteht `mise run check`, Build und unabhängiges Review. Bei Änderungen an Engine oder Rules zusätzlich Mutation. Keine gelockerte Leitplanke und keine neue Abhängigkeit ohne ADR und Registereintrag.
+- [x] AK1 – Ein Worker-Besitzer erfasst Initialisierung, Eingaben, tatsächliche Advances, geordnete Ausgaben und atomar bestätigte Aufnahmegrenzen. Kein aus Snapshots geratener Anfangszustand.
+- [x] AK2 – Journal-Lebensdauer und ausgewähltes Aufnahmefenster sind getrennt. Ein späterer Aufnahmestart verwirft den Warmzustandspräfix nicht und zählt dessen Strecke oder Zeit nicht zur Fahrt.
+- [x] AK3 – Mengen-, Byte-, Zeit- und Abbruchgrenzen ergeben konkrete vollständige oder unvollständige Zustände. Ein übergelaufenes Journal wird nicht nachträglich als vollständig bezeichnet. Die Oberfläche erklärt die Einschränkung.
+- [x] AK4 – Ein kanonischer Archiv- und Annahmepfad erhält vorhandene Fahrten. Neue Eingaben werden an HTTP- und Speichergrenzen geparst. Keine unnötigen parallelen APIs oder verlorenen lokalen Datensätze.
+- [x] AK5 – Serverannahme prüft Eigentümer, unveränderliche Nutzlast, Revision, vollständige Nachrechnung und ehrliche Quellenpolitik. Gleiche Fahrt wiederholen ist idempotent. Fremde IDs oder abweichende Wiederholung sind keine Überschreibung.
+- [x] AK6 – Die Strava-Oberfläche verbindet und trennt ausdrücklich. Übergaben werden sofort aus der URL entfernt und bleiben an Konto und Browser gebunden. Tokens verlassen das Servermodul nicht.
+- [x] AK7 – Ein Uploadauftrag bindet eigene gespeicherte Fahrt, Einwilligung, Zielathlet, Verbindungsgeneration und Exportversion. Deklarierter Sim, fehlende Einwilligung, fremde Fahrten und unzulässige Journale erzeugen keinen Anbieterupload. Eine vollständig erfundene konsistente BLE-Selbstauskunft wird nicht als erkennbar behauptet.
+- [x] AK8 – Tokenrotation, Widerruf, Parallelität und Neustart erhalten konsistente dauerhafte Zustände. Ein unklarer POST oder verlorener Refresh-Response wird nicht blind wiederholt. Bekannte Upload-IDs bleiben beim Polling erhalten.
+- [x] AK9 – Multipart verwendet einen servererzeugten TCX-Export, `sport_type=VirtualRide`, `trainer=1` und die restriktive Sichtbarkeitsanforderung. Keine erfundenen GPS-Daten oder Fremdhersteller. Anbieterfehler werden nicht als HTML angezeigt. Erst bestätigte fertige Verarbeitung heißt Erfolg.
+- [x] AK10 – Ein ausführbarer Browsernachweis gegen echte Adapter mit nativen GATT-Fakes, tatsächlichen Worker, kompilierten API-Prozess und lokale signierende Testanbieter besteht. Kontowechsel, Offlinebetrieb, Reload, Neustart und verlorene Antworten haben eigene Gegenproben.
+- [x] AK11 – Issue #20 wird anhand eines tatsächlich roten Laufs eingegrenzt. Eine Korrektur erhält Assertions, Zeitgrenzen, Sim-Uhr, Datenfrische und Weltqualität. Eine bloße Ressourcenmitigation oder ein grüner Wiederholungslauf gilt nicht als App-Reparatur.
+- [x] AK12 – Jede Lieferung besteht `mise run check`, Build und unabhängiges Review. Bei Änderungen an Engine oder Rules zusätzlich Mutation. Keine gelockerte Leitplanke und keine neue Abhängigkeit ohne ADR und Registereintrag.
 
 ## Arbeitsfolge und Prüfaufwand
 
@@ -51,6 +51,24 @@ Die neue Aufnahme hat einen Besitzer im Engine-Worker. Der Mainthread bekommt as
 Eine Fensterpolitik prüft Bereitschaft und rohe Feldfrische am Start sowie jedes relevante Intervall innerhalb der Aufnahme. Der Vorlauf bleibt vollständig nachgerechnet, wird aber nicht rückwirkend als Aufnahmefehler gewertet. Eine frische, bereits empfangene, aber noch gepufferte Messung wird nicht allein wegen eines älteren Snapshots als fehlend bezeichnet. Die Policy heißt ausdrücklich BLE-Selbstauskunft und bleibt für echten Versand deaktiviert, bis diese Vertrauensgrenze und der Anbieterpilot freigegeben sind.
 
 Die Strava-Auslieferung hat höchstens einen externen Upload-POST pro Fahrt. Eine bekannte Upload-ID geht nicht bei Pollfehlern verloren. Unklarer Versand und unklare Rotation bleiben eigene dauerhafte Zustände. Für nur im Speicher gehaltene Anwendungssessions wird die Popup-/Bridge-Mechanik vor der konkreten UI-Umsetzung separat geprüft.
+
+## Softwarestand und Nachweise
+
+Der wiederholbare Gesamtbefehl lautet `mise exec -- node scripts/ride-delivery-integration/verify.mjs`. Zwölf getrennte Fälle bestanden gegen gebaute Web- und Workerdateien, kompiliertes Nest, echte SQLite und lokale HTTP-Anbieter. Versand, verlorene Anbieterantwort mit Neustart und Pollfehler mit bekannter ID erzeugten jeweils genau einen Anbieter-POST. Eigene Gegenproben prüfen Kontowechsel, fehlenden Consent, Sim, beschleunigtes BLE, geänderten OAuth-State, Einmalverbrauch, echte 65 Sekunden Ablauf und fehlendes Originalcookie.
+
+Der Memory-Sessionfall injiziert Fehler an den drei Persistenzzugängen. Bearer und HttpOnly-Cookie bleiben nativ und werden tatsächlich serverseitig geprüft. Dies belegt den Software-Fallback, keine native Browser-Privacy-Policy. Popup und BroadcastChannel werden nicht ersetzt. Entfernen des tatsächlichen Cookies scheitert vor Tokenaustausch und Upload.
+
+Die Quellen und gebauten Hashes jedes Falls wurden gegen denselben Arbeitsbaum geprüft. Die Belege liegen unter `$TMPDIR/opencode/full-ride-delivery-proof-suite-I9AnBH/`. Ein unabhängiger Reviewer wiederholte Versand, Antwortverlust, Memory-Session und Cookieentzug mit eigenen Builds. Alle vier Fälle und 29 zusätzliche Unit-Proben bestanden. Die Quellhashes einschließlich HTML und öffentlicher Dateien wurden erneut abgeglichen. Dieser Nachweis liegt unter `$TMPDIR/opencode/full-ride-delivery-proof-suite-xLRn7w/`. Frühere Fehlversuche bleiben erhalten. `mise exec -- node apps/web/verification/ride-delivery/verify.mjs` prüft zusätzlich die gebaute Sim-Aufnahme.
+
+Die ursprüngliche Sync-Prüfung besteht nach Neubau des tatsächlichen Servers mit 14 Browserfällen einschließlich Offline-Reload, Kontotrennung und verlorener Antwort. Ein alter Server-Build mit V1-Routen war kein V2-Befund. Lokale E2E laufen mit `E2E_PORT=5230 CI=1`, damit sie nicht den alten laufenden Fahrstand auf Port 5173 wiederverwenden. Prüfkonfiguration, Assertions und Zeitlimits bleiben unverändert.
+
+Die eingegrenzte Lastkorrektur aus Issue #20 ist bereits mit PR #21 integriert. [E4-04](E4-04-render-worker-isolation.md) enthält den roten Baselinelauf, die native Ursache und den grünen Lauf derselben Fälle. E10-04 behauptet keinen zusätzlichen Hardware-FPS- oder Latenznachweis. Gesamtgate und exakte Commit-CI bleiben vor Lieferung bindend.
+
+Das abschließende `E2E_PORT=5230 CI=1 mise run check` besteht mit 821 Unit-Tests einschließlich Coverage und 49 Browserfällen. `mise run build` ist grün. Die zusätzlich nötigen 33 Strava-Verhaltenstests sind unabhängig freigegeben. Sie prüfen insbesondere GET-only-Erholung nach fehlender Uploadantwort, alte Kontoaktionen und das Ende von Polling. Keine Schwelle, Assertion oder Laufzeitgrenze wurde gelockert. Engine und Rules bleiben unverändert, daher ist kein zusätzlicher Mutationlauf erforderlich. Logs liegen unter `$TMPDIR/opencode/final-delivery-normal-{gate,build}.log`.
+
+Neue normale Abschlüsse liegen roh als V2 im vorhandenen Archiv. Historische V1-Daten bleiben unverändert lesbar. Fehlender Journalpräfix ergibt ausdrücklich einen lokalen Track, keinen prüfbaren Upload. `/v2/rides` ist der einzige Fahrtenendpunkt. Der Server speichert Nutzlast, Beleg, Nachrechnung, Zusammenfassung und eigene TCX-Bytes atomar. Die Migrationen `0004` und `0005` erhalten vorhandene Fahrten und verschlüsselte Verbindungen.
+
+Vor der Kontozuordnung steht ausdrücklich, dass der Server auch Vorlaufdaten seit Sitzungsbeginn einschließlich verworfener Fenster erhält. TCX und Strava enthalten nur das ausgewählte Fenster. Die Grenze von acht MiB gilt einschließlich Präfix und Ausgaben. Sechs Stunden maximale Fensterdauer garantieren keine sechs Stunden vollständiges Journal. Bei Erreichen der Grenze bleiben lokale Aufnahme und TCX möglich.
 
 ## Verifikationsplan
 

@@ -174,7 +174,6 @@ export class RecordingJournal {
       commands: this.commands.slice(window.commandOffset),
     };
 
-    // Output bytes already count once in the lifetime budget.
     const cost = bytes(entry) + bytes({ ...observation, events: [], commands: [] });
 
     if (!this.reserve(cost)) return;

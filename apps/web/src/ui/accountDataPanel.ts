@@ -165,7 +165,7 @@ function claimButton(view: AccountView, sync: Commands, rideId: string): HTMLBut
   return button("Fahrt diesem Konto zuordnen und synchronisieren", () => {
     if (
       window.confirm(
-        `Diese lokale Fahrtkopie unwiderruflich ${view.user.email} zuordnen und synchronisieren? Die Aufnahme selbst enthält keinen nachgewiesenen Kontobesitzer.`,
+        `Diese lokale Fahrtkopie unwiderruflich ${view.user.email} zuordnen und synchronisieren? Journalaufnahmen übertragen dabei auch Messwerte seit Sitzungsbeginn, einschließlich verworfener Fenster. TCX und Strava exportieren nur das gewählte Fenster. Die Aufnahme selbst enthält keinen nachgewiesenen Kontobesitzer.`,
       )
     )
       void sync.claim(rideId);

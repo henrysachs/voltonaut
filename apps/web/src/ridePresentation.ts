@@ -9,9 +9,7 @@ import { startRideScene } from "./world/scene.js";
 interface RidePresentationOptions {
   readonly snapshot: () => Readonly<RideSnapshot> | undefined;
   readonly profile: LocalRideMetadata["profile"];
-  readonly source: LocalRideMetadata["source"];
   readonly routeId: string;
-  readonly clockScale: number;
   readonly sceneHost: Readonly<Element> | null;
   readonly debug: boolean;
   readonly recording: RecordingControls;

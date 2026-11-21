@@ -24,6 +24,7 @@ export function stravaCallbackUrl(originalUrl: string, redirectUri: string) {
 
   return {
     state: state.data,
+    denied: single("error") === "access_denied",
     authorization: () => {
       const code = z
         .string()

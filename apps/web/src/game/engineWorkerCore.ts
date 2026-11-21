@@ -128,7 +128,6 @@ class WorkerDriver {
 
   private update(actor: Readonly<Actor>, atMs: number): void {
     const snapshot = actor.engine.snapshot();
-    // Exactly one drain. The same arrays feed the journal and the real presentation/command path.
     const events = actor.engine.drainEvents();
     const commands = actor.engine.drainCommands();
     actor.recorder.outputs(events, commands);
@@ -213,7 +212,6 @@ class WorkerDriver {
     if (message.type === "engine.ingest") {
       if (actor.intervalId === undefined) return;
       actor.recorder.ingest(message.event, this.nowMs());
-      // Capture bounds never clamp or rewrite the actual physics input.
       actor.engine.ingest(message.event);
 
       return;

@@ -143,9 +143,7 @@ async function start(): Promise<void> {
   link.init({ routeId: APP_ROUTE_ID, profile, clockScale, source: simMode ? "sim" : "ble" });
 
   setupRidePresentation({
-    source: simMode ? "sim" : "ble",
     routeId: APP_ROUTE_ID,
-    clockScale,
     profile,
     snapshot: () => link.latestSnapshot(),
     sceneHost: document.querySelector("#ride-scene"),

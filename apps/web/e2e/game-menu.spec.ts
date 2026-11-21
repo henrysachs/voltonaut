@@ -20,7 +20,7 @@ test("ride menu exposes existing profile, recordings and account without body sc
   await expect(page.getByRole("button", { name: "Anmelden", exact: true })).toBeVisible();
   await openGameMenu(page, "Strava");
   await expect(page.getByRole("tabpanel", { name: "Strava" })).toContainText(
-    "Noch nicht im Spiel verfügbar",
+    "Für Strava ausdrücklich bei Voltonaut anmelden",
   );
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
     true,

@@ -28,8 +28,6 @@ function admittedRecording(recording: RideRecording): AdmittedRecording {
     };
   }
 
-  // The strict envelope permits finite observations beyond the bounded export track.
-  // Fail closed rather than persist a misleading summary or turn projection failures into 500s.
   try {
     const assessment = RideAssessmentSchema.parse(assessRecordingV2(recording));
     const track = projectRecordingTrack(recording);

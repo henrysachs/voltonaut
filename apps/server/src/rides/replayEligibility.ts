@@ -28,7 +28,6 @@ class WindowAssessment {
   ingest(entry: RecordingEntryV2): void {
     const atMs = entry[1];
 
-    // Check before applying an update: a fresh input cannot heal its past interval.
     if (this.inWindow) this.check(atMs);
 
     if (entry[2] === "status" && entry[3] === "trainer") {
@@ -45,7 +44,6 @@ class WindowAssessment {
 
       if (entry[4] !== null) this.cadenceAtMs = atMs;
     } else if (entry[2] === "advance" && this.inWindow && entry[3] > 2.5) {
-      // Real advance can overlap start even when the last boundary was recent.
       this.reasons.add("gap");
     } else if (entry[2] === "boundary") {
       if (entry[3] === "start") {

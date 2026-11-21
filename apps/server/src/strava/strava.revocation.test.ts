@@ -27,7 +27,7 @@ it.each<"http" | "stall">(["http", "stall"])(
       .post("/v1/strava/connect-start")
       .set(bearer(context.owner.sessionToken))
       .set("Origin", STRAVA_ORIGIN)
-      .send({ action: "connect" })
+      .send({ action: "connect", channel: "00000000-0000-4000-8000-000000000001" })
       .expect(409);
     context.provider.control.revokeFault = "none";
     expect(bodyOf(await disconnectStrava(context).expect(200))).toEqual({ status: "disconnected" });

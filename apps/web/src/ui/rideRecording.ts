@@ -273,7 +273,7 @@ class RecordingPanel {
     if (
       this.#busy ||
       !window.confirm(
-        "Ungespeicherte Aufnahme wirklich verwerfen? Gespeicherte Fahrten bleiben erhalten.",
+        "Ungespeicherte Aufnahme wirklich verwerfen? Gespeicherte Fahrten bleiben erhalten. Vorlaufdaten eines vorhandenen Journals bleiben ebenfalls erhalten.",
       )
     )
       return;
