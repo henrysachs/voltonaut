@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { nativeMenuTest as test } from "./helpers/nativeMenuTest.js";
 import { openGameMenu } from "./helpers/gameMenu.js";
 import { bluetoothFakeScript } from "./helpers/bluetooth.js";
 import { reportMenuFailure } from "./helpers/menuFailure.js";

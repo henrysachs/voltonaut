@@ -2,19 +2,31 @@
 import type { CDPSession, Page, TestInfo } from "@playwright/test";
 import type { RenderReply } from "../../src/world/render-protocol.js";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { reportMenuFailure } from "./menuFailure.js";
-import type { FirstDrawPoll } from "./menuFailure.js";
 
-export async function captureFirstFrameFailure(
-  page: Readonly<Pick<Page, "evaluate" | "workers" | "screenshot">>,
-  testInfo: Readonly<Pick<TestInfo, "outputPath">>,
-  firstDrawPoll: FirstDrawPoll,
+export async function retainNativeFailureImage(
+  page: Readonly<Pick<Page, "screenshot">>,
+  testInfo: Readonly<Pick<TestInfo, "outputPath" | "title" | "status">>,
 ): Promise<void> {
-  await reportMenuFailure(page, firstDrawPoll).catch(() => null);
-  await page.screenshot({ path: testInfo.outputPath("failure-retained.png") }).catch(() => null);
+  const image = await page
+    .screenshot({ path: testInfo.outputPath("failure-retained.png") })
+    .catch(() => null);
+
+  if (image === null) return;
+  process.stderr.write(
+    `${JSON.stringify({
+      event: "native-first-frame-failure-image",
+      title: testInfo.title,
+      verdict: testInfo.status,
+      observation: "after-failure-and-after-native-trace",
+      sha256: createHash("sha256").update(image).digest("hex"),
+      bytes: image.byteLength,
+      pngBase64: image.byteLength <= 128_000 ? image.toString("base64") : null,
+    })}\n`,
+  );
 }
 
 async function readTrace(
