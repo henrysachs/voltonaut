@@ -48,6 +48,7 @@ Durchgesetzt von **dependency-cruiser** (`docs/09-tooling.md` §6): Apps importi
 6. **Sim-Modus muss immer funktionieren**; jede Hardware-Funktion hat ein Sim-Gerät. Tests nutzen Sim-/Replay-Geräte oder DI-Fakes – **kein `vi.mock`** (anti-slop `no-module-mocking`).
 7. **UNVERIFIZIERTE Protokolldetails** im Code mit `// UNVERIFIED: docs/02-bluetooth.md#…` markieren, bis eine Hardware-Fixture sie bestätigt.
 8. **Assets nur mit Lizenz** (`apps/web/public/assets/LICENSES.md`), über `mise run assets` (glTF + KTX2 + meshopt).
+9. **Trainersteuerung ist eine physische Wirkung.** Verbindung und Messwertempfang lösen keine Widerstandsbefehle aus. Erst ausdrückliche Aktivierung, geprüfte Fähigkeiten und bestätigte Control-Point-Prozeduren erlauben begrenzte Kommandos. Bei Timeout, Berechtigungsverlust oder Disconnect keine alten Ziele blind wiederholen. Einen unbestätigten neutralen Zustand nicht als sicheren Stopp ausgeben.
 
 ## 4. Befehle (alle über mise)
 ```bash
@@ -84,3 +85,18 @@ Web: Cloudflare Pages (`wrangler pages deploy` aus CI nach grünem `check`, Prev
 
 ## 8. Sprache & Stil
 Doku Deutsch; Code, Identifier, Kommentare, Commits Englisch (Conventional Commits: `feat(engine): …`). Formatierung macht Oxfmt – nicht manuell diskutieren. Henry hat am 2026-11-20 zusätzlich `github-copilot` freigegeben. Standard für Implementierung ist `github-copilot/gpt-6.1-sol`; `opencode-go` bleibt erlaubt. Alle anderen Provider bleiben durch `opencode.jsonc` gesperrt.
+
+## 9. Fahrbereitschaft und Bedienung
+- **Bei einem angekündigten Fahrttermin zuerst den durchgängigen Fahrbetrieb liefern.** Trainerdaten, beide Griffe, tatsächliche Widerstandsänderung, Reconnect und bedienbare Oberfläche haben Vorrang vor zusätzlicher Aufnahme-/Strava-Infrastruktur. Andere beauftragte Arbeiten weiterführen, aber nicht anstelle des kritischen Fahrpfads.
+- **HUD-Schalten ist noch keine Rollenschaltung.** Der Nachweis muss vom Druck am Griff über die echte Engine bis zum passenden FTMS-Kommando und seiner Bestätigung reichen. Erst eine gemeinsame reale Probefahrt bestätigt Widerstandsgefühl und Hardwarezuverlässigkeit. Ohne diesen Test ausdrücklich „softwaregeprüft, Hardwareabnahme offen“ sagen.
+- In Specs und Statusmeldungen vier Dinge trennen: **implementiert**, **am tatsächlichen Artefakt softwaregeprüft**, **an echter Hardware geprüft**, **bereitgestellt**. Testzahlen, Sim-/Replay-Läufe, Prototypen oder ein grüner Build ersetzen keinen fehlenden Nachweis. Replay-Konsistenz ist kein Hardwareattest.
+- Welt und HUD sind die Spieloberfläche. Geräte, Trainersteuerung, Profil, Aufnahmen und Strava gehören in ein zugängliches **Ingame-Menü mit Overlays**, nicht dauerhaft untereinander auf eine lange Scrollseite. Fahrt und Geräte laufen beim Öffnen eines Menüs weiter. Native Geräteauswahl bleibt unmittelbar an einen Nutzerklick gebunden.
+- Vor der ersten stabilen Veröffentlichung keine künstlichen parallelen V1/V2-Subsysteme oder Weiterleitungsfassaden bauen. Verträge und alle Aufrufer gemeinsam umstellen. Bestehende eigene Aufnahmen und Zuordnungen dabei nicht stillschweigend löschen oder als nachgerechnet ausgeben.
+
+## 10. Arbeitsstand, Freigaben und Nachweise
+- Vor einer Zusage den tatsächlichen Branch, Worktree und laufenden Prozess prüfen. Ein Merge auf `main` aktualisiert keinen Dev-Server in einem anderen Worktree. Bei lokaler Bereitstellung Commit, URL und echten Geräte- oder Sim-Modus nennen.
+- Isolierte Entwicklung, Rendererarbeit und Tests können ohne Neuladen fremder Tabs erfolgen. Für möglicherweise verlorene Mitschnitte den Umfang einmal klären. Ist das Neuladen im laufenden Auftrag freigegeben, nicht nach jeder Zwischenmeldung erneut fragen. Die Freigabe nicht auf Datenlöschung oder Produktionsdeploys ausweiten.
+- Bekannte Protokollfakten und vorhandene Hardware-Captures zuerst auswerten. Keine erneute Tastenvermessung verlangen, wenn die notwendige Zuordnung bereits belegt ist. Firmware- und Kalibrierungslücken getrennt benennen.
+- Eine Lastkorrektur braucht einen tatsächlich passenden roten Lauf und denselben geprüften Erfolgsfall. Keine Timeouts, Assertions, Sim-Uhr, Datenfrische oder Grafikqualität zum Bestehen verbiegen. Ressourcenbegrenzung als Mitigation benennen, solange keine App-Ursache und Korrektur bewiesen sind. Schwarze Bilder und andere Fehlversuche erhalten, nicht als Weltbeleg verkaufen.
+- In GitHub auch **Rulesets** prüfen, nicht nur klassische Branch-Protection. Agentenreview und formale GitHub-Approval sind verschiedene Nachweise. Ein Owner-Merge benötigt ausdrückliche Freigabe und weiterhin grüne Checks des exakten Heads sowie unabhängiges Review. Keine Schutzregel dafür ändern.
+- Bei Unterbrechung einen knappen Handoff mit Worktree, Commit, geänderten Dateien, tatsächlichen Prüfungen, offenen Fehlern und eigenen Prozessen hinterlassen. Unfertige WIP-Zweige nicht in den Fahrstand mischen.
