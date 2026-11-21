@@ -1,9 +1,13 @@
-import type { DeviceEvent, LocalRideMetadata } from "@voltonaut/shared";
+import {
+  rideTcxFilename,
+  serializeRideTcx,
+  type DeviceEvent,
+  type LocalRideMetadata,
+} from "@voltonaut/shared";
 
 import { createRideRecorder } from "./game/rideRecorder.js";
 import { openRideDatabase } from "./sync/rideDatabase.js";
 import { createRideStore } from "./sync/rideStore.js";
-import { rideTcxFilename, serializeRideTcx } from "./sync/rideTcx.js";
 import { mountRideRecording } from "./ui/rideRecording.js";
 
 interface RecordingSetup {

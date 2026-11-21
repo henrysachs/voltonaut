@@ -12,4 +12,10 @@ export * from "./localRide.js";
 
 export * from "./recordingV2.js";
 
+export * from "./recordingCapture.js";
+
+export * from "./recordingTrack.js";
+
+export * from "./rideTcx.js";
+
 export * from "./units.js";

@@ -1,4 +1,4 @@
-import type { CompletedLocalRide, LocalRidePoint } from "@voltonaut/shared";
+import type { RideTrack, LocalRidePoint } from "./localRide.js";
 
 const TCX_NS = "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2";
 const ACTIVITY_NS = "http://www.garmin.com/xmlschemas/ActivityExtension/v2";
@@ -32,7 +32,7 @@ function trackpoint(startMs: number, point: LocalRidePoint): string {
 }
 
 /** Original serializer for Garmin TCX v2 and ActivityExtension v2. No GPS projection. */
-export function serializeRideTcx(ride: CompletedLocalRide): string {
+export function serializeRideTcx(ride: RideTrack): string {
   const last = ride.samples.at(-1);
 
   if (last === undefined) {
@@ -69,6 +69,6 @@ export function serializeRideTcx(ride: CompletedLocalRide): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<TrainingCenterDatabase xmlns="${TCX_NS}" xmlns:ax="${ACTIVITY_NS}"><Activities><Activity Sport="Biking"><Id>${ride.startedAt}</Id><Lap StartTime="${ride.startedAt}"><TotalTimeSeconds>${last.elapsedMs / 1000}</TotalTimeSeconds><DistanceMeters>${last.distanceM}</DistanceMeters><Calories>0</Calories><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod>${tracks.join("")}</Lap><Notes>${notes}</Notes></Activity></Activities></TrainingCenterDatabase>\n`;
 }
 
-export function rideTcxFilename(ride: CompletedLocalRide): string {
+export function rideTcxFilename(ride: RideTrack): string {
   return `voltonaut-${ride.metadata.source}-${ride.rideId}.tcx`;
 }

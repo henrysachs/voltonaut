@@ -227,7 +227,7 @@ function validBoundaries(ride: z.infer<typeof envelope>): boolean {
     return (
       entry[3] === expected &&
       entry[0] === ride.observations[index]?.boundarySeq &&
-      (previous === undefined || entry[1] > previous[1])
+      (previous === undefined || entry[1] >= previous[1])
     );
   });
 }
