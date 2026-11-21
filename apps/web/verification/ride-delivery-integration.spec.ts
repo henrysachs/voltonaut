@@ -21,6 +21,15 @@ import { capture, claim, prepare, readArchive } from "./ride-delivery-integratio
 import { memoryCookieFlow } from "./ride-delivery-integration-memory.spec.js";
 import { registerAccountCases } from "./ride-delivery-integration-account.spec.js";
 import { registerBindingCases } from "./ride-delivery-integration-binding.spec.js";
+import { verifyDatabase } from "./ride-delivery-integration-database.spec.js";
+
+test.afterAll(async () => {
+  await verifyDatabase({
+    artifacts,
+    database: z.string().min(1).parse(process.env["DELIVERY_DATABASE"]),
+    uploads: (await state()).provider.uploads,
+  });
+});
 
 registerAccountCases();
 

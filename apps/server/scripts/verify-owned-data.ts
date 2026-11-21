@@ -11,7 +11,7 @@ import {
   ProfileStateSchema,
   RideDetailSchema,
   RideReceiptSchema,
-} from "../../../packages/shared/dist/index.js";
+} from "@voltonaut/shared";
 import {
   journalFixture,
   loseJournalReply,

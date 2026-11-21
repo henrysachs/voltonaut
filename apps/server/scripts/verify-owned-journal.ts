@@ -6,7 +6,7 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { createEngine, createRoute, TEST_LOOP } from "../../../packages/engine/dist/index.js";
+import { createEngine, createRoute, TEST_LOOP } from "@voltonaut/engine";
 import {
   DEFAULT_RIDER_PROFILE,
   RecordingV2Schema,
@@ -14,7 +14,7 @@ import {
   ReplaySnapshotV2Schema,
   type ReplayObservationV2,
   type RideReceipt,
-} from "../../../packages/shared/dist/index.js";
+} from "@voltonaut/shared";
 
 export function journalFixture() {
   const engine = createEngine({ route: createRoute(TEST_LOOP), profile: DEFAULT_RIDER_PROFILE });

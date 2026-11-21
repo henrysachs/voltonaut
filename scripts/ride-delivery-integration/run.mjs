@@ -14,7 +14,6 @@ import {
   verifySourceManifest,
 } from "./artifact.mjs";
 import { createHost, createProviders } from "./host.mjs";
-import { verifyDatabase } from "./database.mjs";
 import { runBrowser } from "./browser.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -86,17 +85,6 @@ try {
 
   const builds = [
     {
-      args: [
-        join(root, "node_modules/typescript/bin/tsc"),
-        "-b",
-        "packages/shared",
-        "--pretty",
-        "false",
-      ],
-      cwd: root,
-      name: "shared-build",
-    },
-    {
       args: [join(webDirectory, "node_modules/vite/bin/vite.js"), "build", "--config", config],
       cwd: webDirectory,
       name: "web-build",
@@ -134,6 +122,7 @@ try {
   const result = await runBrowser({
     root,
     artifacts,
+    database,
     web,
     api,
     control: host.origin,
@@ -144,7 +133,6 @@ try {
 
   commands.push(result);
   await verifySourceManifest(root, artifacts);
-  await verifyDatabase({ artifacts, database, uploads: provider.snapshot().uploads });
   assert.equal(result.status, 0, "Case failures remain red; inspect cases.json");
   assert.deepEqual(provider.snapshot().faults, []);
 } finally {

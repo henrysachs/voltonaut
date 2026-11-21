@@ -5,7 +5,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "../../packages/shared/node_modules/zod/index.js";
 
-/** @param {{readonly root: string; readonly artifacts: string; readonly web: string; readonly api: string; readonly control: string; readonly origins: readonly string[]; readonly workers: readonly string[]; readonly filter: string | undefined}} options */
+/** @param {{readonly root: string; readonly artifacts: string; readonly database: string; readonly web: string; readonly api: string; readonly control: string; readonly origins: readonly string[]; readonly workers: readonly string[]; readonly filter: string | undefined}} options */
 export async function runBrowser(options) {
   const config = join(options.artifacts, "playwright.config.mjs");
   const webDirectory = join(options.root, "apps/web");
@@ -33,6 +33,7 @@ export async function runBrowser(options) {
       API_ORIGIN: options.api,
       DELIVERY_CONTROL: options.control,
       DELIVERY_ARTIFACTS: options.artifacts,
+      DELIVERY_DATABASE: options.database,
       DELIVERY_ORIGINS: JSON.stringify(options.origins),
       DELIVERY_WORKERS: JSON.stringify(options.workers),
     },
