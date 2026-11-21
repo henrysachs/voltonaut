@@ -1,4 +1,10 @@
-import type { CompletedLocalRide, ProfileState, RideList, User } from "@voltonaut/shared";
+import {
+  archivedRideTrack,
+  type ArchivedRide,
+  type ProfileState,
+  type RideList,
+  type User,
+} from "@voltonaut/shared";
 import type { ProfileBootstrap } from "../profileBootstrap.js";
 import type { ApplicationSession } from "./applicationSession.js";
 import type { AccountOutbox, OutboxRow } from "./accountOutbox.js";
@@ -12,8 +18,11 @@ type Immutable<T> = { readonly [K in keyof T]: Immutable<T[K]> };
 
 export type OutboxItem = Immutable<Pick<OutboxRow, "kind" | "state"> & { readonly id: string }>;
 
-type LocalRideItem = Pick<CompletedLocalRide, "rideId" | "startedAt"> & {
+type LocalRideItem = {
+  readonly rideId: string;
+  readonly startedAt: string;
   readonly source: "sim" | "ble";
+  readonly kind: ArchivedRide["kind"];
 };
 
 export type AccountDataView = Immutable<
@@ -32,7 +41,7 @@ export type AccountDataView = Immutable<
 export interface SyncOptions {
   readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
   readonly outbox: () => Promise<AccountOutbox>;
-  readonly archive: () => Promise<readonly CompletedLocalRide[]>;
+  readonly archive: () => Promise<readonly ArchivedRide[]>;
   readonly profile: Readonly<Pick<ProfileBootstrap, "saved" | "apply">>;
   readonly nowMs: () => number;
 }
@@ -66,12 +75,17 @@ export function loadedOutbox(rows: readonly OutboxRow[]): Remote<readonly Outbox
   };
 }
 
-export function localArchiveView(archive: readonly CompletedLocalRide[]): readonly LocalRideItem[] {
-  return archive.map((ride) => ({
-    rideId: ride.rideId,
-    startedAt: ride.startedAt,
-    source: ride.metadata.source,
-  }));
+export function localArchiveView(archive: readonly ArchivedRide[]): readonly LocalRideItem[] {
+  return archive.map((ride) => {
+    const track = archivedRideTrack(ride);
+
+    return {
+      rideId: track.rideId,
+      startedAt: track.startedAt,
+      source: track.metadata.source,
+      kind: ride.kind,
+    };
+  });
 }
 
 export function profileApplicationMessage(outcome: "applied" | "pending"): string {

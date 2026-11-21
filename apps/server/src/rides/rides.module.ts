@@ -27,6 +27,7 @@ export class RidesModule {
       ],
       controllers: [RidesController],
       providers: [RidesService, { provide: RIDES_TABLES, useValue: tables }],
+      exports: [RidesService],
     };
   }
 }

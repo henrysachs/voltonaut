@@ -23,7 +23,7 @@ function assertOwnedForeignKeys(db: DatabaseReader): void {
   expect(() =>
     db.$client
       .prepare(
-        "INSERT INTO rides VALUES ('orphan', 'orphan', '{}', 'hash', '{}', '{}', '2026-11-20T00:00:00.000Z', 0, 1000, 0, 'sim')",
+        "INSERT INTO rides (id, user_id, payload_json, payload_hash, receipt_json, assessment_json, started_at, uploaded_at, duration_ms, distance_m, source) VALUES ('orphan', 'orphan', '{}', 'hash', '{}', '{}', '2026-11-20T00:00:00.000Z', 0, 1000, 0, 'sim')",
       )
       .run(),
   ).toThrow("FOREIGN KEY");
@@ -136,7 +136,7 @@ it.each([1, 2])(
         const db = getDatabase(app);
 
         expect(readAuthState(db.$client, migrationCount)).toEqual(authState);
-        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(4);
+        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(5);
         assertOwnedForeignKeys(db);
       } finally {
         await app.close();

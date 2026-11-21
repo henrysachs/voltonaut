@@ -27,7 +27,7 @@ import { RideUploadRateLimitGuard } from "./rides.rate-limit.js";
 import { RideUploadMediaTypeGuard } from "./rides.media-type.guard.js";
 import { RidesService } from "./rides.service.js";
 
-@Controller("v1/rides")
+@Controller("v2/rides")
 export class RidesController {
   public constructor(
     @Inject(RidesService) private readonly rides: Readonly<

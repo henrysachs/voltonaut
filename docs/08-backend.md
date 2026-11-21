@@ -59,21 +59,26 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 
 ## Datenmodell (Skizze)
 
-### Implementierter Teilschritt E5-07
+### Eigene Profile und Fahrtenannahme
 
-[E5-07](specs/E5-07-owned-profile-rides.md) implementiert ausschließlich das eigene Fahrerprofil und dauerhafte lokale V1-Aufnahmen. Die folgenden SQL- und API-Skizzen bleiben der weitergehende Zielstand.
+[E5-07](specs/E5-07-owned-profile-rides.md) liefert eigene Profile und historische V1-Aufnahmen. Die API-Einheit aus [E10-04](specs/E10-04-complete-ride-delivery.md) ergänzt die Journalannahme. Die folgenden SQL- und API-Skizzen bleiben der weitergehende Zielstand.
 
 - `GET /v1/me/profile` liefert `missing` oder `present` mit Profil und UTC-Änderungszeit. `PUT` validiert Profil und Fahrrad strikt.
-- `POST /v1/rides` akzeptiert `CompletedLocalRideSchema` als unkomprimiertes JSON bis 8 MiB. Schemafehler liefern 422, ungültiges JSON weiterhin 400, zu große Bodies 413. Komprimierte Bodies werden mit 415 abgelehnt. Fehlermeldungen enthalten keine rohe Nutzlast.
-- Alle gespeicherten V1-Aufnahmen haben ausschließlich `assessment: {status:'unverified',reason:'legacy_missing_replay'}`. Ohne vollständigen Physik-Anfangszustand und Ereignisse gibt es keine Replay-Prüfung, Belohnung oder Annahme als geprüfte Fahrt.
+- `POST /v2/rides` akzeptiert das rohe `RideRecording`: Journalversion 2 oder historische Version 1, ohne Archivwrapper. `/v1/rides` entfällt ohne Weiterleitung. Unkomprimiertes JSON bleibt auf 8 MiB begrenzt. Schemafehler liefern 422, ungültiges JSON 400, zu große Bodies 413 und komprimierte Bodies 415. Fehlermeldungen enthalten keine rohe Nutzlast.
+- Historische V1-Aufnahmen behalten `assessment: {status:'unverified',reason:'legacy_missing_replay'}` und ihre ursprünglichen Belege. Vollständige bekannte Journale werden ab Initialisierung nachgerechnet. Unvollständige Journale und unbekannte Revisionen bleiben `unverified`; abweichende Beobachtungen ergeben `rejected/observation_mismatch`. Keine dieser Bewertungen vergibt Belohnungen.
+- Quellenqualität gilt nur am Fensterstart und innerhalb des Fensters. Der Server erhält Bereitschaft und rohe Kanalfrische aus dem gesamten Präfix. Frische Daten nach einer Lücke heilen die Lücke nicht. Alte Vorlauffehler blockieren ein wieder gesundes Fenster nicht.
+- Nutzlast, Hash, Bewertung, Beleg, Zusammenfassung und TCX samt Hash und `tcx-1` werden atomar gespeichert. Nachrechnung und Projektion laufen vor der kurzen Schreibtransaktion. Identische eigene Wiederholungen lesen den gespeicherten Beleg vor einer erneuten Nachrechnung. Nicht nachgerechnete Fahrten erhalten keinen TCX-Export auf dem Server.
+- Eine strukturell gültige, aber nicht sicher projizierbare Beobachtung liefert 422 statt 500. Das betrifft etwa fallende virtuelle Distanz oder Werte außerhalb der Trackgrenzen. Ein projizierbarer Beobachtungswiderspruch kann dagegen als `rejected` gespeichert werden. Die Grenzen für sechs Stunden und 8 MiB bleiben unverändert; ein vollständiges Sechs-Stunden-Journal passt nicht zwangsläufig in das Bytebudget.
 - Globale UUID-Eindeutigkeit, kanonische geparste Nutzlast, SHA-256 und ursprünglicher Beleg liegen in derselben SQLite-Transaktion. Erstupload und identische Wiederholung liefern HTTP 200 mit demselben gespeicherten Beleg. Eine abweichende Nutzlast liefert 409 `ride_id_conflict`. Eine fremde UUID liefert auch beim Upload 404.
 - Das gemeinsame `RideIdSchema` normalisiert UUIDs beim API-Upload, Detailpfad und Cursor auf Kleinschreibung, vor Hash und Speicherung. Lokale V1-Dateien und Auth-Identifikatoren werden nicht umgeschrieben. Ein Route-Guard prüft den Medientyp vor der Zod-Bodyvalidierung. `text/plain` liefert 415, gültiges JSON mit Charset bleibt erlaubt.
-- `GET /v1/rides/:rideId` liefert eigene Aufnahme und aktuelle Bewertung. Die Liste enthält keine Samples, ist auf 20 Einträge voreingestellt und auf 50 begrenzt. Cursor und Sortierung verwenden aufsteigende UUIDs, nicht die Aufnahmezeit.
+- `GET /v2/rides/:rideId` liefert eigene Aufnahme und gespeicherte Bewertung. `GET /v2/rides` enthält keine Samples, ist auf 20 Einträge voreingestellt und auf 50 begrenzt. Cursor und Sortierung verwenden aufsteigende UUIDs, nicht die Aufnahmezeit.
 - Jeder Zugriff ist an `SessionPrincipal.userId` gebunden. `GET /v1/me` bleibt Auth-Verantwortung. Es gibt keine automatische Löschung. Uploads sind pro Account auf 30 Anfragen pro Minute begrenzt, auch bei Wiederholungen.
 
 Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)` und `createRidesTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und beide Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an `AccountsModule.register` und `RidesModule.register`. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
 
-Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. Die Migrationen `0000` bis `0002` bleiben unverändert. Strava ergänzt ausschließlich `0003`. Der Browser verwendet die Fahrtendpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
+Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. `0003` ergänzt Strava-Verbindungen. Die additive `0004_replayed_ride_exports.sql` ergänzt Zusammenfassung und Exportspalten, ohne bestehende Nutzlasten, Hashes oder Belege umzuschreiben. Die Migrationen `0000` bis `0003` bleiben unverändert. Der Browser verwendet die Fahrtendpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
+
+`RidesService.loadOwnStravaSource(userId, rideId)` liest synchron eigene gespeicherte Exportbytes. `RIDE_SOURCE_POLICY` ist standardmäßig `disabled`. Nur die ausdrückliche Einstellung `declared_ble_v1` erlaubt ein nachgerechnetes, kontinuierliches, als BLE deklariertes Fenster. Sim, Skalierung und Qualitätsfehler bleiben gesperrt. Die Antwort bezeichnet die Quelle als `client_declared`, nicht als Hardwareattest. Eine vollständig erfundene konsistente BLE-Selbstauskunft ist damit nicht erkennbar. Reale Aktivierung bleibt gesondert offen. Das Lesen der Quelle führt weder einen weiteren Physiklauf noch einen Anbieteraufruf aus.
 
 ```sql
 users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at)
@@ -109,9 +114,9 @@ PUT  /v1/me/profile             RiderProfile                      → profile   
 PUT  /v1/me/avatar              AvatarConfig                      → avatar           (nur Items aus dem Inventar)
 GET  /v1/catalog                                                  → { items[], levels[], version }   (öffentlich, cachebar)
 POST /v1/shop/purchase          { itemId, expectedPriceVolts }    → { voltsBalance, inventoryItem } | 409 insufficient_volts | 409 already_owned
-POST /v1/rides                  RideUpload (gzip)                 → { status, xpAwarded, voltsAwarded, newBadges[], newPbs[], levelUp? }
+POST /v2/rides                  RideRecording (JSON)              → { rideId, storage:'stored', assessment }
                                 (idempotent: gleiche rideId → gleiche Antwort)
-GET  /v1/rides?cursor=…                                           → { rides: RideSummary[], nextCursor }
+GET  /v2/rides?cursor=…                                           → { rides: RideSummary[], nextCursor }
 GET  /v1/me/export                                                → JSON aller eigenen Daten
 DELETE /v1/me                                                     → 202 (Account-Löschung)
 WS   /v1/live                   erster Frame { t:'auth', sessionToken } → Räume (s. u.)
@@ -182,7 +187,7 @@ interface RideUpload {
 
 ## Plausibilitätsprüfung / Anti-Cheat-Grundlagen
 
-[E10-02](specs/E10-02-replay-consistency.md) implementiert separat eine reine V2-Nachrechnung mit vollständigem Initialisierungsjournal. `assessRecordingV2` liefert ausschließlich `unverified`, `rejected` oder `replayed`. Das Ergebnis vergibt weder Belohnungen noch Exportrechte. Die V1-API bleibt unverändert. Die folgenden 3-Prozent- und Annahmeregeln sind weiterhin Zielskizzen, nicht die V2-Prüfung. V2 vergleicht diskrete Werte und Enginezeiten exakt und übrige Messwerte mit enger numerischer Toleranz.
+[E10-02](specs/E10-02-replay-consistency.md) implementiert eine reine V2-Nachrechnung mit vollständigem Initialisierungsjournal. `assessRecordingV2` liefert ausschließlich `unverified`, `rejected` oder `replayed`. E10-04 verwendet diese Nachrechnung im kanonischen `/v2/rides`-Pfad. Konsistenz und Quellenrichtlinie bleiben getrennt. Die folgenden 3-Prozent- und Annahmeregeln sind weiterhin Zielskizzen, nicht die V2-Prüfung. V2 vergleicht diskrete Werte und Enginezeiten exakt und übrige Messwerte mit enger numerischer Toleranz.
 
 Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 

@@ -51,7 +51,7 @@ it.each([1, 2, 3])(
       const db = createDatabase(config);
       expect(db.$client.prepare("SELECT * FROM users").all()).toEqual(auth.users);
       expect(db.$client.prepare("SELECT * FROM sessions").all()).toEqual(auth.sessions);
-      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(4);
+      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(5);
       expect(db.$client.prepare("PRAGMA foreign_key_list(strava_connections)").all()).toMatchObject(
         [{ table: "users", from: "user_id", to: "id" }],
       );
@@ -100,7 +100,18 @@ it("keeps existing profiles and rides byte-identical across the additive migrati
     client.close();
     const db = createDatabase(testServerConfig({ database: { path, migrationsDir: "drizzle" } }));
     expect(db.$client.prepare("SELECT * FROM profiles").all()).toEqual(before.profiles);
-    expect(db.$client.prepare("SELECT * FROM rides").all()).toEqual(before.rides);
+    expect(
+      db.$client
+        .prepare(
+          "SELECT id, user_id, payload_json, payload_hash, receipt_json, assessment_json, started_at, uploaded_at, duration_ms, distance_m, source FROM rides",
+        )
+        .all(),
+    ).toEqual(before.rides);
+    expect(
+      db.$client
+        .prepare("SELECT summary_json, export_tcx, export_hash, export_version FROM rides")
+        .all(),
+    ).toEqual([{ summary_json: null, export_tcx: null, export_hash: null, export_version: null }]);
     db.$client.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });

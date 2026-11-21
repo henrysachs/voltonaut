@@ -149,7 +149,7 @@ async function offlineAndSwitch(page: Readonly<Page>, rideId: string): Promise<v
 async function lostResponse(page: Readonly<Page>, rideId: string): Promise<void> {
   let committed = false;
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright supplies a native Route; only data responses, never auth, are interrupted.
-  await page.route(`${api}/v1/rides`, async (route) => {
+  await page.route(`${api}/v2/rides`, async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();
 
@@ -164,7 +164,7 @@ async function lostResponse(page: Readonly<Page>, rideId: string): Promise<void>
   await claim(page, rideId);
   await expect.poll(() => committed).toBe(true);
   await expect(page.locator(`[data-outbox-id="${rideId}"]`)).toContainText("Dauerhaft vorgemerkt");
-  await page.unroute(`${api}/v1/rides`);
+  await page.unroute(`${api}/v2/rides`);
   await command("restart");
   await page.reload();
   await page.waitForTimeout(2200);
@@ -199,7 +199,7 @@ test("sync signed two-account profile, explicit archive claim, offline reload an
   const third = await record(page);
   await lostResponse(page, third.rideId);
 
-  const response = await fetch(`${api}/v1/rides`, {
+  const response = await fetch(`${api}/v2/rides`, {
     headers: { Authorization: `Bearer ${a.sessionToken}` },
   });
 
