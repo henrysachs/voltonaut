@@ -1,0 +1,116 @@
+name: provision-server
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/provision-server.yml
+      - deploy/provision_env.py
+      - deploy/test_provision_env.py
+      - deploy/compose.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify the provisioning boundary with synthetic credentials
+        run: |
+          docker compose version
+          python3 -m unittest discover -s deploy -p 'test_provision_env.py'
+          python3 -m py_compile deploy/provision_env.py deploy/test_provision_env.py
+
+      - name: Verify foreign-owner rejection in an isolated synthetic directory
+        run: sudo -n python3 -m unittest discover -s deploy -p 'test_provision_env.py' -k test_foreign_owner_is_rejected
+
+  provision:
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate OIDC configuration before installing credentials
+        env:
+          OIDC_ISSUER: ${{ secrets.OIDC_ISSUER }}
+          OIDC_CLIENT_ID: ${{ secrets.OIDC_CLIENT_ID }}
+          OIDC_CLIENT_SECRET: ${{ secrets.OIDC_CLIENT_SECRET }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          sys.path.insert(0, "deploy")
+          import provision_env
+          try:
+              raw = {key: os.environ.get(key, "") for key in provision_env.SECRET_KEYS}
+              raw.update(AUTH_MODE="oidc", CLIENT_ORIGIN=provision_env.CLIENT_ORIGIN,
+                         OIDC_REDIRECT_URI=provision_env.REDIRECT_URI)
+              provision_env.parse_payload(json.dumps(raw).encode())
+          except (provision_env.ProvisionError, UnicodeError):
+              sys.exit("invalid provisioning configuration")
+          PY
+
+      - name: Install dedicated SSH identity and verified host key
+        id: ssh
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          key = os.environ.get("DEPLOY_SSH_KEY", "")
+          known_hosts = os.environ.get("DEPLOY_KNOWN_HOSTS", "")
+          fields = known_hosts.strip().split()
+          if (not key.strip() or len(known_hosts.strip().splitlines()) != 1
+                  or len(fields) != 3 or fields[0] != "voltonaut-production"
+                  or "\0" in key or "\0" in known_hosts):
+              sys.exit("invalid SSH provisioning configuration")
+          directory = Path.home() / ".ssh"
+          directory.mkdir(mode=0o700, exist_ok=True)
+          directory.chmod(0o700)
+          created = []
+          try:
+              for name, value in (("id_ed25519", key), ("known_hosts", known_hosts)):
+                  path = directory / name
+                  fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                  created.append(path)
+                  with os.fdopen(fd, "w") as output:
+                      os.fchmod(output.fileno(), 0o600)
+                      output.write(value.rstrip("\n") + "\n")
+              subprocess.run(["ssh-keygen", "-l", "-f", str(directory / "known_hosts")],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                  output.write("installed=true\n")
+          except (OSError, subprocess.SubprocessError):
+              for path in created:
+                  path.unlink()
+              sys.exit("SSH identity installation failed")
+          PY
+
+      - name: Provision initial private OIDC environment without replacement
+        env:
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          OIDC_ISSUER: ${{ secrets.OIDC_ISSUER }}
+          OIDC_CLIENT_ID: ${{ secrets.OIDC_CLIENT_ID }}
+          OIDC_CLIENT_SECRET: ${{ secrets.OIDC_CLIENT_SECRET }}
+        run: python3 deploy/provision_env.py send "$DEPLOY_USER" "$DEPLOY_HOST"
+
+      - name: Remove runner SSH material
+        if: always() && steps.ssh.outputs.installed == 'true'
+        run: rm -f -- ~/.ssh/id_ed25519 ~/.ssh/known_hosts

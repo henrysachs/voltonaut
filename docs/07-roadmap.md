@@ -33,6 +33,8 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 
 Korrektur vom 20.11.2026: Die beiden E0-opt-Punkte waren versehentlich abgehakt. `SERVER_DEPLOY_ENABLED=false`; Observability ist noch nicht verdrahtet. Die Korrektur dokumentiert offene Arbeit, keine neue Lieferung.
 
+Freigabe vom 21.11.2026: Henry beauftragt Web- und API-Produktionsdeploy sowie eine einmalige sichere OIDC-Provisionierung. Der Betrieb erfolgt ausdrücklich ohne Backup nach [ADR-020](decisions/ADR-020-explicit-production-provisioning.md). [E0-04](specs/E0-04-production-rollout.md) trennt Vorbereitung von tatsächlicher Bereitstellung. Die VPS-Checkbox bleibt bis zum öffentlichen API-Nachweis offen.
+
 Erster Web-Deploy am 20.11.2026: [Sim-Fahrt](https://voltonaut.pages.dev/?sim=1) und [Sniffer](https://voltonaut.pages.dev/debug/ble.html) sind auf dem geprüften `main` veröffentlicht. Die eigene Domain ist eingerichtet. API und automatische Deploys bleiben aus. Nachweise und Grenzen stehen in [E0-02](specs/E0-02-first-web-deploy.md).
 
 ## E1 – Bluetooth-Sniffer, Puls, FTMS lesen

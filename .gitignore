@@ -6,6 +6,7 @@ playwright-report/
 reports/
 .stryker-tmp/
 *.tsbuildinfo
+__pycache__/
 .env
 .env.*
 deploy/deploy.env

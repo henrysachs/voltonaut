@@ -2,6 +2,8 @@
 
 **Status:** Angenommen (2026-11-19). Umfang erweitert am selben Tag: Der Server hostet neben Live-Räumen auch Accounts, Inventar, Ökonomie und Fahrthistorie (ADR-005). Aktualisiert 2026-11-19: Framework **NestJS** statt Fastify, ORM **Drizzle** statt Kysely, Validierung **Zod**. Umsetzung: Server-Gerüst E0 (lokal + CI; echtes VPS-Deploy als optionale Aufgabe E0-opt). **Änderung 19.11.2026:** Betrieb nicht mehr über systemd + Caddy, sondern als Docker-Compose-Projekt hinter dem vorhandenen Traefik (Begründung siehe unten).
 
+Die Backupentscheidung wird am 21.11.2026 durch [ADR-020](ADR-020-explicit-production-provisioning.md) präzisiert. Henry wählt persistenten API-Betrieb ohne Backup. Litestream bleibt nur ausdrücklich auswählbar. Die übrige Hostingentscheidung bleibt unverändert.
+
 ## Kontext
 Gruppenfahrten (gemeinsam auf einer Strecke fahren, andere Avatare sehen) und Accounts mit Inventar/Währung brauchen einen Server. Der Client ist eine statische Seite (ADR-002) und braucht dafür einen Echtzeit-Relay-Dienst mit kleinem Zustand (Räume, letzte Positionen). Henry hat bereits einen Hetzner-VPS.
 

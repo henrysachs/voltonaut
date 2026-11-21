@@ -2,9 +2,9 @@
 set -Eeuo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 temporary="$(mktemp -d "${TMPDIR:-/tmp}/voltonaut-proof.XXXXXX")"
-mkdir "$temporary/data"
+mkdir "$temporary/data" "$temporary/base-data"
 chmod 755 "$temporary"
-chmod 777 "$temporary/data"
+chmod 777 "$temporary/data" "$temporary/base-data"
 project="voltonaut-proof-$(basename "$temporary" | tr '[:upper:].' '[:lower:]-')"
 image="$project:proof"
 replica="$project-replica"
@@ -15,9 +15,15 @@ unset LITESTREAM_BUCKET LITESTREAM_ENDPOINT LITESTREAM_ACCESS_KEY_ID LITESTREAM_
 export VOLTONAUT_IMAGE="$project" VOLTONAUT_TAG=proof
 compose() {
   docker compose -p "$project" --env-file "$temporary/local.env" \
-    -f "$root/deploy/compose.yaml" -f "$temporary/override.yaml" "$@"
+    -f "$root/deploy/compose.yaml" -f "$root/deploy/compose.backup.yaml" -f "$temporary/override.yaml" "$@"
+}
+base_compose() {
+  docker compose -p "$project-base" --env-file "$temporary/base.env" \
+    -f "$root/deploy/compose.yaml" -f "$temporary/base-override.yaml" "$@"
 }
 cleanup() {
+  base_compose logs --no-color >"$temporary/base-containers.log" 2>&1 || true
+  base_compose down --volumes >"$temporary/base-cleanup.log" 2>&1 || true
   compose logs --no-color >"$temporary/containers.log" 2>&1 || true
   compose down --volumes >"$temporary/cleanup.log" 2>&1 || true
   docker rm -f "$project-restored-server" >>"$temporary/cleanup.log" 2>&1 || true
@@ -27,8 +33,8 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-printf 'project=%s\nimage=%s\nreplica=%s\nrestored=%s\nlegacy=%s\n' \
-  "$project" "$image" "$replica" "$restored" "$legacy" >"$temporary/resources.txt"
+printf 'project=%s\nbase-project=%s\nimage=%s\nreplica=%s\nrestored=%s\nlegacy=%s\n' \
+  "$project" "$project-base" "$image" "$replica" "$restored" "$legacy" >"$temporary/resources.txt"
 cat >"$temporary/local.env" <<ENV
 AUTH_MODE=disabled
 CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev
@@ -42,6 +48,23 @@ LITESTREAM_ACCESS_KEY_ID=$project
 LITESTREAM_SECRET_ACCESS_KEY='$project-local-only'
 ENV
 chmod 600 "$temporary/local.env"
+sed -e '/^LITESTREAM_/d' -e 's/^AUTH_MODE=disabled$/AUTH_MODE=oidc/' \
+  "$temporary/local.env" >"$temporary/base.env"
+chmod 600 "$temporary/base.env"
+cat >"$temporary/base-override.yaml" <<YAML
+services:
+  server:
+    labels:
+      traefik.enable: "false"
+    volumes:
+      - $temporary/base-data:/proof
+      - $root/deploy/verify-data.ts:/verify-data.ts:ro
+networks:
+  traefik:
+    name: $project-base-private
+    external: false
+    internal: true
+YAML
 cat >"$temporary/litestream.yml" <<'YAML'
 socket:
   enabled: true
@@ -79,6 +102,8 @@ networks:
     internal: true
 YAML
 compose config --quiet
+base_compose config --quiet
+test "$(base_compose config --services)" = server
 sed '/^AUTH_MODE=/d' "$temporary/local.env" >"$temporary/missing.env"
 if docker compose -p "$project" --env-file "$temporary/missing.env" \
   -f "$root/deploy/compose.yaml" config --quiet >"$temporary/missing-mode.log" 2>&1; then
@@ -88,6 +113,18 @@ fi
 docker build -f "$root/deploy/Dockerfile" -t "$image" "$root" >"$temporary/build.log" 2>&1
 docker image inspect --format 'image-id={{.Id}} platform={{.Os}}/{{.Architecture}} user={{.Config.User}}' \
   "$image" >>"$temporary/resources.txt"
+base_compose up -d --wait --wait-timeout 90 >"$temporary/base-start.log" 2>&1
+test "$(base_compose ps --services --status running)" = server
+test "$(docker ps -a --filter "label=com.docker.compose.project=$project-base" --format '{{.Label "com.docker.compose.service"}}')" = server
+base_compose exec -T server node -e \
+  "const a=require('node:assert/strict');a.equal(Object.keys(process.env).some(k=>k.startsWith('LITESTREAM_')),false);fetch('http://127.0.0.1:3000/v1/auth/config').then(async r=>a.deepEqual(await r.json(),{mode:'oidc'}))"
+base_compose exec -T server node /verify-data.ts seed
+base_compose restart server >"$temporary/base-restart.log" 2>&1
+base_compose up -d --wait --wait-timeout 90 >>"$temporary/base-restart.log" 2>&1
+base_compose exec -T server node /verify-data.ts verify
+printf 'PASS. Base deployment has only the API, no S3 variables, persistent node-owned SQLite and OIDC. No backup.\n' \
+  | tee "$temporary/base-result.txt"
+base_compose stop >"$temporary/base-stop.log" 2>&1
 docker pull litestream/litestream:0.5.18 >"$temporary/pull.log" 2>&1
 docker image inspect --format '{{json .Config.Entrypoint}} {{json .Config.User}}' \
   litestream/litestream:0.5.18 >"$temporary/litestream-image.txt"
@@ -164,4 +201,4 @@ docker run -d --name "$project-restored-server" --network none \
 docker exec "$project-restored-server" node --input-type=module -e \
   "for(let n=0;;n++){try{const r=await fetch('http://127.0.0.1:3000/healthz');if(r.ok)break;}catch{}if(n>=100)process.exit(1);await new Promise(r=>setTimeout(r,100));}"
 docker exec "$project-restored-server" node /verify-data.ts verify
-printf 'PASS. Actual image, node-owned SQLite, migrations, restart and Litestream filesystem restore. NOT an external S3 backup.\n' | tee "$temporary/result.txt"
+printf 'PASS. Actual image, base without backup, node-owned SQLite, migrations, restart and optional Litestream filesystem restore. NOT an external S3 backup.\n' | tee "$temporary/result.txt"
