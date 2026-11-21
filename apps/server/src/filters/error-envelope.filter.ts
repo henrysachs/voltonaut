@@ -55,6 +55,7 @@ export class ErrorEnvelopeFilter implements ExceptionFilter {
   ): void {
     const response = host.switchToHttp().getResponse<EnvelopeResponse>();
     const resolved = resolveError(exception);
+    response.set("Cache-Control", "no-store");
 
     if (resolved.retryAfterS !== undefined) {
       response.set("Retry-After", `${resolved.retryAfterS}`);

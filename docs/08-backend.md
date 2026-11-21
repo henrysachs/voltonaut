@@ -59,6 +59,16 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 | `catalog/`                                                                                                                                                                                                                                              | Item-Katalog, Level-Tabelle aus `@voltonaut/rules`                                  | read-only                                                                                               |
 | Regel: ein Modul besitzt seine Tabellen (Drizzle-Schema-Datei liegt im Modul); andere Module nutzen dessen exportierten Service, nie fremde Tabellen direkt (per dependency-cruiser: `apps/server/src/<a>/**/*.schema.ts` nur aus `<a>/` importierbar). |
 
+## Mitgliedschaft und Verwaltung
+
+[E5-10](specs/E5-10-membership-admin.md) und [ADR-021](decisions/ADR-021-membership-and-administration.md) trennen Normal/Premium/Pro, das zusätzliche VIP-Kennzeichen und die Rolle `user` oder `admin`. `accounts` besitzt alle drei Angaben in `account_status`. Eine fehlende Zeile bedeutet Normal, nicht VIP und nicht Admin. Stufen und VIP verändern vorerst weder Preise noch Spielrechte oder Strava-Freigaben.
+
+`GET /v1/me/account-status` liefert den eigenen Status. `GET /v1/admin/users` listet höchstens 50 aktive Konten mit opakem ID-Cursor. `PATCH /v1/admin/users/:userId/membership` akzeptiert ausschließlich `tier` und `vip`, verlangt den exakten Origin und prüft Actor sowie Ziel innerhalb einer unmittelbaren Schreibtransaktion erneut. Mitgliedschaftsänderungen überschreiben keine Rollen. Antworten einschließlich Fehlern sind `no-store`. Auth-Session, Profil- und Aufnahmeverträge bleiben unverändert.
+
+Nur der Operatorbefehl `node dist/main.js admin grant <bestehendeUserId>` vergibt die Rolle. `admin list [cursor]` zeigt die begrenzte Kontoliste, `admin revoke <bestehendeUserId>` entzieht die Rolle. Der Befehl startet weder HTTP-Server noch Strava-Scheduler. E-Mail dient der Anzeige, niemals der automatischen Zuordnung. Der erste Login erhält keine Adminrechte. Henrys tatsächliches bestehendes Konto muss vor dem ersten Produktionsgrant bestätigt werden.
+
+Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitzer unter `AccountSync` hält die Operation bis zum autoritativen Nachlesen gesperrt. Gehaltene Refresh-, Next- und Save-Aktionen dürfen diese Bestätigung nicht überholen. Ein verlorener Schreibbeleg bleibt unbestätigt, ohne automatischen Retry. Die gebaute Gesamtprüfung und unabhängige Gegenproben bestehen lokal. Bereitstellung und persönlicher Erstzugang sind noch offen.
+
 ## Datenmodell (Skizze)
 
 ### Eigene Profile und Fahrtenannahme

@@ -43,6 +43,13 @@
       "when": 1795229379793,
       "tag": "0005_strava_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1795255594014,
+      "tag": "0006_account_membership_admin",
+      "breakpoints": true
     }
   ]
 }
