@@ -1,7 +1,14 @@
+/// <reference types="node" />
+/// <reference lib="es2023" />
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { DEFAULT_RIDER_PROFILE, RideListSchema, SessionResponseSchema } from "@voltonaut/shared";
+import {
+  archivedRideTrack,
+  DEFAULT_RIDER_PROFILE,
+  RideListSchema,
+  SessionResponseSchema,
+} from "@voltonaut/shared";
 import { openGameMenu } from "../e2e/helpers/gameMenu.js";
 
 const web = process.env["WEB_ORIGIN"] ?? "http://127.0.0.1:5193";
@@ -47,6 +54,11 @@ async function archive() {
   return (await openRideDatabase(indexedDB)).list();
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the Page lifecycle handle; projection uses the already parsed archive view.
+async function archiveTracks(page: Readonly<Page>) {
+  return (await page.evaluate(archive)).map((ride) => archivedRideTrack(ride));
+}
+
 async function localProfileName() {
   const { openProfileDatabase } = await import("../src/sync/profile-database.js");
 
@@ -57,13 +69,13 @@ async function localProfileName() {
 async function record(page: Readonly<Page>) {
   await page.goto(`${web}/?sim=1&debug=1`);
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
-  const before = await page.evaluate(archive);
+  const before = await archiveTracks(page);
   await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
   await page.waitForTimeout(1500);
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("Lokal gespeichert");
-  const after = await page.evaluate(archive);
+  const after = await archiveTracks(page);
   const ride = after.find((entry) => !before.some((old) => old.rideId === entry.rideId));
   assert.ok(ride);
 
@@ -205,7 +217,7 @@ test("sync signed two-account profile, explicit archive claim, offline reload an
   await page.waitForTimeout(1500);
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("Lokal gespeichert");
-  const second = (await page.evaluate(archive)).find((ride) => ride.rideId !== first.rideId);
+  const second = (await archiveTracks(page)).find((ride) => ride.rideId !== first.rideId);
   assert.ok(second);
   expect(second.metadata.profile.displayName).toBe("Frozen next");
   await offlineAndSwitch(page, second.rideId);

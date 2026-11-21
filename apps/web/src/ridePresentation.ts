@@ -1,6 +1,7 @@
 import type { RideSnapshot } from "@voltonaut/engine";
 import { TEST_ROUTES } from "@voltonaut/engine";
-import type { DeviceEvent, LocalRideMetadata } from "@voltonaut/shared";
+import type { LocalRideMetadata } from "@voltonaut/shared";
+import type { RecordingControls } from "./game/rideCaptureProtocol.js";
 
 import { setupRideRecording } from "./rideRecording.js";
 import { startRideScene } from "./world/scene.js";
@@ -13,25 +14,14 @@ interface RidePresentationOptions {
   readonly clockScale: number;
   readonly sceneHost: Readonly<Element> | null;
   readonly debug: boolean;
+  readonly recording: RecordingControls;
 }
 
 export function setupRidePresentation(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM hosts retain native mutable members; the renderer owns their children.
   options: Readonly<RidePresentationOptions>,
-): (event: DeviceEvent) => void {
-  const recordEvent = setupRideRecording({
-    nowMs: () => performance.now(),
-    utcNow: () => new Date().toISOString(),
-    newId: () => crypto.randomUUID(),
-    metadata: {
-      source: options.source,
-      routeId: options.routeId,
-      routeRevision: "1",
-      physicsClockScale: options.clockScale,
-      profile: options.profile,
-    },
-    distanceM: () => options.snapshot()?.distanceM,
-  });
+): void {
+  setupRideRecording(options.recording);
 
   const routeData = TEST_ROUTES[options.routeId];
 
@@ -44,6 +34,4 @@ export function setupRidePresentation(
       debug: options.debug,
     });
   }
-
-  return recordEvent;
 }

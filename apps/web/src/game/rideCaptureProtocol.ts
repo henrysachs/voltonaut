@@ -1,0 +1,49 @@
+import type { CapturedRide, CaptureUnavailabilityReason } from "@voltonaut/shared";
+
+export type CaptureAvailability =
+  | { readonly kind: "journal" }
+  | { readonly kind: "local_only"; readonly reason: CaptureUnavailabilityReason };
+
+export type CaptureView =
+  | { readonly kind: "unavailable"; readonly message: string }
+  | { readonly kind: "idle"; readonly availability: CaptureAvailability }
+  | {
+      readonly kind: "recording";
+      readonly rideId: string;
+      readonly elapsedMs: number;
+      readonly availability: CaptureAvailability;
+    }
+  | {
+      readonly kind: "completed";
+      readonly rideId: string;
+      readonly availability: CaptureAvailability;
+    };
+
+export type CaptureCommand =
+  | { readonly kind: "start"; readonly rideId: string }
+  | { readonly kind: "finish"; readonly rideId: string }
+  | { readonly kind: "discard"; readonly rideId: string }
+  | { readonly kind: "release"; readonly rideId: string };
+
+export type CaptureResult =
+  | { readonly kind: "state"; readonly view: CaptureView }
+  | { readonly kind: "finished"; readonly capture: CapturedRide; readonly view: CaptureView }
+  | { readonly kind: "failed"; readonly message: string; readonly view: CaptureView };
+
+/** Async controls only: the worker owns time, raw readings, samples and completion. */
+export interface RecordingControls {
+  readonly state: () => CaptureView;
+  readonly subscribe: (listener: (view: CaptureView) => void) => () => void;
+  readonly start: () => Promise<void>;
+  readonly finish: () => Promise<CapturedRide>;
+  readonly discard: () => Promise<void>;
+  readonly release: (rideId: string) => Promise<void>;
+}
+
+export function isNewCaptureRequest(requestId: number, lastRequestId: number): boolean {
+  return Number.isSafeInteger(requestId) && requestId > lastRequestId;
+}
+
+export function validCaptureReading(value: number | undefined, max: number): number | null {
+  return value !== undefined && Number.isFinite(value) && value >= 0 && value <= max ? value : null;
+}
