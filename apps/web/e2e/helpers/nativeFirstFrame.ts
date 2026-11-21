@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { startGpuScheduling } from "./gpuScheduling.js";
 
 export async function retainNativeFailureImage(
   page: Readonly<Pick<Page, "screenshot">>,
@@ -66,14 +67,12 @@ async function finishTrace(
   return text;
 }
 
-function observePage(page: Readonly<Pick<Page, "on">>) {
+function observePage(page: Readonly<Pick<Page, "on">>, started: number) {
   const observations: {
     readonly event: string;
     readonly elapsedMs: number;
     readonly value: string;
   }[] = [];
-
-  const started = performance.now();
 
   const note = (event: string, value: string): void => {
     if (observations.length < 40)
@@ -129,7 +128,9 @@ export async function startNativeCapture(
   if (browser === null) throw new Error("Native capture requires Chromium");
 
   const session = await browser.newBrowserCDPSession();
-  const observations = observePage(page);
+  const startedMs = performance.now();
+  const observations = observePage(page, startedMs);
+  const stopGpuScheduling = startGpuScheduling(session, startedMs);
 
   await page.addInitScript(observeRenderReplies);
 
@@ -142,6 +143,7 @@ export async function startNativeCapture(
 
   return async () => {
     const path = testInfo.outputPath("native-first-frame.json");
+    const gpuScheduling = await stopGpuScheduling();
 
     await writeFile(path, await finishTrace(session));
     process.stderr.write(
@@ -151,6 +153,7 @@ export async function startNativeCapture(
         verdict: "see-final-playwright-result",
         architecture: process.arch,
         observations,
+        gpuScheduling,
       })}\n`,
     );
     process.stderr.write(

@@ -8,7 +8,7 @@ Issue #26 durch einen passenden roten nativen x86-Lauf erklären und denselben F
 
 Isolierter Zweig `fix/render-first-frame` ab `916edbb`. Zunächst ausschließlich zusätzliche Browserdiagnose. Kein Produktionsdeploy, kein Zugriff auf laufenden Fahrstand, Geräte oder Nutzerdaten. Originaler Menüfall und alle 49 Browserfälle bleiben unverändert erhalten.
 
-Die Diagnose zeichnet den ursprünglichen Menüfall während des unveränderten Gesamtgates auf. Sein Testkörper, seine Assertions und seine Position zwischen den übrigen 49 Fällen bleiben erhalten. Nur die importierte Test-Fixture startet die native Chromium-Aufzeichnung. Die Aufzeichnung verändert Timing und gilt nicht als unveränderter Performancebeleg. JSON-Zusammenfassungen im CI-Log erhalten Threadnamen und native Ereignisse. Eine Fehleraufnahme erfolgt erst nach dem ursprünglichen Fehler und nach Ende der nativen Aufzeichnung. PNGs bis 128.000 Bytes bleiben unverändert und vollständig im CI-Log erhalten, weil der bestehende Workflow keine Artefakte hochlädt.
+Die Diagnose zeichnet den ursprünglichen Menüfall während des unveränderten Gesamtgates auf. Sein Testkörper, seine Assertions und seine Position zwischen den übrigen 49 Fällen bleiben erhalten. Eine Test-Fixture startet die native Chromium-Aufzeichnung. Die Aufzeichnung verändert Timing und gilt nicht als unveränderter Performancebeleg. JSON-Zusammenfassungen im CI-Log erhalten Threadnamen und native Ereignisse. Eine Fehleraufnahme erfolgt erst nach dem ursprünglichen Fehler und nach Ende der nativen Aufzeichnung. PNGs bis 128.000 Bytes bleiben unverändert und vollständig im CI-Log erhalten, weil der bestehende Workflow keine Artefakte hochlädt.
 
 ## Abnahmekriterien
 
