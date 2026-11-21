@@ -7,6 +7,7 @@ import { writeFile } from "node:fs/promises";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { startGpuScheduling } from "./gpuScheduling.js";
+import { nativeSourceStamp } from "./nativeSource.js";
 
 export async function retainNativeFailureImage(
   page: Readonly<Pick<Page, "screenshot">>,
@@ -123,6 +124,7 @@ export async function startNativeCapture(
   page: Readonly<Pick<Page, "context" | "on" | "addInitScript">>,
   testInfo: Readonly<Pick<TestInfo, "outputPath" | "title" | "status">>,
 ): Promise<() => Promise<void>> {
+  const source = await nativeSourceStamp();
   const browser = page.context().browser();
 
   if (browser === null) throw new Error("Native capture requires Chromium");
@@ -157,6 +159,7 @@ export async function startNativeCapture(
         observations,
         gpuScheduling,
         gpuDevices,
+        source,
       })}\n`,
     );
     process.stderr.write(
