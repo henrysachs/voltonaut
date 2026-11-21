@@ -1,26 +1,11 @@
-import {
-  rideTcxFilename,
-  serializeRideTcx,
-  type DeviceEvent,
-  type LocalRideMetadata,
-} from "@voltonaut/shared";
+import { rideTcxFilename, serializeRideTcx } from "@voltonaut/shared";
 
-import { createRideRecorder } from "./game/rideRecorder.js";
+import type { RecordingControls } from "./game/rideCaptureProtocol.js";
 import { openRideDatabase } from "./sync/rideDatabase.js";
 import { createRideStore } from "./sync/rideStore.js";
 import { mountRideRecording } from "./ui/rideRecording.js";
 
-interface RecordingSetup {
-  readonly nowMs: () => number;
-  readonly utcNow: () => string;
-  readonly newId: () => string;
-  readonly metadata: LocalRideMetadata;
-  readonly distanceM: () => number | undefined;
-}
-
-export function setupRideRecording(options: RecordingSetup): (event: DeviceEvent) => void {
-  const recorder = createRideRecorder(options);
-
+export function setupRideRecording(recorder: RecordingControls): void {
   const store = Promise.resolve()
     .then(() => openRideDatabase(indexedDB))
     .then(createRideStore);
@@ -28,9 +13,6 @@ export function setupRideRecording(options: RecordingSetup): (event: DeviceEvent
   mountRideRecording({
     recorder,
     loadStore: () => store,
-    distanceM: options.distanceM,
     exportRide: (ride) => ({ filename: rideTcxFilename(ride), xml: serializeRideTcx(ride) }),
   });
-
-  return recorder.ingest;
 }

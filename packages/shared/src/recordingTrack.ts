@@ -13,13 +13,25 @@ interface Reading {
 
 type ProjectionWindow =
   | { readonly kind: "waiting" }
+  | { readonly kind: "armed"; readonly rideId: string }
   | {
       readonly kind: "active";
+      readonly rideId: string;
       readonly startMs: number;
       readonly baselineM: number;
       readonly samples: LocalRidePoint[];
       lastBoundaryMs: number;
     };
+
+type RecordingBoundary = Extract<RecordingEntryV2, readonly [number, number, "boundary", string]>;
+
+export interface RecordingTrackProjection {
+  readonly ingest: (entry: RecordingEntryV2) => void;
+  readonly start: (rideId: string) => void;
+  readonly boundary: (entry: RecordingBoundary, observation: ReplayObservationV2) => void;
+  readonly invalidate: (channel: "powerW" | "cadenceRpm" | "hrBpm") => void;
+  readonly finish: () => RideTrack;
+}
 
 const FRESH_MS = 2500;
 
@@ -37,7 +49,25 @@ class TrackProjection {
   private continuity: "continuous" | "gap" = "continuous";
   private window: ProjectionWindow = { kind: "waiting" };
 
-  constructor(private readonly recording: RecordingV2) {}
+  constructor(private readonly recording: Pick<RecordingV2, "initializedAt" | "initialization">) {}
+
+  start(rideId: string): void {
+    this.window = { kind: "armed", rideId };
+    this.continuity = "continuous";
+  }
+
+  invalidate(channel: "powerW" | "cadenceRpm" | "hrBpm"): void {
+    if (channel === "hrBpm") {
+      this.heartRate = undefined;
+
+      return;
+    }
+
+    if (channel === "powerW") this.power = undefined;
+    else this.cadence = undefined;
+
+    if (this.window.kind === "active") this.continuity = "gap";
+  }
 
   private missingTrainer(atMs: number): boolean {
     return (
@@ -76,12 +106,13 @@ class TrackProjection {
     }
   }
 
-  boundary(entry: RecordingEntryV2, observation: ReplayObservationV2): void {
+  boundary(entry: RecordingBoundary, observation: ReplayObservationV2): void {
     const atMs = entry[1];
 
-    if (entry[0] === this.recording.window.startSeq) {
+    if (this.window.kind === "armed" && entry[3] === "start") {
       this.window = {
         kind: "active",
+        rideId: this.window.rideId,
         startMs: atMs,
         baselineM: observation.snapshot.distanceM,
         samples: [],
@@ -133,7 +164,7 @@ class TrackProjection {
     const initialization = this.recording.initialization;
 
     return RideTrackSchema.parse({
-      rideId: this.recording.rideId,
+      rideId: state.rideId,
       startedAt: new Date(
         Date.parse(this.recording.initializedAt) +
           state.startMs -
@@ -151,9 +182,16 @@ class TrackProjection {
   }
 }
 
+export function createRecordingTrackProjection(
+  initialization: Pick<RecordingV2, "initializedAt" | "initialization">,
+): RecordingTrackProjection {
+  return new TrackProjection(initialization);
+}
+
 export function projectRecordingTrack(recording: RecordingV2): RideTrack {
-  const projection = new TrackProjection(recording);
+  const projection = createRecordingTrackProjection(recording);
   const observations = recording.observations.values();
+  projection.start(recording.rideId);
 
   for (const entry of recording.entries) {
     projection.ingest(entry);

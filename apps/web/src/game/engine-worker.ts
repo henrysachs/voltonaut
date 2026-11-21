@@ -10,8 +10,9 @@ export function startEngineWorker(
   cancel: (intervalId: number) => void = (intervalId) => {
     self.clearInterval(intervalId);
   },
+  timeOriginMs: number = performance.timeOrigin,
 ): void {
-  bindEngineWorker(scope, nowMs, schedule, cancel);
+  bindEngineWorker(scope, nowMs, schedule, cancel, timeOriginMs);
 }
 
 // SAFETY: inside a module worker, self is the DedicatedWorkerGlobalScope; the

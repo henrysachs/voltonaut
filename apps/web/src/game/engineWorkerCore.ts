@@ -1,31 +1,57 @@
-import type { DeviceEvent, RideEvent, RiderProfile, TrainerCommand } from "@voltonaut/shared";
+import {
+  RiderProfileSchema,
+  type DeviceEvent,
+  type RideEvent,
+  type RiderProfile,
+  type TrainerCommand,
+} from "@voltonaut/shared";
+import {
+  createEngine,
+  createRoute,
+  TEST_ROUTES,
+  type Engine,
+  type RideSnapshot,
+} from "@voltonaut/engine";
 
-import type { RideSnapshot } from "@voltonaut/engine";
-import { createEngine, createRoute, TEST_ROUTES, type Engine } from "@voltonaut/engine";
+import { createRideRecorder, type RideRecorder } from "./rideRecorder.js";
+import type { CaptureCommand, CaptureResult, CaptureView } from "./rideCaptureProtocol.js";
+import { isNewCaptureRequest } from "./rideCaptureProtocol.js";
 
-/** Main thread -> worker messages. */
 export type EngineWorkerRequest =
   | {
       readonly type: "engine.init";
+      readonly actorId: string;
+      readonly source: "sim" | "ble";
       readonly routeId: string;
       readonly profile: RiderProfile;
-      /** Virtual seconds per real second (sim test clock: ?clock=fast => 20). */
       readonly clockScale: number;
     }
-  | { readonly type: "engine.ingest"; readonly event: DeviceEvent }
-  | { readonly type: "engine.dispose" };
+  | { readonly type: "engine.ingest"; readonly actorId: string; readonly event: DeviceEvent }
+  | {
+      readonly type: "recording.command";
+      readonly actorId: string;
+      readonly requestId: number;
+      readonly command: CaptureCommand;
+    }
+  | { readonly type: "engine.dispose"; readonly actorId: string };
 
-/** Worker -> main thread messages. */
 export type EngineWorkerResponse =
   | {
       readonly type: "engine.update";
+      readonly actorId: string;
       readonly snapshot: RideSnapshot;
       readonly events: readonly RideEvent[];
       readonly commands: readonly TrainerCommand[];
+      readonly recording: CaptureView;
     }
-  | { readonly type: "engine.initFailed"; readonly message: string };
+  | {
+      readonly type: "recording.reply";
+      readonly actorId: string;
+      readonly requestId: number;
+      readonly result: CaptureResult;
+    }
+  | { readonly type: "engine.initFailed"; readonly actorId: string; readonly message: string };
 
-/** Minimal structural view of the worker global scope; the DOM one satisfies it. */
 export interface WorkerScopeLike {
   readonly postMessage: (message: EngineWorkerResponse) => void;
   readonly addEventListener: (
@@ -38,140 +64,213 @@ export type ScheduleInterval = (handler: () => void, intervalMs: number) => numb
 
 export type CancelInterval = (intervalId: number) => void;
 
-/** The worker wakes the accumulator at a fixed real interval (spec E3-01 AK9). */
 export const WAKE_INTERVAL_MS = 50;
 
-interface EngineWorkerState {
-  engine: Engine | undefined;
-  clockScale: number;
+interface Actor {
+  readonly actorId: string;
+  readonly engine: Engine;
+  readonly recorder: RideRecorder;
+  readonly clockScale: number;
   lastWakeMs: number | undefined;
+  lastRequestId: number;
   intervalId: number | undefined;
 }
 
-function createWake(
-  scope: WorkerScopeLike,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The worker driver owns and updates its clock and engine lifecycle state.
-  state: EngineWorkerState,
-  nowMs: () => number,
-): () => void {
-  return (): void => {
-    const engine = state.engine;
+function initializeActor(
+  message: Extract<EngineWorkerRequest, { readonly type: "engine.init" }>,
+  initializedWorkerMs: number,
+  timeOriginMs: number,
+): Actor {
+  const routeData = TEST_ROUTES[message.routeId];
 
-    if (engine === undefined) {
-      return;
-    }
+  if (routeData === undefined) throw new Error(`unknown route ${message.routeId}`);
 
-    const now = nowMs();
+  if (!Number.isFinite(message.clockScale) || message.clockScale < 1 || message.clockScale > 20)
+    throw new Error("Invalid engine clock scale");
+  const profile = RiderProfileSchema.parse(message.profile);
+  const engine = createEngine({ route: createRoute(routeData), profile });
 
-    if (state.lastWakeMs === undefined) {
-      state.lastWakeMs = now;
+  const recorder = createRideRecorder({
+    initializedAt: new Date(timeOriginMs + initializedWorkerMs).toISOString(),
+    initialization: {
+      physicsRevision: "engine-v1",
+      routeId: message.routeId,
+      routeRevision: "1",
+      profile,
+      source: message.source,
+      clockScale: message.clockScale,
+      workerTimeOriginMs: timeOriginMs,
+      initializedWorkerMs,
+    },
+  });
 
-      return;
-    }
-
-    const elapsedRealS = (now - state.lastWakeMs) / 1000;
-
-    state.lastWakeMs = now;
-    engine.advance(elapsedRealS * state.clockScale);
-
-    postUpdate(scope, engine);
+  return {
+    actorId: message.actorId,
+    engine,
+    recorder,
+    clockScale: message.clockScale,
+    lastWakeMs: undefined,
+    lastRequestId: 0,
+    intervalId: undefined,
   };
 }
 
-function postUpdate(scope: WorkerScopeLike, engine: Engine): void {
-  scope.postMessage({
-    type: "engine.update",
-    snapshot: engine.snapshot(),
-    events: engine.drainEvents(),
-    commands: engine.drainCommands(),
-    // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Worker postMessage has no targetOrigin; the lint reports this multiline call at its closing parenthesis.
-  });
+class WorkerDriver {
+  private actor: Actor | undefined;
+
+  constructor(
+    private readonly scope: WorkerScopeLike,
+    private readonly nowMs: () => number,
+    private readonly schedule: ScheduleInterval,
+    private readonly cancel: CancelInterval,
+    private readonly timeOriginMs: number,
+  ) {}
+
+  private update(actor: Readonly<Actor>, atMs: number): void {
+    const snapshot = actor.engine.snapshot();
+    // Exactly one drain. The same arrays feed the journal and the real presentation/command path.
+    const events = actor.engine.drainEvents();
+    const commands = actor.engine.drainCommands();
+    actor.recorder.outputs(events, commands);
+    actor.recorder.sample(atMs, snapshot);
+    this.post({
+      type: "engine.update",
+      actorId: actor.actorId,
+      snapshot,
+      events,
+      commands,
+      recording: actor.recorder.view(atMs),
+    });
+  }
+
+  private post(message: EngineWorkerResponse): void {
+    // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Dedicated worker messages have no targetOrigin.
+    this.scope.postMessage(message);
+  }
+
+  readonly wake = (): void => {
+    const actor = this.actor;
+
+    if (actor === undefined) return;
+    const atMs = this.nowMs();
+
+    if (actor.lastWakeMs === undefined) {
+      actor.lastWakeMs = atMs;
+      actor.recorder.arm(atMs);
+
+      return;
+    }
+
+    const elapsedRealS = (atMs - actor.lastWakeMs) / 1000;
+    actor.lastWakeMs = atMs;
+    actor.recorder.advance(atMs, elapsedRealS);
+    actor.engine.advance(elapsedRealS * actor.clockScale);
+    this.update(actor, atMs);
+  };
+
+  private init(message: Extract<EngineWorkerRequest, { readonly type: "engine.init" }>): void {
+    if (this.actor !== undefined) {
+      this.post({
+        type: "engine.initFailed",
+        actorId: message.actorId,
+        message: "Engine session already initialized; dispose explicitly first.",
+      });
+
+      return;
+    }
+
+    try {
+      const initializedWorkerMs = this.nowMs();
+      const actor = initializeActor(message, initializedWorkerMs, this.timeOriginMs);
+
+      this.actor = actor;
+      actor.intervalId = this.schedule(this.wake, WAKE_INTERVAL_MS);
+      this.update(actor, initializedWorkerMs);
+    } catch (cause) {
+      this.post({
+        type: "engine.initFailed",
+        actorId: message.actorId,
+        message: cause instanceof Error ? cause.message : "Engine initialization failed",
+      });
+    }
+  }
+
+  handle(message: EngineWorkerRequest): void {
+    if (message.type === "engine.init") {
+      this.init(message);
+    } else {
+      this.handleActive(message);
+    }
+  }
+
+  private handleActive(
+    message: Exclude<EngineWorkerRequest, { readonly type: "engine.init" }>,
+  ): void {
+    const actor = this.actor;
+
+    if (actor === undefined || message.actorId !== actor.actorId) return;
+
+    if (message.type === "engine.ingest") {
+      if (actor.intervalId === undefined) return;
+      actor.recorder.ingest(message.event, this.nowMs());
+      // Capture bounds never clamp or rewrite the actual physics input.
+      actor.engine.ingest(message.event);
+
+      return;
+    }
+
+    if (message.type === "recording.command") {
+      const atMs = this.nowMs();
+
+      const result: CaptureResult =
+        isNewCaptureRequest(message.requestId, actor.lastRequestId) &&
+        (actor.intervalId !== undefined || message.command.kind !== "start")
+          ? actor.recorder.command(message.command, atMs, actor.engine.snapshot())
+          : {
+              kind: "failed",
+              message: "Veralteter oder doppelter Aufnahmebefehl.",
+              view: actor.recorder.view(atMs),
+            };
+
+      if (Number.isSafeInteger(message.requestId))
+        actor.lastRequestId = Math.max(actor.lastRequestId, message.requestId);
+      this.post({
+        type: "recording.reply",
+        actorId: actor.actorId,
+        requestId: message.requestId,
+        result,
+      });
+
+      if (actor.intervalId === undefined && actor.recorder.view(atMs).kind === "idle")
+        this.actor = undefined;
+
+      return;
+    }
+
+    this.dispose();
+  }
+
+  private dispose(): void {
+    const actor = this.actor;
+
+    if (actor === undefined) return;
+
+    if (actor.intervalId !== undefined) this.cancel(actor.intervalId);
+    actor.intervalId = undefined;
+
+    if (actor.recorder.view(this.nowMs()).kind === "idle") this.actor = undefined;
+  }
 }
 
-function handleInit(
-  scope: WorkerScopeLike,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Initialization installs the engine and timer into worker-owned lifecycle state.
-  state: EngineWorkerState,
-  wake: () => void,
-  schedule: ScheduleInterval,
-  message: {
-    readonly routeId: string;
-    readonly profile: RiderProfile;
-    readonly clockScale: number;
-  },
-): void {
-  const routeData = TEST_ROUTES[message.routeId];
-
-  if (routeData === undefined) {
-    // oxlint-disable-next-line unicorn/require-post-message-target-origin -- worker-scope postMessage has no targetOrigin parameter; that rule only applies to window messaging.
-    scope.postMessage({ type: "engine.initFailed", message: `unknown route ${message.routeId}` });
-
-    return;
-  }
-
-  const engine = createEngine({ route: createRoute(routeData), profile: message.profile });
-
-  state.engine = engine;
-  state.clockScale = message.clockScale > 0 ? message.clockScale : 1;
-  state.lastWakeMs = undefined;
-  state.intervalId = schedule(wake, WAKE_INTERVAL_MS);
-
-  // Initial update so the main thread renders immediately.
-  postUpdate(scope, engine);
-}
-
-function handleMessage(
-  scope: WorkerScopeLike,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Init and dispose mutate the worker-owned engine and timer lifecycle.
-  state: EngineWorkerState,
-  wake: () => void,
-  schedule: ScheduleInterval,
-  cancel: CancelInterval,
-  message: EngineWorkerRequest,
-): void {
-  if (message.type === "engine.init") {
-    handleInit(scope, state, wake, schedule, message);
-
-    return;
-  }
-
-  if (message.type === "engine.ingest") {
-    state.engine?.ingest(message.event);
-
-    return;
-  }
-
-  // Remaining message type: engine.dispose.
-  if (state.intervalId !== undefined) {
-    cancel(state.intervalId);
-    state.intervalId = undefined;
-  }
-
-  state.engine = undefined;
-}
-
-/**
- * Binds the engine driver to a worker scope: time enters exclusively as
- * elapsed seconds (accumulator with the 120-tick catch-up cap inside the
- * engine); BLE events arrive via postMessage because Bluetooth only runs on
- * the main thread.
- */
 export function bindEngineWorker(
   scope: WorkerScopeLike,
   nowMs: () => number,
   schedule: ScheduleInterval,
   cancel: CancelInterval,
+  timeOriginMs = 0,
 ): void {
-  const state: EngineWorkerState = {
-    engine: undefined,
-    clockScale: 1,
-    lastWakeMs: undefined,
-    intervalId: undefined,
-  };
-
-  const wake = createWake(scope, state, nowMs);
-
+  const driver = new WorkerDriver(scope, nowMs, schedule, cancel, timeOriginMs);
   scope.addEventListener("message", (event) => {
-    handleMessage(scope, state, wake, schedule, cancel, event.data);
+    driver.handle(event.data);
   });
 }
