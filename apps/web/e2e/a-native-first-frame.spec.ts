@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { openGameMenu } from "./helpers/gameMenu.js";
-import { reportMenuFailure } from "./helpers/menuFailure.js";
 import type { FirstDrawPoll } from "./helpers/menuFailure.js";
-import { startNativeCapture } from "./helpers/nativeFirstFrame.js";
+import { captureFirstFrameFailure, startNativeCapture } from "./helpers/nativeFirstFrame.js";
 
 for (let repetition = 0; repetition < 12; repetition += 1) {
   const traced = repetition % 2 === 1;
@@ -50,7 +49,7 @@ for (let repetition = 0; repetition < 12; repetition += 1) {
       await expect(page.locator(".hud")).toBeInViewport({ ratio: 1 });
       await page.screenshot({ path: testInfo.outputPath("desktop-menu.png") });
     } catch (error) {
-      await reportMenuFailure(page, firstDrawPoll).catch(() => null);
+      await captureFirstFrameFailure(page, testInfo, firstDrawPoll);
       throw error;
     } finally {
       await stopCapture();

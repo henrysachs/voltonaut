@@ -20,3 +20,9 @@ Die temporären Zusatzfälle wiederholen den vollständigen ursprünglichen Men�
 ## Nachweisstatus
 
 Diagnose vorbereitet. Produktkorrektur nicht implementiert. Hardware nicht geprüft. Nicht bereitgestellt. Keine Geschwindigkeits- oder FPS-Behauptung.
+
+## Native Nachprüfung
+
+Die x86-Läufe `44892791929` und `44892791893` auf `d93993c` bestehen einschließlich aller 61 Browserfälle. Die nativen Traces erfassen die Zusatzfälle jedoch erst nach Ende der parallelen Coverage. Sie belegen daher keinen passenden Fehler unter dieser Anfangslast.
+
+Die zweite Diagnosefassung ordnet dieselben Zusatzfälle vor den übrigen Browserdateien ein. Coverage, Typecheck und Browser behalten ihre bestehenden Befehle und Ressourcen. Nur die instrumentierte Hälfte erhält zusätzlich einen Worker-Wrapper, der die erste echte Antwort jedes Render-Nachrichtentyps protokolliert. Der Wrapper verändert keine Nachricht und erzeugt keine Engine-Ereignisse. Sein Timing-Einfluss bleibt Teil der Nachweisgrenze. Der ursprüngliche Menüfall bleibt unverändert erhalten.

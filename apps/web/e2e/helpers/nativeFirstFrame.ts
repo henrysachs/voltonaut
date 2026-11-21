@@ -1,9 +1,21 @@
 /// <reference types="node" />
 import type { CDPSession, Page, TestInfo } from "@playwright/test";
+import type { RenderReply } from "../../src/world/render-protocol.js";
 import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { reportMenuFailure } from "./menuFailure.js";
+import type { FirstDrawPoll } from "./menuFailure.js";
+
+export async function captureFirstFrameFailure(
+  page: Readonly<Pick<Page, "evaluate" | "workers" | "screenshot">>,
+  testInfo: Readonly<Pick<TestInfo, "outputPath">>,
+  firstDrawPoll: FirstDrawPoll,
+): Promise<void> {
+  await reportMenuFailure(page, firstDrawPoll).catch(() => null);
+  await page.screenshot({ path: testInfo.outputPath("failure-retained.png") }).catch(() => null);
+}
 
 async function readTrace(
   session: Readonly<Pick<CDPSession, "send">>,
@@ -62,12 +74,39 @@ function observePage(page: Readonly<Pick<Page, "on">>) {
   page.on("pageerror", (error: Readonly<Error>) => {
     note("pageerror", error.message.slice(0, 300));
   });
+  page.on("console", (message: Readonly<{ text: () => string }>) => {
+    const text = message.text();
+
+    if (text.startsWith("FIRST-FRAME-PIPELINE ")) note("pipeline", text);
+  });
 
   return observations;
 }
 
+function observeRenderReplies(): void {
+  const NativeWorker = window.Worker;
+
+  window.Worker = class extends NativeWorker {
+    constructor(url: string | Readonly<URL>, options?: Readonly<WorkerOptions>) {
+      super(url, options);
+
+      if (options?.name !== "ride-render") return;
+      const seen = new Set<RenderReply["type"]>();
+
+      console.warn("FIRST-FRAME-PIPELINE", performance.now(), "constructed");
+      this.addEventListener("message", (event: Readonly<{ data: RenderReply }>) => {
+        const { type } = event.data;
+
+        if (seen.has(type)) return;
+        seen.add(type);
+        console.warn("FIRST-FRAME-PIPELINE", performance.now(), type);
+      });
+    }
+  };
+}
+
 export async function startNativeCapture(
-  page: Readonly<Pick<Page, "context" | "on">>,
+  page: Readonly<Pick<Page, "context" | "on" | "addInitScript">>,
   testInfo: Readonly<Pick<TestInfo, "outputPath" | "title" | "status">>,
 ): Promise<() => Promise<void>> {
   const browser = page.context().browser();
@@ -76,6 +115,8 @@ export async function startNativeCapture(
 
   const session = await browser.newBrowserCDPSession();
   const observations = observePage(page);
+
+  await page.addInitScript(observeRenderReplies);
 
   await session.send("Tracing.start", {
     categories:
