@@ -124,7 +124,6 @@ export async function startNativeCapture(
   page: Readonly<Pick<Page, "context" | "on" | "addInitScript">>,
   testInfo: Readonly<Pick<TestInfo, "outputPath" | "title" | "status">>,
 ): Promise<() => Promise<void>> {
-  const source = await nativeSourceStamp();
   const browser = page.context().browser();
 
   if (browser === null) throw new Error("Native capture requires Chromium");
@@ -134,7 +133,6 @@ export async function startNativeCapture(
   const observations = observePage(page, startedMs);
   const stopGpuScheduling = startGpuScheduling(session, startedMs);
   const { gpu } = await session.send("SystemInfo.getInfo");
-  const gpuDevices = gpu.devices;
 
   await page.addInitScript(observeRenderReplies);
 
@@ -150,6 +148,8 @@ export async function startNativeCapture(
     const gpuScheduling = await stopGpuScheduling();
 
     await writeFile(path, await finishTrace(session));
+    const source = await nativeSourceStamp();
+
     process.stderr.write(
       `${JSON.stringify({
         event: "native-first-frame-run",
@@ -158,8 +158,9 @@ export async function startNativeCapture(
         architecture: process.arch,
         observations,
         gpuScheduling,
-        gpuDevices,
+        gpuDevices: gpu.devices,
         source,
+        sourceCaptured: "after-case-and-native-trace",
       })}\n`,
     );
     process.stderr.write(
