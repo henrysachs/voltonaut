@@ -87,6 +87,7 @@ function observeRenderReplies(): void {
   const NativeWorker = window.Worker;
 
   window.Worker = class extends NativeWorker {
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The native Worker constructor accepts URL with mutable searchParams; this observer only forwards it.
     constructor(url: string | Readonly<URL>, options?: Readonly<WorkerOptions>) {
       super(url, options);
 
