@@ -74,6 +74,18 @@ Softwarestand E1-02: Der Picker akzeptiert FTMS **oder** CPS. Fehlende Steuerrec
 
 FTMS-Kadenz wird bei gesetztem Bit 2 gelesen (GSS v9 §3.124). Der Widerspruch zur invertierten Darstellung in FTMS v1.0 Tabelle 4.10 bleibt bis zur Hardware-Fixture als unverifiziert markiert. Synthetische Parser-/Replay-Tests sind kein Hardware-Befund.
 
+### E2-03 Rollenschaltung
+
+[E2-03](specs/E2-03-ftms-virtual-shifting.md) ergänzt im Trainerabschnitt des Geräte-Overlays **Rollenschaltung aktivieren**. Verbinden, Messdaten-Reconnect und Auswahl bleiben ohne Trainerwrites. Voraussetzungen sind Feature-Bit 13, CP `write` + `indicate` und Echtzeit (`clockScale=1`). CPS bleibt passiv. Eingaben aus Formularen und offenen Menüs lösen keine Tastaturschaltung aus; physische Play-Flanken bleiben aktiv.
+
+Nach dem Klick: Indications abonnieren → Request Control `00` bestätigen → Start `07` bestätigen → neutrales `11` mit Grade/Wind/Crr/Cw null bestätigen. Erst danach werden die bestehenden Strategy-A-Engine-Ziele übertragen, bei frischer Kadenz >0. Die Session begrenzt Grade zusätzlich auf −5…10 %, kodiert Wind in 0,001 m/s, Grade in 0,01 %, Crr in 0,0001 und Cw in 0,01 kg/m. Das sind Sicherheitsgrenzen der Anwendung, **keine gemessenen Trainergrenzen**. Maximal ein Verfahren ist offen; ein neuester Zielwert wartet statt einer unbegrenzten Queue. ACK bedeutet angenommenes Protokollkommando, nicht gemessenen Widerstand.
+
+Fehler, Rechteverlust (`0x05`/Status `0xFF`), Trainer-Resetstatus `0x01`, Disconnect und Auswahl verwerfen Ziele. Ein unbestätigtes Verfahren wird nicht auf derselben GATT-Verbindung wiederholt: Ein altes `0x11`-ACK lässt sich sonst nicht von einem neuen unterscheiden. Neu verbinden und ausdrücklich freigeben. Messwerte laufen unabhängig weiter. Kein automatischer 2-s-Rechte-Retry.
+
+**Deaktivieren:** automatische Ziele sofort sperren; bei bestätigtem Besitz ohne offenes Verfahren innerhalb des nächsten 250-ms-Slots neutralisieren und `08 01` (Stop) bestätigen lassen. Bei offenem/unklarem Verfahren keine zusätzlichen Writes, Zustand ausdrücklich unbekannt, Neuverbindung nötig. Stop-ACK garantiert keinen physischen Stillstand; nach Deaktivieren ist vor einer erneuten Freigabe eine Neuverbindung erforderlich. Trennen, Tab-Schließen und Pagehide garantieren keine Neutralisierung. Nie Reset `01`, kein ERG und kein proprietäres Schaltprotokoll.
+
+**UNVERIFIED:** Henrys Trainer-Firmware, paralleler Funkbetrieb und physisches Gefühl. Die Engine verwendet weiterhin `mT=83 kg` als Annahme. Profil-Kettenblatt/Cog müssen dem realen Rad entsprechen; Kalibrierung und <300-ms-Gefühlsabnahme bleiben offen. Native GATT-Fakes und Sim prüfen Software, nicht echte Bremskräfte oder Funklatenz.
+
 ## 3. Pulsgurt: Heart Rate Service ✅
 
 - Service `0x180D`, Heart Rate Measurement `0x2A37` (notify).

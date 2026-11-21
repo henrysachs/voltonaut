@@ -8,6 +8,10 @@ export * from "./fixtureSchema.js";
 
 export * from "./ftms/adapter.js";
 
+export * from "./ftms/control.js";
+
+export * from "./ftms/controlCodec.js";
+
 export * from "./ftms/feature.js";
 
 export * from "./ftms/parse.js";

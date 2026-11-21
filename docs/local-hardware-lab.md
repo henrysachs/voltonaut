@@ -14,32 +14,41 @@ Die normale App und das BLE-Labor verwenden die echte Bluetooth-API. Es werden k
 
 Die Mehrgeräteansicht auf 5195 hat kein Hot-Reload. **Gerät hinzufügen** öffnet jeweils eine native Auswahl. Drei Karten zeigen Trainer und beide Griffe getrennt. Der Ansichtswechsel trennt keine Verbindung. Die Play-Spielanbindung ist dort noch nicht enthalten. Exportiere offene Mitschnitte vor dem Schließen oder Neuladen eines Labortabs.
 
-## Enthaltener Entwicklungsstand
+## Quellstand und Bereitstellung
 
-Der lokale Branch `lab/hardware-all` enthält Welt und Fahrer, lesende Traineranbindung, Sniffer, Aufnahme und TCX, Browserkonto, Profil-/Fahrtenspeicherung, manuelle kontogebundene Outbox, Replay-Prüfmodul, Strava-Servergrundlage und Deploy-Werkzeuge. Auch die pausierten Korrekturen und noch nicht abschließend geprüften Implementierungen sind als lokale Snapshots integriert. Die ursprünglichen Worktrees bleiben unverändert.
+Der bereitgestellte Commit steht in der aktuellen Statusmeldung. Ein Merge auf `main` aktualisiert keinen Dev-Server in einem anderen Worktree. Der lokale Branch `lab/hardware-all` wird deshalb getrennt auf den geprüften Stand aktualisiert. Unfertige Aufnahme- oder Strava-Arbeit bleibt isoliert.
 
-Anmeldung erfolgt ausdrücklich über **Anmelden** als lokaler Testnutzer `tester@voltonaut.local`. Der Provider signiert echte Testtokens, ist aber keine Cloudflare-Anmeldung. Der Strava-Server verwendet ausschließlich einen lokalen Protokoll-Fake. Eine Strava-Oberfläche und echte Uploads sind nicht freigegeben. Keine echten Provider-Zugangsdaten werden verwendet.
+Die folgenden Menüpfade gelten erst nach dem lokalen Rollout des Ingame-Menüs. Implementierung und Softwareprüfung allein bestätigen keine Bereitstellung. Maßgeblich bleibt der tatsächlich laufende Commit aus der Statusmeldung.
 
-Der Render-Worker ist weiterhin ein separates Wegwerfexperiment und ersetzt nicht den Renderer dieses Teststands. Replay-Prüfung bedeutet noch keine aufgezeichnete oder serverseitig angenommene prüfbare Fahrt.
+Im kombinierten Menü-Stand laufen Welt und Fahrer im Render-Worker. Das Ingame-Menü hält Profil, Aufnahmen und Konto in Overlays. Fahrt und Geräte laufen beim Öffnen weiter. **Geräte verbinden** öffnet den Gerätedialog. Der Trainer bleibt nach dem Verbinden zunächst lesend; Widerstandssteuerung braucht eine eigene Freigabe.
 
-## Vorbereitete Bluetooth-Aktualisierung
+Anmeldung erfolgt ausdrücklich über **Menü → Konto → Anmelden** als lokaler Testnutzer `tester@voltonaut.local`. Der Provider signiert echte Testtokens, ist aber keine Cloudflare-Anmeldung. Der Strava-Server verwendet ausschließlich einen lokalen Protokoll-Fake. Browserverbindung und Fahrt-Upload werden getrennt entwickelt; der Menü-Platzhalter ist keine fertige Uploadfunktion. Ein echter Strava-Pilot braucht gesonderte Zustimmung. Keine echten Provider-Zugangsdaten werden verwendet.
 
-`lab/hardware-ble-combined` enthält zusätzlich die Mehrgeräteansicht und die unabhängig geprüfte Play-Spielanbindung. Beide echten Play-Mitschnitte bestätigen das bekannte Klartextprotokoll. Die Spielanbindung schaltet rechts hoch und links herunter, jeweils einmal pro Druck. Das Labor zeigt Seite, Tasten und unkalibrierte Analogrohwerte. Eine erneute Tastenvermessung ist nicht nötig.
+Lokale Aufnahme und TCX funktionieren ohne Anmeldung. Replay-Prüfung ist kein Hardwareattest. Ob Worker-Aufzeichnung, V2-Annahme oder Strava-Auslieferung bereits bereitgestellt sind, nennt die jeweilige Statusmeldung getrennt. Testzahlen und vorbereitete Module ersetzen diesen Nachweis nicht.
 
-Das kombinierte `E2E_PORT=5194 CI=true mise run check` besteht mit 623 Unit-Tests und 26 E2Es. Auch der Build besteht. Drei native Browser-Fakes prüfen getrennte Mitschnitte einschließlich dekodierter vollständiger Play-Zustände. Die Prüfung belegt keine gleichzeitigen echten Funkverbindungen.
+## Rollenschaltung und Hardwareabnahme
 
-Dieser Stand ist noch nicht auf 5173 oder 5195 eingespielt. Die Aktualisierung der laufenden App wartet auf die Bestätigung, dass alle offenen Mitschnitte exportiert sind und ein Neuladen erlaubt ist. Der nächste echte Trainer-Test liest FTMS-Features und Messwerte. Widerstandssteuerung bleibt davon getrennt.
+Beide echten Play-Mitschnitte bestätigen die Zuordnung: rechts höher, links niedriger, einmal pro Druck. Eine erneute Tastenvermessung ist nicht nötig. Das Labor zeigt Seite, Tasten und unkalibrierte Analogrohwerte.
 
-## Erster Hardwaretest
+Die [FTMS-Steuerung](specs/E2-03-ftms-virtual-shifting.md) verlangt passende Features, Echtzeit und ausdrückliche Aktivierung. Erst bestätigte Control-Point-Prozeduren erlauben begrenzte Engine-Ziele. Reconnect nimmt die Widerstandssteuerung nicht automatisch wieder auf. Ein Zielwert allein ist keine Bestätigung.
+
+Die Softwareprüfungen verwenden Sim- und native GATT-Fakes. Widerstandsgefühl, Firmware, Kalibrierung, gleichzeitiger Funkbetrieb und Latenz brauchen die gemeinsame Probefahrt. Bis dahin gilt **softwaregeprüft, Hardwareabnahme offen**. Die Trainermasse von 83 kg ist eine Annahme.
+
+## Gemeinsame Probefahrt
 
 1. Stelle den Trainer sicher auf und versorge ihn mit Strom.
 2. Schließe Zwift, Wahoo, Rouvy und andere Apps, die das Gerät verbunden halten könnten.
-3. Exportiere offene Mitschnitte im bisherigen Labor, bevor du den Tab schließt.
-4. Öffne die Mehrgeräteansicht auf 5195 in Chrome oder Edge.
-5. Klicke **Gerät hinzufügen** und wähle den Trainer im Browserdialog.
-6. Prüfe zunächst nur Gerätestatus und GATT-Dienste. Verwende noch keine Schreibbefehle oder Widerstands-Presets.
+3. Öffne die App auf 5173 ohne `sim=1` und ohne `clock=fast`.
+4. Prüfe unter **Menü → Profil** Gewicht, reales Kettenblatt und reales Cog. Speichere Änderungen und lade vor dem Verbinden neu. Profiländerungen gelten erst für die nächste Fahrt.
+5. Öffne **Geräte verbinden**. Wähle Trainer, **Play links (Ziel)** und **Play rechts (Ziel)** getrennt über **Gerät wählen**.
+6. Prüfe Bereitschaft sowie plausible Watt- und Kadenzwerte. Aktiviere erst danach **Rollenschaltung aktivieren** und warte auf die bestätigte Freigabe.
+7. Prüfe beim kontrollierten Treten rechts und links jeweils HUD-Gang, bestätigtes Ziel und tatsächliches Widerstandsgefühl. Halten darf nicht wiederholt schalten.
+8. Öffne das Menü. Fahrt und Play müssen weiterlaufen. Pfeiltasten in einem Profilfeld dürfen den Trainer nicht schalten.
+9. Deaktiviere die Rollenschaltung ausdrücklich. Prüfe nach sicherem Anhalten Disconnect und Reconnect. Eine erneute Widerstandsfreigabe braucht einen neuen Klick.
 
-Trainer und Controller reichen für den Beginn. Die Pulsgurt-Abnahme bleibt offen. Firmware, genaue Gerätebezeichnung und echte JSON-Mitschnitte werden während des gemeinsamen Tests erfasst. Reale Messungen sind nicht durch Simulatorprüfungen ersetzt.
+Trennen oder Tab-Schließen garantiert keine Neutralisierung. Ein bestätigter Stop ist kein Stillstandsnachweis. Bei fehlender Bestätigung bleibt der Widerstand unbekannt; beende die Belastung kontrolliert und verbinde erst danach neu.
+
+Trainer und beide Controller reichen für den Beginn. Die Pulsgurt-Abnahme bleibt offen. Notiere Gerätebezeichnung und Firmware beim gemeinsamen Test. Für zusätzliche GATT-Details und JSON-Mitschnitte bleibt das Labor auf 5195 verfügbar. Lade eigene Mitschnitte getrennt als Backup herunter.
 
 ## Lokaler Betrieb
 

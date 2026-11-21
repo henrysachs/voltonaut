@@ -27,6 +27,10 @@ interface FrameInput {
 Systeme (Reihenfolge): `environment` (Sonne, Himmel, Wetter) → `terrain` (Chunk-Streaming, LOD) → `scenery` (Instancing) → `riders` (eigener + Bots + Remote, Animation) → `crowd` (Zuschauer) → `pickups` (Volts-Blitze) → `effects` (Partikel, Banner) → `camera` → `audio` → `post` (Post-Processing) → `debug`.
 Jedes System besitzt seine three.js-Objekte; keines schreibt in Engine-State. Game-Logik (Pickup gesammelt, Segment) kommt als `RideEvent` aus der Engine und löst nur Effekte aus.
 
+[E4-04](specs/E4-04-render-worker-isolation.md) verschiebt diese bestehenden Systeme und WebGL in einen eigenen Render-Worker. Main überträgt den Canvas einmal und behält DOM, Kameraeingaben und Snapshot-Pull. Die erforderliche `routeId` wird im Worker über die vorhandenen Routendaten aufgelöst. Ein unbestätigter Snapshot plus ein ersetzbarer letzter Wert begrenzen ausschließlich die Darstellungsnachrichten. Engine, BLE und Aufnahmen behalten ihre bisherigen Besitzer. Details und Grenzen stehen in [ADR-019](decisions/ADR-019-render-worker-isolation.md).
+
+Während des Starts bleibt ein zugänglicher Ladestatus sichtbar. Renderdiagnostik stammt nach `renderer.render` aus den echten Three-Zählern und Posen. `after-render-task` bezeichnet die folgende Worker-Task, keine bestätigte sichtbare Präsentation. Fehlende Worker- oder OffscreenCanvas-Unterstützung, Initfehler und Kontextverlust zeigen `3D unavailable`; Fahrt und HUD laufen weiter. Ein Main-WebGL- oder CPU-Bildkopie-Fallback existiert nicht.
+
 ## 2. Rendering & Licht
 
 - `WebGLRenderer` (WebGPU-Renderer später prüfen ❓), `SRGBColorSpace`, ACES/AgX-Tonemapping, physikalisch korrekte Lichtintensitäten.

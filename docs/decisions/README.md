@@ -20,3 +20,5 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [014](ADR-014-three-rendering-dependencies.md) | Abhängigkeiten für die erste 3D-Szene | Umsetzung von ADR-002 und ADR-008 |
 | [015](ADR-015-oidc-client-library.md) | openid-client für serverseitigen OIDC-Codeflow | Gewählt für E5-06 |
 | [016](ADR-016-server-engine-replay.md) | Öffentliche Engine für reine Server-Nachrechnung | Gewählt für E10-02 |
+| [017](ADR-017-strava-connection.md) | Strava-Verbindung und verschlüsselte Zugangsdaten | Serverseitiger Teilschnitt integriert; echter Pilot offen |
+| [019](ADR-019-render-worker-isolation.md) | WebGL im getrennten Render-Worker | Softwaregeprüft für E4-04; Hardware-FPS offen |

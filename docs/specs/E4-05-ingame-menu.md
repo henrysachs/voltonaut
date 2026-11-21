@@ -1,7 +1,7 @@
 # Spec E4-05 – Ingame-Menü
 
 - **Roadmap-Bezug:** E4, Spiel-HUD (`04` §9); E3, Rider-Profil-Screen; E1, Verbinden-Dialog im Spiel.
-- **Status:** Review
+- **Status:** Implementiert und unabhängig softwaregeprüft, einschließlich Kombination mit Render-Worker und FTMS-Steuerung. Hardwareabnahme offen.
 - **Betroffene Module:** `apps/web/index.html`, `src/styles.css`, `src/ui/gameMenu.ts`, mechanische Verdrahtung in `src/main.ts` und Geräte-Button-Attribut.
 
 ## Ziel
@@ -52,11 +52,12 @@ Keine offenen Produktfragen. Hardwarezuverlässigkeit, reales Widerstandsgefühl
 ## Doku-Updates
 
 - [x] Begrenzter Abschnitt in `docs/04-world-3d.md`.
-- Roadmap und ADR-Index integriert der übergeordnete Auftrag. Die umfassenden E4-Kriterien bleiben offen.
+- [x] Roadmap nennt den begrenzten Teilschritt. Eine neue Architekturentscheidung ist nicht erforderlich. Die umfassenden E4-Kriterien bleiben offen.
 
 ## Nachweisstatus
 
 - Implementiert: ja. Die bestehenden Hosts `#account-panel`, `#account-data`, `#ride-recording` und `#profile-form` bleiben erhalten. `#strava-panel` liegt einmalig im Strava-Tab und enthält bis zur getrennten Browserintegration nur den ehrlichen Hinweistext.
 - Am tatsächlichen Artefakt softwaregeprüft: ja. `mise run check` mit `CI=true E2E_PORT=5235`, Build, 13 Browserfälle gegen den gebauten Client, fünf synthetische OIDC-Fälle und 14 Sync-Fälle. Native Provider, Bluetooth-Hardware und produktive Daten wurden nicht verwendet. Screenshots zeigen 1280 × 720 und 390 × 844. Die gebaute Desktop-Menüaufnahme zeigt 131 Draw Calls und 168.166 Dreiecke.
+- Unabhängige Standards- und Laufzeitreviews bestanden. Der frische kombinierte Produktionsbuild bestätigt genau einen Engine- und Render-Worker, sichtbare Welt und HUD, fortlaufende Distanz sowie tatsächliche Play-/FTMS-Schaltung bei offenem Menü. Profilpfeile und C bleiben ohne Gang-, Kamera- oder Trainerwirkung. Das kombinierte Parent-Gate besteht mit 690 Unit-Tests, 44 Browserfällen und Build. Die beiden neuen Profiltest-Aufrufer verwenden echte Menünavigation; ursprüngliche Assertions und Zeitlimits bleiben erhalten.
 - An echter Hardware geprüft: nein.
-- Bereitgestellt: nein.
+- Bereitstellung wird getrennt mit tatsächlichem Commit, URL und Betriebsart gemeldet.

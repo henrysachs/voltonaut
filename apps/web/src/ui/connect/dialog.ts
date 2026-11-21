@@ -1,10 +1,13 @@
 import type { DeviceAdapter, EventBus } from "@voltonaut/shared";
+import type { TrainerControl } from "@voltonaut/ble";
+import { renderTrainerControl } from "./trainerControl.js";
 
 export interface ConnectSlot {
   readonly label: string;
   readonly adapter: DeviceAdapter;
   readonly select: () => Promise<void>;
   readonly description?: () => string;
+  readonly trainer?: { readonly control: TrainerControl; readonly clockScale: number };
 }
 
 function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
@@ -41,20 +44,39 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
     });
   };
 
-  choose.addEventListener("click", () => {
-    connect(slot.select);
-  });
-  retry.addEventListener("click", () => {
-    connect(() => slot.adapter.connect());
-  });
-  disconnect.addEventListener("click", () => {
-    connect(() => slot.adapter.disconnect());
-  });
+  bindActions(slot, { choose, retry, disconnect }, connect);
   bus.subscribe("device.status", update);
   update();
   row.append(heading, status, description, choose, retry, disconnect);
 
+  if (slot.trainer !== undefined)
+    row.append(renderTrainerControl(slot.trainer.control, slot.trainer.clockScale));
+
   return row;
+}
+
+interface ClickTarget {
+  readonly addEventListener: (type: "click", listener: () => void) => void;
+}
+
+function bindActions(
+  slot: ConnectSlot,
+  buttons: Readonly<{
+    choose: ClickTarget;
+    retry: ClickTarget;
+    disconnect: ClickTarget;
+  }>,
+  connect: (action: () => Promise<void>) => void,
+): void {
+  buttons.choose.addEventListener("click", () => {
+    connect(slot.select);
+  });
+  buttons.retry.addEventListener("click", () => {
+    connect(() => slot.adapter.connect());
+  });
+  buttons.disconnect.addEventListener("click", () => {
+    connect(() => slot.adapter.disconnect());
+  });
 }
 
 export function mountConnectDialog(slots: readonly ConnectSlot[], bus: EventBus): void {
