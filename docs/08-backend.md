@@ -261,6 +261,14 @@ Client interpoliert Remote-Fahrer ~250 ms in der Vergangenheit; Positionen nur a
 
 ## Deployment auf den Hetzner-VPS (in E0 dokumentiert; echtes Deploy = optionale Aufgabe E0-opt)
 
+### Prozessende und offene Verbindungen
+
+Der Bootstrap aktiviert Nests `forceCloseConnections` und Shutdown-Hooks. Bei SIGTERM schließt der Express-Adapter alle erfassten TCP-Verbindungen, auch aktive Requests. Damit blockieren Verbindungen ohne HTTP-Bytes keinen Neustart. Das ist kein Drain laufender HTTP-Antworten. Eine Antwort kann nach einem erfolgreichen Datenbankcommit verloren gehen. Wiederholungen derselben Fahrt lesen weiterhin den unveränderlichen gespeicherten Beleg.
+
+Nest führt die Modulabbau-Hooks vor dem HTTP-Adapterabbau aus. Der Strava-Scheduler signalisiert dabei den Abbruch und wartet auf seine laufende Arbeit. Dauerhafte Versandzustände bleiben maßgeblich. Ein unbekanntes POST-Ergebnis erlaubt keinen erneuten Versand. Bekannte Upload-IDs bleiben für spätere Polls erhalten. Der Prozessregressionstest startet den tatsächlichen kompilierten Bootstrap mit lokaler OIDC-Konfiguration und hält beim SIGTERM eine TCP-Verbindung ohne Nutzdaten offen.
+
+### Bereitstellung
+
 Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB frei. Auf dem VPS läuft bereits Financensor (Docker Compose); `financensor-traefik-1` (`traefik:v3.6`) belegt Ports 80/443. Deshalb kein Caddy und kein systemd – der Server kommt als Container hinter diesen Traefik (ADR-004). SSH-Deploy-Zugang ist eingerichtet: DNS-A-Record `api.voltonaut.stammkneipe.dev` → VPS-IP, **unproxied** (damit Traefiks `letsencrypt`-Resolver das Zertifikat direkt zieht), Deploy-Secrets und `DEPLOY_USER` im GitHub-Environment `production`.
 
 Stand 20.11.2026 ist keine Voltonaut-API bereitgestellt; `/srv/voltonaut` existiert noch nicht. `SERVER_DEPLOY_ENABLED=false` bleibt bestehen. Vor einer Freigabe fehlen die Übergabe der Auth-Produktionskonfiguration an den Container, ein eingerichtetes externes Backup-Ziel und ein Restore-Nachweis. Die folgenden Schritte beschreiben den vorbereiteten Deploy, keinen laufenden Dienst.

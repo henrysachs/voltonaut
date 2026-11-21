@@ -9,7 +9,7 @@ import { parseServerConfig } from "./config.js";
 
 export async function bootstrap(): Promise<void> {
   const config = parseServerConfig(process.env, process.env["NODE_ENV"] ?? "development");
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { forceCloseConnections: true });
 
   app.enableShutdownHooks();
   setupHttp(app, config);
