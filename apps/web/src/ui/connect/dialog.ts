@@ -65,6 +65,8 @@ export function mountConnectDialog(slots: readonly ConnectSlot[], bus: EventBus)
   const close = document.createElement("button");
 
   open.textContent = "Geräte verbinden";
+  // oxlint-disable-next-line unicorn/prefer-dom-node-dataset -- Keep the navigation hook on the attribute API supported by the existing structural DOM adapter.
+  open.setAttribute("data-game-action", "devices");
   title.textContent = "Bluetooth-Geräte";
   title.id = "connect-title";
   dialog.setAttribute("aria-labelledby", title.id);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { expect, test, type Page } from "@playwright/test";
 import { DEFAULT_RIDER_PROFILE, SessionResponseSchema } from "@voltonaut/shared";
 import type { PendingInput } from "./profileRaceFixture.js";
+import { openGameMenu } from "../e2e/helpers/gameMenu.js";
 
 const web = process.env["WEB_ORIGIN"] ?? "http://127.0.0.1:5193";
 const api = process.env["API_ORIGIN"] ?? "";
@@ -27,13 +28,16 @@ async function release(name: string) {
 async function setup(page: Readonly<Page>) {
   expect((await fetch(`${control}/a`, { method: "POST" })).status).toBe(204);
   await page.goto(`${web}/?sim=1`);
+  await openGameMenu(page, "Konto");
   const exchange = page.waitForResponse(`${api}/v1/auth/oidc/exchange`);
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   const raw: unknown = await (await exchange).json();
   const session = SessionResponseSchema.parse(raw);
+  await openGameMenu(page, "Konto");
   await expect(page.getByRole("region", { name: "Konto", exact: true })).toContainText(
     session.user.email,
   );
+  await openGameMenu(page, "Profil");
   await page.getByTestId("profile-displayName").fill("Pending Local");
   await page.getByTestId("profile-save").click();
   await expect.poll(() => page.evaluate(savedName)).toBe("Pending Local");
@@ -48,6 +52,7 @@ async function setup(page: Readonly<Page>) {
   });
 
   expect(response.status).toBe(200);
+  await openGameMenu(page, "Konto");
   await page
     .getByRole("button", { name: "Kontodaten und lokales Archiv aktualisieren", exact: true })
     .click();
@@ -162,6 +167,7 @@ test("sync actual logout aborts a profile pull queued behind another tab's nativ
 
   expect(await page.evaluate(savedName)).toBe("Pending Local");
   await page.reload();
+  await openGameMenu(page, "Profil");
   await expect(page.getByTestId("profile-displayName")).toHaveValue("Pending Local");
 });
 

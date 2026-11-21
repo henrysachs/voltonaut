@@ -80,6 +80,14 @@ Web Audio API (keine Zusatzlib): Wind proportional zum Tempo (gedämpft im Winds
 
 Watt (3-s-Mittel), Kadenz, Puls mit Zonenfarbe, Tempo, Gang (1–24 mit Schaltanimation), Steigung, Distanz/Zeit, Volts-Zähler ⚡, Mini-Höhenprofil mit Position und Segmenten, Mini-Map, Windschatten-Indikator, Segment-Live-Delta, Fahrerliste (Bots/Freunde mit Abstand), Benachrichtigungen (Badge, Level-Up). Skalierbar, kontrastreich, ausblendbar (Cinematic).
 
+### Ingame-Menü
+
+[E4-05](specs/E4-05-ingame-menu.md) ordnet die vorhandene Oberfläche als Spielansicht an. Header, Welt und HUD passen ins Fenster. Profil, lokale Aufnahmen und Konto liegen einmalig in einem nativen Dialog mit benannten Tabs. Kleine Fenster scrollen nur den Menüinhalt. Strava zeigt die noch fehlende Browserintegration, keinen Upload-Erfolg.
+
+**Menü** oder Escape öffnet den Dialog. **Zurück zur Fahrt** oder Escape schließt ihn und stellt den vorherigen Fokus wieder her. Pfeiltasten wechseln zwischen Tabs. Im Menü erreichen Tastendrücke keine globalen Gang- oder Kamerakürzel. Texteingabe und native Zahlenfeldbedienung bleiben erhalten.
+
+Die Fahrt, Geräte und eine laufende Aufnahme bleiben aktiv. Menüschließen speichert oder verwirft keine Aufnahme. Der vorhandene Shortcut **Geräte verbinden** bleibt im Header. **Geräte öffnen** im Menü öffnet denselben Gerätedialog. Erst dessen **Gerät wählen** fordert eine native Geräteauswahl an.
+
 ## 10. Asset-Pipeline
 
 - **Quellen:** Blender (eigene Modelle), CC0 (Kenney, Quaternius, Poly Haven, ambientCG), CC-BY nur mit Credits; kein NC/ND; Mixamo nur als Rigging-Hilfe (Weitergabe-Bedingungen unklar). Jede Datei in `apps/web/public/assets/LICENSES.md`.

@@ -3,6 +3,7 @@ import { expect, test, type Download, type Page } from "@playwright/test";
 import { MAX_LOCAL_RIDE_MS, type CompletedLocalRide } from "@voltonaut/shared";
 
 import { localRide } from "../src/sync/testdata/localRide.js";
+import { openGameMenu } from "./helpers/gameMenu.js";
 
 async function downloadText(download: Readonly<Download>): Promise<string> {
   const path = await download.path();
@@ -89,6 +90,7 @@ test("records real time, explicitly downloads TCX and reloads the same saved byt
 }) => {
   await page.goto("/?sim=1&clock=fast");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await openGameMenu(page, "Aufnahmen");
   const status = page.getByTestId("recording-status");
   const start = page.getByRole("button", { name: "Aufnahme starten", exact: true });
   const finish = page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true });
@@ -117,6 +119,7 @@ test("records real time, explicitly downloads TCX and reloads the same saved byt
   expect(await downloadText(await secondDownload)).toBe(xml);
 
   await page.reload();
+  await openGameMenu(page, "Aufnahmen");
   await expect(exportButton).toHaveCount(1);
   const reloadedDownload = page.waitForEvent("download");
   await exportButton.click();
@@ -131,8 +134,10 @@ test("records real time, explicitly downloads TCX and reloads the same saved byt
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("rejects an empty capture without creating a saved ride", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByTestId("hud-gear")).toHaveText("12");
+  await expect(page.getByTestId("hud-warning")).toHaveText("No trainer data");
+  await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
+  await expect(page.getByTestId("recording-status")).toContainText("Aufnahme läuft.");
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("leer oder ungültig");
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(0);
@@ -146,6 +151,7 @@ test("full local storage preserves existing rides and offers the unsaved downloa
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await page.evaluate(seedFullArchive, localRide);
   await page.reload();
+  await openGameMenu(page, "Aufnahmen");
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(
     20,
   );
@@ -169,6 +175,7 @@ test("full local storage preserves existing rides and offers the unsaved downloa
     21,
   );
   await page.reload();
+  await openGameMenu(page, "Aufnahmen");
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(
     20,
   );
@@ -218,6 +225,7 @@ test("confirmation recovers an overlong recording without reload or loss of save
   await page.clock.install();
   await page.goto("/?sim=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await openGameMenu(page, "Aufnahmen");
   const start = page.getByRole("button", { name: "Aufnahme starten", exact: true });
   const finish = page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true });
   const discard = page.getByRole("button", { name: "Laufende Aufnahme verwerfen", exact: true });
