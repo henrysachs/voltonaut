@@ -1,5 +1,8 @@
+/// <reference types="node" />
+/// <reference lib="es2023" />
+
 import assert from "node:assert/strict";
-import { z } from "../../packages/shared/node_modules/zod/index.js";
+import { z } from "../../../../packages/shared/node_modules/zod/index.js";
 
 const finite = z.number().finite();
 const identity = z.object({ schemaVersion: z.number().int() }).passthrough().readonly();

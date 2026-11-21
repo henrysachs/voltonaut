@@ -1,19 +1,21 @@
+/// <reference types="node" />
+
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { captureSimArchive } from "./ride-delivery-verification/browser.mjs";
-import { describeArchive, requireRecordingV2 } from "./ride-delivery-verification/archive.mjs";
-import { buildWeb, serveBuild, sha256 } from "./ride-delivery-verification/artifact.mjs";
+import { captureSimArchive } from "./capture.browser.spec.ts";
+import { describeArchive, requireRecordingV2 } from "./archive.mjs";
+import { buildWeb, serveBuild, sha256 } from "./artifact.mjs";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "../../../..");
 const temporary = join(tmpdir(), "opencode");
 
 await mkdir(temporary, { recursive: true });
 
 const artifacts = await mkdtemp(join(temporary, "delivery-capture-harness-"));
 const output = join(artifacts, "built-web");
-const rerun = "mise exec -- node scripts/verify-ride-delivery.mjs";
+const rerun = "mise exec -- node apps/web/verification/ride-delivery/verify.mjs";
 
 process.stdout.write(`Artifacts: ${artifacts}\nRerun: ${rerun}\n`);
 

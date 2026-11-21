@@ -1,4 +1,4 @@
-import type { EventBus } from "@voltonaut/shared";
+import type { EventBus, TrainerCommand } from "@voltonaut/shared";
 import {
   createFakeHeartRate,
   createFakePlay,
@@ -11,11 +11,13 @@ import {
   createPlayAdapter,
   createNavigatorBluetoothCentral,
   createWebBluetoothTransport,
-  type KeyboardEventLike,
   type KeyboardSource,
   type PlayAdapterOptions,
   type WebBluetoothCentral,
+  type TrainerControl,
+  type SimulationCommand,
 } from "@voltonaut/ble";
+import type { RideSnapshot } from "@voltonaut/engine";
 import { mountConnectDialog } from "./ui/connect/dialog.js";
 
 const SIM_SAMPLES = createSimScript([
@@ -25,26 +27,52 @@ const SIM_SAMPLES = createSimScript([
   { powerW: 168, cadenceRpm: 91, heartRateBpm: 130, gearIndex: 0 },
 ]);
 
+// oxlint-disable typescript/prefer-readonly-parameter-types -- DOM listener signatures include EventTarget; native KeyboardEvent values are only inspected.
 interface WindowKeyboardTarget {
   readonly addEventListener: (
     type: "keydown" | "keyup",
-    listener: (event: KeyboardEventLike) => void,
+    listener: (event: Readonly<KeyboardEvent>) => void,
   ) => void;
   readonly removeEventListener: (
     type: "keydown" | "keyup",
-    listener: (event: KeyboardEventLike) => void,
+    listener: (event: Readonly<KeyboardEvent>) => void,
   ) => void;
 }
+// oxlint-enable typescript/prefer-readonly-parameter-types
 
-function createWindowKeyboardSource(window: WindowKeyboardTarget): KeyboardSource {
+function visibleRideMenu(): boolean {
+  for (const element of document.querySelectorAll(
+    "dialog[open], [role='dialog'][aria-modal='true'], [role='menu']",
+  )) {
+    if (element.getClientRects().length > 0 && element.getAttribute("aria-hidden") !== "true")
+      return true;
+  }
+
+  return false;
+}
+
+export function createWindowKeyboardSource(window: WindowKeyboardTarget): KeyboardSource {
   return {
     subscribe(listener) {
-      const keydown = (event: KeyboardEventLike): void => {
-        listener("keydown", event);
+      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM KeyboardEvent is the native listener contract; it is inspected, never modified.
+      const keydown = (event: KeyboardEvent): void => {
+        const target = event.target;
+
+        if (
+          event.defaultPrevented ||
+          visibleRideMenu() ||
+          (target instanceof Element &&
+            target.closest(
+              "input, textarea, select, form, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='spinbutton'], [role='combobox']",
+            ) !== null)
+        )
+          return;
+        listener("keydown", { key: event.key });
       };
 
-      const keyup = (event: KeyboardEventLike): void => {
-        listener("keyup", event);
+      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Key-up must clear held state even after focus moves into a modal.
+      const keyup = (event: KeyboardEvent): void => {
+        listener("keyup", { key: event.key });
       };
 
       window.addEventListener("keydown", keydown);
@@ -68,20 +96,54 @@ export function setupKeyboard(bus: EventBus): void {
   void keyboard.connect();
 }
 
-export function setupSimDevices(bus: EventBus, clockScale: number): void {
+export interface RideDevices {
+  readonly mount: () => void;
+  readonly onCommands: (commands: readonly TrainerCommand[]) => void;
+  readonly onSnapshot: (snapshot: RideSnapshot) => void;
+}
+
+/** An unchanged engine target is current only while worker snapshots and fresh cadence continue. */
+function commandSink(control: TrainerControl): Pick<RideDevices, "onCommands" | "onSnapshot"> {
+  let latest: SimulationCommand | undefined;
+  let riding = false;
+
+  return {
+    onSnapshot(snapshot) {
+      riding = !snapshot.paused && snapshot.cadenceRpm > 0;
+    },
+    onCommands(commands) {
+      for (const command of commands) if (command.type === "simulation") latest = command;
+
+      if (riding && latest !== undefined) control.submit(latest);
+    },
+  };
+}
+
+export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices {
   const ticker = createIntervalTicker(250 / clockScale);
   const clock = { nowS: (): number => performance.now() / 1000 };
   const trainer = createFakeTrainer({ bus, clock, ticker, samples: SIM_SAMPLES });
   const heartRate = createFakeHeartRate({ bus, clock, ticker, samples: SIM_SAMPLES });
   const play = createFakePlay({ bus, clock });
-  mountConnectDialog(
-    [
-      { label: "Trainer", adapter: trainer, select: () => trainer.connect() },
-      { label: "Puls", adapter: heartRate, select: () => heartRate.connect() },
-    ],
-    bus,
-  );
-  void Promise.all([trainer, heartRate, play].map((device) => device.connect()));
+
+  return {
+    ...commandSink(trainer.control),
+    mount() {
+      mountConnectDialog(
+        [
+          {
+            label: "Trainer",
+            adapter: trainer,
+            select: () => trainer.connect(),
+            trainer: { control: trainer.control, clockScale },
+          },
+          { label: "Puls", adapter: heartRate, select: () => heartRate.connect() },
+        ],
+        bus,
+      );
+      void Promise.all([trainer, heartRate, play].map((device) => device.connect()));
+    },
+  };
 }
 
 function playSlots(
@@ -104,7 +166,7 @@ function playSlots(
   });
 }
 
-export function setupBluetoothDevices(bus: EventBus): void {
+export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDevices | undefined {
   const central = createNavigatorBluetoothCentral();
 
   if (central === undefined) {
@@ -113,7 +175,7 @@ export function setupBluetoothDevices(bus: EventBus): void {
       "Web Bluetooth benötigt Chrome/Edge und HTTPS oder localhost. Sim-Modus: ?sim=1";
     document.body.append(warning);
 
-    return;
+    return undefined;
   }
 
   const clock = { nowS: (): number => performance.now() / 1000 };
@@ -133,12 +195,22 @@ export function setupBluetoothDevices(bus: EventBus): void {
     transport: createWebBluetoothTransport({ central }),
   });
 
-  mountConnectDialog(
-    [
-      { label: "Trainer", adapter: trainer, select: trainer.select },
-      { label: "Puls", adapter: heartRate, select: heartRate.select },
-      ...playSlots({ bus, clock, ticker }, central),
-    ],
-    bus,
-  );
+  return {
+    ...commandSink(trainer.control),
+    mount() {
+      mountConnectDialog(
+        [
+          {
+            label: "Trainer",
+            adapter: trainer,
+            select: trainer.select,
+            trainer: { control: trainer.control, clockScale },
+          },
+          { label: "Puls", adapter: heartRate, select: heartRate.select },
+          ...playSlots({ bus, clock, ticker }, central),
+        ],
+        bus,
+      );
+    },
+  };
 }

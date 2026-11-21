@@ -1,8 +1,19 @@
+/// <reference types="node" />
+
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { chromium, expect } from "./playwright-runtime.mjs";
+import { chromium, expect, type BrowserContext, type Page } from "@playwright/test";
+
+type Diagnostics = {
+  console: { readonly type: string; readonly text: string }[];
+  errors: string[];
+  blocked: string[];
+  requests: { readonly path: string; readonly type: string }[];
+  workers: string[];
+  bluetoothAccesses: number;
+};
 
 function forbidNativeBluetooth() {
   Object.defineProperty(navigator, "bluetooth", {
@@ -13,8 +24,7 @@ function forbidNativeBluetooth() {
   });
 }
 
-/** @returns {Promise<string>} */
-function readArchiveJson() {
+function readArchiveJson(): Promise<string> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("voltonaut-local-rides");
     request.addEventListener("upgradeneeded", () => {
@@ -41,8 +51,7 @@ function readArchiveJson() {
 }
 
 function createDiagnostics() {
-  /** @type {{ console: { readonly type: string; readonly text: string }[]; errors: string[]; blocked: string[]; requests: { readonly path: string; readonly type: string }[]; workers: string[]; bluetoothAccesses: number }} */
-  const diagnostics = {
+  const diagnostics: Diagnostics = {
     console: [],
     errors: [],
     blocked: [],
@@ -54,9 +63,13 @@ function createDiagnostics() {
   return diagnostics;
 }
 
-/** @param {Readonly<import("../../apps/web/node_modules/@playwright/test/index.js").BrowserContext>} context @param {ReturnType<typeof createDiagnostics>} diagnostics @param {string} origin */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the context; this boundary records blocked requests in the owned diagnostics.
-async function restrictNetwork(context, diagnostics, origin) {
+async function restrictNetwork(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the native context lifecycle.
+  context: Readonly<BrowserContext>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- This boundary records blocked requests in the owned diagnostics.
+  diagnostics: Diagnostics,
+  origin: string,
+) {
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the Route lifecycle and request interception methods.
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
@@ -81,9 +94,8 @@ async function restrictNetwork(context, diagnostics, origin) {
   });
 }
 
-/** @param {Readonly<import("../../apps/web/node_modules/@playwright/test/index.js").Page>} page @param {ReturnType<typeof createDiagnostics>} diagnostics */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns native page/event handles; listeners append to the owned diagnostics.
-function observeBrowser(page, diagnostics) {
+function observeBrowser(page: Readonly<Page>, diagnostics: Diagnostics) {
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the native ConsoleMessage handle.
   page.on("console", (message) => {
     const text = message.text();
@@ -102,9 +114,17 @@ function observeBrowser(page, diagnostics) {
   });
 }
 
-/** @param {Readonly<import("../../apps/web/node_modules/@playwright/test/index.js").Page>} page @param {string} origin @param {string} artifacts */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Public menu navigation requires Playwright's native Page handle.
+async function openRecordingMenu(page: Readonly<Page>) {
+  await page.getByRole("button", { name: "Menü", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Fahrtmenü" })
+    .getByRole("tab", { name: "Aufnahmen", exact: true })
+    .click();
+}
+
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Driving public controls requires Playwright's native Page handle.
-async function recordThroughUi(page, origin, artifacts) {
+async function recordThroughUi(page: Readonly<Page>, origin: string, artifacts: string) {
   const response = await page.goto(`${origin}/?sim=1`);
   assert.equal(response?.headers()["referrer-policy"], "no-referrer");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
@@ -115,6 +135,7 @@ async function recordThroughUi(page, origin, artifacts) {
     "[]",
     "Fresh browser starts with an empty archive",
   );
+  await openRecordingMenu(page);
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("Aufnahme läuft");
   const startedMs = performance.now();
@@ -131,6 +152,7 @@ async function recordThroughUi(page, origin, artifacts) {
 
   await page.screenshot({ path: join(artifacts, "stored-capture.png"), fullPage: true });
   await page.reload();
+  await openRecordingMenu(page);
   await expect(page.getByRole("button", { name: "TCX herunterladen", exact: true })).toHaveCount(1);
   assert.equal(
     await page.evaluate(readArchiveJson),
@@ -146,9 +168,11 @@ async function recordThroughUi(page, origin, artifacts) {
   return archive;
 }
 
-/** @param {ReturnType<typeof createDiagnostics>} diagnostics @param {readonly { readonly path: string }[]} workers */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Evidence is the same owned diagnostic log populated by native browser listeners.
-function requireBrowserEvidence(diagnostics, workers) {
+function requireBrowserEvidence(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Evidence is the same owned diagnostic log populated by native browser listeners.
+  diagnostics: Diagnostics,
+  workers: readonly { readonly path: string }[],
+) {
   assert.equal(diagnostics.bluetoothAccesses, 0, "Sim never accesses native Bluetooth");
   assert.deepEqual(
     diagnostics.blocked,
@@ -169,8 +193,11 @@ function requireBrowserEvidence(diagnostics, workers) {
   }
 }
 
-/** @param {{ readonly origin: string; readonly artifacts: string; readonly workers: readonly { readonly path: string }[] }} options */
-export async function captureSimArchive(options) {
+export async function captureSimArchive(options: {
+  readonly origin: string;
+  readonly artifacts: string;
+  readonly workers: readonly { readonly path: string }[];
+}) {
   const { origin, artifacts, workers } = options;
   const diagnostics = createDiagnostics();
 

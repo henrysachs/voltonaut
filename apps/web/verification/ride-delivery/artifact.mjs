@@ -1,3 +1,6 @@
+/// <reference types="node" />
+/// <reference lib="es2023" />
+
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -5,7 +8,7 @@ import { once } from "node:events";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
-import { z } from "../../packages/shared/node_modules/zod/index.js";
+import { z } from "../../../../packages/shared/node_modules/zod/index.js";
 
 /** @param {string | Readonly<Uint8Array>} bytes */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Node Crypto accepts native typed-array buffers; hashing does not mutate them.

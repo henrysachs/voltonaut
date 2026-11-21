@@ -9,18 +9,22 @@
   </head>
   <body>
     <main class="app" aria-label="Voltonaut">
-      <header class="ride-title"><span>VOLTONAUT</span><span>FIRST RIDE / TEST LOOP</span></header>
+      <header class="ride-title">
+        <div class="ride-title__identity"><span>VOLTONAUT</span><span>TEST LOOP / 10 KM</span></div>
+        <div id="game-header-actions" class="ride-title__actions">
+          <button
+            id="game-menu-open"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="game-menu"
+            aria-expanded="false"
+          >
+            Menü
+          </button>
+        </div>
+      </header>
+      <aside id="game-notices" class="game-notices" aria-label="Gerätehinweise"></aside>
       <section id="ride-scene" class="scene" aria-label="Ride world"></section>
-      <section id="account-panel" class="panel account" aria-label="Konto" lang="de">
-        <h2>Konto</h2>
-        <p>Gastfahrten bleiben lokal. Anmeldung lädt keine Fahrten hoch.</p>
-      </section>
-      <section
-        id="account-data"
-        class="panel account-data"
-        aria-label="Kontodaten"
-        lang="de"
-      ></section>
       <section class="panel hud" aria-label="Ride HUD">
         <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
         <dl class="hud__values">
@@ -61,108 +65,223 @@
         <p class="hud__hint">Sim mode: use ArrowUp and ArrowDown to shift.</p>
       </section>
 
-      <section class="panel recording" id="ride-recording" aria-label="Fahrtaufnahme" lang="de">
-        <h2>Lokale Fahrtaufnahme</h2>
-        <p>
-          Aufnahme beenden stoppt nicht die Fahrtphysik. Ausrollen wird aufgenommen. Ein Reload
-          verwirft die laufende Aufnahme.
-        </p>
-        <p>
-          TCX-Download ist kein Strava-Upload. Sim-Dateien sind als Simulation markiert. Virtuelle
-          Distanz, kein GPS.
-        </p>
-        <p>
-          Maximal 6 Stunden pro Aufnahme und 20 Fahrten lokal in diesem Browser. Keine automatische
-          Löschung. Browserdaten sind kein Backup.
-        </p>
-      </section>
+      <dialog id="game-menu" class="game-menu" aria-labelledby="game-menu-title" lang="de">
+        <span class="game-menu__focus-guard" tabindex="0" data-menu-boundary="start"></span>
+        <header class="game-menu__header">
+          <div>
+            <p class="game-menu__eyebrow">VOLTONAUT / IN RIDE</p>
+            <h1 id="game-menu-title">Fahrtmenü</h1>
+          </div>
+          <button id="game-menu-close" type="button" autofocus>Zurück zur Fahrt</button>
+        </header>
+        <p class="game-menu__hint">Die Fahrt läuft weiter. Escape schließt das Menü.</p>
+        <div class="game-menu__tabs" role="tablist" aria-label="Fahrtmenü-Bereiche">
+          <button
+            id="game-tab-profile"
+            role="tab"
+            type="button"
+            aria-controls="rider-profile"
+            aria-selected="true"
+          >
+            Profil
+          </button>
+          <button
+            id="game-tab-recordings"
+            role="tab"
+            type="button"
+            aria-controls="ride-recording"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Aufnahmen
+          </button>
+          <button
+            id="game-tab-account"
+            role="tab"
+            type="button"
+            aria-controls="game-panel-account"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Konto
+          </button>
+          <button
+            id="game-tab-strava"
+            role="tab"
+            type="button"
+            aria-controls="game-panel-strava"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Strava
+          </button>
+        </div>
+        <div class="game-menu__content">
+          <section
+            class="panel recording"
+            id="ride-recording"
+            role="tabpanel"
+            aria-labelledby="game-tab-recordings"
+            data-game-panel
+            hidden
+            lang="de"
+            tabindex="0"
+          >
+            <h2>Lokale Fahrtaufnahme</h2>
+            <p>
+              Aufnahme beenden stoppt nicht die Fahrtphysik. Ausrollen wird aufgenommen. Ein Reload
+              verwirft die laufende Aufnahme.
+            </p>
+            <p>
+              TCX-Download ist kein Strava-Upload. Sim-Dateien sind als Simulation markiert.
+              Virtuelle Distanz, kein GPS.
+            </p>
+            <p>
+              Maximal 6 Stunden pro Aufnahme und 20 Fahrten lokal in diesem Browser. Keine
+              automatische Löschung. Browserdaten sind kein Backup.
+            </p>
+          </section>
 
-      <section class="panel profile" aria-label="Rider profile">
-        <h2 class="profile__title">Rider profile</h2>
-        <form id="profile-form" data-testid="profile-form">
-          <label class="profile__field">
-            Name
-            <input
-              id="profile-displayName"
-              data-testid="profile-displayName"
-              type="text"
-              value="Rider"
-            />
-          </label>
-          <label class="profile__field">
-            Mass (kg)
-            <input
-              id="profile-massKg"
-              data-testid="profile-massKg"
-              type="number"
-              inputmode="decimal"
-              value="75"
-            />
-          </label>
-          <label class="profile__field">
-            Height (cm)
-            <input
-              id="profile-heightCm"
-              data-testid="profile-heightCm"
-              type="number"
-              inputmode="decimal"
-              value="185"
-            />
-          </label>
-          <label class="profile__field">
-            Bike mass (kg)
-            <input
-              id="profile-bikeMassKg"
-              data-testid="profile-bikeMassKg"
-              type="number"
-              inputmode="decimal"
-              value="8"
-            />
-          </label>
-          <label class="profile__field">
-            Chainring (teeth)
-            <input
-              id="profile-chainringTeeth"
-              data-testid="profile-chainringTeeth"
-              type="number"
-              inputmode="numeric"
-              value="42"
-            />
-          </label>
-          <label class="profile__field">
-            Cog (teeth)
-            <input
-              id="profile-cogTeeth"
-              data-testid="profile-cogTeeth"
-              type="number"
-              inputmode="numeric"
-              value="14"
-            />
-          </label>
-          <label class="profile__field">
-            Wheel circumference (m)
-            <input
-              id="profile-wheelCircM"
-              data-testid="profile-wheelCircM"
-              type="number"
-              inputmode="decimal"
-              step="0.001"
-              value="2.105"
-            />
-          </label>
-          <label class="profile__field">
-            Units
-            <select id="profile-units" data-testid="profile-units">
-              <option value="metric">metric</option>
-              <option value="imperial">imperial</option>
-            </select>
-          </label>
-          <p class="profile__error" id="profile-error" data-testid="profile-error"></p>
-          <p class="profile__status" id="profile-status" data-testid="profile-status"></p>
-          <button class="profile__save" type="submit" data-testid="profile-save">Save</button>
-          <p class="profile__hint">FTP and max heart rate are reserved for later stages.</p>
-        </form>
-      </section>
+          <section
+            id="rider-profile"
+            class="panel profile"
+            role="tabpanel"
+            aria-labelledby="game-tab-profile"
+            data-game-panel
+            tabindex="0"
+          >
+            <h2 class="profile__title">Rider profile</h2>
+            <form id="profile-form" data-testid="profile-form">
+              <label class="profile__field">
+                Name
+                <input
+                  id="profile-displayName"
+                  data-testid="profile-displayName"
+                  type="text"
+                  value="Rider"
+                />
+              </label>
+              <label class="profile__field">
+                Mass (kg)
+                <input
+                  id="profile-massKg"
+                  data-testid="profile-massKg"
+                  type="number"
+                  inputmode="decimal"
+                  value="75"
+                />
+              </label>
+              <label class="profile__field">
+                Height (cm)
+                <input
+                  id="profile-heightCm"
+                  data-testid="profile-heightCm"
+                  type="number"
+                  inputmode="decimal"
+                  value="185"
+                />
+              </label>
+              <label class="profile__field">
+                Bike mass (kg)
+                <input
+                  id="profile-bikeMassKg"
+                  data-testid="profile-bikeMassKg"
+                  type="number"
+                  inputmode="decimal"
+                  value="8"
+                />
+              </label>
+              <label class="profile__field">
+                Chainring (teeth)
+                <input
+                  id="profile-chainringTeeth"
+                  data-testid="profile-chainringTeeth"
+                  type="number"
+                  inputmode="numeric"
+                  value="42"
+                />
+              </label>
+              <label class="profile__field">
+                Cog (teeth)
+                <input
+                  id="profile-cogTeeth"
+                  data-testid="profile-cogTeeth"
+                  type="number"
+                  inputmode="numeric"
+                  value="14"
+                />
+              </label>
+              <label class="profile__field">
+                Wheel circumference (m)
+                <input
+                  id="profile-wheelCircM"
+                  data-testid="profile-wheelCircM"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.001"
+                  value="2.105"
+                />
+              </label>
+              <label class="profile__field">
+                Units
+                <select id="profile-units" data-testid="profile-units">
+                  <option value="metric">metric</option>
+                  <option value="imperial">imperial</option>
+                </select>
+              </label>
+              <p class="profile__error" id="profile-error" data-testid="profile-error"></p>
+              <p class="profile__status" id="profile-status" data-testid="profile-status"></p>
+              <button class="profile__save" type="submit" data-testid="profile-save">Save</button>
+              <p class="profile__hint">FTP and max heart rate are reserved for later stages.</p>
+            </form>
+          </section>
+          <section
+            id="game-panel-account"
+            role="tabpanel"
+            aria-labelledby="game-tab-account"
+            data-game-panel
+            hidden
+            tabindex="0"
+          >
+            <section id="account-panel" class="panel account" aria-label="Konto" lang="de">
+              <h2>Konto</h2>
+              <p>Gastfahrten bleiben lokal. Anmeldung lädt keine Fahrten hoch.</p>
+            </section>
+            <section
+              id="account-data"
+              class="panel account-data"
+              aria-label="Kontodaten"
+              lang="de"
+            ></section>
+          </section>
+          <section
+            id="game-panel-strava"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="game-tab-strava"
+            data-game-panel
+            hidden
+            tabindex="0"
+          >
+            <div id="strava-panel">
+              <h2>Strava</h2>
+              <p>
+                Noch nicht im Spiel verfügbar. Die Serverintegration ist vorbereitet;
+                Kontoverbindung und Upload im Browser fehlen noch.
+              </p>
+              <p>
+                Lokale Fahrten kannst du unter Aufnahmen als TCX herunterladen. Ein TCX-Download ist
+                kein Strava-Upload.
+              </p>
+            </div>
+          </section>
+        </div>
+        <footer class="game-menu__footer">
+          <span>Geräte und Fahrt bleiben aktiv.</span>
+          <button id="game-menu-devices" type="button">Geräte öffnen</button>
+        </footer>
+        <span class="game-menu__focus-guard" tabindex="0" data-menu-boundary="end"></span>
+      </dialog>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

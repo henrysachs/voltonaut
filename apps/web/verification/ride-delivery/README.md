@@ -2,8 +2,13 @@
 
 ```sh
 mise run install
-mise exec -- node scripts/verify-ride-delivery.mjs
+mise exec -- node apps/web/verification/ride-delivery/verify.mjs
 ```
+
+Der Treiber liegt bei der Webanwendung, die `@playwright/test` besitzt. Laufzeit
+und Typen verwenden denselben Paketimport ohne Weiterleitung oder pnpm-Storepfad.
+Die echte Browserprüfung liegt in `capture.browser.spec.ts`; Node 24 lädt sie
+mit nativer TypeScript-Typlöschung direkt aus dem Verifikations-CLI.
 
 Der Treiber baut die echte Webanwendung einschließlich Engine-Worker mit der
 vorhandenen Vite-Konfiguration. Build, Cache und frisches Chromium-Profil liegen
@@ -12,7 +17,8 @@ Ein eigener statischer SPA-Server bindet ausschließlich `127.0.0.1` mit einem
 OS-zugewiesenen Port und `Referrer-Policy: no-referrer`. Kein Vite-Devserver.
 
 Chromium öffnet ausschließlich `/?sim=1`, wartet auf echte HUD-Messwerte und
-bedient die vorhandenen Aufnahmebuttons. Nach mindestens einer echten Sekunde
+öffnet den Aufnahmebereich im Ingame-Menü über die tatsächlichen Buttons und Tabs.
+Nach mindestens einer echten Sekunde
 liest der Treiber die tatsächliche IndexedDB ausschließlich lesend. Ein Reload
 muss denselben Datensatz liefern. Native Bluetooth-Zugriffe werden vor jedem
 nativen Aufruf abgebrochen; Netzwerk außerhalb des eigenen Servers ist gesperrt.
@@ -29,7 +35,7 @@ Workers, `browser-diagnostics.json`, `static-requests.json`, `capture.json`,
 `actual-sanitized-archive-shape.json`, Screenshots vor/nach Reload und `result.log`.
 Profilwerte und Fahrt-ID werden nicht in die Archivform übernommen.
 
-`browser.mjs` besitzt den UI-/Browserablauf; `archive.mjs` prüft die gelesene
+`capture.browser.spec.ts` besitzt den UI-/Browserablauf; `archive.mjs` prüft die gelesene
 Archivgrenze. Ein späterer nativer GATT-Fake-Fluss kann den UI-Ablauf ergänzen,
 ohne einen zweiten Aufnahmeproduzenten einzuführen. API, Konto, Strava und
 native Adapter sind durch diesen ersten Sim-Nachweis noch nicht verifiziert.

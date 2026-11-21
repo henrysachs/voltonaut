@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { DEFAULT_RIDER_PROFILE, RideListSchema, SessionResponseSchema } from "@voltonaut/shared";
+import { openGameMenu } from "../e2e/helpers/gameMenu.js";
 
 const web = process.env["WEB_ORIGIN"] ?? "http://127.0.0.1:5193";
 const api = process.env["API_ORIGIN"] ?? "";
@@ -15,12 +16,14 @@ async function command(path: string): Promise<void> {
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the Page lifecycle handle.
 async function login(page: Readonly<Page>, identity: "a" | "b") {
   await command(identity);
+  await openGameMenu(page, "Konto");
   const exchange = page.waitForResponse(`${api}/v1/auth/oidc/exchange`);
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   const response = await exchange;
   assert.equal(response.status(), 200);
   const raw: unknown = await response.json();
   const session = SessionResponseSchema.parse(raw);
+  await openGameMenu(page, "Konto");
   await expect(page.getByRole("region", { name: "Konto", exact: true })).toContainText(
     `sync-${identity}@example.com`,
   );
@@ -31,6 +34,7 @@ async function login(page: Readonly<Page>, identity: "a" | "b") {
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the Page and native dialog handles.
 async function confirm(page: Readonly<Page>, label: string): Promise<void> {
+  await openGameMenu(page, "Konto");
   const dialog = page.waitForEvent("dialog");
   const click = page.getByRole("button", { name: label, exact: true }).click();
   await (await dialog).accept();
@@ -54,6 +58,7 @@ async function record(page: Readonly<Page>) {
   await page.goto(`${web}/?sim=1&debug=1`);
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   const before = await page.evaluate(archive);
+  await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
   await page.waitForTimeout(1500);
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
@@ -71,6 +76,7 @@ async function claim(
   rideId: string,
   email = "sync-a@example.com",
 ): Promise<void> {
+  await openGameMenu(page, "Konto");
   await page
     .getByRole("button", { name: "Kontodaten und lokales Archiv aktualisieren", exact: true })
     .click();
@@ -85,6 +91,7 @@ async function claim(
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the Page lifecycle handle.
 async function profileFlow(page: Readonly<Page>): Promise<void> {
+  await openGameMenu(page, "Profil");
   await page.getByTestId("profile-displayName").fill("Sync A");
   await page.getByTestId("profile-save").click();
   await expect(page.getByTestId("profile-status")).toHaveText("Saved locally");
@@ -94,13 +101,16 @@ async function profileFlow(page: Readonly<Page>): Promise<void> {
   await expect(page.getByRole("region", { name: "Kontodaten", exact: true })).toContainText(
     "Serverprofil: Sync A",
   );
+  await openGameMenu(page, "Profil");
   await expect(page.getByTestId("profile-displayName")).toHaveValue("Unsaved draft");
   await page.getByTestId("profile-displayName").fill("Frozen next");
   await page.getByTestId("profile-save").click();
   await expect.poll(() => page.evaluate(localProfileName)).toBe("Frozen next");
   await page.goto(`${web}/?sim=1&debug=1`);
+  await openGameMenu(page, "Profil");
   await expect(page.getByTestId("profile-displayName")).toHaveValue("Frozen next");
   await confirm(page, "Serverprofil für nächste Fahrt lokal verwenden");
+  await openGameMenu(page, "Profil");
   await expect(page.getByTestId("profile-displayName")).toHaveValue("Sync A");
   await expect(page.getByTestId("profile-status")).toContainText("nächste Fahrt");
 }
@@ -111,6 +121,7 @@ async function offlineAndSwitch(page: Readonly<Page>, rideId: string): Promise<v
   await claim(page, rideId);
   await expect(page.locator(`[data-outbox-id="${rideId}"]`)).toContainText("Dauerhaft vorgemerkt");
   await page.reload();
+  await openGameMenu(page, "Konto");
   await expect(page.getByRole("button", { name: "Anmelden", exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "Kontodaten", exact: true })).not.toContainText(
     "Sync A",
@@ -167,6 +178,7 @@ async function lostResponse(page: Readonly<Page>, rideId: string): Promise<void>
   await page.unroute(`${api}/v1/rides`);
   await command("restart");
   await page.reload();
+  await openGameMenu(page, "Konto");
   await page.waitForTimeout(2200);
   await page.getByRole("button", { name: "Vorgemerkte Aufträge erneut versuchen" }).click();
   await expect(page.locator(`[data-outbox-id="${rideId}"]`)).toContainText(
@@ -188,6 +200,7 @@ test("sync signed two-account profile, explicit archive claim, offline reload an
     "Auf Server gespeichert",
   );
   await profileFlow(page);
+  await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
   await page.waitForTimeout(1500);
   await page.getByRole("button", { name: "Aufnahme beenden und speichern", exact: true }).click();
@@ -261,6 +274,7 @@ test("sync signed profile pull fails closed with denied storage and keeps the lo
   await expect(page.getByRole("region", { name: "Kontodaten", exact: true })).toContainText(
     "Kontowarteschlange nicht bestätigt",
   );
+  await openGameMenu(page, "Profil");
   await expect(page.getByTestId("profile-displayName")).toHaveValue(
     DEFAULT_RIDER_PROFILE.displayName,
   );

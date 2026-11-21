@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { closeGameMenu, openGameMenu } from "./helpers/gameMenu.js";
 
 import {
   captureRenderWorker,
@@ -103,8 +104,11 @@ test("does not switch camera while a profile field owns keyboard input", async (
   const debug = page.getByLabel("Render diagnostics");
 
   await expect(debug).toHaveAttribute("data-camera", "chase");
+  await openGameMenu(page, "Profil");
   await page.getByRole("textbox", { name: "Name", exact: true }).focus();
   await page.keyboard.press("c");
+  await expect(debug).toHaveAttribute("data-camera", "chase");
+  await closeGameMenu(page);
   await expect(page.getByRole("button", { name: "Camera: chase" })).toBeVisible();
   await page.getByRole("button", { name: "Camera: chase" }).click();
   await expect(debug).toHaveAttribute("data-camera", "overview");

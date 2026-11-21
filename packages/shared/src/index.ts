@@ -14,7 +14,11 @@ export * from "./recordingV2.js";
 
 export * from "./recordingCapture.js";
 
-export * from "./recordingTrack.js";
+export {
+  createRecordingTrackProjection,
+  projectRecordingTrack,
+  type RecordingTrackProjection,
+} from "./recordingTrack.js";
 
 export * from "./rideTcx.js";
 
