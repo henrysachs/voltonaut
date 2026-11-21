@@ -39,9 +39,9 @@ it("requires a session on every owned endpoint", async () => {
   const server = httpServerOf(testApp.app);
   await request(server).get("/v1/me/profile").expect(401);
   await request(server).put("/v1/me/profile").send(DEFAULT_RIDER_PROFILE).expect(401);
-  await request(server).post("/v1/rides").send(recording()).expect(401);
-  await request(server).get("/v1/rides").expect(401);
-  await request(server).get(`/v1/rides/${randomUUID()}`).expect(401);
+  await request(server).post("/v2/rides").send(recording()).expect(401);
+  await request(server).get("/v2/rides").expect(401);
+  await request(server).get(`/v2/rides/${randomUUID()}`).expect(401);
 });
 
 it("keeps independent profiles and updates only the current owner", async () => {
@@ -86,7 +86,7 @@ it("keeps independent profiles and updates only the current owner", async () => 
 it("stores unverified recordings and retries canonically", async () => {
   const server = httpServerOf(testApp.app);
   const ride = recording();
-  const post = () => request(server).post("/v1/rides").set(bearer(alice.sessionToken));
+  const post = () => request(server).post("/v2/rides").set(bearer(alice.sessionToken));
   const first = await post().send(ride).expect(200);
   expect(RideReceiptSchema.parse(bodyOf(first))).toEqual({
     rideId: ride.rideId,
@@ -113,7 +113,7 @@ it("stores unverified recordings and retries canonically", async () => {
   expect(bodyOf(conflict)).toMatchObject({ error: { code: "ride_id_conflict" } });
 
   const detail = await request(server)
-    .get(`/v1/rides/${ride.rideId}`)
+    .get(`/v2/rides/${ride.rideId}`)
     .set(bearer(alice.sessionToken))
     .expect(200);
 
@@ -127,22 +127,22 @@ it("hides foreign ride IDs on reads and upload collisions", async () => {
   const server = httpServerOf(testApp.app);
   const ride = recording();
 
-  await request(server).post("/v1/rides").set(bearer(alice.sessionToken)).send(ride).expect(200);
+  await request(server).post("/v2/rides").set(bearer(alice.sessionToken)).send(ride).expect(200);
 
   const foreign = await request(server)
-    .get(`/v1/rides/${ride.rideId}`)
+    .get(`/v2/rides/${ride.rideId}`)
     .set(bearer(bob.sessionToken))
     .expect(404);
 
   const missing = await request(server)
-    .get(`/v1/rides/${randomUUID()}`)
+    .get(`/v2/rides/${randomUUID()}`)
     .set(bearer(bob.sessionToken))
     .expect(404);
 
   expect(bodyOf(foreign)).toEqual(bodyOf(missing));
 
   const collision = await request(server)
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(bob.sessionToken))
     .send(ride)
     .expect(404);
@@ -156,7 +156,7 @@ it("converges concurrent retries to one row and lists only owned summaries", asy
 
   const responses = await Promise.all(
     Array.from({ length: 5 }, () =>
-      request(server).post("/v1/rides").set(bearer(alice.sessionToken)).send(ride).expect(200),
+      request(server).post("/v2/rides").set(bearer(alice.sessionToken)).send(ride).expect(200),
     ),
   );
 
@@ -175,7 +175,7 @@ it("converges concurrent retries to one row and lists only owned summaries", asy
   ).toEqual({ total: 1 });
 
   const page = await request(server)
-    .get("/v1/rides?limit=1")
+    .get("/v2/rides?limit=1")
     .set(bearer(alice.sessionToken))
     .expect(200);
 
@@ -186,7 +186,7 @@ it("converges concurrent retries to one row and lists only owned summaries", asy
   expect(parsed.nextCursor).not.toBeNull();
 
   const next = await request(server)
-    .get(`/v1/rides?limit=1&cursor=${parsed.nextCursor}`)
+    .get(`/v2/rides?limit=1&cursor=${parsed.nextCursor}`)
     .set(bearer(alice.sessionToken))
     .expect(200);
 
@@ -195,7 +195,7 @@ it("converges concurrent retries to one row and lists only owned summaries", asy
   expect(nextPage.rides).toHaveLength(1);
   expect(nextPage.rides[0]?.rideId).not.toBe(parsed.rides[0]?.rideId);
 
-  const other = await request(server).get("/v1/rides").set(bearer(bob.sessionToken)).expect(200);
+  const other = await request(server).get("/v2/rides").set(bearer(bob.sessionToken)).expect(200);
 
   expect(RideListSchema.parse(bodyOf(other))).toEqual({ rides: [], nextCursor: null });
 });

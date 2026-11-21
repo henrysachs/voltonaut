@@ -29,7 +29,7 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 
 - `fixtures/rides/<name>.input.json`: Route-ID, RiderProfile, Gang-Wechsel und 1-Hz-Leistungs-/Kadenz-Reihe (z. B. 60 min Henry-typisches Profil, 10 min Bergsprint, 5 min Abfahrt ohne Treten).
 - `<name>.golden.json`: Distanz, Höhenmeter, kJ, Segmentzeiten, Endgeschwindigkeit, XP, Volts, Badges, Trainer-Kommando-Folge (Hash). Zahlen auf 6 Nachkommastellen gerundet (plattformstabil); Vergleich **exakt**.
-- Gleiche Fixtures laufen gegen `packages/engine`/`rules` direkt **und** gegen den Server-Endpunkt `POST /v1/rides` (Server muss identisch rechnen).
+- Gleiche Fixtures laufen gegen `packages/engine`/`rules` direkt **und** gegen den Server-Endpunkt `POST /v2/rides` (Server muss identisch rechnen).
 - Aktualisieren nur mit `mise run golden:update` + Begründung im PR; Dateien sind CODEOWNERS-geschützt.
 
 ## 4. Property-based Tests (fast-check)

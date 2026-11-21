@@ -4,6 +4,7 @@ import {
   type ProfileState,
   type RideList,
   type RideReceipt,
+  type ArchivedRide,
 } from "@voltonaut/shared";
 
 import { AccountSync } from "./accountSync.js";
@@ -12,6 +13,7 @@ import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.j
 import type { SessionView } from "./applicationSession.js";
 import { localRide } from "./testdata/localRide.js";
 import { deferred } from "./testdata/deferred.js";
+import { journalRide } from "./testdata/journal.js";
 
 class SyncFixture {
   readonly rows = new Map<string, OutboxRow>();
@@ -25,6 +27,7 @@ class SyncFixture {
   nextReceipt: (() => Promise<RideReceipt>) | undefined;
   failure: PrivateRequestError | undefined;
   readonly applied: string[] = [];
+  archive: readonly ArchivedRide[] = [{ kind: "legacy", recording: localRide }];
   readonly outbox: AccountOutbox = {
     list: (owner) =>
       Promise.resolve([...this.rows.values()].filter((row) => row.userId === owner.userId)),
@@ -37,7 +40,7 @@ class SyncFixture {
       subscribe: (listener) => this.subscribe(listener),
     },
     outbox: () => Promise.resolve(this.outbox),
-    archive: () => Promise.resolve([localRide]),
+    archive: () => Promise.resolve(this.archive),
     profile: {
       saved: () => Promise.resolve(DEFAULT_RIDER_PROFILE),
       apply: (value) => {
@@ -113,15 +116,6 @@ class SyncFixture {
 
     for (const listener of this.listeners) listener({ kind: "guest", message: "Gast" });
   }
-  fail(): void {
-    this.failure = new PrivateRequestError("retry");
-  }
-  later(): void {
-    this.nowMs += 120_000;
-  }
-  wait(receipt: () => Promise<RideReceipt>): void {
-    this.nextReceipt = receipt;
-  }
 }
 
 function fixture(): SyncFixture {
@@ -143,18 +137,37 @@ it("does not claim the guest archive on login; explicit claim snapshots the ride
   expect([...f.rows.values()][0]?.payload).toEqual(localRide);
 });
 
+it("claims raw journal payload only after explicit action, never a local-only track", async () => {
+  const f = fixture();
+  f.archive = [
+    { kind: "journal", recording: journalRide },
+    { kind: "local_only", reason: "journal_age", track: localRide },
+  ];
+  f.login(A);
+  await f.sync.refresh();
+  expect(f.rows.size).toBe(0);
+  await f.sync.claim(localRide.rideId);
+  expect(f.rows.size).toBe(0);
+  await f.sync.claim(journalRide.rideId);
+  expect([...f.rows.values()][0]?.payload).toEqual(journalRide);
+  expect(f.sync.view()).toMatchObject({
+    kind: "account",
+    local: [{ kind: "journal" }, { kind: "local_only" }],
+  });
+});
+
 it("keeps A's queued payload after logout and never sends it as B", async () => {
   const f = fixture();
   f.login(A);
   await f.sync.refresh();
-  f.fail();
+  f.failure = new PrivateRequestError("retry");
   await f.sync.claim(localRide.rideId);
   await expect.poll(() => f.uploads).toEqual([A]);
   f.logout();
   expect(f.sync.view().kind).toBe("guest");
   f.login(B);
   await f.sync.refresh();
-  f.later();
+  f.nowMs += 120_000;
   await f.sync.retry();
   expect(f.uploads).toEqual([A]);
   expect([...f.rows.values()][0]?.userId).toBe(A);
@@ -163,7 +176,7 @@ it("keeps A's queued payload after logout and never sends it as B", async () => 
 it("ignores a late A receipt and never paints it into B", async () => {
   const f = fixture();
   const receipt = deferred<RideReceipt>();
-  f.wait(() => receipt.promise);
+  f.nextReceipt = () => receipt.promise;
   f.login(A);
   await f.sync.refresh();
   const sending = f.sync.claim(localRide.rideId);
@@ -206,14 +219,14 @@ it("backs off retryable failures; refresh does not create an upload loop", async
   const f = fixture();
   f.login(A);
   await f.sync.refresh();
-  f.fail();
+  f.failure = new PrivateRequestError("retry");
   await f.sync.claim(localRide.rideId);
   await expect.poll(() => f.uploads).toEqual([A]);
   await f.sync.retry();
   await f.sync.refresh();
   await f.sync.retry();
   expect(f.uploads).toEqual([A]);
-  f.later();
+  f.nowMs += 120_000;
   await f.sync.retry();
   await expect.poll(() => f.uploads).toEqual([A, A]);
 });

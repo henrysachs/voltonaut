@@ -93,13 +93,13 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
           ),
         history: (cursor) =>
           request(
-            cursor === null ? "/v1/rides" : `/v1/rides?cursor=${RideIdSchema.parse(cursor)}`,
+            cursor === null ? "/v2/rides" : `/v2/rides?cursor=${RideIdSchema.parse(cursor)}`,
             RideListSchema,
           ),
-        detail: (rideId) => request(`/v1/rides/${RideIdSchema.parse(rideId)}`, RideDetailSchema),
+        detail: (rideId) => request(`/v2/rides/${RideIdSchema.parse(rideId)}`, RideDetailSchema),
         async upload(ride) {
           const payload = RideUploadSchema.parse(ride);
-          const receipt = await request("/v1/rides", RideReceiptSchema, JSON.stringify(payload));
+          const receipt = await request("/v2/rides", RideReceiptSchema, JSON.stringify(payload));
 
           if (receipt.rideId !== payload.rideId) throw new PrivateRequestError("contract");
 
@@ -110,9 +110,15 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
   };
 }
 
+type PrivatePath =
+  | "/v1/me/profile"
+  | "/v2/rides"
+  | `/v2/rides?cursor=${string}`
+  | `/v2/rides/${string}`;
+
 function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization) {
   return async function request<T>(
-    path: string,
+    path: PrivatePath,
     schema: ResponseSchema<T>,
     body?: string,
   ): Promise<T> {

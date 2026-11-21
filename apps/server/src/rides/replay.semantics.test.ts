@@ -2,7 +2,13 @@ import { expect, it } from "vitest";
 import { TEST_LOOP } from "@voltonaut/engine";
 import type { RecordingEntryV2, RecordingV2, ReplayObservationV2 } from "@voltonaut/shared";
 
-import { normalReplay, recordReplay, replayed, replayEngine } from "../testing/replay.spec.js";
+import {
+  normalReplay,
+  recordReplay,
+  replayed,
+  replayEngine,
+  windowFailures,
+} from "../testing/replay.spec.js";
 import { assessRecordingV2 } from "./replay.js";
 
 it("keeps the first wake as arming only even when capture starts before it", () => {
@@ -38,15 +44,16 @@ it("distinguishes per-channel 2.5s export freshness from engine's >3s hold", () 
   for (const durationMs of [2500, 2501]) {
     const ride = recordReplay([
       [0, 0, "arm"],
-      [1, 0, "boundary", "start"],
+      [1, 0, "status", "trainer", "ready"],
       [2, 0, "trainer", 250, 90, null],
-      [3, durationMs, "advance", durationMs / 1000],
-      [4, durationMs, "boundary", "finish"],
+      [3, 0, "boundary", "start"],
+      [4, durationMs, "advance", durationMs / 1000],
+      [5, durationMs, "boundary", "finish"],
     ]);
 
     const result = replayed(ride);
     expect(result.summary.energyKj).toBeCloseTo(0.625, 12);
-    expect(result.eligibility.reasons.includes("stale_trainer")).toBe(durationMs > 2500);
+    expect(windowFailures(ride).includes("stale_trainer")).toBe(durationMs > 2500);
   }
 });
 
@@ -84,7 +91,7 @@ it("ages paused ticks without advancing ride time, then resumes from fresh input
   expect(later?.tS).toBe(paused?.tS);
   expect(Number(later?.dataAgeS)).toBeGreaterThan(Number(paused?.dataAgeS));
   expect(ride.observations.at(-1)?.snapshot.paused).toBe(false);
-  expect(replayed(ride).eligibility.reasons).toContain("stale_trainer");
+  expect(windowFailures(ride)).toContain("stale_trainer");
 });
 
 it("detects reordered shifts across a tick even with contiguous replacement sequences", () => {
@@ -184,12 +191,16 @@ it("checks every output including missing, extra, reordered and changed commands
     ).status,
   ).toBe("rejected");
   expect(assessRecordingV2(replaceFinish(ride, { gap: true })).status).toBe("replayed");
-  expect(replayed(replaceFinish(ride, { gap: true })).eligibility.reasons).toContain("gap");
+  expect(replayed(replaceFinish(ride, { gap: true })).source.window).toEqual({
+    kind: "blocked",
+    reasons: ["gap"],
+  });
 });
 
-it("leaves even a numerically consistent ordinary BLE journal externally ineligible", () => {
-  expect(replayed(normalReplay()).eligibility).toEqual({
-    status: "ineligible",
-    reasons: ["capture_not_verified"],
+it("keeps ordinary BLE consistency explicitly client declared, not hardware attested", () => {
+  expect(replayed(normalReplay()).source).toEqual({
+    assurance: "client_declared",
+    declaredSource: "ble",
+    window: { kind: "continuous" },
   });
 });

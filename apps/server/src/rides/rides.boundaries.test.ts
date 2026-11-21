@@ -69,7 +69,7 @@ it.each([
   "userId=other",
 ])("rejects malformed query %s", async (query) => {
   const response = await request(httpServerOf(testApp.app))
-    .get(`/v1/rides?${query}`)
+    .get(`/v2/rides?${query}`)
     .set(bearer(session.sessionToken))
     .expect(422);
 
@@ -116,7 +116,7 @@ it("rejects malformed recording fields", async () => {
   await Promise.all(
     invalid.map(async (payload) => {
       const response = await request(server)
-        .post("/v1/rides")
+        .post("/v2/rides")
         .set(bearer(session.sessionToken))
         .set("Content-Type", "application/json")
         .send(payload)
@@ -129,7 +129,7 @@ it("rejects malformed recording fields", async () => {
 
 it("rejects malformed ride paths", async () => {
   const path = await request(httpServerOf(testApp.app))
-    .get("/v1/rides/not-a-uuid")
+    .get("/v2/rides/not-a-uuid")
     .set(bearer(session.sessionToken))
     .expect(422);
 
@@ -151,7 +151,7 @@ it("accepts a normal hour recording beyond Nest's default 100 KiB", async () => 
   expect(Buffer.byteLength(JSON.stringify(ride))).toBeGreaterThan(100 * 1024);
 
   const response = await request(httpServerOf(testApp.app))
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(session.sessionToken))
     .send(ride)
     .expect(200);
@@ -163,7 +163,7 @@ it("rejects oversized and malformed JSON without returning the raw body", async 
   const server = httpServerOf(testApp.app);
 
   const oversized = await request(server)
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(session.sessionToken))
     .set("Content-Type", "application/json")
     .send(JSON.stringify({ privateValue: "x".repeat(MAX_JSON_BODY_BYTES) }))
@@ -173,7 +173,7 @@ it("rejects oversized and malformed JSON without returning the raw body", async 
   expect(JSON.stringify(bodyOf(oversized))).not.toContain("privateValue");
 
   const malformed = await request(server)
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(session.sessionToken))
     .set("Content-Type", "application/json")
     .send('{"secret":"do-not-return",')
@@ -185,7 +185,7 @@ it("rejects oversized and malformed JSON without returning the raw body", async 
 
 it("rejects compressed JSON rather than accepting an unbounded inflation", async () => {
   const response = await request(httpServerOf(testApp.app))
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(session.sessionToken))
     .set("Content-Type", "application/json")
     .set("Content-Encoding", "gzip")
@@ -197,7 +197,7 @@ it("rejects compressed JSON rather than accepting an unbounded inflation", async
 
 it("rejects plain-text JSON with 415 before body validation", async () => {
   const response = await request(httpServerOf(testApp.app))
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(session.sessionToken))
     .set("Content-Type", "text/plain")
     .send(JSON.stringify(recording()))
@@ -206,7 +206,7 @@ it("rejects plain-text JSON with 415 before body validation", async () => {
   expect(ErrorEnvelopeSchema.parse(bodyOf(response)).error.code).toBe("unsupported_media_type");
 
   const anonymous = await request(httpServerOf(testApp.app))
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set("Content-Type", "text/plain")
     .send(JSON.stringify(recording()))
     .expect(401);
@@ -216,7 +216,7 @@ it("rejects plain-text JSON with 415 before body validation", async () => {
 
 it("accepts application/json with a legitimate charset", async () => {
   const response = await request(httpServerOf(testApp.app))
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(session.sessionToken))
     .set("Content-Type", "application/json; charset=utf-8")
     .send(JSON.stringify(recording()))

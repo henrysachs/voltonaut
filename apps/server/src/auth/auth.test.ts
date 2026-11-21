@@ -201,7 +201,7 @@ it("returns authenticated account and owned rides but exposes no development mai
   const session = await loginTestUser(app, mail, "scope@example.com");
 
   const responses = await Promise.all(
-    ["/v1/me", "/v1/rides", "/dev/mailbox"].map((path) =>
+    ["/v1/me", "/v2/rides", "/dev/mailbox"].map((path) =>
       request(httpServerOf(app)).get(path).set(bearer(session.sessionToken)),
     ),
   );

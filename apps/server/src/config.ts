@@ -33,6 +33,7 @@ export type MailConfig = (z.infer<typeof MailConfigSchema> | { readonly provider
 export interface ServerConfig {
   readonly auth: AuthConfig;
   readonly strava: StravaConfig;
+  readonly rideSourcePolicy: "disabled" | "declared_ble_v1";
   readonly clientOrigin: string;
   readonly database: { readonly path: string; readonly migrationsDir: string };
   readonly mail: MailConfig;
@@ -200,17 +201,8 @@ export function parseServerConfig(
   return {
     auth,
     strava: stravaForBrowser(env, environment, browser),
+    ...parseRideConfig(env, environment),
     ...browser,
-    database: {
-      path: z
-        .string()
-        .min(1)
-        .parse(env["DATABASE_PATH"] ?? (environment === "test" ? ":memory:" : "data/voltonaut.db")),
-      migrationsDir: z
-        .string()
-        .min(1)
-        .parse(env["DRIZZLE_MIGRATIONS_DIR"] ?? "drizzle"),
-    },
     mail:
       auth.mode === "magic-link"
         ? parseMailConfig(env, environment)
@@ -236,6 +228,27 @@ export function parseServerConfig(
         .min(0)
         .max(65535)
         .parse(env["PORT"] ?? 3000),
+    },
+  };
+}
+
+function parseRideConfig(
+  env: Readonly<Record<string, string | undefined>>,
+  environment: string,
+): Pick<ServerConfig, "database" | "rideSourcePolicy"> {
+  return {
+    rideSourcePolicy: z
+      .enum(["disabled", "declared_ble_v1"])
+      .parse(env["RIDE_SOURCE_POLICY"] ?? "disabled"),
+    database: {
+      path: z
+        .string()
+        .min(1)
+        .parse(env["DATABASE_PATH"] ?? (environment === "test" ? ":memory:" : "data/voltonaut.db")),
+      migrationsDir: z
+        .string()
+        .min(1)
+        .parse(env["DRIZZLE_MIGRATIONS_DIR"] ?? "drizzle"),
     },
   };
 }

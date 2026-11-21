@@ -37,7 +37,7 @@ it.each([
     const server = httpServerOf(testApp.app);
 
     const first = await request(server)
-      .post("/v1/rides")
+      .post("/v2/rides")
       .set(bearer(owner.sessionToken))
       .send(recording(firstId))
       .expect(200);
@@ -55,7 +55,7 @@ it.each([
     ]);
 
     const retry = await request(server)
-      .post("/v1/rides")
+      .post("/v2/rides")
       .set(bearer(owner.sessionToken))
       .send(recording(retryId))
       .expect(200);
@@ -73,18 +73,18 @@ it("keeps foreign case aliases indistinguishable from missing rides on upload", 
   const server = httpServerOf(testApp.app);
 
   await request(server)
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(owner.sessionToken))
     .send(recording(LOWER_ID))
     .expect(200);
 
   const missing = await request(server)
-    .get("/v1/rides/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+    .get("/v2/rides/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
     .set(bearer(other.sessionToken))
     .expect(404);
 
   const collision = await request(server)
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(other.sessionToken))
     .send(recording(UPPER_ID))
     .expect(404);
@@ -99,23 +99,23 @@ it("resolves detail aliases for the owner and hides the same aliases from anothe
   const server = httpServerOf(testApp.app);
 
   await request(server)
-    .post("/v1/rides")
+    .post("/v2/rides")
     .set(bearer(owner.sessionToken))
     .send(recording(LOWER_ID))
     .expect(200);
 
   const lower = await request(server)
-    .get(`/v1/rides/${LOWER_ID}`)
+    .get(`/v2/rides/${LOWER_ID}`)
     .set(bearer(owner.sessionToken))
     .expect(200);
 
   const upper = await request(server)
-    .get(`/v1/rides/${UPPER_ID}`)
+    .get(`/v2/rides/${UPPER_ID}`)
     .set(bearer(owner.sessionToken))
     .expect(200);
 
   const foreign = await request(server)
-    .get(`/v1/rides/${UPPER_ID}`)
+    .get(`/v2/rides/${UPPER_ID}`)
     .set(bearer(other.sessionToken))
     .expect(404);
 
@@ -136,7 +136,7 @@ it("canonicalizes cursor case before the owner-scoped SQLite comparison", async 
   await Promise.all(
     ids.map((id) =>
       request(server)
-        .post("/v1/rides")
+        .post("/v2/rides")
         .set(bearer(owner.sessionToken))
         .send(recording(id))
         .expect(200),
@@ -144,12 +144,12 @@ it("canonicalizes cursor case before the owner-scoped SQLite comparison", async 
   );
 
   const lower = await request(server)
-    .get(`/v1/rides?limit=1&cursor=${LOWER_ID}`)
+    .get(`/v2/rides?limit=1&cursor=${LOWER_ID}`)
     .set(bearer(owner.sessionToken))
     .expect(200);
 
   const upper = await request(server)
-    .get(`/v1/rides?limit=1&cursor=${UPPER_ID}`)
+    .get(`/v2/rides?limit=1&cursor=${UPPER_ID}`)
     .set(bearer(owner.sessionToken))
     .expect(200);
 
