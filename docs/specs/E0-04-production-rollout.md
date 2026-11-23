@@ -2,7 +2,7 @@
 
 - **Auftrag und Freigabe:** Henry beauftragt am 21.11.2026 ausdrücklich den Produktionsdeploy von Web und API.
 - **Basis:** `9b8e28b500f5aaf000c57ff2aa094835b412416e`, alle drei Main-Workflows erfolgreich.
-- **Status:** In Arbeit. Zuerst lesender Betriebsbefund, dann getrennte Bereitstellung und öffentliche Prüfung.
+- **Status:** Web `61ca9c0` öffentlich geprüft, kompatible API `a504e35` mit serverseitig aktiviertem Strava produktiv. Der Queryplan-Fix `61ca9c0` ist nativ softwaregeprüft; dessen API-Deploy wartet auf Produktionsfreigabe. Persönlicher Anbieterpilot und Hardwareabnahme bleiben offen.
 - **Betroffen:** Bestehendes Pages-Projekt `voltonaut`, dediziertes API-Compose-Projekt auf dem vorhandenen VPS und sichere Produktionskonfiguration ohne Backup.
 
 ## Ziel
@@ -18,11 +18,11 @@ OIDC-Anwendung, eingeschränkte Pilot-Policy und Produktionscallback sind vorhan
 ## Abnahmekriterien
 
 - [x] AK1 – Pages veröffentlicht ausschließlich den freigegebenen grünen Main-Stand. Eigene Domain, Sim-Fahrt, Geräteoberfläche, Menü, Aufnahme und TCX funktionieren am öffentlichen gebauten Artefakt ohne Hardwarezugriff.
-- [ ] AK2 – API-Image stammt aus demselben geprüften Stand. Container läuft unprivilegiert, ohne öffentliche Host-Portbindung, hinter dem bestehenden Traefik. Bestehende Dienste und Daten bleiben erhalten.
-- [ ] AK3 – Produktionsmodus bleibt ausdrücklich OIDC. Issuer, Client-ID und Secret gelangen nur über einen freigegebenen sicheren Kanal in die private Serverkonfiguration. Kein Disabled- oder Speicher-Mailer-Fallback und keine blinde Credentialrotation.
-- [ ] AK4 – Normaler Deploy benötigt weder Litestream noch S3-Werte. SQLite bleibt persistent. Es werden keine Backupressourcen angelegt und keine Offhost-Wiederherstellung behauptet. Der optionale Backupmodus bleibt getrennt fail-closed geprüft.
-- [ ] AK5 – Öffentliche API hat gültiges TLS, korrekte Credential-CORS und geschützte eigene Endpunkte. Callback-Queries und Secrets erscheinen nicht in Betriebslogs. Ein erzwungener Login im Namen eines Pilotnutzers wird nicht vorgetäuscht.
-- [ ] AK6 – Tatsächliche Release-IDs, Commit, URLs, Health, Sicherung und verbleibende manuelle Abnahmen sind getrennt dokumentiert. Kein bloß erfolgreicher Workflow gilt als Deploynachweis.
+- [x] AK2 – API-Image stammt aus demselben geprüften Stand. Container läuft unprivilegiert, ohne öffentliche Host-Portbindung, hinter dem bestehenden Traefik. Bestehende Dienste und Daten bleiben erhalten.
+- [x] AK3 – Produktionsmodus bleibt ausdrücklich OIDC. Issuer, Client-ID und Secret gelangen nur über einen freigegebenen sicheren Kanal in die private Serverkonfiguration. Kein Disabled- oder Speicher-Mailer-Fallback und keine blinde Credentialrotation.
+- [x] AK4 – Normaler Deploy benötigt weder Litestream noch S3-Werte. SQLite bleibt persistent. Es werden keine Backupressourcen angelegt und keine Offhost-Wiederherstellung behauptet. Der optionale Backupmodus bleibt getrennt fail-closed geprüft.
+- [x] AK5 – Öffentliche API hat gültiges TLS, korrekte Credential-CORS und geschützte eigene Endpunkte. Callback-Queries und Secrets erscheinen nicht in Betriebslogs. Ein erzwungener Login im Namen eines Pilotnutzers wird nicht vorgetäuscht.
+- [x] AK6 – Tatsächliche Release-IDs, Commit, URLs, Health, Sicherung und verbleibende manuelle Abnahmen sind getrennt dokumentiert. Kein bloß erfolgreicher Workflow gilt als Deploynachweis.
 
 ## Grenzen
 
@@ -39,14 +39,60 @@ Bestehendes `mise run check`, Produktionsimage und Compose-Vertrag verwenden. Co
 - Henry genehmigt den einmaligen CI-Provisionierungs-Workflow mit ADR und unveränderter manueller Produktionsfreigabe.
 - Henry entscheidet ausdrücklich gegen ein Backup. Kein R2-Bucket und keine Backup-Credentials werden angelegt.
 - [ADR-020](../decisions/ADR-020-explicit-production-provisioning.md) hält Übergabe, Nichtüberschreiben und den persistenten Betrieb ohne Sicherung fest.
-- Keine offenen Anforderungsfragen. Tatsächlicher Credential- und Deploynachweis bleibt zu erbringen.
+- Keine offenen Anforderungsfragen. Credential- und Deploynachweise sind unten festgehalten.
 
-## Bisherige Nachweise
+## Nachweise
 
 Pages-Produktionsdeploy `7b3d9bc5-723e-4834-9325-5fe215addff7` liefert den geprüften Stand `9b8e28b`. Buildlog und Deploymentmetadaten bestätigen denselben Checkout. Die eigene Domain besteht mit normaler TLS-Prüfung, sichtbarer Welt, Menü, Geräteoberfläche, Sniffer, Sim-Schaltung, rohem V2-Abschluss, TCX und identischem Reload. Die gebaute Strava-Finishseite entfernt ihre Query vor der ersten Skriptanforderung. Keine Hardware ausgewählt und kein persönlicher Anbieterlogin durchgeführt.
 
+Der endgültige Web-Deploy `7c8c881a-586e-4516-818a-f2ec739bf99e` und der API-Release verwenden beide `916edbb070ee5c3ffaeea5836cd91dfed3410836`. Pages-Buildlog bestätigt den tatsächlichen Checkout. Öffentliche Workerbytes entsprechen den geprüften Artefakten. Die Gast-/Sim-Aufnahmeprüfung besteht nach diesem Deploy erneut.
+
+Henry hat den [Provisionierungslauf](https://github.com/henrysachs/voltonaut/actions/runs/44889675380) und anschließend den [API-Deploy](https://github.com/henrysachs/voltonaut/actions/runs/44890102275) jeweils im bestehenden GitHub-Environment `production` manuell freigegeben. Alle Schritte sind erfolgreich. Die vorhandene Schutzkonfiguration bleibt unverändert. Die private OIDC-Datei liegt als Deploy-Nutzer mit Modus 600 vor und enthält ausschließlich die sechs genehmigten Felder. Es bleiben keine Stagingdateien zurück. Werte wurden nicht ausgegeben oder in Images übernommen.
+
+Der native VPS führt das CI-gebaute `linux/amd64`-Image `sha256:27cdc2241fdd58525aabc2534709ffdbb67b5c2a3d3bfe7cda231eee61308c59` als `node` aus. Ein SSH-Aufruf über den bereits vertrauten Hostzugang bestätigt dieselbe Image-ID wie das CI-Buildlog, den Release-Tag, Health und `state/current-tag`. Im Voltonaut-Projekt läuft nur `voltonaut-server-1`, ohne veröffentlichte Host-Ports, mit persistentem `voltonaut_sqlite`. Datenbankprozess und Datei gehören UID 1000. Sechs normale Migrationen und Fremdschlüsselintegrität sind bestätigt.
+
+`https://api.voltonaut.stammkneipe.dev/healthz` antwortet mit 200 und gültigem Let's-Encrypt-Zertifikat. Eigene Endpunkte lehnen fehlende Sessions mit 401 ab. Credential-CORS erlaubt exakt die kanonische Web-Origin und keinen fremden Ursprung. Der echte OIDC-Einstieg bestätigt Cloudflare-Discovery, registrierte Client-ID und Callback, PKCE S256 sowie hostgebundenes Secure-/HttpOnly-Cookie. Es wird kein persönlicher Login oder Tokenaustausch als Pilotnutzer behauptet.
+
 Die No-Backup-Komposition und der Provisionierer sind unabhängig freigegeben. Base plus Backup-Overlay entspricht der bisherigen vollständigen Compose-Konfiguration. Der neue Standard enthält nur API und persistentes SQLite. Tatsächliche ARM64- und emulierte AMD64-Containerproben bestehen einschließlich Datenbesitz, Migrationen, OIDC-Konfiguration, geschützter Daten, Idempotenz und Wiederanlauf. Die bisherigen optionalen Replikations- und Restoregegenproben bleiben erhalten. Dies aktiviert keine Sicherung in Produktion.
 
-Das reguläre `E2E_PORT=5236 CI=1 mise run check` besteht mit 822 Unit-Tests einschließlich Coverage und 49 Browserfällen. Build und Release-Kommandotests grün. Provisionierungstests bestehen lokal mit 16 Fällen und einem mangels Rootrechten übersprungenen Fremdbesitzfall. Der neue Workflow prüft diesen Fall gesondert in seiner isolierten CI. Tatsächliche Credentialübergabe und API-Aktivierung stehen noch aus.
+Das reguläre `E2E_PORT=5236 CI=1 mise run check` besteht mit 822 Unit-Tests einschließlich Coverage und 49 Browserfällen. Build und Release-Kommandotests grün. Provisionierungstests bestehen lokal mit 16 Fällen und einem mangels Rootrechten übersprungenen Fremdbesitzfall. Der neue Workflow bestätigt auch diesen Fall gesondert als Root in seiner isolierten CI. Alle drei Main-Push-Workflows auf `916edbb` sowie der tatsächliche Deploy sind erfolgreich.
+
+Für den ursprünglichen `916edbb`-Dispatch war `SERVER_DEPLOY_ENABLED` einmalig aktiv und wurde danach zurückgesetzt. Henry ändert diese Betriebsentscheidung am 23.11.2026 ausdrücklich: Main-Deploys sollen dauerhaft aktiviert bleiben. `SERVER_DEPLOY_ENABLED=true` und die Pages-Produktionseinstellungen sind deshalb eingeschaltet. Kein erneutes Zurücksetzen nach einem Einzeldeploy. Die menschliche Produktionsfreigabe der API bleibt bestehen. Backups bleiben ausdrücklich aus. Der lokale Fahrstand wurde durch diesen Rollout nicht verändert.
+
+Der bestehende GitHub-Pages-Job war mangels beider Cloudflare-Secrets übersprungen. `CLOUDFLARE_ACCOUNT_ID` ist inzwischen nach Prüfung des bestehenden Zielprojekts hinterlegt. Das dedizierte `CLOUDFLARE_API_TOKEN` fehlt noch. Der verfügbare Zugriff verweigert persönliche Tokenverwaltung mit 403; Account-Tokenverwaltung ist verfügbar, kennzeichnet `Pages Write` aber als nicht auswählbar. Deshalb wird kein breiter Betriebszugang in GitHub kopiert und keine Tokenausstellung mit zusätzlichen Rechten erzwungen. Die aktivierten Pages-Giteinstellungen haben für den folgenden Main-Push noch keinen automatischen Deploy belegt. Ein erfolgreicher direkter Webdeploy ist kein Nachweis funktionierender CI-Automatik.
+
+## Folgerelease vom 23.11.2026
+
+Main `5bcec675dbb4a200dccfdaa47e92f246fe8d2c57` ergänzt Mitgliedschaft/Admin, vorläufige Sprint-/KOM-Vorschau und ADR-023. Beide PR-Prüfungen und alle drei Main-Workflows bestehen. Henry genehmigt den anschließenden API-Deploy [45213643632](https://github.com/henrysachs/voltonaut/actions/runs/45213643632) im unveränderten Produktionsenvironment. Der tatsächliche native Container verwendet Image `sha256:24aefe453bc438257cba82839951493d0d1ff543e837d54f8efe09e65f928dd3`, sieben Migrationen und dasselbe persistente SQLite. Fremdschlüsselintegrität, gesundes OIDC und die unveränderte private Konfigurationsdatei sind bestätigt. Es wird kein Admin automatisch vergeben.
+
+Pages-Produktionsdeploy `97022ddc-9626-4050-8a35-58e2a7cb6a8a` liefert denselben Commit. Ein unabhängiger öffentlicher Nachweis vergleicht alle 17 gebauten Dateien bytegenau und fährt die gewöhnliche Sim-Welt mit Segmentzeilen, Menü und Gangwechsel. V2-Aufnahme, Sim-TCX, unverändertes Archiv nach Reload, kein Seiten-Scrollen und keine Browserfehler sind bestätigt. Öffentliche API-Proben prüfen Health, eigene 401-Grenze, exaktes CORS und anonymen OIDC-Einstieg ohne persönlichen Login. Der Nachweis liegt unter `$TMPDIR/opencode/segments-live-independent-20261123/`.
+
+Die anschließende reine Dokumentationsintegration auf Main `a504e35` besteht `CI=1 E2E_PORT=5236 mise run check` mit 1050 Unit-/Integrationstests und 50 Browserfällen. Anwendungsquellen, Abhängigkeiten, Deploymentcode und maschinelle Leitplanken bleiben gegenüber dieser Basis unverändert. Dieses Gate ist kein neuer Produktions- oder Anbieterpilot.
+
+## Serveraktivierung von Strava
+
+Henry genehmigt die Produktionsläufe [Strava-Provisionierung 45226134599](https://github.com/henrysachs/voltonaut/actions/runs/45226134599) und [API-Deploy 45225736978](https://github.com/henrysachs/voltonaut/actions/runs/45225736978). Beide sind erfolgreich. Der tatsächliche API-Stand ist `a504e356ea7cad49b99cb0e8dd513f1efc0fc24d`, Image `sha256:9053c220344371cad1341c1a95125763b52ea23e0e4d0d72f6f1a2bde878cadc`, mit acht Migrationen und ohne Fremdschlüsselverletzung.
+
+Der geprüfte private Operator erstellt eine echte Strava-Anwendungssubscription und bestätigt anschließend Appbezug und kanonischen Callback beim Anbieter. Die Registrierungsdatei bleibt privat. Ein kontrollierter Recreate ausschließlich des bestehenden API-Dienstes lädt sie mit demselben freigegebenen Image und Volume. OIDC-, Schlüssel- und Registrierungsdatei bleiben über die jeweils relevanten Schritte bytegleich. Die Runtime bestätigt `STRAVA_MODE=enabled`, vorhandene Schlüssel-, Verify- und Subscriptionwerte sowie `declared_ble_v1`. Das attestiert keine Hardwareleistung.
+
+Eigene und unabhängige öffentliche GET-Proben bestätigen Health, OIDC/`no-store`, exaktes CORS, geschützte eigene Strava-Verbindung und Ablehnung eines falschen Challenge-Tokens. Private Revision, Image und geladene Registrierung sind durch Operatorreceipts belegt, nicht über anonymes HTTP ablesbar. Die Logprüfung gilt ausschließlich für das dokumentierte API-Containerfenster. Belege: `$TMPDIR/opencode/strava-a504-activation-handoff.md` und `strava-activation-independent-review.md`.
+
+Die nachfolgenden Main- und Dokumentationschecks überschritten erneut im unveränderten Budgettest 5000 ms, während der API-Workflow sein Gate bestand. Die vorherige grüne Feature-CI und lokalen Gesamtgates wurden deshalb nicht als abgeschlossene CI-Stabilisierung ausgegeben. Der laufende Webstand wurde nicht über fehlgeschlagene Checks hinweg aktualisiert.
+
+[Issue #35](https://github.com/henrysachs/voltonaut/issues/35) ist anschließend durch PR #37 behoben, Main `61ca9c0aac33c5ad9730931b3397e7b9c9d677c4`. Native CPU-Profile belegten wiederholten SQL-Aufbau und SQLite-Vorbereitung. Fünfzehn feste lazy Query-Pläne je Store-/DB-Satz ersetzen wiederholte Vorbereitung, nicht Datenabruf oder Autoritätsprüfung. Alle bisherigen Tests bleiben bytegleich. Die beiden nativen PR-Gates und alle drei Main-Prüfjobs bestehen mit 1061 Unit-/Integrationstests und 50 Browserfällen. Der ursprüngliche einzelne 5000-ms-Test, 1000 Schritte, Quoten und Assertions bleiben unverändert. Der diagnostische Draft #36 ist ohne Merge geschlossen. Eine Beschleunigungsquote, Hardware- oder Anbieterpilotabnahme wird daraus nicht abgeleitet.
+
+Die Dokumentationsintegration auf dieser Basis besteht ebenfalls das reguläre `CI=1 E2E_PORT=5236 mise run check` mit 1061 Tests und 50 Browserfällen. Die nachfolgenden Dokupräzisierungen ändern keine Anwendungsquelle. Der neue API-Fix-Deploy besitzt weiterhin seine eigene menschliche Produktionsfreigabe.
+
+## Webveröffentlichung des geprüften Fix-Stands
+
+Pages-Produktionsdeploy `5bfd64f7-1821-4b98-8f1b-f6766f7a4e61` veröffentlicht Main `61ca9c0`. Der private SQL-Fix ändert weder Web-/Shared-Quellen noch API-Controller, Konfigurations- oder Wire-Schemas. Nach den grünen PR- und Main-Prüfjobs kann dieser Client deshalb mit der bereits gesunden API `a504e35` veröffentlicht werden, während deren eigener Fix-Deploy auf menschliche Freigabe wartet. Diese Kompatibilität ist keine Freigabe für beliebige vorgezogene Vertragsänderungen.
+
+Die unabhängige öffentliche Nachprüfung vergleicht alle 17 Dateien einschließlich tatsächlichem HTML, Einstieg und beiden Workern bytegenau mit dem erwarteten Build. Ein frischer privater Browserkontext bestätigt Gastfahrt ohne Geräteauswahl, Strava-Anmeldehinweis, gewöhnliche Sim-Fahrt, Gang 13, laufende Fahrt im Menü, Segment-HUD, kein Body-Scroll, lokale V2-Aufnahme, Sim-TCX und unverändertes Archiv nach Reload. Drei tatsächliche Screenshots sind geöffnet; Welt und Fahrer sind sichtbar. Keine unerwarteten Origins, schreibenden HTTP-Methoden oder Browserfehler. Private API-Revision und -Konfiguration bleiben Operatorreceipts, kein anonymer HTTP-Nachweis. Belege: `$TMPDIR/opencode/main61-public-independent-review.md` und `main61-public-independent-20261123/`.
+
+## Noch offene reale Abnahmen
+
+Persönlicher Cloudflare-Login mit Allow/Deny und Identitätsstabilität, echte Trainer-/Controllerfahrt und der ausdrücklich beauftragte reale Strava-Pilot bleiben getrennt.
+
+Mitgliedschaft/Admin und vorläufiges Sprint-/KOM-HUD gehören zum getrennt belegten Folgerelease, nicht zum ursprünglichen `916edbb`-Deploy. Issue #26 ist durch die ausdrücklich genehmigte Prüfungsreihenfolge aus ADR-023 geschlossen. Der passende native Fehlerfall und die grünen unveränderten Kontrollfälle belegen eine CI-Lastkorrektur, keine Rendererreparatur oder Hardwareabnahme.
 
 Private Belege liegen unter `$TMPDIR/opencode/production-deploy-CcIOVO/`, `oidc-runtime-review-wwj9f_ef/` und den darin referenzierten Docker-Proof-Verzeichnissen. Literalwerte mit Dollarzeichen, Quotes, Backslashes und Unicode sind zusätzlich im tatsächlichen Containerprozess geprüft. Secrets bleiben aus den Belegen und Logs heraus.

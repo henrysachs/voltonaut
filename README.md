@@ -2,9 +2,15 @@
 
 Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz. Läuft komplett im Browser (Chrome/Edge am Laptop), spricht per Web Bluetooth direkt mit Rollentrainer, Pulsgurt und Schalt-Controllern Web-App auf Cloudflare Pages, Solo-Fahrten funktionieren ohne Server; Accounts, Freischaltungen, Volts und Gruppenfahrten laufen über einen eigenen Server (TypeScript/NestJS auf einem Hetzner-VPS, ADR-004/005).
 
-> **Status:** Gastfahrt, Sim-Modus, lesendes BLE, 3D-Landschaft und lokale Aufnahme mit TCX-Export sind implementiert. Browserkonto, kontogebundener manueller Sync, Replay-Prüfkern und serverseitige Strava-Verbindung sind lokal geprüft. Play-Tasten und Handshake sind durch echte Mitschnitte belegt. Produktions-API, V2-Aufzeichnung, Strava-Fahrtupload und gemeinsame Hardwarefahrt bleiben offen. Die [Integrationsspec](docs/specs/E0-04-current-implementation-integration.md) dokumentiert den zusammengeführten Stand.
+> **Status:** Web und API sind [produktiv bereitgestellt](docs/specs/E0-04-production-rollout.md). Der Webstand `61ca9c0` ist öffentlich geprüft; die kompatible API auf `a504e35` hat Strava serverseitig aktiviert und die echte Anwendungssubscription geladen. Ingame-Menü, V2-Aufnahmen, TCX-Export, Browserkonto und kontogebundener manueller Sync sind implementiert und softwaregeprüft. Die Rollenschaltung ist vom Play-Tastendruck über den Engine-Worker bis zum bestätigten FTMS-Kommando softwaregeprüft. Persönlicher Login, Strava-OAuth-/Uploadpilot und gemeinsame Hardwarefahrt bleiben getrennte offene Abnahmen.
 
-Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) zeigt den bisherigen Landschaftsstand. Aufnahme und neue Serverfunktionen sind noch nicht öffentlich bereitgestellt.
+Mitgliedschaft/Admin und die vorläufige Sprint-/KOM-Anzeige sind ebenfalls bereitgestellt. [Issue #26](https://github.com/henrysachs/voltonaut/issues/26) ist durch die genehmigte CI-Lastkorrektur aus [ADR-023](docs/decisions/ADR-023-sequence-browser-gate.md) geschlossen. Die Korrektur ändert die Prüfungsreihenfolge, nicht den Renderer oder seine Anforderungen.
+
+Henry hat am 23.11.2026 den dauerhaften Main-Deploy beauftragt. `SERVER_DEPLOY_ENABLED=true` und die Pages-Produktionseinstellungen bleiben aktiv; API-Releases behalten die menschliche GitHub-Produktionsfreigabe. Die Schalter werden nach einem Einzeldeploy nicht mehr zurückgesetzt. Der GitHub-Pages-Job benötigt noch ein dediziertes `CLOUDFLARE_API_TOKEN` als Repository-Secret. Dessen sichere Provisionierung ist über den vorhandenen Betriebszugriff derzeit blockiert. Bis dahin werden geprüfte Webreleases ausdrücklich veröffentlicht. Persönliche Anbieterzustimmung und Hardwareabnahme bleiben eigene Nachweise.
+
+Der wiederkehrende native Budgettimeout aus [Issue #35](https://github.com/henrysachs/voltonaut/issues/35) ist durch Wiederverwendung vorbereiteter SQL-Abfragen behoben. Der unveränderte Originaltest besteht mit dem Fix in beiden PR-Gates und allen drei Main-Prüfjobs. Die temporäre Diagnostik wurde nicht gemergt. Eine neue Veröffentlichung bleibt an ihre tatsächlichen Prüfungen und Freigaben gebunden.
+
+Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) lässt sich ohne Hardware und Konto fahren. Aufnahme und TCX funktionieren auch als Gast. Die [Produktions-API](https://api.voltonaut.stammkneipe.dev/healthz) läuft mit persistentem SQLite, auf Henrys ausdrücklichen Wunsch ohne Backup.
 
 ## Vision in drei Sätzen
 
