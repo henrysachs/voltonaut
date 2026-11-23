@@ -11,3 +11,9 @@ export const unusedStravaLease: StravaLease = {
   ride: unexpected,
   upload: unexpected,
 };
+
+export const unexpectedMembership = {
+  accountStatus: () => Promise.reject(new Error("unexpected account status")),
+  adminUsers: () => Promise.reject(new Error("unexpected admin directory")),
+  saveMembership: () => Promise.reject(new Error("unexpected membership write")),
+};

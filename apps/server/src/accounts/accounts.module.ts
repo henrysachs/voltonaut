@@ -5,6 +5,10 @@ import { ACCOUNTS_TABLES } from "./accounts.schema.js";
 import type { AccountsTables } from "./accounts.schema.js";
 import { AccountsController } from "./accounts.controller.js";
 import { AccountsService } from "./accounts.service.js";
+import { AdminUsersController } from "./admin-users.controller.js";
+import { AdminGuard } from "./admin.guard.js";
+import { AdminOriginGuard } from "./admin-origin.guard.js";
+import { AuthDirectory } from "../auth/auth-directory.js";
 
 @Module({})
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest dynamic modules expose their registration factory on the decorated class.
@@ -13,8 +17,14 @@ export class AccountsModule {
   public static register(tables: AccountsTables): DynamicModule {
     return {
       module: AccountsModule,
-      controllers: [AccountsController],
-      providers: [AccountsService, { provide: ACCOUNTS_TABLES, useValue: tables }],
+      controllers: [AccountsController, AdminUsersController],
+      providers: [
+        AccountsService,
+        AuthDirectory,
+        AdminGuard,
+        AdminOriginGuard,
+        { provide: ACCOUNTS_TABLES, useValue: tables },
+      ],
     };
   }
 }

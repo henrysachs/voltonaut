@@ -59,6 +59,16 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 | `catalog/`                                                                                                                                                                                                                                              | Item-Katalog, Level-Tabelle aus `@voltonaut/rules`                                  | read-only                                                                                               |
 | Regel: ein Modul besitzt seine Tabellen (Drizzle-Schema-Datei liegt im Modul); andere Module nutzen dessen exportierten Service, nie fremde Tabellen direkt (per dependency-cruiser: `apps/server/src/<a>/**/*.schema.ts` nur aus `<a>/` importierbar). |
 
+## Mitgliedschaft und Verwaltung
+
+[E5-10](specs/E5-10-membership-admin.md) und [ADR-021](decisions/ADR-021-membership-and-administration.md) trennen Normal/Premium/Pro, das zusätzliche VIP-Kennzeichen und die Rolle `user` oder `admin`. `accounts` besitzt alle drei Angaben in `account_status`. Eine fehlende Zeile bedeutet Normal, nicht VIP und nicht Admin. Stufen und VIP verändern vorerst weder Preise noch Spielrechte oder Strava-Freigaben.
+
+`GET /v1/me/account-status` liefert den eigenen Status. `GET /v1/admin/users` listet höchstens 50 aktive Konten mit opakem ID-Cursor. `PATCH /v1/admin/users/:userId/membership` akzeptiert ausschließlich `tier` und `vip`, verlangt den exakten Origin und prüft Actor sowie Ziel innerhalb einer unmittelbaren Schreibtransaktion erneut. Mitgliedschaftsänderungen überschreiben keine Rollen. Antworten einschließlich Fehlern sind `no-store`. Auth-Session, Profil- und Aufnahmeverträge bleiben unverändert.
+
+Nur der Operatorbefehl `node dist/main.js admin grant <bestehendeUserId>` vergibt die Rolle. `admin list [cursor]` zeigt die begrenzte Kontoliste, `admin revoke <bestehendeUserId>` entzieht die Rolle. Der Befehl startet weder HTTP-Server noch Strava-Scheduler. E-Mail dient der Anzeige, niemals der automatischen Zuordnung. Der erste Login erhält keine Adminrechte. Henrys tatsächliches bestehendes Konto muss vor dem ersten Produktionsgrant bestätigt werden.
+
+Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitzer unter `AccountSync` hält die Operation bis zum autoritativen Nachlesen gesperrt. Gehaltene Refresh-, Next- und Save-Aktionen dürfen diese Bestätigung nicht überholen. Ein verlorener Schreibbeleg bleibt unbestätigt, ohne automatischen Retry. Die gebaute Gesamtprüfung und unabhängige Gegenproben bestehen lokal. Bereitstellung und persönlicher Erstzugang sind noch offen.
+
 ## Datenmodell (Skizze)
 
 ### Eigene Profile und Fahrtenannahme
@@ -275,7 +285,7 @@ Geprüft am 19.11.2026 (nur lesend): Ubuntu 24.04, 2 vCPU, 4 GB RAM, rund 18 GB 
 
 Am 21.11.2026 genehmigt Henry den Produktionsdeploy und einen einmaligen Provisionierungs-Workflow für die bestehenden OIDC-Secrets. Er entscheidet ausdrücklich gegen ein Backup. [ADR-020](decisions/ADR-020-explicit-production-provisioning.md) ersetzt die bisherige verpflichtende S3-Startvoraussetzung durch ein optionales Overlay. Persistentes SQLite bleibt bestehen. Ohne Backup gibt es keinen zugesagten Offhost-Restore. Den tatsächlichen Release- und Prüfstand hält [E0-04](specs/E0-04-production-rollout.md) fest.
 
-Web und API laufen inzwischen produktiv auf `916edbb`. Der tatsächliche native AMD64-Container, UID-1000-SQLite, sechs Migrationen, öffentliche Health mit gültigem TLS, Credential-CORS und der reale OIDC-Einstieg sind geprüft. Henry hat beide Produktionsjobs manuell freigegeben. Sein persönlicher Login-Pilot bleibt offen. Der einmalig aktivierte Repository-Deploy-Schalter steht wieder auf `false`; die laufende Anwendung bleibt aktiv.
+Web und API sind produktiv. Das erste Release `916edbb` und der Folgestand `5bcec67` sind getrennt in [E0-04](specs/E0-04-production-rollout.md) belegt. Der tatsächliche native AMD64-Container, UID-1000-SQLite, inzwischen sieben Migrationen, öffentliche Health mit gültigem TLS, Credential-CORS und der reale OIDC-Einstieg sind geprüft. Henry hat die Produktionsjobs manuell freigegeben. Sein persönlicher Login-Pilot bleibt offen. Seit seinem Auftrag vom 23.11.2026 bleiben `SERVER_DEPLOY_ENABLED=true` und automatische Pages-Main-Deploys dauerhaft aktiviert. API-Releases behalten ihre menschliche Produktionsfreigabe.
 
 1. CI (`deploy-server.yml`, nur nach grünem `mise run check` auf `main`, Grep `vars.SERVER_DEPLOY_ENABLED`): Docker-Image lokal bauen (`docker build -f deploy/Dockerfile`, Tag = Git-SHA, Node-Pin 24.22.3 im Image) und per SSH über die Pipe übertragen (`docker save | ssh "gunzip | docker load"`) – **kein** Registry-Push, daher wird auch kein GHCR-Token gebraucht; ein späterer Wechsel auf `ghcr.io/henrysachs/voltonaut-server` bleibt möglich (dann `docker compose pull` im Skript).
 2. Per SSH `deploy/` nach `/srv/voltonaut` übertragen und `deploy.sh deploy <tag>` ausführen: `docker compose up -d` mit neuem Tag, danach `curl -f https://api.voltonaut.stammkneipe.dev/healthz`; bei Fehler automatischer Rollback auf das in `state/previous-tag` gemerkte vorherige Image-Tag.

@@ -5,9 +5,7 @@ import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDev
 
 import type { AppDocument } from "./app.js";
 import { startApp } from "./app.js";
-import type { EngineLink, EngineLinkCallbacks } from "./game/engine-link.js";
-import { createEngineLink } from "./game/engine-link.js";
-import type { EngineWorkerRequest, EngineWorkerResponse } from "./game/engineWorkerCore.js";
+import { createRideSession } from "./game/rideSession.js";
 import { createConnectionMonitor, type ConnectionMonitor } from "./game/connectionMonitor.js";
 import { setupProfile } from "./profileBootstrap.js";
 import { setupBrowserAccount } from "./browserAccount.js";
@@ -37,83 +35,20 @@ function createDomDocument(source: DocumentQuerySource): AppDocument {
   };
 }
 
-/** Structural channel the main thread uses to talk to the engine worker. */
-interface EngineWorkerChannel {
-  readonly send: (message: EngineWorkerRequest) => void;
-  readonly addMessageListener: (listener: (message: EngineWorkerResponse) => void) => () => void;
-  readonly subscribeFailure: (listener: (message: string) => void) => () => void;
-}
-
-function createEngineWorkerChannel(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Worker is the external DOM contract type; the adapter only forwards messages.
-  worker: Worker,
-): EngineWorkerChannel {
-  return {
-    subscribeFailure: (listener) => {
-      const handler = (): void => {
-        listener("Engine-Worker ausgefallen. Ungespeicherte Aufnahme möglicherweise verloren.");
-      };
-
-      worker.addEventListener("error", handler);
-      worker.addEventListener("messageerror", handler);
-
-      return () => {
-        worker.removeEventListener("error", handler);
-        worker.removeEventListener("messageerror", handler);
-      };
-    },
-    send: (message) => {
-      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage has no targetOrigin parameter; that rule only applies to window messaging.
-      worker.postMessage(message);
-    },
-    addMessageListener: (listener) => {
-      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- MessageEvent is the DOM listener contract type.
-      const handler = (event: MessageEvent<EngineWorkerResponse>): void => {
-        listener(event.data);
-      };
-
-      worker.addEventListener("message", handler);
-
-      return () => {
-        worker.removeEventListener("message", handler);
-      };
-    },
-  };
-}
-
-function createWorkerLink(
-  callbacks: Pick<EngineLinkCallbacks, "onCommands" | "onSnapshot">,
-): EngineLink {
-  const worker = new Worker(new URL("./game/engine-worker.ts", import.meta.url), {
-    type: "module",
-  });
-
-  const channel = createEngineWorkerChannel(worker);
-
-  return createEngineLink(
-    {
-      subscribeFailure: channel.subscribeFailure,
-      postMessage: (message) => {
-        channel.send(message);
-      },
-      subscribe: (listener) => {
-        return channel.addMessageListener(listener);
-      },
-    },
-    callbacks,
-  );
-}
-
 function startHud(
   document: DocumentQuerySource,
-  link: EngineLink,
+  session: Readonly<ReturnType<typeof createRideSession>>,
   connection: Readonly<ConnectionMonitor>,
   connectedLabel: string,
 ): void {
+  const { link, segments } = session;
+
   const ride = {
     snapshot: () => link.latestSnapshot(),
     connected: () => connection.state().connected,
+    segments: () => segments.view(),
     dispose: () => {
+      segments.unavailable();
       link.dispose();
       connection.dispose();
     },
@@ -134,7 +69,8 @@ async function start(): Promise<void> {
     ? setupSimDevices(bus, clockScale)
     : setupBluetoothDevices(bus, clockScale);
 
-  const link = createWorkerLink(devices ?? {});
+  const session = createRideSession(APP_ROUTE_ID, devices ?? {});
+  const { link } = session;
   const connection = createConnectionMonitor(bus);
 
   const { initialProfile: profile } = await profileReady;
@@ -160,7 +96,7 @@ async function start(): Promise<void> {
   bus.subscribe("controller.button", forwardEvent);
   bus.subscribe("device.status", forwardEvent);
 
-  startHud(document, link, connection, simMode ? "Sim connected" : "Bluetooth connected");
+  startHud(document, session, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupKeyboard(bus);
 
   devices?.mount();

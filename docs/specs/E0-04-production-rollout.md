@@ -2,7 +2,7 @@
 
 - **Auftrag und Freigabe:** Henry beauftragt am 21.11.2026 ausdrücklich den Produktionsdeploy von Web und API.
 - **Basis:** `9b8e28b500f5aaf000c57ff2aa094835b412416e`, alle drei Main-Workflows erfolgreich.
-- **Status:** Web und API auf `916edbb` produktiv bereitgestellt und öffentlich softwaregeprüft. Persönlicher Anbieterlogin und Hardwareabnahme bleiben offen.
+- **Status:** Erstes Release `916edbb` und Folgerelease `5bcec67` produktiv bereitgestellt und öffentlich softwaregeprüft. Persönlicher Anbieterlogin und Hardwareabnahme bleiben offen.
 - **Betroffen:** Bestehendes Pages-Projekt `voltonaut`, dediziertes API-Compose-Projekt auf dem vorhandenen VPS und sichere Produktionskonfiguration ohne Backup.
 
 ## Ziel
@@ -57,10 +57,18 @@ Die No-Backup-Komposition und der Provisionierer sind unabhängig freigegeben. B
 
 Das reguläre `E2E_PORT=5236 CI=1 mise run check` besteht mit 822 Unit-Tests einschließlich Coverage und 49 Browserfällen. Build und Release-Kommandotests grün. Provisionierungstests bestehen lokal mit 16 Fällen und einem mangels Rootrechten übersprungenen Fremdbesitzfall. Der neue Workflow bestätigt auch diesen Fall gesondert als Root in seiner isolierten CI. Alle drei Main-Push-Workflows auf `916edbb` sowie der tatsächliche Deploy sind erfolgreich.
 
-`SERVER_DEPLOY_ENABLED` war ausschließlich für den beauftragten Dispatch aktiv und steht wieder auf `false`. Künftige Main-Pushes aktivieren deshalb keinen neuen Produktionsdeploy. Backups bleiben ausdrücklich aus. Der lokale Fahrstand wurde durch diesen Rollout nicht verändert.
+Für den ursprünglichen `916edbb`-Dispatch war `SERVER_DEPLOY_ENABLED` einmalig aktiv und wurde danach zurückgesetzt. Henry ändert diese Betriebsentscheidung am 23.11.2026 ausdrücklich: Main-Deploys sollen dauerhaft aktiviert bleiben. `SERVER_DEPLOY_ENABLED=true` und die Pages-Produktionseinstellungen sind deshalb eingeschaltet. Kein erneutes Zurücksetzen nach einem Einzeldeploy. Die menschliche Produktionsfreigabe der API bleibt bestehen. Backups bleiben ausdrücklich aus. Der lokale Fahrstand wurde durch diesen Rollout nicht verändert.
+
+## Folgerelease vom 23.11.2026
+
+Main `5bcec675dbb4a200dccfdaa47e92f246fe8d2c57` ergänzt Mitgliedschaft/Admin, vorläufige Sprint-/KOM-Vorschau und ADR-023. Beide PR-Prüfungen und alle drei Main-Workflows bestehen. Henry genehmigt den anschließenden API-Deploy [45213643632](https://github.com/henrysachs/voltonaut/actions/runs/45213643632) im unveränderten Produktionsenvironment. Der tatsächliche native Container verwendet Image `sha256:24aefe453bc438257cba82839951493d0d1ff543e837d54f8efe09e65f928dd3`, sieben Migrationen und dasselbe persistente SQLite. Fremdschlüsselintegrität, gesundes OIDC und die unveränderte private Konfigurationsdatei sind bestätigt. Es wird kein Admin automatisch vergeben.
+
+Pages-Produktionsdeploy `97022ddc-9626-4050-8a35-58e2a7cb6a8a` liefert denselben Commit. Ein unabhängiger öffentlicher Nachweis vergleicht alle 17 gebauten Dateien bytegenau und fährt die gewöhnliche Sim-Welt mit Segmentzeilen, Menü und Gangwechsel. V2-Aufnahme, Sim-TCX, unverändertes Archiv nach Reload, kein Seiten-Scrollen und keine Browserfehler sind bestätigt. Öffentliche API-Proben prüfen Health, eigene 401-Grenze, exaktes CORS und anonymen OIDC-Einstieg ohne persönlichen Login. Der Nachweis liegt unter `$TMPDIR/opencode/segments-live-independent-20261123/`.
 
 ## Noch offene reale Abnahmen
 
-Persönlicher Cloudflare-Login mit Allow/Deny und Identitätsstabilität, echte Trainer-/Controllerfahrt und der ausdrücklich beauftragte reale Strava-Pilot bleiben getrennt. Mitgliedsstufen mit Adminoberfläche und ein noch nachzuweisender Renderfix aus #26 sind nachfolgende Aufträge, keine Eigenschaften dieses Release-Nachweises.
+Persönlicher Cloudflare-Login mit Allow/Deny und Identitätsstabilität, echte Trainer-/Controllerfahrt und der ausdrücklich beauftragte reale Strava-Pilot bleiben getrennt.
+
+Mitgliedschaft/Admin und vorläufiges Sprint-/KOM-HUD gehören zum getrennt belegten Folgerelease, nicht zum ursprünglichen `916edbb`-Deploy. Issue #26 ist durch die ausdrücklich genehmigte Prüfungsreihenfolge aus ADR-023 geschlossen. Der passende native Fehlerfall und die grünen unveränderten Kontrollfälle belegen eine CI-Lastkorrektur, keine Rendererreparatur oder Hardwareabnahme.
 
 Private Belege liegen unter `$TMPDIR/opencode/production-deploy-CcIOVO/`, `oidc-runtime-review-wwj9f_ef/` und den darin referenzierten Docker-Proof-Verzeichnissen. Literalwerte mit Dollarzeichen, Quotes, Backslashes und Unicode sind zusätzlich im tatsächlichen Containerprozess geprüft. Secrets bleiben aus den Belegen und Logs heraus.
