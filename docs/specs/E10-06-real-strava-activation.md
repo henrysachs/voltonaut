@@ -3,7 +3,7 @@
 - **Auftrag:** Henry fordert am 21.11.2026 ausdrücklich, Strava zu aktivieren und vollständig funktionsfähig zu machen.
 - **Basis:** Produktiver Stand `916edbb070ee5c3ffaeea5836cd91dfed3410836`.
 - **Integrationsbasis:** Main `415cffe217dae06a6b4ada7a0e1cbf26d7314606` mit Mitgliedschaft/Admin, Sprint-/KOM-Vorschau und reinen Reward-Angeboten.
-- **Status:** Implementiert und nach Korrekturen unabhängig geprüft. Reguläres gemeinsames Gate, Build und alle zwölf ursprünglichen Auslieferungsfälle bestehen auch mit Main `415cffe`. CI des endgültigen Heads und tatsächliche Strava-Aktivierung bleiben offen.
+- **Status:** Implementiert, am Artefakt softwaregeprüft und auf API `a504e35` serverseitig aktiviert. Echte Anwendungssubscription registriert und geladen. Persönlicher Pilot bleibt offen. Die zunächst grüne native Feature-CI wird inzwischen wieder vom unveränderten Budgettimeout überlagert; zuverlässiger Abschluss ausstehend, siehe #35.
 - **Module:** Dedizierte private Strava-Provisionierung, Compose, Server `strava`, vorhandene Uploadoberfläche und Verifikation.
 
 ## Ziel
@@ -18,14 +18,14 @@ Henry hat den Betrieb ohne Backup gewählt. Es werden weder Backupressourcen noc
 
 ## Abnahmekriterien
 
-- [ ] AK1 – Ein eigenes Provisionierungsprofil verwendet ausschließlich vorhandene Strava-Client-Secrets aus GitHub. Manueller Main-Start, Produktionsfreigabe, gepinnter SSH-Host und private stdin-Übergabe bleiben erhalten. OIDC-Datei und ihre bisherigen Eigenschaften bleiben unverändert.
-- [ ] AK2 – Schlüsselmaterial entsteht einmalig kryptografisch sicher auf dem VPS, bleibt privat mit Modus 600 und gelangt nicht in CI, Prozessargumente, Logs, Frontend oder Image. Wiederholung und konkurrierende Provisionierung erhalten den bestehenden Schlüssel. Unsichere/abweichende Bestände werden nicht ersetzt.
-- [ ] AK3 – Die API erhält echte Strava-Konfiguration aus einer getrennten privaten Datei. Ohne Datei bleiben sichere Defaults erhalten. Aktivierung wählt ausdrücklich `declared_ble_v1`, ohne Herkunft oder reale Trainingsleistung zu attestieren.
+- [x] AK1 – Ein eigenes Provisionierungsprofil verwendet ausschließlich vorhandene Strava-Client-Secrets aus GitHub. Manueller Main-Start, Produktionsfreigabe, gepinnter SSH-Host und private stdin-Übergabe bleiben erhalten. OIDC-Datei und ihre bisherigen Eigenschaften bleiben unverändert.
+- [x] AK2 – Schlüsselmaterial entsteht einmalig kryptografisch sicher auf dem VPS, bleibt privat mit Modus 600 und gelangt nicht in CI, Prozessargumente, Logs, Frontend oder Image. Wiederholung und konkurrierende Provisionierung erhalten den bestehenden Schlüssel. Unsichere/abweichende Bestände werden nicht ersetzt.
+- [x] AK3 – Die API erhält echte Strava-Konfiguration aus einer getrennten privaten Datei. Ohne Datei bleiben sichere Defaults erhalten. Aktivierung wählt ausdrücklich `declared_ble_v1`, ohne Herkunft oder reale Trainingsleistung zu attestieren.
 - [x] AK4 – Verbindung, Athletenbindung und Einzelfahrtfreigabe bleiben getrennt. Höchstens ein externer Upload-POST je Fahrt, keine blinde Wiederholung bei unklarem Ergebnis, bekannte Upload-IDs bleiben bei Pollfehlern und Neustarts erhalten.
 - [x] AK5 – Aktuelle offizielle Verträge für Multipart, VirtualRide, TCX, `visibility=only_me`, Scopes, Refreshrotation und appweite Limits sind belegt. Eine angefragte Sichtbarkeit wird nicht als tatsächlich bestätigte Strava-Privatsichtbarkeit ausgegeben.
 - [x] AK6 – Erforderliche Deautorisierungs-Webhooks haben einen engen, geprüften Vertrag. Ein ungeprüfter öffentlicher POST darf weder eigene Aufnahmen löschen noch eine neue Verbindung anhand eines alten Ereignisses dauerhaft sperren. Subscription-Setup verändert keine fremde bestehende Subscription.
-- [x] AK7 – Normales Gate, Build, sichere Provisionierungs-/Containerproben, ursprüngliche zwölf gebaute Auslieferungsfälle, aktuelle Anbietergegenproben und unabhängiges Review bestehen. Keine Zeitlimits, Assertions, Datenfrische oder Grafikqualität gelockert.
-- [ ] AK8 – Der tatsächliche Produktionsstand, private Konfigurationspräsenz, unverändertes OIDC, Callback-/Logprüfung und verbleibende menschliche Abnahmen sind belegt. Persönlicher OAuth, echte zulässige Fahrt und sichtbare Strava-Verarbeitung bleiben bis zum gemeinsamen Pilot explizit offen.
+- [ ] AK7 – Normales Gate, Build, sichere Provisionierungs-/Containerproben, ursprüngliche zwölf gebaute Auslieferungsfälle, aktuelle Anbietergegenproben und unabhängiges Review bestehen. Keine Zeitlimits, Assertions, Datenfrische oder Grafikqualität gelockert. Die früheren grünen Gesamtnachweise bleiben erhalten; der erneute native Budgettimeout muss noch zuverlässig behoben werden.
+- [x] AK8 – Der tatsächliche Produktionsstand, private Konfigurationspräsenz, unverändertes OIDC, Callback-/Logprüfung und verbleibende menschliche Abnahmen sind belegt. Persönlicher OAuth, echte zulässige Fahrt und sichtbare Strava-Verarbeitung bleiben bis zum gemeinsamen Pilot explizit offen.
 
 ## Recherche und Architekturfragen
 
@@ -70,6 +70,14 @@ Das reguläre Gate nach dieser unabhängig geprüften Testkorrektur besteht mit 
 Nach Integration von Main `415cffe` bestehen das reguläre Gate mit 1050 Unit-/Integrationstests und 50 Browserfällen, der normale Build und erneut alle zwölf ursprünglichen gebauten Auslieferungsfälle. Alle zwölf Manifeste enthalten dieselben 515 Anwendungsquellen und entsprechen dem aktuellen Arbeitsbaum. Ihre kompilierten Server entsprechen dem normalen Build mit SHA-256 `ab379e282abc39b59d2acbb5fc86a00e7db6630ddde31e6a868385d795a05af0`. Engine und Rules bleiben gegenüber Main unverändert.
 
 Belege sind `strava-main415-awake-{check,build,twelve}.log`, `strava-main415-twelve-source-proof.json` und `full-ride-delivery-proof-suite-pQXMLp/`. Zwei lokale Vorläufe bleiben erhalten: zuerst fehlte nach dem Workspacewechsel die normale Installation, danach unterbrach der protokollierte Mac-Ruhezustand den Build-Hook. Installation mit unverändertem Lockfile und eine nur für den abschließenden Prozess geltende Wachhalte-Anforderung beheben diese Umgebungsbedingungen. Kein Test, Timeout, Ressourcenlimit oder Produktcode wurde dafür geändert.
+
+## Tatsächliche Serveraktivierung
+
+Henry hat die Produktionsläufe `45226134599` für das Strava-Profil und `45225736978` für die API persönlich freigegeben. Der tatsächliche API-Stand `a504e356ea7cad49b99cb0e8dd513f1efc0fc24d` läuft gesund mit acht Migrationen. Schlüssel- und Verify-Token entstanden ausschließlich privat auf dem VPS. Die beiden ausdrücklich übertragenen und hashgeprüften Operatorquellen bestätigten nach der echten Subscription-Erstellung den Appbezug und den kanonischen Callback. Der anschließende API-Recreate lädt die private Registrierungsdatei unter demselben freigegebenen Image und Volume. Die private OIDC-/Schlüsselkonfiguration bleibt erhalten. Das ist eine Anwendungssubscription, keine persönliche Kontoverbindung.
+
+Die Runtime bestätigt OIDC, aktiviertes Strava, vorhandenen Schlüssel, Verify-Token und Subscription-ID sowie `declared_ble_v1`. Öffentliche GET-Proben prüfen Health, Authgrenzen, CORS und Challenge-Ablehnung. Die unabhängige Betriebsprüfung wiederholt diese HTTP-Proben und prüft die privaten Receipts auf Konsistenz; sie behauptet keine eigene SSH-Abnahme der privaten Werte. Containerlog-Nachweis und persönliche Pilotgrenzen sind ausdrücklich eingegrenzt. Primärbelege liegen unter `$TMPDIR/opencode/strava-a504-activation-handoff.md` und `strava-activation-independent-review.md`.
+
+Die folgenden Main-Läufe überschreiten den ursprünglichen Budgettest wieder, trotz der vorherigen grünen baumgleichen Feature-CI. [Issue #35](https://github.com/henrysachs/voltonaut/issues/35) bleibt offen. Der diagnostische Draft #36 verändert weder Produktcode noch Assertions oder Fristen und wird nicht als Reparatur gemergt. Der Webstand bleibt `5bcec67`, bis die nächste Veröffentlichung ihre Prüfungen besteht.
 
 ## Menschliche Abnahmen
 

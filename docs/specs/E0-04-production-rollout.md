@@ -2,7 +2,7 @@
 
 - **Auftrag und Freigabe:** Henry beauftragt am 21.11.2026 ausdrücklich den Produktionsdeploy von Web und API.
 - **Basis:** `9b8e28b500f5aaf000c57ff2aa094835b412416e`, alle drei Main-Workflows erfolgreich.
-- **Status:** Erstes Release `916edbb` und Folgerelease `5bcec67` produktiv bereitgestellt und öffentlich softwaregeprüft. Persönlicher Anbieterlogin und Hardwareabnahme bleiben offen.
+- **Status:** Web `5bcec67` öffentlich geprüft, API `a504e35` mit serverseitig aktiviertem Strava produktiv. Persönlicher Anbieterpilot, Hardwareabnahme und zuverlässiger nativer Budgetcheck bleiben offen.
 - **Betroffen:** Bestehendes Pages-Projekt `voltonaut`, dediziertes API-Compose-Projekt auf dem vorhandenen VPS und sichere Produktionskonfiguration ohne Backup.
 
 ## Ziel
@@ -68,6 +68,16 @@ Main `5bcec675dbb4a200dccfdaa47e92f246fe8d2c57` ergänzt Mitgliedschaft/Admin, v
 Pages-Produktionsdeploy `97022ddc-9626-4050-8a35-58e2a7cb6a8a` liefert denselben Commit. Ein unabhängiger öffentlicher Nachweis vergleicht alle 17 gebauten Dateien bytegenau und fährt die gewöhnliche Sim-Welt mit Segmentzeilen, Menü und Gangwechsel. V2-Aufnahme, Sim-TCX, unverändertes Archiv nach Reload, kein Seiten-Scrollen und keine Browserfehler sind bestätigt. Öffentliche API-Proben prüfen Health, eigene 401-Grenze, exaktes CORS und anonymen OIDC-Einstieg ohne persönlichen Login. Der Nachweis liegt unter `$TMPDIR/opencode/segments-live-independent-20261123/`.
 
 Die anschließende reine Dokumentationsintegration auf Main `a504e35` besteht `CI=1 E2E_PORT=5236 mise run check` mit 1050 Unit-/Integrationstests und 50 Browserfällen. Anwendungsquellen, Abhängigkeiten, Deploymentcode und maschinelle Leitplanken bleiben gegenüber dieser Basis unverändert. Dieses Gate ist kein neuer Produktions- oder Anbieterpilot.
+
+## Serveraktivierung von Strava
+
+Henry genehmigt die Produktionsläufe [Strava-Provisionierung 45226134599](https://github.com/henrysachs/voltonaut/actions/runs/45226134599) und [API-Deploy 45225736978](https://github.com/henrysachs/voltonaut/actions/runs/45225736978). Beide sind erfolgreich. Der tatsächliche API-Stand ist `a504e356ea7cad49b99cb0e8dd513f1efc0fc24d`, Image `sha256:9053c220344371cad1341c1a95125763b52ea23e0e4d0d72f6f1a2bde878cadc`, mit acht Migrationen und ohne Fremdschlüsselverletzung.
+
+Der geprüfte private Operator erstellt eine echte Strava-Anwendungssubscription und bestätigt anschließend Appbezug und kanonischen Callback beim Anbieter. Die Registrierungsdatei bleibt privat. Ein kontrollierter Recreate ausschließlich des bestehenden API-Dienstes lädt sie mit demselben freigegebenen Image und Volume. OIDC-, Schlüssel- und Registrierungsdatei bleiben über die jeweils relevanten Schritte bytegleich. Die Runtime bestätigt `STRAVA_MODE=enabled`, vorhandene Schlüssel-, Verify- und Subscriptionwerte sowie `declared_ble_v1`. Das attestiert keine Hardwareleistung.
+
+Eigene und unabhängige öffentliche GET-Proben bestätigen Health, OIDC/`no-store`, exaktes CORS, geschützte eigene Strava-Verbindung und Ablehnung eines falschen Challenge-Tokens. Private Revision, Image und geladene Registrierung sind durch Operatorreceipts belegt, nicht über anonymes HTTP ablesbar. Die Logprüfung gilt ausschließlich für das dokumentierte API-Containerfenster. Belege: `$TMPDIR/opencode/strava-a504-activation-handoff.md` und `strava-activation-independent-review.md`.
+
+Die nachfolgenden Main- und Dokumentationschecks überschreiten erneut im unveränderten Budgettest 5000 ms, während der API-Workflow sein Gate besteht. [Issue #35](https://github.com/henrysachs/voltonaut/issues/35) und der isolierte diagnostische Draft #36 untersuchen die native Ursache. Die vorherige grüne Feature-CI und lokalen Gesamtgates werden deshalb nicht als abgeschlossene aktuelle CI-Stabilisierung ausgegeben. Kein neuer Webdeploy wird über die fehlgeschlagenen Checks hinweg erzwungen; dort bleibt `5bcec67` aktiv.
 
 ## Noch offene reale Abnahmen
 
