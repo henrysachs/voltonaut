@@ -23,3 +23,5 @@ export {
 export * from "./rideTcx.js";
 
 export * from "./units.js";
+
+export * from "./rewards.js";
