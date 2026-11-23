@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
+import { availableParallelism, cpus, loadavg } from "node:os";
 import { performance } from "node:perf_hooks";
 import { onTestFailed, onTestFinished } from "vitest";
 import type { TestContext } from "vitest";
 import { z } from "zod";
 import type { schedulerFixture } from "./strava.scheduler-fixture.spec.js";
+import { cpuProfile } from "./strava.cpu-profile-helper.spec.js";
+import type { CpuProfiler } from "./strava.cpu-profile-helper.spec.js";
 
 type Fixture = Awaited<ReturnType<typeof schedulerFixture>>;
 
@@ -111,14 +114,48 @@ type HookOutcome = {
   };
 };
 
+function hostMetadata() {
+  try {
+    const processors = cpus();
+
+    return {
+      kind: "available",
+      availableParallelism: availableParallelism(),
+      logicalCpuCount: processors.length,
+      cpuModels: [
+        ...new Set(
+          processors.map((cpu: Readonly<Pick<ReturnType<typeof cpus>[number], "model">>) =>
+            cpu.model.replaceAll(/[^A-Za-z0-9 .()@_+-]/gu, "_").slice(0, 100),
+          ),
+        ),
+      ].slice(0, 4),
+      loadAverage1m5m15m: loadavg(),
+    };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
 function registerReport(
   snapshot: () => {
     readonly sqlite: ReturnType<typeof sqliteMetadata>;
     readonly checkpoints: readonly Checkpoint[];
   },
   checkpoint: (phase: Phase) => void,
+  createProfiler?: () => CpuProfiler,
 ) {
-  const emit = (failed: boolean) => {
+  const host = hostMetadata();
+  const profile = cpuProfile(createProfiler);
+  let emitted = false;
+
+  const emit = async (failed: boolean) => {
+    if (emitted) return;
+
+    emitted = true;
+    const observed = snapshot();
+    const checkpoints = [...observed.checkpoints];
+    const cpu = await profile.finish();
+
     process.stderr.write(
       `[strava-native-budget-v1] ${JSON.stringify({
         kind: "temporary_test_diagnostic",
@@ -127,25 +164,30 @@ function registerReport(
         nodeVersion: process.versions.node,
         failed,
         observation: "hook_observed_not_exact_deadline",
-        ...snapshot(),
+        host,
+        cpuProfile: cpu,
+        sqlite: observed.sqlite,
+        checkpoints,
       })}\n`,
     );
   };
 
-  onTestFailed(() => {
+  onTestFailed(async () => {
     checkpoint("failed");
-    emit(true);
+    await emit(true);
   });
-  onTestFinished(({ task }: HookOutcome) => {
+  onTestFinished(async ({ task }: HookOutcome) => {
     if (task.result?.state === "fail") return;
 
     checkpoint("finished");
-    emit(false);
+    await emit(false);
   });
+
+  return profile.ready();
 }
 
 // TEMPORARY: native CI attribution only; remove after the residual timeout is attributed.
-export function nativeBudgetDiagnostic() {
+export async function nativeBudgetDiagnostic(createProfiler?: () => CpuProfiler) {
   const start = performance.now();
   const processStart = process.cpuUsage();
   const threadStart = process.threadCpuUsage();
@@ -173,7 +215,7 @@ export function nativeBudgetDiagnostic() {
   };
 
   checkpoint("start");
-  registerReport(() => ({ sqlite, checkpoints }), checkpoint);
+  await registerReport(() => ({ sqlite, checkpoints }), checkpoint, createProfiler);
 
   return {
     checkpoint,
@@ -198,7 +240,7 @@ export function nativeBudgetDiagnostic() {
 
 export async function nativeBudgetAttack(
   setup: () => Promise<Fixture>,
-  diagnostic: Readonly<ReturnType<typeof nativeBudgetDiagnostic>>,
+  diagnostic: Readonly<Awaited<ReturnType<typeof nativeBudgetDiagnostic>>>,
 ) {
   const state = await setup();
   const { time, hints, scheduler } = state;

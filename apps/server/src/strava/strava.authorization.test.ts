@@ -33,7 +33,7 @@ async function setup(authorizationTransport: "http" | "in_process" = "http") {
 }
 
 it("keeps a later known upload pollable after a day of forged hints", async () => {
-  const diagnostic = nativeBudgetDiagnostic();
+  const diagnostic = await nativeBudgetDiagnostic();
 
   const { reopen, scheduler, peer, time, policy } = await nativeBudgetAttack(
     () => setup("in_process"),
