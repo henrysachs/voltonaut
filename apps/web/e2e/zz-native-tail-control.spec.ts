@@ -1,8 +1,9 @@
 /// <reference types="node" />
 import { expect, test } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import process from "node:process";
 import { openGameMenu } from "./helpers/gameMenu.js";
 import { reportMenuFailure } from "./helpers/menuFailure.js";
@@ -89,6 +90,35 @@ function requireOrigin(value: string | undefined): string {
   return value;
 }
 
+async function verifyNativeBuild(): Promise<void> {
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+
+  execFileSync("mise", ["run", "build"], { cwd: root, stdio: "inherit" });
+  const files = await readdir(`${root}/apps/web/dist/assets`);
+  const workers = files.filter((file) => file.includes("worker") && file.endsWith(".js"));
+
+  const bundles = await Promise.all(
+    workers.map(async (file) => ({
+      file,
+      sha256: createHash("sha256")
+        .update(await readFile(`${root}/apps/web/dist/assets/${file}`))
+        .digest("hex"),
+    })),
+  );
+
+  process.stderr.write(
+    `${JSON.stringify({
+      event: "native-build-verification",
+      architecture: process.arch,
+      checkoutSha: execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim(),
+      workerBundles: bundles,
+    })}\n`,
+  );
+}
+
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns its browser factory and test information fixtures.
 test(title, async ({ playwright, baseURL }, testInfo) => {
   const origin = requireOrigin(baseURL);
@@ -115,4 +145,6 @@ test(title, async ({ playwright, baseURL }, testInfo) => {
   } finally {
     await browser.close();
   }
+
+  await verifyNativeBuild();
 });
