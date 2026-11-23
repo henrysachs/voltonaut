@@ -129,6 +129,7 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
 - [ ] Segmente (1 Sprint, 1 KOM) mit Banner-Torbögen, Countdown-Flaggen, Live-Delta, PB-Konfetti; PBs serverseitig
+  - [x] [E6-01](specs/E6-01-visible-segments.md): vorläufige Sprint-/KOM-Anzeige mit laufender Zeit, Restdistanz und Rundenergebnis softwaregeprüft. Keine bestätigten PBs oder Belohnungsbuchungen.
 - [ ] Zielbogen/Rundenanzeige; 9 Start-Badges (Prädikate in `packages/rules`)
 - [ ] Fahrtzusammenfassung: vorläufig → bestätigt (Blitz-Regen-Animation)
 - [ ] Erste Sounds: Wind, Freilauf, Schalten, Blitz-Sammeln, PB-Fanfare
