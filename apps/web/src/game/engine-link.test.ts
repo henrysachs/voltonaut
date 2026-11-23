@@ -2,48 +2,11 @@ import { expect, it } from "vitest";
 import { createEngine, createRoute, FLAT_LOOP } from "@voltonaut/engine";
 import { DEFAULT_RIDER_PROFILE, type CapturedRide } from "@voltonaut/shared";
 
-import type { EngineWorkerRequest, EngineWorkerResponse } from "./engineWorkerCore.js";
-import type { EngineWorkerPort } from "./engine-link.js";
+import type { EngineLink } from "./engine-link.js";
 import { createEngineLink } from "./engine-link.js";
 import { localRide } from "../sync/testdata/localRide.js";
 import type { CaptureView } from "./rideCaptureProtocol.js";
-
-function createFakePort() {
-  const listeners = new Set<(message: EngineWorkerResponse) => void>();
-  const errors = new Set<(message: string) => void>();
-  const sent: EngineWorkerRequest[] = [];
-
-  const port: EngineWorkerPort = {
-    postMessage: (message) => {
-      sent.push(message);
-    },
-    subscribe: (listener) => {
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    subscribeFailure: (listener) => {
-      errors.add(listener);
-
-      return () => {
-        errors.delete(listener);
-      };
-    },
-  };
-
-  return {
-    port,
-    sent,
-    deliver: (message: EngineWorkerResponse) => {
-      for (const listener of listeners) listener(message);
-    },
-    fail: (message: string) => {
-      for (const listener of errors) listener(message);
-    },
-  };
-}
+import { createFakePort } from "./testdata/enginePort.js";
 
 const profile = DEFAULT_RIDER_PROFILE;
 const snapshot = createEngine({ route: createRoute(FLAT_LOOP), profile }).snapshot();
@@ -125,14 +88,16 @@ it("sends frozen initialization and ignores stale actor snapshots", () => {
 it("delivers snapshot before commands on every update, including empty command arrays", async () => {
   const fake = createFakePort();
   const calls: string[] = [];
+  const observed: (number | undefined)[] = [];
 
-  const link = createEngineLink(
+  const link: EngineLink = createEngineLink(
     fake.port,
     {
       onSnapshot: () => {
         calls.push("snapshot");
       },
       onEvents: () => {
+        observed.push(link.latestSnapshot()?.tS);
         calls.push("events");
       },
       onCommands: (commands) => {
@@ -154,7 +119,7 @@ it("delivers snapshot before commands on every update, including empty command a
   fake.deliver({
     type: "engine.update",
     actorId: "actor",
-    snapshot,
+    snapshot: { ...snapshot, tS: 2 },
     events: [],
     commands: [],
     recording: idle,
@@ -168,6 +133,7 @@ it("delivers snapshot before commands on every update, including empty command a
   });
   await start;
   expect(calls).toEqual(["snapshot", "events", "commands:0", "snapshot", "events", "commands:0"]);
+  expect(observed).toEqual([0, 2]);
 });
 
 it("correlates recording acknowledgements and ignores duplicate and late replies", async () => {

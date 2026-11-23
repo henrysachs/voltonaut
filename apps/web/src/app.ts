@@ -1,8 +1,9 @@
 import type { TickSource } from "@voltonaut/ble";
 import { createIntervalTicker } from "@voltonaut/ble";
 import type { RideSnapshot } from "@voltonaut/engine";
+import type { SegmentHudView } from "./game/segments.js";
 
-import { renderHud } from "./ui/hud.js";
+import { renderHud, renderSegmentHud } from "./ui/hud.js";
 import type { HudTargets, TextTarget } from "./ui/hud.js";
 import { rideHudModelFrom } from "./ui/hud.js";
 
@@ -19,6 +20,8 @@ const HUD_ELEMENT_IDS = [
   "elevationGain",
   "energy",
   "warning",
+  "sprint",
+  "kom",
 ] as const;
 
 export interface AppDocument {
@@ -29,6 +32,7 @@ export interface AppDocument {
 export interface RideHudSource {
   readonly snapshot: () => RideSnapshot | undefined;
   readonly connected: () => boolean;
+  readonly segments: () => SegmentHudView;
   readonly dispose: () => void;
 }
 
@@ -55,6 +59,8 @@ interface OptionalHudTargets {
   readonly elevationGain: TextTarget | undefined;
   readonly energy: TextTarget | undefined;
   readonly warning: TextTarget | undefined;
+  readonly sprint: TextTarget | undefined;
+  readonly kom: TextTarget | undefined;
 }
 
 function hudTargetsFrom(targets: OptionalHudTargets): HudTargets | undefined {
@@ -69,6 +75,8 @@ function hudTargetsFrom(targets: OptionalHudTargets): HudTargets | undefined {
     elevationGain,
     energy,
     warning,
+    sprint,
+    kom,
   } = targets;
 
   if (
@@ -81,7 +89,9 @@ function hudTargetsFrom(targets: OptionalHudTargets): HudTargets | undefined {
     distance === undefined ||
     elevationGain === undefined ||
     energy === undefined ||
-    warning === undefined
+    warning === undefined ||
+    sprint === undefined ||
+    kom === undefined
   ) {
     return undefined;
   }
@@ -97,6 +107,8 @@ function hudTargetsFrom(targets: OptionalHudTargets): HudTargets | undefined {
     elevationGain,
     energy,
     warning,
+    sprint,
+    kom,
   };
 }
 
@@ -115,6 +127,8 @@ function readHudTargets(document: AppDocument): HudTargets | undefined {
     elevationGain: target("elevationGain"),
     energy: target("energy"),
     warning: target("warning"),
+    sprint: target("sprint"),
+    kom: target("kom"),
   });
 }
 
@@ -128,6 +142,7 @@ export function startApp(options: StartAppOptions): App {
   const ticker = options.ticker ?? createIntervalTicker(HUD_INTERVAL_MS);
 
   const render = (): void => {
+    renderSegmentHud(options.ride.segments(), targets);
     const snapshot = options.ride.snapshot();
 
     if (snapshot === undefined) {
@@ -149,6 +164,7 @@ export function startApp(options: StartAppOptions): App {
     stop() {
       stopTicker();
       options.ride.dispose();
+      renderSegmentHud(options.ride.segments(), targets);
     },
   };
 }

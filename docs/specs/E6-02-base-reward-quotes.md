@@ -1,8 +1,8 @@
 # Spec E6-02 – Reine XP-, Level- und Volts-Angebote
 
 - **Auftrag:** Hardwareunabhängiger Softwareausbau nach Henrys Klarstellung vom 23.11.2026.
-- **Basis:** Main `a001d168ab9be7d190e6c08a506f3379ba82445f` mit genehmigter Prüfungsreihenfolge aus ADR-023.
-- **Status:** Implementiert und nach Grenzkorrektur unabhängig geprüft. Reguläres integriertes Gate, Build und Mutation grün. CI-Freigabe noch offen. Keine verbindlichen Kontobuchungen, Bereitstellung oder Hardwareabnahme.
+- **Basis:** Main `5bcec675dbb4a200dccfdaa47e92f246fe8d2c57` mit Sprint-/KOM-Vorschau und genehmigter Prüfungsreihenfolge aus ADR-023.
+- **Status:** Implementiert und nach Grenzkorrektur unabhängig geprüft. Reguläres Gate, Build und Mutation nach Integration von Main `5bcec67` grün. CI-Freigabe noch offen. Keine verbindlichen Kontobuchungen, Bereitstellung oder Hardwareabnahme.
 - **Module:** Eigene Shared-Domänenschemas und reine Funktionen im bestehenden Rules-Paket.
 
 ## Ziel
@@ -44,6 +44,7 @@ Rules liefert `isXpActive`, `calculateBaseRewards`, `xpForLevel`, `levelForXp` u
 - Der eigenständige Korrekturlauf besteht mit 977 Unit-/Integrationstests, 49 Browserfällen und Build. Dieser Lauf verwendete `mise run --jobs 1 check` und ersetzt nicht das reguläre integrierte Abschlussgate.
 - Die frische vollständige Mutation besteht mit 5143 Mutanten und 95,59 %. Alle 44 neuen Formelmutanten sind getötet. Geschützte Konfigurationen, Engine und Golden-Dateien bleiben unverändert.
 - Nach Integration von Main `a001d16` besteht das reguläre `CI=1 E2E_PORT=5250 mise run check` mit 977 Unit-/Integrationstests und 49 Browserfällen. Normaler Build und `mise run check:mutation` bestehen. Der integrierte Mutationstest bestätigt unveränderte Quell- und Testdateien, verwendet 5142 vorhandene Ergebnisse erneut und behält 95,59 %. Das ist kein zweiter frischer Volllauf. Alle 14 reviewten Quell-, Manifest- und Lockfiledateien sowie die bisherigen 22 Browserdateien bleiben bytegleich.
+- Nach Übernahme der Sprint-/KOM-Vorschau aus Main `5bcec67` bestehen dasselbe reguläre Gate mit 1008 Unit-/Integrationstests und 50 Browserfällen, normaler Build und Standardmutation erneut. Die 5143 Mutanten behalten 95,59 % bei unveränderten mutierten Quellen und Tests. Die zusätzlichen Browser- und Segmenttests ersetzen keinen bestehenden Fall.
 
 ## Grenzen
 
