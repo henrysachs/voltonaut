@@ -25,6 +25,12 @@ function canClaim(row: StravaConnection, operation: CredentialOperation, nowMs: 
 
 @Injectable()
 export class StravaCredentialStore {
+  private connectionQuery: ReturnType<StravaCredentialStore["prepareConnection"]> | undefined;
+  private recoverQuery: ReturnType<StravaCredentialStore["prepareRecover"]> | undefined;
+  private claimQuery: ReturnType<StravaCredentialStore["prepareClaim"]> | undefined;
+  private releaseQuery: ReturnType<StravaCredentialStore["prepareRelease"]> | undefined;
+  private revocationsQuery: ReturnType<StravaCredentialStore["prepareRevocations"]> | undefined;
+
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable connection.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
@@ -33,24 +39,37 @@ export class StravaCredentialStore {
   ) {}
 
   public connection(userId: string): StravaConnection | undefined {
+    return (this.connectionQuery ??= this.prepareConnection()).get({ userId });
+  }
+
+  private prepareConnection() {
     const table = this.tables.connections;
 
-    return this.db.select().from(table).where(eq(table.userId, userId)).get();
+    return this.db
+      .select()
+      .from(table)
+      .where(eq(table.userId, sql.placeholder("userId")))
+      .prepare();
   }
 
   public recover(nowMs: number): void {
+    (this.recoverQuery ??= this.prepareRecover()).run({ nowMs });
+  }
+
+  private prepareRecover() {
     const table = this.tables.connections;
-    this.db
+
+    return this.db
       .update(table)
       .set({ credentialState: "uncertain" })
       .where(
         and(
           eq(table.workKind, "refresh"),
-          lte(table.workUntil, nowMs),
+          lte(table.workUntil, sql.placeholder("nowMs")),
           eq(table.credentialState, "refreshing"),
         ),
       )
-      .run();
+      .prepare();
   }
 
   public claimWork(
@@ -58,8 +77,6 @@ export class StravaCredentialStore {
     operation: CredentialOperation,
     nowMs: number,
   ): StravaConnection | undefined {
-    const table = this.tables.connections;
-
     return this.db.transaction(
       (): StravaConnection | undefined => {
         this.recover(nowMs);
@@ -67,26 +84,40 @@ export class StravaCredentialStore {
 
         if (row === undefined || !canClaim(row, operation, nowMs)) return undefined;
 
-        return this.db
-          .update(table)
-          .set({
-            workOwner: randomUUID(),
-            workKind: operation,
-            workUntil: nowMs + 10000,
-            credentialState: operation === "refresh" ? "refreshing" : row.credentialState,
-          })
-          .where(
-            and(
-              eq(table.userId, userId),
-              eq(table.generation, row.generation),
-              eq(table.tokenRevision, row.tokenRevision),
-            ),
-          )
-          .returning()
-          .get();
+        return (this.claimQuery ??= this.prepareClaim()).get({
+          workOwner: randomUUID(),
+          workKind: operation,
+          workUntil: nowMs + 10000,
+          credentialState: operation === "refresh" ? "refreshing" : row.credentialState,
+          userId,
+          generation: row.generation,
+          tokenRevision: row.tokenRevision,
+        });
       },
       { behavior: "immediate" },
     );
+  }
+
+  private prepareClaim() {
+    const table = this.tables.connections;
+
+    return this.db
+      .update(table)
+      .set({
+        workOwner: sql`${sql.placeholder("workOwner")}`,
+        workKind: sql`${sql.placeholder("workKind")}`,
+        workUntil: sql`${sql.placeholder("workUntil")}`,
+        credentialState: sql`${sql.placeholder("credentialState")}`,
+      })
+      .where(
+        and(
+          eq(table.userId, sql.placeholder("userId")),
+          eq(table.generation, sql.placeholder("generation")),
+          eq(table.tokenRevision, sql.placeholder("tokenRevision")),
+        ),
+      )
+      .returning()
+      .prepare();
   }
 
   public blockAndClaimRevocation(userId: string, nowMs: number): StravaConnection | undefined {
@@ -113,21 +144,30 @@ export class StravaCredentialStore {
   }
 
   public releaseWork(row: StravaConnection): void {
+    if (row.workOwner === null) return;
+    (this.releaseQuery ??= this.prepareRelease()).run({
+      userId: row.userId,
+      generation: row.generation,
+      workOwner: row.workOwner,
+      tokenRevision: row.tokenRevision,
+    });
+  }
+
+  private prepareRelease() {
     const table = this.tables.connections;
 
-    if (row.workOwner === null) return;
-    this.db
+    return this.db
       .update(table)
       .set({ workOwner: null, workKind: null, workUntil: 0 })
       .where(
         and(
-          eq(table.userId, row.userId),
-          eq(table.generation, row.generation),
-          eq(table.workOwner, row.workOwner),
-          eq(table.tokenRevision, row.tokenRevision),
+          eq(table.userId, sql.placeholder("userId")),
+          eq(table.generation, sql.placeholder("generation")),
+          eq(table.workOwner, sql.placeholder("workOwner")),
+          eq(table.tokenRevision, sql.placeholder("tokenRevision")),
         ),
       )
-      .run();
+      .prepare();
   }
 
   public revoked(row: StravaConnection): void {
@@ -233,6 +273,10 @@ export class StravaCredentialStore {
   }
 
   public pendingRevocations(): readonly StravaConnection[] {
+    return (this.revocationsQuery ??= this.prepareRevocations()).all();
+  }
+
+  private prepareRevocations() {
     const table = this.tables.connections;
 
     return this.db
@@ -240,6 +284,6 @@ export class StravaCredentialStore {
       .from(table)
       .where(eq(table.status, "revocation_pending"))
       .limit(10)
-      .all();
+      .prepare();
   }
 }
