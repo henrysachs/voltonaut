@@ -3,7 +3,7 @@
 - **Auftrag:** Henry fordert am 21.11.2026 ausdrücklich, Strava zu aktivieren und vollständig funktionsfähig zu machen.
 - **Basis:** Produktiver Stand `916edbb070ee5c3ffaeea5836cd91dfed3410836`.
 - **Integrationsbasis:** Main `415cffe217dae06a6b4ada7a0e1cbf26d7314606` mit Mitgliedschaft/Admin, Sprint-/KOM-Vorschau und reinen Reward-Angeboten.
-- **Status:** Implementiert, am Artefakt softwaregeprüft und auf API `a504e35` serverseitig aktiviert. Echte Anwendungssubscription registriert und geladen. Persönlicher Pilot bleibt offen. Die zunächst grüne native Feature-CI wird inzwischen wieder vom unveränderten Budgettimeout überlagert; zuverlässiger Abschluss ausstehend, siehe #35.
+- **Status:** Implementiert, am Artefakt softwaregeprüft und auf API `a504e35` serverseitig aktiviert. Echte Anwendungssubscription registriert und geladen. Der Budgetfix `61ca9c0` besteht beide nativen PR-Gates und alle drei Main-Prüfjobs unverändert. Persönlicher Pilot und Bereitstellung dieses nachfolgenden Queryplan-Fixes bleiben offen.
 - **Module:** Dedizierte private Strava-Provisionierung, Compose, Server `strava`, vorhandene Uploadoberfläche und Verifikation.
 
 ## Ziel
@@ -24,7 +24,7 @@ Henry hat den Betrieb ohne Backup gewählt. Es werden weder Backupressourcen noc
 - [x] AK4 – Verbindung, Athletenbindung und Einzelfahrtfreigabe bleiben getrennt. Höchstens ein externer Upload-POST je Fahrt, keine blinde Wiederholung bei unklarem Ergebnis, bekannte Upload-IDs bleiben bei Pollfehlern und Neustarts erhalten.
 - [x] AK5 – Aktuelle offizielle Verträge für Multipart, VirtualRide, TCX, `visibility=only_me`, Scopes, Refreshrotation und appweite Limits sind belegt. Eine angefragte Sichtbarkeit wird nicht als tatsächlich bestätigte Strava-Privatsichtbarkeit ausgegeben.
 - [x] AK6 – Erforderliche Deautorisierungs-Webhooks haben einen engen, geprüften Vertrag. Ein ungeprüfter öffentlicher POST darf weder eigene Aufnahmen löschen noch eine neue Verbindung anhand eines alten Ereignisses dauerhaft sperren. Subscription-Setup verändert keine fremde bestehende Subscription.
-- [ ] AK7 – Normales Gate, Build, sichere Provisionierungs-/Containerproben, ursprüngliche zwölf gebaute Auslieferungsfälle, aktuelle Anbietergegenproben und unabhängiges Review bestehen. Keine Zeitlimits, Assertions, Datenfrische oder Grafikqualität gelockert. Die früheren grünen Gesamtnachweise bleiben erhalten; der erneute native Budgettimeout muss noch zuverlässig behoben werden.
+- [x] AK7 – Normales Gate, Build, sichere Provisionierungs-/Containerproben, ursprüngliche zwölf gebaute Auslieferungsfälle, aktuelle Anbietergegenproben und unabhängiges Review bestehen. Keine Zeitlimits, Assertions, Datenfrische oder Grafikqualität gelockert. Der erneute native Budgettimeout ist mit unverändertem Originaltest durch Wiederverwendung vorbereiteter Abfragen behoben; fünf native vollständige Gates des Fixes bestehen.
 - [x] AK8 – Der tatsächliche Produktionsstand, private Konfigurationspräsenz, unverändertes OIDC, Callback-/Logprüfung und verbleibende menschliche Abnahmen sind belegt. Persönlicher OAuth, echte zulässige Fahrt und sichtbare Strava-Verarbeitung bleiben bis zum gemeinsamen Pilot explizit offen.
 
 ## Recherche und Architekturfragen
@@ -77,7 +77,7 @@ Henry hat die Produktionsläufe `45226134599` für das Strava-Profil und `452257
 
 Die Runtime bestätigt OIDC, aktiviertes Strava, vorhandenen Schlüssel, Verify-Token und Subscription-ID sowie `declared_ble_v1`. Öffentliche GET-Proben prüfen Health, Authgrenzen, CORS und Challenge-Ablehnung. Die unabhängige Betriebsprüfung wiederholt diese HTTP-Proben und prüft die privaten Receipts auf Konsistenz; sie behauptet keine eigene SSH-Abnahme der privaten Werte. Containerlog-Nachweis und persönliche Pilotgrenzen sind ausdrücklich eingegrenzt. Primärbelege liegen unter `$TMPDIR/opencode/strava-a504-activation-handoff.md` und `strava-activation-independent-review.md`.
 
-Die folgenden Main-Läufe überschreiten den ursprünglichen Budgettest wieder, trotz der vorherigen grünen baumgleichen Feature-CI. [Issue #35](https://github.com/henrysachs/voltonaut/issues/35) bleibt offen. Der diagnostische Draft #36 verändert weder Produktcode noch Assertions oder Fristen und wird nicht als Reparatur gemergt. Der Webstand bleibt `5bcec67`, bis die nächste Veröffentlichung ihre Prüfungen besteht.
+Die folgenden Main-Läufe überschritten den ursprünglichen Budgettest wieder, trotz der vorherigen grünen baumgleichen Feature-CI. [Issue #35](https://github.com/henrysachs/voltonaut/issues/35) ist danach durch den unabhängig geprüften Queryplan-Fix aus PR #37, Main `61ca9c0`, geschlossen. Beide nativen PR-Gates und alle drei Main-Prüfjobs bestehen mit 1061 Tests und 50 Browserfällen. Kein ursprünglicher Test, Timeout, Schritt, Quotenwert oder Transaktionsschutz wurde verändert. Der diagnostische Draft #36 ist ohne Merge geschlossen. Der Webclient `61ca9c0` ist nach diesen Prüfungen veröffentlicht und unabhängig mit allen 17 gebauten Dateien sowie gewöhnlichem Sim-/Aufnahme-/TCX-Browserfluss geprüft. Die kompatible API `a504e35` hat dieselben HTTP-Verträge und aktiviertes Strava; die neue private SQL-Implementierung wartet auf ihre eigene API-Produktionsfreigabe.
 
 ## Menschliche Abnahmen
 

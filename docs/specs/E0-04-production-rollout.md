@@ -2,7 +2,7 @@
 
 - **Auftrag und Freigabe:** Henry beauftragt am 21.11.2026 ausdrücklich den Produktionsdeploy von Web und API.
 - **Basis:** `9b8e28b500f5aaf000c57ff2aa094835b412416e`, alle drei Main-Workflows erfolgreich.
-- **Status:** Web `5bcec67` öffentlich geprüft, API `a504e35` mit serverseitig aktiviertem Strava produktiv. Persönlicher Anbieterpilot, Hardwareabnahme und zuverlässiger nativer Budgetcheck bleiben offen.
+- **Status:** Web `61ca9c0` öffentlich geprüft, kompatible API `a504e35` mit serverseitig aktiviertem Strava produktiv. Der Queryplan-Fix `61ca9c0` ist nativ softwaregeprüft; dessen API-Deploy wartet auf Produktionsfreigabe. Persönlicher Anbieterpilot und Hardwareabnahme bleiben offen.
 - **Betroffen:** Bestehendes Pages-Projekt `voltonaut`, dediziertes API-Compose-Projekt auf dem vorhandenen VPS und sichere Produktionskonfiguration ohne Backup.
 
 ## Ziel
@@ -77,7 +77,17 @@ Der geprüfte private Operator erstellt eine echte Strava-Anwendungssubscription
 
 Eigene und unabhängige öffentliche GET-Proben bestätigen Health, OIDC/`no-store`, exaktes CORS, geschützte eigene Strava-Verbindung und Ablehnung eines falschen Challenge-Tokens. Private Revision, Image und geladene Registrierung sind durch Operatorreceipts belegt, nicht über anonymes HTTP ablesbar. Die Logprüfung gilt ausschließlich für das dokumentierte API-Containerfenster. Belege: `$TMPDIR/opencode/strava-a504-activation-handoff.md` und `strava-activation-independent-review.md`.
 
-Die nachfolgenden Main- und Dokumentationschecks überschreiten erneut im unveränderten Budgettest 5000 ms, während der API-Workflow sein Gate besteht. [Issue #35](https://github.com/henrysachs/voltonaut/issues/35) und der isolierte diagnostische Draft #36 untersuchen die native Ursache. Die vorherige grüne Feature-CI und lokalen Gesamtgates werden deshalb nicht als abgeschlossene aktuelle CI-Stabilisierung ausgegeben. Kein neuer Webdeploy wird über die fehlgeschlagenen Checks hinweg erzwungen; dort bleibt `5bcec67` aktiv.
+Die nachfolgenden Main- und Dokumentationschecks überschritten erneut im unveränderten Budgettest 5000 ms, während der API-Workflow sein Gate bestand. Die vorherige grüne Feature-CI und lokalen Gesamtgates wurden deshalb nicht als abgeschlossene CI-Stabilisierung ausgegeben. Der laufende Webstand wurde nicht über fehlgeschlagene Checks hinweg aktualisiert.
+
+[Issue #35](https://github.com/henrysachs/voltonaut/issues/35) ist anschließend durch PR #37 behoben, Main `61ca9c0aac33c5ad9730931b3397e7b9c9d677c4`. Native CPU-Profile belegten wiederholten SQL-Aufbau und SQLite-Vorbereitung. Fünfzehn feste lazy Query-Pläne je Store-/DB-Satz ersetzen wiederholte Vorbereitung, nicht Datenabruf oder Autoritätsprüfung. Alle bisherigen Tests bleiben bytegleich. Die beiden nativen PR-Gates und alle drei Main-Prüfjobs bestehen mit 1061 Unit-/Integrationstests und 50 Browserfällen. Der ursprüngliche einzelne 5000-ms-Test, 1000 Schritte, Quoten und Assertions bleiben unverändert. Der diagnostische Draft #36 ist ohne Merge geschlossen. Eine Beschleunigungsquote, Hardware- oder Anbieterpilotabnahme wird daraus nicht abgeleitet.
+
+Die Dokumentationsintegration auf dieser Basis besteht ebenfalls das reguläre `CI=1 E2E_PORT=5236 mise run check` mit 1061 Tests und 50 Browserfällen. Die nachfolgenden Dokupräzisierungen ändern keine Anwendungsquelle. Der neue API-Fix-Deploy besitzt weiterhin seine eigene menschliche Produktionsfreigabe.
+
+## Webveröffentlichung des geprüften Fix-Stands
+
+Pages-Produktionsdeploy `5bfd64f7-1821-4b98-8f1b-f6766f7a4e61` veröffentlicht Main `61ca9c0`. Der private SQL-Fix ändert weder Web-/Shared-Quellen noch API-Controller, Konfigurations- oder Wire-Schemas. Nach den grünen PR- und Main-Prüfjobs kann dieser Client deshalb mit der bereits gesunden API `a504e35` veröffentlicht werden, während deren eigener Fix-Deploy auf menschliche Freigabe wartet. Diese Kompatibilität ist keine Freigabe für beliebige vorgezogene Vertragsänderungen.
+
+Die unabhängige öffentliche Nachprüfung vergleicht alle 17 Dateien einschließlich tatsächlichem HTML, Einstieg und beiden Workern bytegenau mit dem erwarteten Build. Ein frischer privater Browserkontext bestätigt Gastfahrt ohne Geräteauswahl, Strava-Anmeldehinweis, gewöhnliche Sim-Fahrt, Gang 13, laufende Fahrt im Menü, Segment-HUD, kein Body-Scroll, lokale V2-Aufnahme, Sim-TCX und unverändertes Archiv nach Reload. Drei tatsächliche Screenshots sind geöffnet; Welt und Fahrer sind sichtbar. Keine unerwarteten Origins, schreibenden HTTP-Methoden oder Browserfehler. Private API-Revision und -Konfiguration bleiben Operatorreceipts, kein anonymer HTTP-Nachweis. Belege: `$TMPDIR/opencode/main61-public-independent-review.md` und `main61-public-independent-20261123/`.
 
 ## Noch offene reale Abnahmen
 
