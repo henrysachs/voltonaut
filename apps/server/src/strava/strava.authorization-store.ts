@@ -8,6 +8,11 @@ import type { StravaConnection } from "./strava.store.js";
 
 @Injectable()
 export class StravaAuthorizationStore {
+  private hintQuery: ReturnType<StravaAuthorizationStore["prepareHint"]> | undefined;
+  private nextQuery: ReturnType<StravaAuthorizationStore["prepareNext"]> | undefined;
+  private validQuery: ReturnType<StravaAuthorizationStore["prepareDefer"]> | undefined;
+  private deferredQuery: ReturnType<StravaAuthorizationStore["prepareDefer"]> | undefined;
+
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable connection.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
@@ -16,15 +21,24 @@ export class StravaAuthorizationStore {
   ) {}
 
   public hint(athleteId: string): void {
+    (this.hintQuery ??= this.prepareHint()).run({ athleteId });
+  }
+
+  private prepareHint() {
     const t = this.tables.connections;
-    this.db
+
+    return this.db
       .update(t)
       .set({ authorizationHintRevision: sql`${t.authorizationHintRevision} + 1` })
-      .where(and(eq(t.athleteId, athleteId), eq(t.status, "connected")))
-      .run();
+      .where(and(eq(t.athleteId, sql.placeholder("athleteId")), eq(t.status, "connected")))
+      .prepare();
   }
 
   public next(nowMs: number): StravaConnection | undefined {
+    return (this.nextQuery ??= this.prepareNext()).get({ nowMs });
+  }
+
+  private prepareNext() {
     const t = this.tables.connections;
 
     return this.db
@@ -34,41 +48,56 @@ export class StravaAuthorizationStore {
         and(
           eq(t.status, "connected"),
           eq(t.credentialState, "available"),
-          or(isNull(t.workOwner), lte(t.workUntil, nowMs)),
+          or(isNull(t.workOwner), lte(t.workUntil, sql.placeholder("nowMs"))),
           gt(t.authorizationHintRevision, t.authorizationCheckedRevision),
-          lte(t.authorizationCheckAfter, nowMs),
+          lte(t.authorizationCheckAfter, sql.placeholder("nowMs")),
         ),
       )
       .orderBy(t.authorizationCheckAfter)
       .limit(1)
-      .get();
+      .prepare();
   }
 
   public defer(row: StravaConnection, untilMs: number, valid: boolean): void {
-    const t = this.tables.connections;
-
     if (row.workOwner === null || row.workKind !== "poll") return;
+
+    const query = valid
+      ? (this.validQuery ??= this.prepareDefer(true))
+      : (this.deferredQuery ??= this.prepareDefer(false));
+
+    query.run({
+      untilMs,
+      authorizationHintRevision: row.authorizationHintRevision,
+      userId: row.userId,
+      generation: row.generation,
+      tokenRevision: row.tokenRevision,
+      workOwner: row.workOwner,
+    });
+  }
+
+  private prepareDefer(valid: boolean) {
+    const t = this.tables.connections;
 
     const update = valid
       ? {
-          authorizationCheckAfter: untilMs,
-          authorizationCheckedRevision: row.authorizationHintRevision,
+          authorizationCheckAfter: sql`${sql.placeholder("untilMs")}`,
+          authorizationCheckedRevision: sql`${sql.placeholder("authorizationHintRevision")}`,
         }
-      : { authorizationCheckAfter: untilMs };
+      : { authorizationCheckAfter: sql`${sql.placeholder("untilMs")}` };
 
-    this.db
+    return this.db
       .update(t)
       .set(update)
       .where(
         and(
-          eq(t.userId, row.userId),
-          eq(t.generation, row.generation),
-          eq(t.tokenRevision, row.tokenRevision),
-          eq(t.workOwner, row.workOwner),
+          eq(t.userId, sql.placeholder("userId")),
+          eq(t.generation, sql.placeholder("generation")),
+          eq(t.tokenRevision, sql.placeholder("tokenRevision")),
+          eq(t.workOwner, sql.placeholder("workOwner")),
           eq(t.workKind, "poll"),
           eq(t.status, "connected"),
         ),
       )
-      .run();
+      .prepare();
   }
 }

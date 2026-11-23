@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { DRIZZLE } from "../database/drizzle.provider.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
@@ -123,6 +123,10 @@ function observedBudget(row: Budget, headers: RateHeaders, requestedAtMs: number
 
 @Injectable()
 export class StravaRateStore {
+  private insertQuery: ReturnType<StravaRateStore["prepareInsert"]> | undefined;
+  private budgetQuery: ReturnType<StravaRateStore["prepareBudget"]> | undefined;
+  private updateQuery: ReturnType<StravaRateStore["prepareUpdate"]> | undefined;
+
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable connection.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
@@ -130,40 +134,87 @@ export class StravaRateStore {
     @Inject(STRAVA_TABLES) private readonly tables: StravaTables,
   ) {}
 
+  private prepareInsert() {
+    return this.db
+      .insert(this.tables.rateBudget)
+      .values({
+        id: 1,
+        shortReset: sql.placeholder("shortReset"),
+        dayReset: sql.placeholder("dayReset"),
+      })
+      .onConflictDoNothing()
+      .prepare();
+  }
+
+  private prepareBudget() {
+    const table = this.tables.rateBudget;
+
+    return this.db.select().from(table).where(eq(table.id, 1)).prepare();
+  }
+
+  private budget(): Budget | undefined {
+    return (this.budgetQuery ??= this.prepareBudget()).get();
+  }
+
+  private prepareUpdate() {
+    const table = this.tables.rateBudget;
+
+    return this.db
+      .update(table)
+      .set({
+        id: sql`${sql.placeholder("id")}`,
+        shortReset: sql`${sql.placeholder("shortReset")}`,
+        dayReset: sql`${sql.placeholder("dayReset")}`,
+        shortLimit: sql`${sql.placeholder("shortLimit")}`,
+        dayLimit: sql`${sql.placeholder("dayLimit")}`,
+        readShortLimit: sql`${sql.placeholder("readShortLimit")}`,
+        readDayLimit: sql`${sql.placeholder("readDayLimit")}`,
+        shortUsage: sql`${sql.placeholder("shortUsage")}`,
+        dayUsage: sql`${sql.placeholder("dayUsage")}`,
+        readShortUsage: sql`${sql.placeholder("readShortUsage")}`,
+        readDayUsage: sql`${sql.placeholder("readDayUsage")}`,
+        shortPending: sql`${sql.placeholder("shortPending")}`,
+        dayPending: sql`${sql.placeholder("dayPending")}`,
+        readShortPending: sql`${sql.placeholder("readShortPending")}`,
+        readDayPending: sql`${sql.placeholder("readDayPending")}`,
+        blockedUntil: sql`${sql.placeholder("blockedUntil")}`,
+      })
+      .where(eq(table.id, 1))
+      .prepare();
+  }
+
+  private update(row: Budget): void {
+    (this.updateQuery ??= this.prepareUpdate()).run(row);
+  }
+
   public reserve(
     purpose: StravaRatePurpose,
     nowMs: number,
   ): { readonly kind: "reserved" } | { readonly kind: "wait"; readonly untilMs: number } {
     return this.db.transaction(
       () => {
-        const table = this.tables.rateBudget;
-        this.db
-          .insert(table)
-          .values({ id: 1, shortReset: shortReset(nowMs), dayReset: dayReset(nowMs) })
-          .onConflictDoNothing()
-          .run();
-        const row = this.db.select().from(table).where(eq(table.id, 1)).get();
+        (this.insertQuery ??= this.prepareInsert()).run({
+          shortReset: shortReset(nowMs),
+          dayReset: dayReset(nowMs),
+        });
+        const row = this.budget();
 
         if (row === undefined) throw new Error("missing Strava rate budget");
         const current = currentBudget(row, nowMs);
         const untilMs = waitUntil(current, purpose);
         const reserved = untilMs <= nowMs;
         const read = purpose !== "upload";
-        this.db
-          .update(table)
-          .set({
-            ...current,
-            shortUsage: current.shortUsage + Number(reserved),
-            dayUsage: current.dayUsage + Number(reserved),
-            readShortUsage: current.readShortUsage + Number(reserved && read),
-            readDayUsage: current.readDayUsage + Number(reserved && read),
-            shortPending: current.shortPending + Number(reserved),
-            dayPending: current.dayPending + Number(reserved),
-            readShortPending: current.readShortPending + Number(reserved && read),
-            readDayPending: current.readDayPending + Number(reserved && read),
-          })
-          .where(eq(table.id, 1))
-          .run();
+        this.update({
+          ...current,
+          shortUsage: current.shortUsage + Number(reserved),
+          dayUsage: current.dayUsage + Number(reserved),
+          readShortUsage: current.readShortUsage + Number(reserved && read),
+          readDayUsage: current.readDayUsage + Number(reserved && read),
+          shortPending: current.shortPending + Number(reserved),
+          dayPending: current.dayPending + Number(reserved),
+          readShortPending: current.readShortPending + Number(reserved && read),
+          readDayPending: current.readDayPending + Number(reserved && read),
+        });
 
         return reserved ? { kind: "reserved" } : { kind: "wait", untilMs };
       },
@@ -180,8 +231,7 @@ export class StravaRateStore {
   ): void {
     this.db.transaction(
       () => {
-        const table = this.tables.rateBudget;
-        const row = this.db.select().from(table).where(eq(table.id, 1)).get();
+        const row = this.budget();
 
         if (row === undefined) return;
 
@@ -193,17 +243,13 @@ export class StravaRateStore {
 
         const retryAtMs = retryAfterAt(headers.get("retry-after"), nowMs);
 
-        this.db
-          .update(table)
-          .set({
-            ...observed,
-            blockedUntil:
-              status === 429
-                ? Math.max(observed.blockedUntil, retryAtMs ?? shortReset(nowMs))
-                : observed.blockedUntil,
-          })
-          .where(eq(table.id, 1))
-          .run();
+        this.update({
+          ...observed,
+          blockedUntil:
+            status === 429
+              ? Math.max(observed.blockedUntil, retryAtMs ?? shortReset(nowMs))
+              : observed.blockedUntil,
+        });
       },
       { behavior: "immediate" },
     );

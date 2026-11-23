@@ -15,6 +15,10 @@ import type { OwnedDelivery } from "./strava.delivery-state.js";
 
 @Injectable()
 export class StravaDeliveryStore {
+  private readonly dueQueries: {
+    [Kind in "prepare" | "recover" | "poll"]?: ReturnType<StravaDeliveryStore["prepareDue"]>;
+  } = {};
+
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable connection.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
@@ -226,7 +230,14 @@ export class StravaDeliveryStore {
   }
 
   private due(kind: "prepare" | "recover" | "poll", nowMs: number): readonly OwnedDelivery[] {
+    return (this.dueQueries[kind] ??= this.prepareDue(kind))
+      .all({ nowMs })
+      .map((row) => parseDelivery(row));
+  }
+
+  private prepareDue(kind: "prepare" | "recover" | "poll") {
     const table = this.tables.deliveries;
+    const nowMs = sql.placeholder("nowMs");
     const progressKind = sql`json_extract(${table.progress}, '$.kind')`;
     const authorityKind = sql`json_extract(${table.authority}, '$.kind')`;
 
@@ -236,16 +247,10 @@ export class StravaDeliveryStore {
       poll: sql`${authorityKind} = 'consented' AND ${progressKind} = 'processing' AND json_extract(${table.progress}, '$.nextPollAtMs') <= ${nowMs}`,
     };
 
-    return this.db
-      .select()
-      .from(table)
-      .where(conditions[kind])
-      .orderBy(
-        sql`coalesce(json_extract(${table.progress}, '$.notBeforeMs'), json_extract(${table.progress}, '$.leaseUntilMs'), json_extract(${table.progress}, '$.nextPollAtMs'), 0)`,
-      )
-      .limit(100)
-      .all()
-      .map((row) => parseDelivery(row));
+    const order = sql`coalesce(json_extract(${table.progress}, '$.notBeforeMs'), json_extract(${table.progress}, '$.leaseUntilMs'), json_extract(${table.progress}, '$.nextPollAtMs'), 0)`;
+    const query = this.db.select().from(table).where(conditions[kind]);
+
+    return query.orderBy(order).limit(100).prepare();
   }
 
   public stopRide(
