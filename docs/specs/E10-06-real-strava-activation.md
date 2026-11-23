@@ -3,7 +3,7 @@
 - **Auftrag:** Henry fordert am 21.11.2026 ausdrücklich, Strava zu aktivieren und vollständig funktionsfähig zu machen.
 - **Basis:** Produktiver Stand `916edbb070ee5c3ffaeea5836cd91dfed3410836`.
 - **Integrationsbasis:** Mitgliedschafts-Main `3afcfc59f4c3d1dbcbe4fb5e6a6d2ada5c224055`.
-- **Status:** Implementiert, gemeinsam am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Die gemeinsame Gesamtprüfung besteht mit der freigegebenen CI-Reihenfolge. CI des endgültigen Heads und tatsächliche Aktivierung bleiben offen. Bestehende Produktion bleibt unverändert.
+- **Status:** Implementiert, gemeinsam am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Die gemeinsame Gesamtprüfung besteht mit der freigegebenen CI-Reihenfolge. CI des endgültigen Heads und tatsächliche Strava-Aktivierung bleiben offen.
 - **Module:** Dedizierte private Strava-Provisionierung, Compose, Server `strava`, vorhandene Uploadoberfläche und Verifikation.
 
 ## Ziel
@@ -63,6 +63,10 @@ Die anschließende gemeinsame Artefaktprüfung besteht mit normalem Build, dem u
 
 Primärbelege sind `joined-software-verification.md`, `joined-membership-browser-fKHpcz/`, `joined-membership-package-46xozX/`, `joined-twelve-source-proof.json` und `full-ride-delivery-proof-suite-xyVdHo/` unter demselben privaten Belegverzeichnis. Nach Integration der gesondert freigegebenen CI-Reihenfolge bestehen `E2E_PORT=5242 CI=1 mise run check` mit 889 Unit-Tests und den unveränderten 49 Browserfällen sowie der normale Build. Belege: `joined-final-sequenced-check.log` und `joined-final-sequenced-build.log`. Keine Bereitstellung oder reale Fahrtabnahme behauptet.
 
+Die native CI überschritt anschließend im langen Budgettest dessen unveränderte Frist. Die Entkopplung wiederholter Athleten-HTTP-Aufrufe reichte nicht. Eine gezielte Diagnose fand einen Fehler der neuen Testgegenstelle: Sie lehnte nach erfolgreichem echtem Refresh das neu ausgegebene Token ab und verursachte 483 weitere Refresh-Aufrufe. Die Gegenstelle lernt nun ausschließlich erfolgreich ausgegebene Tokens. Neue dauerhafte Regressionen prüfen die Äquivalenz zum echten lokalen HTTP-Anbieter sowie abgelehnte Refresh-Antworten. Der vollständige 1000-Schritte-Budgetfall verlangt zusätzlich genau einen Refresh, bestätigte Hinweisrevision 499 und Tokenrevision 1. Alle bisherigen Assertions, Quoten und Fristen bleiben erhalten. Gegen den alten Limiter scheitert derselbe Fall weiterhin am ausbleibenden späteren Poll.
+
+Das reguläre Gate nach dieser unabhängig geprüften Testkorrektur besteht mit 892 Unit-/Integrationstests und 49 Browserfällen, ebenso der normale Build. Produktquellen und gebauter Server bleiben bytegleich. Belege sind `strava-native-diagnosis/`, `strava-policy-rotation-fix/` und `strava-rotation-readonly-review-HF6nJh/`. Diese lokalen Nachweise ersetzen nicht die noch ausstehende native Prüfung des endgültigen Heads.
+
 ## Menschliche Abnahmen
 
-Henry bestätigt Callbackdomain und verfügbare Athletenkapazität im Strava-Dashboard. Er führt persönlichen Login und OAuth-Klick selbst aus. Eine ausdrücklich freigegebene reale Fahrt prüft VirtualRide-Klassifikation, Messwerte, Zeit, Sichtbarkeit und fertige Verarbeitung. Der Rendererfehler aus #26 bleibt ein eigener Auftrag.
+Henry bestätigt Callbackdomain und verfügbare Athletenkapazität im Strava-Dashboard. Er führt persönlichen Login und OAuth-Klick selbst aus. Eine ausdrücklich freigegebene reale Fahrt prüft VirtualRide-Klassifikation, Messwerte, Zeit, Sichtbarkeit und fertige Verarbeitung. Issue #26 ist durch die gesondert genehmigte CI-Lastkorrektur aus ADR-023 geschlossen, nicht durch eine Rendereränderung oder Hardwareabnahme.

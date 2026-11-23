@@ -11,14 +11,26 @@ import type { AuthorizationProof } from "./strava.authorization-provider.js";
 
 export class PolicyProvider extends StravaProvider {
   public athleteCalls = 0;
+  readonly #accessTokens = new Set<string>();
   #headers: Readonly<Headers> | undefined;
 
   public constructor(
     provider: Readonly<StravaProvider>,
-    private readonly tokens: { readonly accessToken: string },
+    tokens: { readonly accessToken: string },
     private readonly athlete: { readonly athleteId: number },
   ) {
     super(provider.enabledConfig());
+    this.#accessTokens.add(tokens.accessToken);
+  }
+
+  public override async refresh(
+    ...input: Readonly<Parameters<StravaProvider["refresh"]>>
+  ): Promise<Awaited<ReturnType<StravaProvider["refresh"]>>> {
+    const result = await super.refresh(...input);
+
+    if (result.kind === "refreshed") this.#accessTokens.add(result.tokens.accessToken);
+
+    return result;
   }
 
   public override verifyAuthorization(
@@ -37,7 +49,7 @@ export class PolicyProvider extends StravaProvider {
       });
 
     input.signal.throwIfAborted();
-    const authorized = input.accessToken === this.tokens.accessToken;
+    const authorized = this.#accessTokens.has(input.accessToken);
     input.onHeaders(this.#headers, authorized ? 200 : 401);
 
     return Promise.resolve(

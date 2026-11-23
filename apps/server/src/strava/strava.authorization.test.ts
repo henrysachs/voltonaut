@@ -48,10 +48,15 @@ it("keeps a later known upload pollable after a day of forged hints", async () =
   expect(peer.resources.athleteCalls).toBeGreaterThan(0);
   expect(peer.resources.athleteCalls).toBeLessThanOrEqual(500);
   expect(peer.resources.athleteCalls).toBe(1);
+  expect(peer.resources.refreshCalls).toBe(1);
   expect(policy.athleteCalls).toBeGreaterThan(0);
   expect(policy.athleteCalls).toBeLessThanOrEqual(500);
   expect(policy.athleteCalls).toBe(499);
   expect(reopened.credentials.connection("owner")?.authorizationCheckAfter).toBe(86400000);
+  expect(reopened.credentials.connection("owner")).toMatchObject({
+    authorizationCheckedRevision: 499,
+    tokenRevision: 1,
+  });
   expect(reopened.jobs.own("owner", consent.rideId)).toMatchObject({
     authority: known.authority,
     progress: {
