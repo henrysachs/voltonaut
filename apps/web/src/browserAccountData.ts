@@ -4,6 +4,7 @@ import { AccountSync } from "./sync/accountSync.js";
 import { openAccountOutbox } from "./sync/accountOutboxDatabase.js";
 import { openRideDatabase } from "./sync/rideDatabase.js";
 import { mountAccountDataPanel } from "./ui/accountDataPanel.js";
+import { mountAccountMembershipPanel } from "./ui/accountMembershipPanel.js";
 
 function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
   let resource: Promise<T> | undefined;
@@ -37,6 +38,7 @@ export async function setupBrowserAccountData(
   });
 
   mountAccountDataPanel(sync);
+  mountAccountMembershipPanel(sync.administration);
   window.addEventListener("online", () => {
     void sync.retry("resume");
   });

@@ -14,6 +14,7 @@ afterEach(async () => {
 });
 
 interface RequestInfo {
+  readonly method?: string | undefined;
   readonly url?: string | undefined;
   readonly headers: { readonly authorization?: string | undefined };
 }
@@ -25,6 +26,7 @@ interface ResponseInfo {
 
 async function fixture() {
   const calls: string[] = [];
+  const methods: string[] = [];
   let current = true;
   let status = 200;
   let mime = "application/json";
@@ -32,6 +34,7 @@ async function fixture() {
 
   const server = createServer((request: RequestInfo, response: ResponseInfo) => {
     calls.push(`${request.url ?? ""}:${request.headers.authorization ?? ""}`);
+    methods.push(request.method ?? "");
     response.writeHead(status, { "Content-Type": mime });
     response.end(body);
   });
@@ -42,7 +45,6 @@ async function fixture() {
   const port = address instanceof Object ? address.port : undefined;
 
   if (port === undefined) throw new Error("Missing test port");
-  const origin = `http://127.0.0.1:${port}`;
   cleanup.add(async () => {
     server.closeAllConnections();
     await new Promise<void>((resolve) => {
@@ -52,17 +54,16 @@ async function fixture() {
     });
   });
 
-  const lease = privateAuthTransport(origin).authorize({
-    token: "private-token",
-    userId: "user-a",
-    generation: 1,
-    signal: AbortSignal.timeout(8000),
-    current: () => current,
-  });
-
   return {
-    lease,
+    lease: privateAuthTransport(`http://127.0.0.1:${port}`).authorize({
+      token: "private-token",
+      userId: "user-a",
+      generation: 1,
+      signal: AbortSignal.timeout(8000),
+      current: () => current,
+    }),
     calls,
+    methods,
     reply: (code: number, type: string, value: string) => {
       status = code;
       mime = type;
@@ -83,6 +84,29 @@ it("keeps bearer on fixed known paths and rejects caller-controlled ride/cursor 
   f.supersede();
   await expect(f.lease.profile()).rejects.toMatchObject({ cause: "superseded" });
   expect(f.calls).toHaveLength(1);
+});
+
+it("keeps membership credentials on encoded fixed admin paths and uses PATCH without rewriting opaque IDs", async () => {
+  const f = await fixture();
+  const status = { membership: { tier: "pro", vip: true }, authorization: { role: "user" } };
+  f.reply(200, "application/json", JSON.stringify(status));
+  await expect(f.lease.accountStatus()).resolves.toEqual(status);
+  await expect(f.lease.saveMembership("existing", { tier: "pro", vip: true })).resolves.toEqual(
+    status,
+  );
+  f.reply(200, "application/json", JSON.stringify({ users: [], nextCursor: null }));
+  await f.lease.adminUsers("first/second?query");
+  expect(f.calls).toEqual([
+    "/v1/me/account-status:Bearer private-token",
+    "/v1/admin/users/existing/membership:Bearer private-token",
+    "/v1/admin/users?cursor=first%2Fsecond%3Fquery:Bearer private-token",
+  ]);
+  expect(f.methods).toEqual(["GET", "PATCH", "GET"]);
+  f.supersede();
+  await expect(
+    f.lease.saveMembership("existing", { tier: "normal", vip: false }),
+  ).rejects.toMatchObject({ cause: "superseded" });
+  expect(f.methods).toHaveLength(3);
 });
 
 it.each([

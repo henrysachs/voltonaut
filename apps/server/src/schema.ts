@@ -8,6 +8,7 @@ import { createStravaTables } from "./strava/strava.schema.js";
 export const accountsTables = createAccountsTables(users.id);
 export const ridesTables = createRidesTables(users.id);
 export const profiles = accountsTables.profiles;
+export const accountStatus = accountsTables.accountStatus;
 export const rides = ridesTables.rides;
 export const stravaTables = createStravaTables(users.id);
 export const stravaTransactions = stravaTables.transactions;
