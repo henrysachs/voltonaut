@@ -1,5 +1,6 @@
 import type { RideSnapshot } from "@voltonaut/engine";
 import { gearLabel } from "@voltonaut/rules";
+import type { SegmentHudRow, SegmentHudView, SegmentProgress } from "../game/segments.js";
 
 /** Everything the HUD renders, merged from the engine snapshot and device status. */
 export interface RideHudModel {
@@ -52,6 +53,8 @@ export interface TextTarget {
 }
 
 export interface HudTargets {
+  readonly sprint: TextTarget;
+  readonly kom: TextTarget;
   readonly powerW: TextTarget;
   readonly cadenceRpm: TextTarget;
   readonly heartRateBpm: TextTarget;
@@ -62,6 +65,52 @@ export interface HudTargets {
   readonly elevationGain: TextTarget;
   readonly energy: TextTarget;
   readonly warning: TextTarget;
+}
+
+const INVALID_SEGMENT_LABELS: Readonly<
+  Record<Extract<SegmentProgress, { readonly kind: "invalid" }>["reason"], string>
+> = {
+  clock_skipped: "Zeitlücke",
+  missing_entry: "Start fehlt",
+  engine_unavailable: "Engine nicht verfügbar",
+  invalid_timing: "Zeitfolge unvollständig",
+};
+
+function segmentText(row: SegmentHudRow): string {
+  const { progress, segment } = row;
+
+  switch (progress.kind) {
+    case "idle":
+      return `${segment.name} · ab ${(segment.startM / 1000).toFixed(1)} km`;
+    case "active":
+      return `${segment.name} · R${progress.lap + 1} · ${progress.elapsedS.toFixed(1)} s · noch ${Math.ceil(progress.remainingM)} m`;
+    case "finished":
+      return `${segment.name} · R${progress.lap + 1} · ${progress.timeS.toFixed(1)} s · vorläufig`;
+    case "invalid":
+      return `${segment.name} · ungültig · ${INVALID_SEGMENT_LABELS[progress.reason]}`;
+    default: {
+      const exhaustive: never = progress;
+
+      return exhaustive;
+    }
+  }
+}
+
+export function renderSegmentHud(
+  view: SegmentHudView,
+  targets: Pick<HudTargets, "sprint" | "kom">,
+): void {
+  const kinds: readonly ("sprint" | "kom")[] = ["sprint", "kom"];
+
+  for (const kind of kinds) {
+    const texts: string[] = [];
+
+    for (const row of view.rows) {
+      if (row.segment.kind === kind) texts.push(segmentText(row));
+    }
+
+    targets[kind].write(texts.join(" / "));
+  }
 }
 
 /** Data-loss warning threshold from docs/03 section 1 (> 3 s without data). */

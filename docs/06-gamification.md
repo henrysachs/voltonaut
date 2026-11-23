@@ -77,7 +77,8 @@ Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magne
 ## Segmente
 
 - Definition in der Route (`SegmentDef`: `sprint` | `kom` | `lap`, `startM`–`endM`).
-- Erkennung in `engine` (`segment.entered/exited`, Zeit zwischen Ticks interpoliert, < 0,05 s). Live-HUD: laufende Zeit, Delta zur PB, Restdistanz.
+- Erkennung in `engine` über `segment.entered/exited`. Die vorhandenen Ereigniszeiten markieren das Tickende (0,05 s), nicht interpolierte Grenzübertritte. [E6-01](specs/E6-01-visible-segments.md) zeigt daraus eine ausdrücklich vorläufige Spielsession-Vorschau mit laufender Zeit, Restdistanz und letztem Abschluss je Segment und Runde. Auto-Pause hält die Enginezeit und damit die laufende Segmentzeit an. Zeitlücken, fehlende Grenzen und Engineausfall entwerten betroffene Versuche.
+- Interpolierte Grenzzeiten, Live-Delta zur bestätigten PB und serverseitige PBs bleiben Zielzustand. Die Vorschau gehört nicht zum gewählten Aufnahmefenster und schreibt weder PBs noch Belohnungen, Aufnahmeresultate oder Exporte.
 - PBs liegen auf dem Server (pro Account), lokal gecacht. Ghost der PB-Fahrt (1-Hz-Positionen) später.
 
 ## Fahrtzusammenfassung

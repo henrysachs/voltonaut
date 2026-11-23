@@ -1,11 +1,18 @@
 import { createManualTicker } from "@voltonaut/ble";
-import { createEngine, createRoute, FLAT_LOOP, type RideSnapshot } from "@voltonaut/engine";
+import {
+  createEngine,
+  createRoute,
+  FLAT_LOOP,
+  TEST_LOOP,
+  type RideSnapshot,
+} from "@voltonaut/engine";
 import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
 import { expect, it } from "vitest";
 
 import type { AppDocument, RideHudSource } from "./app.js";
 import { startApp } from "./app.js";
 import type { TextTarget } from "./ui/hud.js";
+import { createSegmentProjector } from "./game/segments.js";
 
 interface Target extends TextTarget {
   readonly read: () => string;
@@ -34,11 +41,13 @@ function createTargets() {
     "hud-elevationGain": createTarget(),
     "hud-energy": createTarget(),
     "hud-warning": createTarget(),
+    "hud-sprint": createTarget(),
+    "hud-kom": createTarget(),
   };
 }
 
 function createDocument(
-  withMissingElement = false,
+  missingSelector?: string,
 ): AppDocument & { targets: Record<string, Target> } {
   const targets = createTargets();
   const targetsById = new Map<string, TextTarget>(Object.entries(targets));
@@ -46,7 +55,7 @@ function createDocument(
   return {
     targets,
     querySelector(selector: string) {
-      if (withMissingElement && selector === "#hud-status") {
+      if (selector === missingSelector) {
         return null;
       }
 
@@ -57,6 +66,7 @@ function createDocument(
 
 function createRideSource() {
   const engine = createEngine({ route: createRoute(FLAT_LOOP), profile: DEFAULT_RIDER_PROFILE });
+  const segments = createSegmentProjector(FLAT_LOOP);
 
   engine.ingest({ type: "trainer.data", tS: 0, powerW: 210, cadenceRpm: 95 });
   engine.advance(1);
@@ -66,8 +76,10 @@ function createRideSource() {
     source: {
       snapshot: (): RideSnapshot | undefined => engine.snapshot(),
       connected: () => true,
+      segments: () => segments.view(),
       dispose: () => {
         engine.drainEvents();
+        segments.unavailable();
       },
     },
   };
@@ -113,6 +125,7 @@ it("skips rendering while no snapshot exists yet", () => {
   const ride: RideHudSource = {
     snapshot: () => {},
     connected: () => false,
+    segments: () => createSegmentProjector(FLAT_LOOP).view(),
     dispose: () => {
       disposed = true;
     },
@@ -127,10 +140,71 @@ it("skips rendering while no snapshot exists yet", () => {
 });
 
 it("rejects a document with missing HUD elements", () => {
-  const document = createDocument(true);
+  const document = createDocument("#hud-status");
   const ride = createRideSource();
 
   expect(() => startApp({ document, ride: ride.source, ticker: createManualTicker() })).toThrow(
     "HUD elements are missing from the document",
   );
+});
+
+it("renders unavailable segments without inventing a missing engine snapshot", () => {
+  const document = createDocument();
+  const segments = createSegmentProjector(TEST_LOOP);
+  segments.unavailable();
+
+  const ride: RideHudSource = {
+    snapshot: () => {},
+    connected: () => false,
+    segments: () => segments.view(),
+    dispose: () => {},
+  };
+
+  startApp({ document, ride, ticker: createManualTicker() });
+  expect(document.targets["hud-sprint"]?.read()).toBe("Sprint · ungültig · Engine nicht verfügbar");
+  expect(document.targets["hud-powerW"]?.read()).toBe("");
+});
+
+it("pulls segment progress on the existing ticker and exposes invalidation on stop", () => {
+  const document = createDocument();
+  const ticker = createManualTicker();
+  const segments = createSegmentProjector(TEST_LOOP);
+
+  const snapshot = createEngine({
+    route: createRoute(TEST_LOOP),
+    profile: DEFAULT_RIDER_PROFILE,
+  }).snapshot();
+
+  segments.consume({
+    events: [{ type: "segment.entered", segmentId: "sprint-1", tS: 1 }],
+    snapshot: { ...snapshot, tS: 3, routePosM: 2200 },
+  });
+
+  const ride: RideHudSource = {
+    snapshot: () => snapshot,
+    connected: () => true,
+    segments: () => segments.view(),
+    dispose: () => {
+      segments.unavailable();
+    },
+  };
+
+  const app = startApp({ document, ride, ticker });
+  expect(document.targets["hud-sprint"]?.read()).toContain("2.0 s · noch 300 m");
+  segments.consume({ events: [], snapshot: { ...snapshot, tS: 4, routePosM: 2300 } });
+  ticker.tick();
+  expect(document.targets["hud-sprint"]?.read()).toContain("3.0 s · noch 200 m");
+  app.stop();
+  expect(document.targets["hud-sprint"]?.read()).toContain("ungültig · Engine nicht verfügbar");
+});
+
+it("requires segment targets along with the existing HUD", () => {
+  const document = createDocument("#hud-sprint");
+  expect(() =>
+    startApp({
+      document,
+      ride: createRideSource().source,
+      ticker: createManualTicker(),
+    }),
+  ).toThrow("HUD elements are missing");
 });
