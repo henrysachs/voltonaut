@@ -17,6 +17,8 @@ const dayReset = (nowMs: number) => (Math.floor(nowMs / 86400000) + 1) * 8640000
 
 type Budget = Readonly<StravaTables["rateBudget"]["$inferSelect"]>;
 
+export type StravaRatePurpose = "upload" | "poll" | "authorization_hint";
+
 interface RateHeaders {
   readonly get: (name: string) => string | null;
 }
@@ -69,13 +71,20 @@ function completeReservation(row: Budget, requestedAtMs: number, read: boolean):
   };
 }
 
-function waitUntil(row: Budget, read: boolean): number {
+function waitUntil(row: Budget, purpose: StravaRatePurpose): number {
   let untilMs = row.blockedUntil;
+  const read = purpose !== "upload";
 
-  if (row.shortUsage >= row.shortLimit || (read && row.readShortUsage >= row.readShortLimit))
+  const limit = (providerLimit: number) =>
+    purpose === "authorization_hint" ? Math.floor(providerLimit / 2) : providerLimit;
+
+  if (
+    row.shortUsage >= limit(row.shortLimit) ||
+    (read && row.readShortUsage >= limit(row.readShortLimit))
+  )
     untilMs = Math.max(untilMs, row.shortReset);
 
-  if (row.dayUsage >= row.dayLimit || (read && row.readDayUsage >= row.readDayLimit))
+  if (row.dayUsage >= limit(row.dayLimit) || (read && row.readDayUsage >= limit(row.readDayLimit)))
     untilMs = Math.max(untilMs, row.dayReset);
 
   return untilMs;
@@ -122,7 +131,7 @@ export class StravaRateStore {
   ) {}
 
   public reserve(
-    read: boolean,
+    purpose: StravaRatePurpose,
     nowMs: number,
   ): { readonly kind: "reserved" } | { readonly kind: "wait"; readonly untilMs: number } {
     return this.db.transaction(
@@ -137,8 +146,9 @@ export class StravaRateStore {
 
         if (row === undefined) throw new Error("missing Strava rate budget");
         const current = currentBudget(row, nowMs);
-        const untilMs = waitUntil(current, read);
+        const untilMs = waitUntil(current, purpose);
         const reserved = untilMs <= nowMs;
+        const read = purpose !== "upload";
         this.db
           .update(table)
           .set({
@@ -166,7 +176,7 @@ export class StravaRateStore {
     status: number,
     requestedAtMs: number,
     nowMs: number,
-    read: boolean,
+    purpose: StravaRatePurpose,
   ): void {
     this.db.transaction(
       () => {
@@ -176,7 +186,7 @@ export class StravaRateStore {
         if (row === undefined) return;
 
         const observed = observedBudget(
-          completeReservation(currentBudget(row, nowMs), requestedAtMs, read),
+          completeReservation(currentBudget(row, nowMs), requestedAtMs, purpose !== "upload"),
           headers,
           requestedAtMs,
         );

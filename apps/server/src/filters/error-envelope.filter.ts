@@ -118,7 +118,10 @@ function resolveError(
 
 function resolveParserError(exception: Readonly<Error>): ResolvedError | undefined {
   const parsed = z
-    .object({ type: z.enum(["entity.too.large", "entity.parse.failed", "encoding.unsupported"]) })
+    .object({
+      type: z.enum(["entity.too.large", "entity.parse.failed", "encoding.unsupported"]),
+      limit: z.number().int().positive().optional(),
+    })
     .safeParse(exception.cause ?? exception);
 
   if (!parsed.success) {
@@ -129,7 +132,7 @@ function resolveParserError(exception: Readonly<Error>): ResolvedError | undefin
     "entity.too.large": {
       status: 413,
       code: "payload_too_large",
-      message: "JSON body exceeds 8 MiB",
+      message: parsed.data.limit === 8192 ? "JSON body exceeds 8 KiB" : "JSON body exceeds 8 MiB",
     },
     "entity.parse.failed": {
       status: 400,

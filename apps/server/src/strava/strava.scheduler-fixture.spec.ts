@@ -4,28 +4,33 @@ import { StravaScheduler } from "./strava.scheduler.js";
 import { StravaService } from "./strava.service.js";
 import { StravaStore } from "./strava.store.js";
 import { StravaDeliveryService } from "./strava.delivery.js";
-import { StravaRateStore } from "./strava.rate-store.js";
 import { RidesService } from "../rides/rides.service.js";
 import { parseServerConfig } from "../config.js";
 import { stravaTables, ridesTables } from "../schema.js";
+import { authorizationFixture, PolicyProvider } from "./strava.authorization-fixture.spec.js";
 
-export async function schedulerFixture() {
+export async function schedulerFixture(authorizationTransport: "http" | "in_process" = "http") {
   const owners = fixture();
   const remote = await providerFixture();
+
+  const policy = new PolicyProvider(remote.provider, remote.grant.tokens, remote.peer.control);
+  const provider = authorizationTransport === "in_process" ? policy : remote.provider;
 
   const config = {
     ...parseServerConfig({ AUTH_MODE: "disabled" }, "test"),
     strava: remote.provider.enabledConfig(),
   };
 
-  const clock = { nowMs: () => 20000 };
+  const time = { nowMs: 20000 };
+  const clock = { nowMs: () => time.nowMs };
+  const checks = authorizationFixture(owners.a, provider, clock);
   const connections = new StravaStore(owners.a.db, stravaTables);
 
   const service = new StravaService(
     connections,
     config,
     clock,
-    remote.provider,
+    provider,
     owners.a.jobs,
     owners.a.credentials,
   );
@@ -42,11 +47,12 @@ export async function schedulerFixture() {
     deliveries,
     owners.a.jobs,
     owners.a.credentials,
-    remote.provider,
-    new StravaRateStore(owners.a.db, stravaTables),
+    provider,
+    checks.rates,
     service,
     clock,
+    checks.authorization,
   );
 
-  return { ...owners, ...remote, config, scheduler };
+  return { ...owners, ...remote, ...checks, provider, time, config, scheduler, policy };
 }

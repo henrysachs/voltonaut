@@ -9,6 +9,10 @@ export type StravaConfig =
       readonly redirectUri: string;
       readonly tokenKey: string;
       readonly providerOrigin: string;
+      readonly webhook: {
+        readonly verifyToken: string;
+        readonly subscriptionId: string | null;
+      };
     };
 
 export function validTokenKey(value: string): boolean {
@@ -50,6 +54,21 @@ const TestOriginSchema = z
     );
   });
 
+function webhookConfig(env: Readonly<Record<string, string | undefined>>) {
+  return {
+    verifyToken: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/u)
+      .parse(env["STRAVA_WEBHOOK_VERIFY_TOKEN"]),
+    subscriptionId:
+      z
+        .string()
+        .regex(/^[1-9]\d{0,15}$/u)
+        .optional()
+        .parse(env["STRAVA_WEBHOOK_SUBSCRIPTION_ID"]) ?? null,
+  };
+}
+
 export function parseStravaConfig(
   env: Readonly<Record<string, string | undefined>>,
   production: boolean,
@@ -82,6 +101,7 @@ export function parseStravaConfig(
     redirectUri,
     providerOrigin,
     tokenKey: key,
+    webhook: webhookConfig(env),
     clientId: z
       .string()
       .regex(/^[1-9]\d*$/u)

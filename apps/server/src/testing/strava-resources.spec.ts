@@ -44,6 +44,10 @@ export class LocalStravaResources {
   public submitCalls = 0;
   public pollCalls = 0;
   public refreshCalls = 0;
+  public athleteCalls = 0;
+  public athleteFault: "none" | "unauthorized" | "foreign" | "http" | "lost" = "none";
+  public athleteGate: { readonly enter: () => void; readonly wait: Promise<void> } | undefined;
+  public refreshResponse: { readonly status: number; readonly body: string } | undefined;
   public submission: "processing" | "lost" | "invalid" | "http" = "processing";
   public processing:
     | "processing"
@@ -74,6 +78,13 @@ export class LocalStravaResources {
 
   async refresh(body: Readonly<URLSearchParams>, res: ResourceResponse): Promise<void> {
     this.refreshCalls += 1;
+
+    if (this.refreshResponse !== undefined) {
+      res.writeHead(this.refreshResponse.status, { "Content-Type": "application/json" });
+      res.end(this.refreshResponse.body);
+
+      return;
+    }
 
     if (!this.#refreshTokens.delete(body.get("refresh_token") ?? "")) {
       res.writeHead(400);
@@ -108,6 +119,39 @@ export class LocalStravaResources {
         access_token: access,
         refresh_token: refresh,
         expires_at: Math.floor(Date.now() / 1000) + 21600,
+      }),
+    );
+  }
+
+  async athlete(
+    req: StravaResourceRequest,
+    res: ResourceResponse,
+    athleteId: number,
+  ): Promise<void> {
+    this.athleteCalls += 1;
+    this.athleteGate?.enter();
+    await this.athleteGate?.wait;
+
+    if (this.athleteFault === "lost") {
+      res.destroy();
+
+      return;
+    }
+
+    const token = (req.headers.authorization ?? "").slice(7);
+
+    res.writeHead(
+      this.athleteFault === "unauthorized" || !this.#accessTokens.has(token)
+        ? 401
+        : this.athleteFault === "http"
+          ? 503
+          : 200,
+      RATE_HEADERS,
+    );
+    res.end(
+      JSON.stringify({
+        id: this.athleteFault === "foreign" ? athleteId + 1 : athleteId,
+        firstname: "discard-this-private-provider-value",
       }),
     );
   }

@@ -2,11 +2,23 @@ name: provision-server
 
 on:
   workflow_dispatch:
+    inputs:
+      profile:
+        description: Fixed configuration profile
+        required: true
+        type: choice
+        default: oidc
+        options:
+          - oidc
+          - strava
   pull_request:
     paths:
       - .github/workflows/provision-server.yml
       - deploy/provision_env.py
       - deploy/test_provision_env.py
+      - deploy/test_strava_provision.py
+      - deploy/strava_subscription.py
+      - deploy/test_strava_subscription.py
       - deploy/compose.yaml
 
 permissions:
@@ -24,11 +36,12 @@ jobs:
       - name: Verify the provisioning boundary with synthetic credentials
         run: |
           docker compose version
-          python3 -m unittest discover -s deploy -p 'test_provision_env.py'
-          python3 -m py_compile deploy/provision_env.py deploy/test_provision_env.py
+          python3 -m unittest discover -s deploy -p 'test_*.py'
+          python3 -m py_compile deploy/provision_env.py deploy/test_provision_env.py \
+            deploy/strava_subscription.py deploy/test_strava_provision.py deploy/test_strava_subscription.py
 
       - name: Verify foreign-owner rejection in an isolated synthetic directory
-        run: sudo -n python3 -m unittest discover -s deploy -p 'test_provision_env.py' -k test_foreign_owner_is_rejected
+        run: sudo -n python3 -m unittest discover -s deploy -p 'test_*.py' -k test_foreign_owner_is_rejected
 
   provision:
     needs: test
@@ -42,13 +55,13 @@ jobs:
           persist-credentials: false
 
       - name: Validate OIDC configuration before installing credentials
+        if: inputs.profile == 'oidc'
         env:
           OIDC_ISSUER: ${{ secrets.OIDC_ISSUER }}
           OIDC_CLIENT_ID: ${{ secrets.OIDC_CLIENT_ID }}
           OIDC_CLIENT_SECRET: ${{ secrets.OIDC_CLIENT_SECRET }}
         run: |
           python3 - <<'PY'
-          import json
           import os
           import sys
           sys.path.insert(0, "deploy")
@@ -57,7 +70,26 @@ jobs:
               raw = {key: os.environ.get(key, "") for key in provision_env.SECRET_KEYS}
               raw.update(AUTH_MODE="oidc", CLIENT_ORIGIN=provision_env.CLIENT_ORIGIN,
                          OIDC_REDIRECT_URI=provision_env.REDIRECT_URI)
-              provision_env.parse_payload(json.dumps(raw).encode())
+              provision_env.parse_config(raw)
+          except (provision_env.ProvisionError, UnicodeError):
+              sys.exit("invalid provisioning configuration")
+          PY
+
+      - name: Validate Strava configuration before installing credentials
+        if: inputs.profile == 'strava'
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+          sys.path.insert(0, "deploy")
+          import provision_env
+          try:
+              config = provision_env.StravaConfig(os.environ.get("STRAVA_CLIENT_ID", ""),
+                                                  os.environ.get("STRAVA_CLIENT_SECRET", ""))
+              provision_env.parse_strava(config.values())
           except (provision_env.ProvisionError, UnicodeError):
               sys.exit("invalid provisioning configuration")
           PY
@@ -102,14 +134,24 @@ jobs:
               sys.exit("SSH identity installation failed")
           PY
 
-      - name: Provision initial private OIDC environment without replacement
+      - name: Provision private OIDC environment without replacement
+        if: inputs.profile == 'oidc'
         env:
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           OIDC_ISSUER: ${{ secrets.OIDC_ISSUER }}
           OIDC_CLIENT_ID: ${{ secrets.OIDC_CLIENT_ID }}
           OIDC_CLIENT_SECRET: ${{ secrets.OIDC_CLIENT_SECRET }}
-        run: python3 deploy/provision_env.py send "$DEPLOY_USER" "$DEPLOY_HOST"
+        run: python3 deploy/provision_env.py send "$DEPLOY_USER" "$DEPLOY_HOST" oidc
+
+      - name: Provision private Strava environment without replacement
+        if: inputs.profile == 'strava'
+        env:
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+        run: python3 deploy/provision_env.py send "$DEPLOY_USER" "$DEPLOY_HOST" strava
 
       - name: Remove runner SSH material
         if: always() && steps.ssh.outputs.installed == 'true'

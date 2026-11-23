@@ -7,6 +7,25 @@ import { testServerConfig } from "../config.js";
 import { createDatabase } from "./drizzle.provider.js";
 import type { DatabaseReader } from "../testing/test-app.spec.js";
 
+const LEGACY_STRAVA_COLUMNS = [
+  "user_id",
+  "athlete_id",
+  "status",
+  "encrypted_tokens",
+  "access_expires_at",
+  "scope",
+  "revoke_lease_until",
+  "handoff_hash",
+  "binding_hash",
+  "confirm_by",
+  "generation",
+  "token_revision",
+  "credential_state",
+  "work_owner",
+  "work_kind",
+  "work_until",
+];
+
 function legacyFolder(directory: string): string {
   const source = resolve("apps/server/drizzle");
   const folder = join(directory, "legacy");
@@ -34,12 +53,15 @@ function oldData(db: DatabaseReader) {
     db.$client.prepare("SELECT * FROM sessions").all(),
     db.$client.prepare("SELECT * FROM profiles").all(),
     db.$client.prepare("SELECT * FROM rides").all(),
-    db.$client.prepare("SELECT * FROM strava_connections").all(),
+    db.$client.prepare(`SELECT ${LEGACY_STRAVA_COLUMNS.join(",")} FROM strava_connections`).all(),
   ];
 }
 
 function seed(db: {
-  readonly $client: { readonly exec: ReturnType<typeof createDatabase>["$client"]["exec"] };
+  readonly $client: {
+    readonly exec: ReturnType<typeof createDatabase>["$client"]["exec"];
+    readonly pragma: ReturnType<typeof createDatabase>["$client"]["pragma"];
+  };
 }): void {
   db.$client.exec(`
     INSERT INTO users VALUES ('existing', 'existing@example.com', 123, NULL);
@@ -53,9 +75,15 @@ function seed(db: {
     INSERT INTO strava_connections (user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,generation)
       VALUES ('existing','123','connected','unchanged-ciphertext',9999999999999,'activity:write','generation');
   `);
+
+  const columns = z
+    .array(z.object({ name: z.string() }))
+    .parse(db.$client.pragma("table_info(strava_connections)"));
+
+  expect(columns.map((column) => column.name)).toEqual(LEGACY_STRAVA_COLUMNS);
 }
 
-it("adds only membership after the six actual migrations, preserves opaque owners and bytes across restart", () => {
+it("adds membership and authorization revisions after six actual migrations without changing opaque owners or prior bytes", () => {
   const directory = mkdtempSync(join(tmpdir(), "voltonaut-membership-upgrade-"));
   const path = join(directory, "accounts.db");
 
@@ -65,12 +93,25 @@ it("adds only membership after the six actual migrations, preserves opaque owner
     );
 
     seed(old);
+
     const before = oldData(old);
     expect(old.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(6);
     old.$client.close();
     const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
     const next = createDatabase(config);
     expect(oldData(next)).toEqual(before);
+
+    const revisions = next.$client
+      .prepare(
+        "SELECT authorization_hint_revision,authorization_checked_revision,authorization_check_after FROM strava_connections",
+      )
+      .get();
+
+    expect(revisions).toEqual({
+      authorization_hint_revision: 0,
+      authorization_checked_revision: 0,
+      authorization_check_after: 0,
+    });
     expect(next.$client.prepare("SELECT * FROM account_status").all()).toEqual([]);
     next.$client.prepare("INSERT INTO account_status (user_id) VALUES ('existing')").run();
     expect(next.$client.prepare("SELECT * FROM account_status").all()).toEqual([
@@ -83,7 +124,7 @@ it("adds only membership after the six actual migrations, preserves opaque owner
     next.$client.close();
     const restarted = createDatabase(config);
     expect(oldData(restarted)).toEqual(before);
-    expect(restarted.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(7);
+    expect(restarted.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(8);
     restarted.$client.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });

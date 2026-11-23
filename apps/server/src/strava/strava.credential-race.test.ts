@@ -48,7 +48,7 @@ it("keeps uncertain rotation blocked after stale poll401 and retains late creden
     });
 
     expect(latePoll).toEqual({ kind: "deferred", reason: "authorization" });
-    a.credentials.credentialFailure(oldPoll);
+    a.credentials.requestAuthorizationCheck(oldPoll);
     b.credentials.recover(24000);
     expect.soft(b.credentials.connection("owner")?.credentialState).toBe("uncertain");
     const revokedWithOldToken = b.credentials.blockAndClaimRevocation("owner", 24000);
@@ -82,7 +82,7 @@ it.each(["refreshing", "uncertain", "refreshed", "replacement"])(
     replaceWork(b.credentials, state);
 
     const before = required(b.credentials.connection("owner"));
-    a.credentials.credentialFailure(old);
+    a.credentials.requestAuthorizationCheck(old);
     expect(reopen().credentials.connection("owner")).toEqual(before);
   },
 );
@@ -92,24 +92,24 @@ it("ignores an authorization failure after its owner releases the work", () => {
   const old = required(a.credentials.claimWork("owner", "poll", 1000));
   a.credentials.releaseWork(old);
   const before = required(b.credentials.connection("owner"));
-  a.credentials.credentialFailure(old);
+  a.credentials.requestAuthorizationCheck(old);
   expect(reopen().credentials.connection("owner")).toEqual(before);
 });
 
 it.each<{ readonly kind: "poll" | "submit" }>([{ kind: "poll" }, { kind: "submit" }])(
-  "blocks work after the current $kind credential is refused",
+  "persists a hint, not a revocation, after the current $kind credential is refused",
   ({ kind }) => {
     const { a, b, reopen } = fixture();
 
     const work = required(a.credentials.claimWork("owner", kind, 1000));
 
-    a.credentials.credentialFailure(work);
+    a.credentials.requestAuthorizationCheck(work);
     a.credentials.releaseWork(work);
-    expect(reopen().credentials.connection("owner")?.credentialState).toBe(
-      "reauthorization_required",
-    );
-    expect(b.credentials.claimWork("owner", "poll", 12000)).toBeUndefined();
-    expect(b.credentials.claimWork("owner", "submit", 12000)).toBeUndefined();
-    expect(b.credentials.claimWork("owner", "refresh", 12000)).toBeUndefined();
+    expect(reopen().credentials.connection("owner")).toMatchObject({
+      credentialState: "available",
+      authorizationHintRevision: 1,
+      authorizationCheckedRevision: 0,
+    });
+    expect(b.credentials.claimWork("owner", "poll", 12000)).toBeDefined();
   },
 );

@@ -1,7 +1,9 @@
 import type { ServerConfig } from "./config.js";
 import { ExpressAdapter } from "@nestjs/platform-express";
+import { z } from "zod";
 
 export const MAX_JSON_BODY_BYTES = 8 * 1024 * 1024;
+const ExpressRequestPathSchema = z.object({ path: z.string() });
 
 interface ExpressSettings {
   readonly set: (setting: string, value: number | boolean | string) => void;
@@ -25,6 +27,19 @@ export function setupHttp(app: HttpSetupApp, config: ServerConfig): void {
   const adapter = app.getHttpAdapter();
 
   if (adapter instanceof ExpressAdapter) {
+    adapter.useBodyParser("json", false, {
+      limit: 8192,
+      inflate: false,
+      type: (req: { readonly headers: { readonly "content-type"?: string } }) => {
+        const parsed = ExpressRequestPathSchema.safeParse(req);
+
+        return (
+          parsed.success &&
+          /^\/v1\/strava\/webhook\/?$/iu.test(parsed.data.path) &&
+          req.headers["content-type"]?.split(";")[0]?.trim().toLowerCase() === "application/json"
+        );
+      },
+    });
     adapter.useBodyParser("json", false, { limit: MAX_JSON_BODY_BYTES, inflate: false });
   } else {
     throw new TypeError("HTTP setup requires the Nest Express adapter");

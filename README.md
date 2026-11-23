@@ -6,7 +6,7 @@ Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz.
 
 Mitgliedschaft/Admin und die vorläufige Sprint-/KOM-Anzeige sind ebenfalls bereitgestellt. [Issue #26](https://github.com/henrysachs/voltonaut/issues/26) ist durch die genehmigte CI-Lastkorrektur aus [ADR-023](docs/decisions/ADR-023-sequence-browser-gate.md) geschlossen. Die Korrektur ändert die Prüfungsreihenfolge, nicht den Renderer oder seine Anforderungen.
 
-Henry hat am 23.11.2026 den dauerhaften Main-Deploy beauftragt. Pages veröffentlicht künftige Main-Änderungen automatisch. `SERVER_DEPLOY_ENABLED=true` bleibt aktiv; API-Releases behalten die menschliche GitHub-Produktionsfreigabe. Die Schalter werden nach einem Einzeldeploy nicht mehr zurückgesetzt. Persönliche Anbieterzustimmung und Hardwareabnahme bleiben eigene Nachweise.
+Henry hat am 23.11.2026 den dauerhaften Main-Deploy beauftragt. `SERVER_DEPLOY_ENABLED=true` und die Pages-Produktionseinstellungen bleiben aktiv; API-Releases behalten die menschliche GitHub-Produktionsfreigabe. Die Schalter werden nach einem Einzeldeploy nicht mehr zurückgesetzt. Der GitHub-Pages-Job benötigt noch ein dediziertes `CLOUDFLARE_API_TOKEN` als Repository-Secret. Dessen sichere Provisionierung ist über den vorhandenen Betriebszugriff derzeit blockiert. Bis dahin werden geprüfte Webreleases ausdrücklich veröffentlicht. Persönliche Anbieterzustimmung und Hardwareabnahme bleiben eigene Nachweise.
 
 Die [öffentliche Sim-Welt](https://voltonaut.stammkneipe.dev/?sim=1) lässt sich ohne Hardware und Konto fahren. Aufnahme und TCX funktionieren auch als Gast. Die [Produktions-API](https://api.voltonaut.stammkneipe.dev/healthz) läuft mit persistentem SQLite, auf Henrys ausdrücklichen Wunsch ohne Backup.
 

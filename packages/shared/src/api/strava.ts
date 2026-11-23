@@ -3,6 +3,7 @@ import { z } from "zod";
 const EmptyStatus = (
   status:
     | "disabled"
+    | "registration_required"
     | "disconnected"
     | "confirmation_expired"
     | "credentials_unavailable"
@@ -14,6 +15,7 @@ const EmptyStatus = (
 
 export const StravaStatusSchema = z.union([
   EmptyStatus("disabled"),
+  EmptyStatus("registration_required"),
   EmptyStatus("disconnected"),
   EmptyStatus("confirmation_expired"),
   EmptyStatus("credentials_unavailable"),
@@ -169,6 +171,7 @@ export const StravaRideViewSchema = z.discriminatedUnion("kind", [
         "not_replayed",
         "window_source",
         "connection_disabled",
+        "registration_required",
         "connection_missing",
         "confirmation_required",
         "credentials_unavailable",

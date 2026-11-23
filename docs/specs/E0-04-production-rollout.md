@@ -59,11 +59,15 @@ Das reguläre `E2E_PORT=5236 CI=1 mise run check` besteht mit 822 Unit-Tests ein
 
 Für den ursprünglichen `916edbb`-Dispatch war `SERVER_DEPLOY_ENABLED` einmalig aktiv und wurde danach zurückgesetzt. Henry ändert diese Betriebsentscheidung am 23.11.2026 ausdrücklich: Main-Deploys sollen dauerhaft aktiviert bleiben. `SERVER_DEPLOY_ENABLED=true` und die Pages-Produktionseinstellungen sind deshalb eingeschaltet. Kein erneutes Zurücksetzen nach einem Einzeldeploy. Die menschliche Produktionsfreigabe der API bleibt bestehen. Backups bleiben ausdrücklich aus. Der lokale Fahrstand wurde durch diesen Rollout nicht verändert.
 
+Der bestehende GitHub-Pages-Job war mangels beider Cloudflare-Secrets übersprungen. `CLOUDFLARE_ACCOUNT_ID` ist inzwischen nach Prüfung des bestehenden Zielprojekts hinterlegt. Das dedizierte `CLOUDFLARE_API_TOKEN` fehlt noch. Der verfügbare Zugriff verweigert persönliche Tokenverwaltung mit 403; Account-Tokenverwaltung ist verfügbar, kennzeichnet `Pages Write` aber als nicht auswählbar. Deshalb wird kein breiter Betriebszugang in GitHub kopiert und keine Tokenausstellung mit zusätzlichen Rechten erzwungen. Die aktivierten Pages-Giteinstellungen haben für den folgenden Main-Push noch keinen automatischen Deploy belegt. Ein erfolgreicher direkter Webdeploy ist kein Nachweis funktionierender CI-Automatik.
+
 ## Folgerelease vom 23.11.2026
 
 Main `5bcec675dbb4a200dccfdaa47e92f246fe8d2c57` ergänzt Mitgliedschaft/Admin, vorläufige Sprint-/KOM-Vorschau und ADR-023. Beide PR-Prüfungen und alle drei Main-Workflows bestehen. Henry genehmigt den anschließenden API-Deploy [45213643632](https://github.com/henrysachs/voltonaut/actions/runs/45213643632) im unveränderten Produktionsenvironment. Der tatsächliche native Container verwendet Image `sha256:24aefe453bc438257cba82839951493d0d1ff543e837d54f8efe09e65f928dd3`, sieben Migrationen und dasselbe persistente SQLite. Fremdschlüsselintegrität, gesundes OIDC und die unveränderte private Konfigurationsdatei sind bestätigt. Es wird kein Admin automatisch vergeben.
 
 Pages-Produktionsdeploy `97022ddc-9626-4050-8a35-58e2a7cb6a8a` liefert denselben Commit. Ein unabhängiger öffentlicher Nachweis vergleicht alle 17 gebauten Dateien bytegenau und fährt die gewöhnliche Sim-Welt mit Segmentzeilen, Menü und Gangwechsel. V2-Aufnahme, Sim-TCX, unverändertes Archiv nach Reload, kein Seiten-Scrollen und keine Browserfehler sind bestätigt. Öffentliche API-Proben prüfen Health, eigene 401-Grenze, exaktes CORS und anonymen OIDC-Einstieg ohne persönlichen Login. Der Nachweis liegt unter `$TMPDIR/opencode/segments-live-independent-20261123/`.
+
+Die anschließende reine Dokumentationsintegration auf Main `a504e35` besteht `CI=1 E2E_PORT=5236 mise run check` mit 1050 Unit-/Integrationstests und 50 Browserfällen. Anwendungsquellen, Abhängigkeiten, Deploymentcode und maschinelle Leitplanken bleiben gegenüber dieser Basis unverändert. Dieses Gate ist kein neuer Produktions- oder Anbieterpilot.
 
 ## Noch offene reale Abnahmen
 

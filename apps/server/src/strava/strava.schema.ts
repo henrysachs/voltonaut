@@ -58,6 +58,9 @@ function createConnections(userIdColumn: SQLiteColumn) {
       workOwner: text("work_owner"),
       workKind: text("work_kind", { enum: ["refresh", "submit", "poll", "revoke"] }),
       workUntil: integer("work_until").notNull().default(0),
+      authorizationHintRevision: integer("authorization_hint_revision").notNull().default(0),
+      authorizationCheckedRevision: integer("authorization_checked_revision").notNull().default(0),
+      authorizationCheckAfter: integer("authorization_check_after").notNull().default(0),
     },
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle infers mutable column metadata for constraint construction.
     (table) => [

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
-import { and, eq, lte } from "drizzle-orm";
+import { and, eq, lte, sql } from "drizzle-orm";
 import { DRIZZLE } from "../database/drizzle.provider.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
 import { STRAVA_TABLES } from "./strava.schema.js";
@@ -164,43 +164,47 @@ export class StravaCredentialStore {
           readonly accessExpiresAt: number;
         }
       | { readonly kind: "refused" | "unknown" },
-  ): void {
+  ): boolean {
     const table = this.tables.connections;
 
-    if (row.workOwner === null) return;
-    this.db
-      .update(table)
-      .set(
-        result.kind === "refreshed"
-          ? {
-              encryptedTokens: result.encryptedTokens,
-              accessExpiresAt: result.accessExpiresAt,
-              tokenRevision: row.tokenRevision + 1,
-              credentialState: "available",
-              workOwner: null,
-              workKind: null,
-              workUntil: 0,
-            }
-          : {
-              credentialState: result.kind === "unknown" ? "uncertain" : "reauthorization_required",
-              workOwner: null,
-              workKind: null,
-              workUntil: 0,
-            },
-      )
-      .where(
-        and(
-          eq(table.userId, row.userId),
-          eq(table.generation, row.generation),
-          eq(table.tokenRevision, row.tokenRevision),
-          eq(table.workOwner, row.workOwner),
-          eq(table.workKind, "refresh"),
-        ),
-      )
-      .run();
+    if (row.workOwner === null) return false;
+
+    return (
+      this.db
+        .update(table)
+        .set(
+          result.kind === "refreshed"
+            ? {
+                encryptedTokens: result.encryptedTokens,
+                accessExpiresAt: result.accessExpiresAt,
+                tokenRevision: row.tokenRevision + 1,
+                credentialState: "available",
+                workOwner: null,
+                workKind: null,
+                workUntil: 0,
+              }
+            : {
+                credentialState:
+                  result.kind === "unknown" ? "uncertain" : "reauthorization_required",
+                workOwner: null,
+                workKind: null,
+                workUntil: 0,
+              },
+        )
+        .where(
+          and(
+            eq(table.userId, row.userId),
+            eq(table.generation, row.generation),
+            eq(table.tokenRevision, row.tokenRevision),
+            eq(table.workOwner, row.workOwner),
+            eq(table.workKind, "refresh"),
+          ),
+        )
+        .run().changes === 1
+    );
   }
 
-  public credentialFailure(row: StravaConnection): boolean {
+  public requestAuthorizationCheck(row: StravaConnection): void {
     const table = this.tables.connections;
 
     if (
@@ -209,25 +213,23 @@ export class StravaCredentialStore {
       row.status !== "connected" ||
       row.credentialState !== "available"
     )
-      return false;
+      return;
 
-    return (
-      this.db
-        .update(table)
-        .set({ credentialState: "reauthorization_required" })
-        .where(
-          and(
-            eq(table.userId, row.userId),
-            eq(table.generation, row.generation),
-            eq(table.tokenRevision, row.tokenRevision),
-            eq(table.workOwner, row.workOwner),
-            eq(table.workKind, row.workKind),
-            eq(table.status, "connected"),
-            eq(table.credentialState, "available"),
-          ),
-        )
-        .run().changes === 1
-    );
+    this.db
+      .update(table)
+      .set({ authorizationHintRevision: sql`${table.authorizationHintRevision} + 1` })
+      .where(
+        and(
+          eq(table.userId, row.userId),
+          eq(table.generation, row.generation),
+          eq(table.tokenRevision, row.tokenRevision),
+          eq(table.workOwner, row.workOwner),
+          eq(table.workKind, row.workKind),
+          eq(table.status, "connected"),
+          eq(table.credentialState, "available"),
+        ),
+      )
+      .run();
   }
 
   public pendingRevocations(): readonly StravaConnection[] {
