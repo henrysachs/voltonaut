@@ -1,25 +1,25 @@
-# Spec E4-06 – Erster echter Renderframe
+# Spec E4-06 – CI-Lastkorrektur für den ersten Renderframe
 
 ## Ziel
 
-Issue #26 durch einen passenden roten nativen x86-Lauf erklären und denselben Fall nach einer gezielten Korrektur grün prüfen. Diagnose allein schließt den Fehler nicht.
+Issue #26 durch einen passenden roten nativen x86-Lauf erklären und denselben unveränderten Fall nach der freigegebenen Gate-Sequenzierung grün prüfen. Keine behauptete Reparatur des Anwendungsrenderers. Diagnose allein schließt den Fehler nicht.
 
 ## Umfang
 
-Isolierter Zweig `fix/render-first-frame` ab `916edbb`. Zunächst ausschließlich zusätzliche Browserdiagnose. Kein Produktionsdeploy, kein Zugriff auf laufenden Fahrstand, Geräte oder Nutzerdaten. Originaler Menüfall und alle 49 Browserfälle bleiben unverändert erhalten.
+Isolierter Zweig `fix/render-first-frame`, für die Korrektur mit Main `3afcfc5` zusammengeführt. Henry hat am 23.11.2026 genau die Änderung von `mise.toml` und ADR-023 freigegeben. Kein Produktionsdeploy, kein Zugriff auf laufenden Fahrstand, Geräte oder Nutzerdaten. Originaler Menüfall und alle 49 Browserfälle bleiben unverändert erhalten.
 
 Die Diagnose zeichnet den ursprünglichen Menüfall während des unveränderten Gesamtgates auf. Sein Testkörper, seine Assertions und seine Position zwischen den übrigen 49 Fällen bleiben erhalten. Eine Test-Fixture startet die native Chromium-Aufzeichnung. Die Aufzeichnung verändert Timing und gilt nicht als unveränderter Performancebeleg. JSON-Zusammenfassungen im CI-Log erhalten Threadnamen und native Ereignisse. Eine Fehleraufnahme erfolgt erst nach dem ursprünglichen Fehler und nach Ende der nativen Aufzeichnung. PNGs bis 128.000 Bytes bleiben unverändert und vollständig im CI-Log erhalten, weil der bestehende Workflow keine Artefakte hochlädt.
 
 ## Abnahmekriterien
 
-- [ ] Passender roter Erstframe-Fall auf nativem x86 mit unterscheidbarem Rohwert und lokalisierter Ursache.
-- [ ] Gezielte Produktkorrektur und derselbe Erfolgsfall ohne geänderte Zeitlimits, Assertions, Sim-Uhr oder Grafikqualität.
+- [x] Passender roter Erstframe-Fall auf nativem x86 mit unterscheidbarem Rohwert und lokalisierter Ursache.
+- [ ] Freigegebene Gate-Sequenzierung und derselbe Erfolgsfall ohne geänderte Zeitlimits, Assertions, Sim-Uhr, CPU-Limits oder Grafikqualität nativ geprüft.
 - [ ] Tatsächliche sichtbare Welt, weiterlaufende Fahrt und ehrlicher Fehlerfallback erhalten.
 - [ ] Temporäre Wiederholungen vor dem finalen Artefakt entfernt, vollständiges `mise run check`, Build und unabhängiges Review grün.
 
 ## Nachweisstatus
 
-Diagnose vorbereitet. Produktkorrektur nicht implementiert. Hardware nicht geprüft. Nicht bereitgestellt. Keine Geschwindigkeits- oder FPS-Behauptung.
+Diagnose belegt. Freigegebene CI-Lastkorrektur wird implementiert und anschließend nativ gegen denselben Anwendungsstand geprüft. Hardware nicht geprüft. Nicht bereitgestellt. Keine Geschwindigkeits- oder FPS-Behauptung. Entscheidung und Freigabe stehen in [ADR-023](../decisions/ADR-023-sequence-browser-gate.md).
 
 ## Native Nachprüfung
 
