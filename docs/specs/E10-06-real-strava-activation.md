@@ -2,8 +2,8 @@
 
 - **Auftrag:** Henry fordert am 21.11.2026 ausdrücklich, Strava zu aktivieren und vollständig funktionsfähig zu machen.
 - **Basis:** Produktiver Stand `916edbb070ee5c3ffaeea5836cd91dfed3410836`.
-- **Integrationsbasis:** Mitgliedschafts-Main `3afcfc59f4c3d1dbcbe4fb5e6a6d2ada5c224055`.
-- **Status:** Implementiert, gemeinsam am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Die gemeinsame Gesamtprüfung besteht mit der freigegebenen CI-Reihenfolge. CI des endgültigen Heads und tatsächliche Strava-Aktivierung bleiben offen.
+- **Integrationsbasis:** Main `415cffe217dae06a6b4ada7a0e1cbf26d7314606` mit Mitgliedschaft/Admin, Sprint-/KOM-Vorschau und reinen Reward-Angeboten.
+- **Status:** Implementiert und nach Korrekturen unabhängig geprüft. Reguläres gemeinsames Gate, Build und alle zwölf ursprünglichen Auslieferungsfälle bestehen auch mit Main `415cffe`. CI des endgültigen Heads und tatsächliche Strava-Aktivierung bleiben offen.
 - **Module:** Dedizierte private Strava-Provisionierung, Compose, Server `strava`, vorhandene Uploadoberfläche und Verifikation.
 
 ## Ziel
@@ -66,6 +66,10 @@ Primärbelege sind `joined-software-verification.md`, `joined-membership-browser
 Die native CI überschritt anschließend im langen Budgettest dessen unveränderte Frist. Die Entkopplung wiederholter Athleten-HTTP-Aufrufe reichte nicht. Eine gezielte Diagnose fand einen Fehler der neuen Testgegenstelle: Sie lehnte nach erfolgreichem echtem Refresh das neu ausgegebene Token ab und verursachte 483 weitere Refresh-Aufrufe. Die Gegenstelle lernt nun ausschließlich erfolgreich ausgegebene Tokens. Neue dauerhafte Regressionen prüfen die Äquivalenz zum echten lokalen HTTP-Anbieter sowie abgelehnte Refresh-Antworten. Der vollständige 1000-Schritte-Budgetfall verlangt zusätzlich genau einen Refresh, bestätigte Hinweisrevision 499 und Tokenrevision 1. Alle bisherigen Assertions, Quoten und Fristen bleiben erhalten. Gegen den alten Limiter scheitert derselbe Fall weiterhin am ausbleibenden späteren Poll.
 
 Das reguläre Gate nach dieser unabhängig geprüften Testkorrektur besteht mit 892 Unit-/Integrationstests und 49 Browserfällen, ebenso der normale Build. Produktquellen und gebauter Server bleiben bytegleich. Belege sind `strava-native-diagnosis/`, `strava-policy-rotation-fix/` und `strava-rotation-readonly-review-HF6nJh/`. Diese lokalen Nachweise ersetzen nicht die noch ausstehende native Prüfung des endgültigen Heads.
+
+Nach Integration von Main `415cffe` bestehen das reguläre Gate mit 1050 Unit-/Integrationstests und 50 Browserfällen, der normale Build und erneut alle zwölf ursprünglichen gebauten Auslieferungsfälle. Alle zwölf Manifeste enthalten dieselben 515 Anwendungsquellen und entsprechen dem aktuellen Arbeitsbaum. Ihre kompilierten Server entsprechen dem normalen Build mit SHA-256 `ab379e282abc39b59d2acbb5fc86a00e7db6630ddde31e6a868385d795a05af0`. Engine und Rules bleiben gegenüber Main unverändert.
+
+Belege sind `strava-main415-awake-{check,build,twelve}.log`, `strava-main415-twelve-source-proof.json` und `full-ride-delivery-proof-suite-pQXMLp/`. Zwei lokale Vorläufe bleiben erhalten: zuerst fehlte nach dem Workspacewechsel die normale Installation, danach unterbrach der protokollierte Mac-Ruhezustand den Build-Hook. Installation mit unverändertem Lockfile und eine nur für den abschließenden Prozess geltende Wachhalte-Anforderung beheben diese Umgebungsbedingungen. Kein Test, Timeout, Ressourcenlimit oder Produktcode wurde dafür geändert.
 
 ## Menschliche Abnahmen
 

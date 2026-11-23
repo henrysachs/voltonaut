@@ -96,6 +96,8 @@ describe("renderHud", () => {
       elevationGain: target(),
       energy: target(),
       warning: target(),
+      sprint: target(),
+      kom: target(),
     } satisfies HudTargets;
 
     renderHud(model({ gearIndex: 0, connected: false }), targets);
