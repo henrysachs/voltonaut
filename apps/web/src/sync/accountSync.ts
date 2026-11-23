@@ -18,8 +18,10 @@ import {
 import { deliverAccountRow } from "./accountDelivery.js";
 import { applyAccountProfile } from "./accountProfile.js";
 import type { AccountLease } from "./privateAuthTransport.js";
+import { AccountAdministration } from "./accountAdministration.js";
 
 export class AccountSync {
+  readonly administration = new AccountAdministration();
   readonly #options: SyncOptions;
   readonly #listeners = new Set<(view: AccountDataView) => void>();
   readonly #sending = new Set<number>();
@@ -32,25 +34,18 @@ export class AccountSync {
   constructor(options: SyncOptions) {
     this.#options = options;
     options.session.subscribe((view) => {
-      this.#lease = undefined;
+      const lease = view.kind === "authenticated" ? options.session.authorize() : undefined;
+      this.#lease = lease;
+      this.administration.bind(lease);
       this.#archive = [];
       this.#reauth = false;
 
-      if (view.kind !== "authenticated") {
+      if (view.kind !== "authenticated" || lease === undefined) {
         this.publish({ kind: "guest" });
 
         return;
       }
 
-      const lease = options.session.authorize();
-
-      if (lease === undefined) {
-        this.publish({ kind: "guest" });
-
-        return;
-      }
-
-      this.#lease = lease;
       this.publish(initialAccountData(view.user));
       void this.refresh().then(() => (lease.current() ? this.retry("resume") : undefined));
     });

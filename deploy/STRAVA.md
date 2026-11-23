@@ -2,7 +2,7 @@
 
 Nur der Parent führt diese Schritte nach Review, grünen Gates und Produktionsfreigabe aus. Persönliches OAuth bleibt beim Nutzer. Dieser Ablauf behauptet keinen abgeschlossenen Anbieterpilot.
 
-1. Integriere die additive Migration gemeinsam mit der Mitgliedschaftsmigration. Der isolierte Entwurf heißt vorläufig `0006_strava_authorization_checks`. Regeneriere gemeinsam SQL-Metadaten und Snapshot für die finale `0007`. Ändere keine historischen Migrationen.
+1. Verwende die geprüfte gemeinsame Migrationsfolge. `0006_account_membership_admin` bleibt unverändert. Die aus dem gemeinsamen Root-Schema erzeugte `0007_strava_authorization_checks` ergänzt ausschließlich drei Connection-Spalten. Erzeuge oder ändere beim Produktionsbetrieb keine historischen SQL-Dateien oder Snapshots.
 2. Starte den bestehenden manuellen Workflow `provision-server` auf `main` mit Profil `strava`. Verwende die bestehende Produktionsfreigabe. Der Sender liest ausschließlich vorhandene Strava-Client-Secrets. Der Empfänger erzeugt Schlüsselmaterial nur bei nachweislich leerem verschlüsseltem Verbindungsbestand. Unlesbare Bestände führen zum Abbruch.
 3. Stelle das geprüfte API-Artefakt bereit. Prüfe Health, unverändertes OIDC und deaktivierte Querylogs. Die optionale `strava.env` aktiviert ausdrücklich `declared_ble_v1`. Das ist BLE-Selbstauskunft, kein Hardwareattest. Ohne Registrierungsdatei bleibt OAuth gesperrt, während die Challenge erreichbar ist.
 4. Übertrage ausdrücklich **beide** geprüften Dateien `deploy/provision_env.py` und `deploy/strava_subscription.py` über den bestehenden gepinnten SSH-Weg in ein neues privates Operatorverzeichnis auf dem VPS. Der normale Deploy-Tar überträgt diese Dateien nicht. Vergleiche ihre SHA-256-Hashes vor der Ausführung.

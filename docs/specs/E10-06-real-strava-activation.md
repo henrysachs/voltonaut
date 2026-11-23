@@ -2,7 +2,8 @@
 
 - **Auftrag:** Henry fordert am 21.11.2026 ausdrücklich, Strava zu aktivieren und vollständig funktionsfähig zu machen.
 - **Basis:** Produktiver Stand `916edbb070ee5c3ffaeea5836cd91dfed3410836`.
-- **Status:** Implementiert, isoliert am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Gemeinsame Migration, abschließende Integrationsprüfung, CI und tatsächliche Aktivierung bleiben offen. Bestehende Produktion bleibt unverändert.
+- **Integrationsbasis:** Mitgliedschafts-Main `3afcfc59f4c3d1dbcbe4fb5e6a6d2ada5c224055`.
+- **Status:** Implementiert, isoliert am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Gemeinsame Migration erzeugt und mit 17 Datenbankfällen geprüft. Abschließende Gesamtprüfung, CI und tatsächliche Aktivierung bleiben offen. Bestehende Produktion bleibt unverändert.
 - **Module:** Dedizierte private Strava-Provisionierung, Compose, Server `strava`, vorhandene Uploadoberfläche und Verifikation.
 
 ## Ziel
@@ -30,11 +31,11 @@ Henry hat den Betrieb ohne Backup gewählt. Es werden weder Backupressourcen noc
 
 Die offizielle Upload-Referenz dokumentiert `visibility=only_me`; die allgemeinere Uploadanleitung lässt den Parameter aus. Der vorhandene Parameter und die ehrliche Einschränkung bleiben erhalten. Kein unnötiger Wechsel der Einwilligungsrevision allein aufgrund dieser Auslassung.
 
-Bevorzugt ist ein getrenntes optionales `strava.env` am bestehenden API-Dienst. Ein Sendervertrag darf keinen Ersatzschlüssel liefern. Für erforderliche Webhooks sind Vertrauen, verspätete Ereignisse und widerrufene oder neu autorisierte Verbindungen vor der Implementierung konkret zu klären. Keine neue Datenmigration ohne Abstimmung mit der parallelen Mitgliedschaftstabelle.
+Ein getrenntes optionales `strava.env` konfiguriert den bestehenden API-Dienst. Ein Sendervertrag darf keinen Ersatzschlüssel liefern. Öffentliche Ereignisse bleiben ungeprüfte Hinweise. Die neue Datenmigration folgt der bereits integrierten Mitgliedschaftstabelle.
 
-[ADR-022](../decisions/ADR-022-real-strava-provisioning.md) wählt öffentlich validierte Hinweise mit anschließender Anbieterprüfung statt geheimer Callback-URLs. Vorgesehen sind drei additive Connection-Felder für Hinweisrevision, bestätigte Revision und frühesten Prüfzeitpunkt. Der Scheduler nutzt aktuelle Credential-Leases und appweite Read-Budgets. Ein generischer 400/401-Refreshfehler ist kein Beweis einer Deautorisierung. Eine spezifische Strava-Antwortform muss als dokumentierter oder tatsächlicher sicherer Wire-Nachweis vorliegen; bis dahin bleibt die Verarbeitung konservativ.
+[ADR-022](../decisions/ADR-022-real-strava-provisioning.md) wählt öffentlich validierte Hinweise mit anschließender Anbieterprüfung statt geheimer Callback-URLs. Drei additive Connection-Felder speichern Hinweisrevision, bestätigte Revision und frühesten Prüfzeitpunkt. Der Scheduler nutzt aktuelle Credential-Leases und appweite Read-Budgets. Ein generischer 400/401-Refreshfehler ist kein Beweis einer Deautorisierung. Eine spezifische Strava-Antwortform muss als dokumentierter oder tatsächlicher sicherer Wire-Nachweis vorliegen; bis dahin bleibt die Verarbeitung konservativ.
 
-Eine Operator-Registrierung läuft erst nach dem HTTP-Start. Sie liest vorhandene Subscriptions, übernimmt nur passende Callbacks und legt ausschließlich bei Abwesenheit neu an. Die Subscription-ID bleibt in einer eigenen privaten Registrierungsdatei erhalten. Verbindungsstart ohne bestätigte Registrierung bleibt gesperrt. Die finale Migrationsmetadatenfolge wird gemeinsam mit der parallelen Mitgliedschaftsmigration integriert, nicht blind überschrieben.
+Eine Operator-Registrierung läuft erst nach dem HTTP-Start. Sie liest vorhandene Subscriptions, übernimmt nur passende Callbacks und legt ausschließlich bei Abwesenheit neu an. Die Subscription-ID bleibt in einer eigenen privaten Registrierungsdatei erhalten. Verbindungsstart ohne bestätigte Registrierung bleibt gesperrt. Die generierte `0007_strava_authorization_checks` folgt der unveränderten `0006_account_membership_admin`. Historische SQL- und Snapshot-Dateien bleiben erhalten.
 
 ## Testplan
 
@@ -51,6 +52,16 @@ Das frische Budgetreview führt einen Angriff über 1000 kontrollierte Scheduler
 Das frische Parserreview sendet 102 reale HTTP-Requests. Dasselbe 1.048.723-Byte-JSON, das der alte Build über rohe Fragment- und Absolute-Form-Targets annahm, erhält im aktuellen Build 413. Exakt 8192 Byte bleiben zulässig, 8193 werden abgelehnt. Chunked, UTF-8, Charset, falscher Medientyp und Kompression sind geprüft. Allgemeine Fahrtenrequests behalten 8 MiB. Nachrichten unterscheiden 8 KiB und 8 MiB, ohne Nutzlasten auszugeben.
 
 Private Primärbelege liegen unter `$TMPDIR/opencode/`: `strava-independent-p1-c3f1wncn/`, `strava-independent-p2-0bYuNplJ/`, `strava-parser-root-fix.md`, `strava-parser-parent-final-proof.json` und `full-ride-delivery-proof-suite-wp1meZ/`. Diese Nachweise betreffen die isolierte Einheit mit vorläufiger Migration. Sie ersetzen weder die gemeinsame finale `0007` noch deren Integrationsprüfung oder CI. AK1 bis AK3 bleiben bis zur tatsächlichen privaten Produktionsprovisionierung und Aktivierung offen, AK7 bis zur vollständigen gemeinsamen Prüfung.
+
+## Gemeinsame Migration
+
+Die Elternintegration behält alle 14 veröffentlichten SQL- und Snapshot-Dateien bis einschließlich Main-`0006` bytegleich. Die ersten sieben Journaleinträge bleiben unverändert. Drizzle Kit erzeugt aus dem gemeinsamen Root-Schema die finale `0007` mit genau den drei bereits geprüften `ALTER TABLE`-Anweisungen. Der neue Snapshot erhält `account_status` und alle übrigen Tabellen unverändert. Die vorläufige, nie produktiv angewendete Strava-`0006` entfällt.
+
+17 Datenbanktests und der Typecheck bestehen am gemeinsamen Stand. Upgrades aus sechs und sieben tatsächlichen Migrationen erhalten Chiffrate, Sessions, eigene Fahrten und vorhandenes Pro/VIP/Admin einschließlich erneutem Öffnen. Der Mitgliedschaftstest vergleicht weiterhin sämtliche 16 alten Strava-Spalten und prüft die drei neuen Standardwerte separat. Die Gesamtfolge umfasst jetzt acht Migrationen. Dies ist noch kein Beleg für den vollständigen gemeinsamen Browserfluss oder den Produktionsdeploy.
+
+Die anschließende gemeinsame Artefaktprüfung besteht mit normalem Build, dem unveränderten Admin-Browserfall und dem tatsächlichen Produktionspaket. Rollenvergabe, unabhängiges Pro/VIP, Kontowechsel, fortlaufende Sim-Fahrt und Netzwerkgrenzen sind geprüft. Der bestehende Paket-Smoke bestätigt alle acht Migrationen. Nach Korrektur einer lediglich noch im Git-Index erfassten gelöschten vorläufigen SQL-Datei bestehen auch die ursprünglichen zwölf Auslieferungsfälle unverändert. Alle zwölf Anwendungsquellmanifeste sind identisch und während des Laufs stabil. Der fehlgeschlagene Manifestvorlauf bleibt erhalten, keine Assertion wurde dafür geändert.
+
+Primärbelege sind `joined-software-verification.md`, `joined-membership-browser-fKHpcz/`, `joined-membership-package-46xozX/`, `joined-twelve-source-proof.json` und `full-ride-delivery-proof-suite-xyVdHo/` unter demselben privaten Belegverzeichnis. Der finale gemeinsame vollständige Gate-Lauf folgt nach Integration der gesondert freigegebenen CI-Reihenfolge. Keine Bereitstellung oder reale Fahrtabnahme behauptet.
 
 ## Menschliche Abnahmen
 

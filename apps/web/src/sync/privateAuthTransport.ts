@@ -14,6 +14,13 @@ import {
   StravaRideViewSchema,
   StravaUploadRequestSchema,
   StravaDeliverySchema,
+  AccountStatusSchema,
+  AccountUserIdSchema,
+  AdminUsersSchema,
+  MembershipSchema,
+  type AccountStatus,
+  type AdminUsers,
+  type Membership,
   type ProfileInput,
   type ProfileState,
   type RideDetail,
@@ -54,6 +61,12 @@ export interface AccountLease extends ProfileWriteLease {
   readonly detail: (rideId: string) => Promise<RideDetail>;
   readonly upload: (ride: RideUpload) => Promise<RideReceipt>;
   readonly strava: StravaLease;
+  readonly accountStatus: () => Promise<AccountStatus>;
+  readonly adminUsers: (cursor: string | null) => Promise<AdminUsers>;
+  readonly saveMembership: (
+    userId: string,
+    membership: Readonly<Membership>,
+  ) => Promise<AccountStatus>;
 }
 
 export interface StravaLease {
@@ -149,6 +162,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         signal: authorization.signal,
         current: authorization.current,
         strava: stravaLease(request),
+        ...membershipLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>
           request(
@@ -175,7 +189,32 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
   };
 }
 
+function membershipLease(
+  request: ReturnType<typeof authorizedRequest>,
+): Pick<AccountLease, "accountStatus" | "adminUsers" | "saveMembership"> {
+  return {
+    accountStatus: () => request("/v1/me/account-status", AccountStatusSchema),
+    adminUsers: (cursor) =>
+      request(
+        cursor === null
+          ? "/v1/admin/users"
+          : `/v1/admin/users?cursor=${encodeURIComponent(AccountUserIdSchema.parse(cursor))}`,
+        AdminUsersSchema,
+      ),
+    saveMembership: (userId, membership) =>
+      request(
+        `/v1/admin/users/${encodeURIComponent(AccountUserIdSchema.parse(userId))}/membership`,
+        AccountStatusSchema,
+        JSON.stringify(MembershipSchema.parse(membership)),
+      ),
+  };
+}
+
 type PrivatePath =
+  | "/v1/me/account-status"
+  | "/v1/admin/users"
+  | `/v1/admin/users?cursor=${string}`
+  | `/v1/admin/users/${string}/membership`
   | "/v1/me/profile"
   | "/v2/rides"
   | `/v2/rides?cursor=${string}`
@@ -197,7 +236,14 @@ function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization)
 
     try {
       const response = await fetch(`${apiOrigin}${path}`, {
-        method: body === undefined ? "GET" : path === "/v1/me/profile" ? "PUT" : "POST",
+        method:
+          body === undefined
+            ? "GET"
+            : path === "/v1/me/profile"
+              ? "PUT"
+              : path.startsWith("/v1/admin/users/")
+                ? "PATCH"
+                : "POST",
         headers: {
           Authorization: `Bearer ${authorization.token}`,
           "Content-Type": "application/json",
@@ -211,28 +257,36 @@ function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization)
 
       if (!authorization.current()) throw new PrivateRequestError("superseded");
 
-      if (response.status !== 200) throw new PrivateRequestError(statusFailure(response.status));
-
-      if (
-        response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !==
-        "application/json"
-      )
-        throw new PrivateRequestError("contract");
-
-      const raw: unknown = await response.json().catch(() => {
-        throw new PrivateRequestError("contract");
-      });
+      const value = await parseResponse(response, schema);
 
       if (!authorization.current()) throw new PrivateRequestError("superseded");
 
-      try {
-        return schema.parse(raw);
-      } catch {
-        throw new PrivateRequestError("contract");
-      }
+      return value;
     } catch (error) {
       if (!authorization.current()) throw new PrivateRequestError("superseded");
       throw error instanceof PrivateRequestError ? error : new PrivateRequestError("retry");
     }
   };
+}
+
+async function parseResponse<T>(
+  response: Readonly<Pick<Response, "status" | "json">> & {
+    readonly headers: Readonly<Pick<Headers, "get">>;
+  },
+  schema: ResponseSchema<T>,
+): Promise<T> {
+  if (response.status !== 200) throw new PrivateRequestError(statusFailure(response.status));
+
+  if (
+    response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json"
+  )
+    throw new PrivateRequestError("contract");
+
+  try {
+    const raw: unknown = await response.json();
+
+    return schema.parse(raw);
+  } catch {
+    throw new PrivateRequestError("contract");
+  }
 }

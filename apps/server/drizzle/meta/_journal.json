@@ -47,8 +47,15 @@
     {
       "idx": 6,
       "version": "6",
-      "when": 1795256511684,
-      "tag": "0006_strava_authorization_checks",
+      "when": 1795255594014,
+      "tag": "0006_account_membership_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1795261787665,
+      "tag": "0007_strava_authorization_checks",
       "breakpoints": true
     }
   ]

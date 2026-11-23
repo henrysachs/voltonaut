@@ -1,9 +1,77 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e90b5c1a-5dd5-4d49-95d4-a190af2f7f4b",
+  "id": "3fd82072-7b92-4292-a0cc-3548f9f6bba9",
   "prevId": "86feda65-e161-4c01-879c-9e612747ebe6",
   "tables": {
+    "account_status": {
+      "name": "account_status",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tier": {
+          "name": "tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'normal'"
+        },
+        "vip": {
+          "name": "vip",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'user'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "account_status_user_id_users_id_fk": {
+          "name": "account_status_user_id_users_id_fk",
+          "tableFrom": "account_status",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "account_status_tier": {
+          "name": "account_status_tier",
+          "value": "\"account_status\".\"tier\" IN ('normal', 'premium', 'pro')"
+        },
+        "account_status_vip": {
+          "name": "account_status_vip",
+          "value": "\"account_status\".\"vip\" IN (0, 1)"
+        },
+        "account_status_role": {
+          "name": "account_status_role",
+          "value": "\"account_status\".\"role\" IN ('user', 'admin')"
+        }
+      }
+    },
     "profiles": {
       "name": "profiles",
       "columns": {
@@ -301,30 +369,6 @@
         },
         "work_until": {
           "name": "work_until",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "authorization_hint_revision": {
-          "name": "authorization_hint_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "authorization_checked_revision": {
-          "name": "authorization_checked_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "authorization_check_after": {
-          "name": "authorization_check_after",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

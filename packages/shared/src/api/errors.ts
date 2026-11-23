@@ -3,6 +3,7 @@ import { z } from "zod";
 /** Error codes used across every /v1 endpoint (08-backend.md error envelope). */
 export const ErrorCodeSchema = z.enum([
   "unauthorized",
+  "forbidden",
   "invalid_login_token",
   "invalid_oidc_login",
   "identity_conflict",
