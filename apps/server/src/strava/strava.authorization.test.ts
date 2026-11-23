@@ -4,6 +4,10 @@ import { accepted, consent, gate, required } from "./strava.delivery-fixture.spe
 import { encryptTokens } from "./strava.crypto.js";
 import { StravaAuthorizationStore } from "./strava.authorization-store.js";
 import { stravaTables } from "../schema.js";
+import {
+  nativeBudgetAttack,
+  nativeBudgetDiagnostic,
+} from "./strava.native-budget-diagnostic.spec.js";
 
 async function setup(authorizationTransport: "http" | "in_process" = "http") {
   const state = await schedulerFixture(authorizationTransport);
@@ -29,20 +33,20 @@ async function setup(authorizationTransport: "http" | "in_process" = "http") {
 }
 
 it("keeps a later known upload pollable after a day of forged hints", async () => {
-  const { reopen, hints, scheduler, peer, time, policy } = await setup("in_process");
+  const diagnostic = nativeBudgetDiagnostic();
 
-  for (let minute = 0; minute < 1000; minute += 1) {
-    time.nowMs = 20000 + minute * 60000;
-    hints.hint("42");
-    // oxlint-disable-next-line no-await-in-loop -- Advance legitimate scheduler time between authorization proofs.
-    await scheduler.tick();
-  }
+  const { reopen, scheduler, peer, time, policy } = await nativeBudgetAttack(
+    () => setup("in_process"),
+    diagnostic,
+  );
 
   const reopened = reopen();
   const known = accepted(reopened, "owner", consent, time.nowMs);
+  diagnostic.checkpoint("reopen_accepted");
   time.nowMs += 20000;
   peer.resources.processing = "delivered";
   await scheduler.tick();
+  diagnostic.checkpoint("late_poll");
   expect(peer.resources.pollCalls).toBe(1);
   expect(peer.resources.submitCalls).toBe(0);
   expect(peer.resources.athleteCalls).toBeGreaterThan(0);
