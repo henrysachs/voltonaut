@@ -35,6 +35,7 @@ function connectionBlock(
     case "confirmation_expired":
       return { kind: "blocked", reason: "confirmation_required" };
     case "credentials_unavailable":
+    case "registration_required":
     case "credentials_uncertain":
     case "reauthorization_required":
     case "revocation_pending":

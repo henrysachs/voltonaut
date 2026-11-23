@@ -100,6 +100,12 @@ export class LocalStravaProvider {
       return;
     }
 
+    if (url.pathname === "/api/v3/athlete") {
+      await this.resources.athlete(req, res, this.control.athleteId);
+
+      return;
+    }
+
     if (
       url.pathname === "/api/v3/uploads" ||
       /^\/api\/v3\/uploads\/[1-9]\d*$/u.test(url.pathname)

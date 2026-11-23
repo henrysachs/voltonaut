@@ -15,6 +15,7 @@ import {
 } from "./artifact.mjs";
 import { createHost, createProviders } from "./host.mjs";
 import { runBrowser } from "./browser.mjs";
+import { verifyBuiltWebhook } from "./webhook.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const temporary = join(tmpdir(), "opencode");
@@ -62,6 +63,8 @@ const host = await createHost({
     STRAVA_CLIENT_SECRET: secret,
     STRAVA_REDIRECT_URI: `${api}/v1/strava/callback`,
     STRAVA_TOKEN_KEY: secret,
+    STRAVA_WEBHOOK_VERIFY_TOKEN: "b".repeat(64),
+    STRAVA_WEBHOOK_SUBSCRIPTION_ID: "123",
     STRAVA_TEST_PROVIDER_ORIGIN: provider.origin,
     RIDE_SOURCE_POLICY: "declared_ble_v1",
   },
@@ -118,6 +121,7 @@ try {
   );
   staticServer = await serveBuild({ output: webOutput, port: webPort, origin: web, artifacts });
   await host.start();
+  await verifyBuiltWebhook(api, artifacts);
 
   const result = await runBrowser({
     root,

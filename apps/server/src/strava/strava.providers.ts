@@ -8,12 +8,12 @@ import { StravaDeliveryStore } from "./strava.delivery-store.js";
 import { StravaDeliveryService } from "./strava.delivery.js";
 import { StravaScheduler } from "./strava.scheduler.js";
 import { StravaRateStore } from "./strava.rate-store.js";
-import { StravaCredentialStore } from "./strava.credential-store.js";
+import { STRAVA_AUTHORIZATION_PROVIDERS } from "./strava.authorization.js";
 
 export const STRAVA_PROVIDERS = [
   StravaService,
   StravaStore,
-  StravaCredentialStore,
+  ...STRAVA_AUTHORIZATION_PROVIDERS,
   StravaDeliveryStore,
   StravaDeliveryService,
   StravaScheduler,

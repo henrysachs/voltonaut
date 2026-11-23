@@ -51,6 +51,8 @@ export async function createVerificationHost(root, serverDirectory) {
     STRAVA_CLIENT_SECRET: secret,
     STRAVA_REDIRECT_URI: `${api}/v1/strava/callback`,
     STRAVA_TOKEN_KEY: randomBytes(32).toString("hex"),
+    STRAVA_WEBHOOK_VERIFY_TOKEN: "b".repeat(64),
+    STRAVA_WEBHOOK_SUBSCRIPTION_ID: "123",
     STRAVA_TEST_PROVIDER_ORIGIN: provider.origin,
   };
 

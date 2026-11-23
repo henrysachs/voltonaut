@@ -197,12 +197,20 @@ export class StravaDeliveryStore {
     userId: string,
     reason: "disconnect" | "credentials" | "policy",
     nowMs: number,
+    generation?: string,
   ): void {
     const table = this.tables.deliveries;
     this.db.transaction(
       () => {
-        for (const row of this.db.select().from(table).where(eq(table.userId, userId)).all())
-          this.stopRide(parseDelivery(row), reason, nowMs);
+        for (const row of this.db.select().from(table).where(eq(table.userId, userId)).all()) {
+          const delivery = parseDelivery(row);
+
+          if (
+            generation === undefined ||
+            delivery.authority.consent.connectionGeneration === generation
+          )
+            this.stopRide(delivery, reason, nowMs);
+        }
       },
       { behavior: "immediate" },
     );

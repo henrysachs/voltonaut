@@ -8,6 +8,7 @@ import { STRAVA_TABLES } from "./strava.schema.js";
 import type { StravaTables } from "./strava.schema.js";
 import { StravaController } from "./strava.controller.js";
 import { STRAVA_PROVIDERS } from "./strava.providers.js";
+import { StravaWebhookController } from "./strava.webhook.js";
 
 @Module({})
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest dynamic module owns the registration factory.
@@ -32,7 +33,7 @@ export class StravaModule {
           }),
         }),
       ],
-      controllers: [StravaController],
+      controllers: [StravaController, StravaWebhookController],
       providers: [...STRAVA_PROVIDERS, { provide: STRAVA_TABLES, useValue: tables }],
     };
   }

@@ -7,6 +7,11 @@ services:
   server:
     image: ${VOLTONAUT_IMAGE:-voltonaut-server}:${VOLTONAUT_TAG:?explicit release tag required}
     restart: unless-stopped
+    env_file:
+      - path: ./strava.env
+        required: false
+      - path: ./strava-webhook.env
+        required: false
     environment:
       HOST: 0.0.0.0
       NODE_ENV: production

@@ -6,6 +6,7 @@ import { uploadReceipt, uploadState } from "./strava.upload-provider.js";
 import type { SubmitResult, PollResult, RefreshResult } from "./strava.upload-provider.js";
 import type { StravaReceipt } from "@voltonaut/shared";
 import { boundedBody, isJsonResponse, stravaMultipart } from "./strava.provider-http.js";
+import { verifyAthlete } from "./strava.authorization-provider.js";
 
 const RefreshResponseSchema = z.object({
   token_type: z.literal("Bearer"),
@@ -50,8 +51,16 @@ export function stravaCapacityExceeded(): ApiError {
   return new ApiError(429, "rate_limited", "too many connection attempts");
 }
 
+export function stravaRegistrationRequired(): ApiError {
+  return new ApiError(503, "strava_registration_required", "Strava webhook registration required");
+}
+
 export class StravaProvider {
   public constructor(private readonly config: StravaConfig) {}
+
+  public verifyAuthorization(input: ResourceInput & { readonly athleteId: string }) {
+    return verifyAthlete({ ...input, providerOrigin: this.enabledConfig().providerOrigin });
+  }
 
   public authorizationUrl(state: string): string {
     const config = this.enabledConfig();
@@ -157,7 +166,7 @@ export class StravaProvider {
       if (response.status === 400 || response.status === 401) {
         await response.body?.cancel();
 
-        return { kind: "refused" };
+        return { kind: "unknown" };
       }
 
       if (response.status !== 200 || !isJsonResponse(response)) {

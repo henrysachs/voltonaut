@@ -253,6 +253,7 @@ it("rejects a provider token scope reduction and client mismatch", async () => {
     clientSecret: "wrong",
     redirectUri: "http://127.0.0.1/v1/strava/callback",
     tokenKey: "a".repeat(64),
+    webhook: { verifyToken: "b".repeat(64), subscriptionId: "123" },
     providerOrigin: context.provider.origin,
   });
 

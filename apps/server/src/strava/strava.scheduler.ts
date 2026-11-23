@@ -9,8 +9,8 @@ import { StravaCredentialStore } from "./strava.credential-store.js";
 import type { StravaConnection } from "./strava.credential-store.js";
 import { StravaProvider } from "./strava.provider.js";
 import { StravaRateStore } from "./strava.rate-store.js";
-import { decryptTokens, encryptTokens } from "./strava.crypto.js";
 import { StravaService } from "./strava.service.js";
+import { StravaAuthorization } from "./strava.authorization.js";
 
 @Injectable()
 export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
@@ -26,6 +26,7 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
     @Inject(StravaRateStore) private readonly rates: Readonly<StravaRateStore>,
     @Inject(StravaService) private readonly connection: Readonly<StravaService>,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(StravaAuthorization) private readonly authorization: Readonly<StravaAuthorization>,
   ) {}
 
   public onModuleInit(): void {
@@ -73,6 +74,8 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
     const poll = this.jobs.nextPoll(this.clock.nowMs());
 
     if (poll !== undefined) await this.poll(poll);
+
+    if (!this.#shutdown.signal.aborted) await this.authorization.tick(this.signal());
   }
 
   private providerModeDisabled(): boolean {
@@ -89,64 +92,8 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
     return AbortSignal.any([this.#shutdown.signal, AbortSignal.timeout(2000)]);
   }
 
-  private async refreshIfNeeded(userId: string): Promise<boolean> {
-    const row = this.credentials.connection(userId);
-
-    if (row === undefined || row.status !== "connected") return false;
-
-    if (row.accessExpiresAt > this.clock.nowMs() + 5000) return row.credentialState === "available";
-    const work = this.credentials.claimWork(userId, "refresh", this.clock.nowMs());
-
-    if (work === undefined) return false;
-
-    try {
-      const config = this.provider.enabledConfig();
-      const tokens = decryptTokens(work.encryptedTokens, config.tokenKey, userId, work.athleteId);
-
-      const result = await this.provider.refresh(
-        tokens.refreshToken,
-        this.clock.nowMs(),
-        this.signal(),
-      );
-
-      this.credentials.finishRefresh(
-        work,
-        result.kind === "refreshed"
-          ? {
-              kind: "refreshed",
-              encryptedTokens: encryptTokens(
-                result.tokens,
-                config.tokenKey,
-                userId,
-                work.athleteId,
-              ),
-              accessExpiresAt: result.accessExpiresAt,
-            }
-          : result,
-      );
-
-      if (result.kind !== "refreshed") this.jobs.stop(userId, "credentials", this.clock.nowMs());
-
-      return result.kind === "refreshed";
-    } catch {
-      this.credentials.finishRefresh(work, { kind: "unknown" });
-      this.jobs.stop(userId, "credentials", this.clock.nowMs());
-
-      return false;
-    }
-  }
-
-  private accessToken(work: StravaConnection): string {
-    return decryptTokens(
-      work.encryptedTokens,
-      this.provider.enabledConfig().tokenKey,
-      work.userId,
-      work.athleteId,
-    ).accessToken;
-  }
-
   private async submit(job: OwnedDelivery): Promise<void> {
-    const ready = await this.refreshIfNeeded(job.userId);
+    const ready = await this.authorization.ready(job.userId, this.signal());
 
     if (!ready) {
       this.jobs.defer(job, this.clock.nowMs() + 15000);
@@ -188,9 +135,9 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
     tcx: string,
     consent: OwnedDelivery["authority"]["consent"],
   ): Promise<void> {
-    const token = this.accessToken(work);
+    const token = this.authorization.accessToken(work);
     const requestedAtMs = this.clock.nowMs();
-    const rate = this.rates.reserve(false, requestedAtMs);
+    const rate = this.rates.reserve("upload", requestedAtMs);
 
     if (rate.kind === "wait") {
       this.jobs.defer(job, rate.untilMs);
@@ -208,22 +155,18 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
       externalId: `voltonaut-${job.rideId}.tcx`,
       signal: this.signal(),
       onHeaders: (headers, status) => {
-        this.rates.observe(headers, status, requestedAtMs, this.clock.nowMs(), false);
+        this.rates.observe(headers, status, requestedAtMs, this.clock.nowMs(), "upload");
       },
     });
 
     this.jobs.submitted(dispatched, result, this.clock.nowMs());
 
-    if (
-      result.kind === "refused" &&
-      result.reason === "authorization" &&
-      this.credentials.credentialFailure(work)
-    )
-      this.jobs.stop(job.userId, "credentials", this.clock.nowMs());
+    if (result.kind === "refused" && result.reason === "authorization")
+      this.credentials.requestAuthorizationCheck(work);
   }
 
   private async poll(job: OwnedDelivery): Promise<void> {
-    const work = (await this.refreshIfNeeded(job.userId))
+    const work = (await this.authorization.ready(job.userId, this.signal()))
       ? this.credentials.claimWork(job.userId, "poll", this.clock.nowMs())
       : undefined;
 
@@ -242,17 +185,17 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
         current.progress.nextPollAtMs > this.clock.nowMs()
       )
         return;
-      const token = this.accessToken(work);
+      const token = this.authorization.accessToken(work);
       const requestedAtMs = this.clock.nowMs();
 
-      if (this.rates.reserve(true, requestedAtMs).kind === "wait") return;
+      if (this.rates.reserve("poll", requestedAtMs).kind === "wait") return;
 
       const result = await this.provider.poll({
         accessToken: token,
         receipt: current.progress.receipt,
         signal: this.signal(),
         onHeaders: (headers, status) => {
-          this.rates.observe(headers, status, requestedAtMs, this.clock.nowMs(), true);
+          this.rates.observe(headers, status, requestedAtMs, this.clock.nowMs(), "poll");
         },
       });
 
@@ -262,12 +205,8 @@ export class StravaScheduler implements OnModuleInit, OnModuleDestroy {
         this.clock.nowMs(),
       );
 
-      if (
-        result.kind === "deferred" &&
-        result.reason === "authorization" &&
-        this.credentials.credentialFailure(work)
-      )
-        this.jobs.stop(job.userId, "credentials", this.clock.nowMs());
+      if (result.kind === "deferred" && result.reason === "authorization")
+        this.credentials.requestAuthorizationCheck(work);
     } finally {
       this.credentials.releaseWork(work);
     }
