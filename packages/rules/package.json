@@ -10,6 +10,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@voltonaut/engine": "workspace:*"
+    "@voltonaut/engine": "workspace:*",
+    "@voltonaut/shared": "workspace:*"
   }
 }
