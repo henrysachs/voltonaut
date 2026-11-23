@@ -5,8 +5,8 @@ import { encryptTokens } from "./strava.crypto.js";
 import { StravaAuthorizationStore } from "./strava.authorization-store.js";
 import { stravaTables } from "../schema.js";
 
-async function setup() {
-  const state = await schedulerFixture();
+async function setup(authorizationTransport: "http" | "in_process" = "http") {
+  const state = await schedulerFixture(authorizationTransport);
   state.a.db.$client
     .prepare("UPDATE strava_connections SET encrypted_tokens = ? WHERE user_id = 'owner'")
     .run(encryptTokens(state.grant.tokens, state.config.strava.tokenKey, "owner", "42"));
@@ -29,12 +29,12 @@ async function setup() {
 }
 
 it("keeps a later known upload pollable after a day of forged hints", async () => {
-  const { reopen, hints, scheduler, peer, time } = await setup();
+  const { reopen, hints, scheduler, peer, time, policy } = await setup("in_process");
 
   for (let minute = 0; minute < 1000; minute += 1) {
     time.nowMs = 20000 + minute * 60000;
     hints.hint("42");
-    // oxlint-disable-next-line no-await-in-loop -- Advance legitimate scheduler time between real loopback requests.
+    // oxlint-disable-next-line no-await-in-loop -- Advance legitimate scheduler time between authorization proofs.
     await scheduler.tick();
   }
 
@@ -47,6 +47,10 @@ it("keeps a later known upload pollable after a day of forged hints", async () =
   expect(peer.resources.submitCalls).toBe(0);
   expect(peer.resources.athleteCalls).toBeGreaterThan(0);
   expect(peer.resources.athleteCalls).toBeLessThanOrEqual(500);
+  expect(peer.resources.athleteCalls).toBe(1);
+  expect(policy.athleteCalls).toBeGreaterThan(0);
+  expect(policy.athleteCalls).toBeLessThanOrEqual(500);
+  expect(policy.athleteCalls).toBe(499);
   expect(reopened.credentials.connection("owner")?.authorizationCheckAfter).toBe(86400000);
   expect(reopened.jobs.own("owner", consent.rideId)).toMatchObject({
     authority: known.authority,
@@ -54,6 +58,16 @@ it("keeps a later known upload pollable after a day of forged hints", async () =
       kind: "delivered",
       receipt: { uploadId: "12345678901234567890" },
     },
+  });
+  expect(reopened.db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    shortLimit: 100,
+    dayLimit: 1000,
+    readShortLimit: 100,
+    readDayLimit: 1000,
+    dayUsage: 501,
+    readDayUsage: 501,
+    dayPending: 0,
+    readDayPending: 0,
   });
 });
 

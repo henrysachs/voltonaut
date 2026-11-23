@@ -5,8 +5,48 @@ import { stravaTables } from "../schema.js";
 import type { StravaCredentialStore } from "./strava.credential-store.js";
 import type { StravaDeliveryStore } from "./strava.delivery-store.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
-import type { StravaProvider } from "./strava.provider.js";
+import { StravaProvider } from "./strava.provider.js";
 import type { Clock } from "../config.module.js";
+import type { AuthorizationProof } from "./strava.authorization-provider.js";
+
+export class PolicyProvider extends StravaProvider {
+  public athleteCalls = 0;
+  #headers: Readonly<Headers> | undefined;
+
+  public constructor(
+    provider: Readonly<StravaProvider>,
+    private readonly tokens: { readonly accessToken: string },
+    private readonly athlete: { readonly athleteId: number },
+  ) {
+    super(provider.enabledConfig());
+  }
+
+  public override verifyAuthorization(
+    input: Parameters<StravaProvider["verifyAuthorization"]>[0],
+  ): Promise<AuthorizationProof> {
+    this.athleteCalls += 1;
+
+    // Learn actual loopback headers once; only the long policy attack reuses them in process.
+    if (this.#headers === undefined)
+      return super.verifyAuthorization({
+        ...input,
+        onHeaders: (headers, status) => {
+          if (status === 200) this.#headers = headers;
+          input.onHeaders(headers, status);
+        },
+      });
+
+    input.signal.throwIfAborted();
+    const authorized = input.accessToken === this.tokens.accessToken;
+    input.onHeaders(this.#headers, authorized ? 200 : 401);
+
+    return Promise.resolve(
+      authorized && input.athleteId === String(this.athlete.athleteId)
+        ? { kind: "valid" }
+        : { kind: "deferred", unauthorized: !authorized },
+    );
+  }
+}
 
 export function authorizationFixture(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each test owner uses an actual mutable SQLite connection.
