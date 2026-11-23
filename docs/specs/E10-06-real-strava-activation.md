@@ -3,7 +3,7 @@
 - **Auftrag:** Henry fordert am 21.11.2026 ausdrücklich, Strava zu aktivieren und vollständig funktionsfähig zu machen.
 - **Basis:** Produktiver Stand `916edbb070ee5c3ffaeea5836cd91dfed3410836`.
 - **Integrationsbasis:** Mitgliedschafts-Main `3afcfc59f4c3d1dbcbe4fb5e6a6d2ada5c224055`.
-- **Status:** Implementiert, isoliert am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Gemeinsame Migration erzeugt und mit 17 Datenbankfällen geprüft. Abschließende Gesamtprüfung, CI und tatsächliche Aktivierung bleiben offen. Bestehende Produktion bleibt unverändert.
+- **Status:** Implementiert, gemeinsam am gebauten Artefakt softwaregeprüft und nach Korrekturen unabhängig geprüft. Die gemeinsame Gesamtprüfung besteht mit der freigegebenen CI-Reihenfolge. CI des endgültigen Heads und tatsächliche Aktivierung bleiben offen. Bestehende Produktion bleibt unverändert.
 - **Module:** Dedizierte private Strava-Provisionierung, Compose, Server `strava`, vorhandene Uploadoberfläche und Verifikation.
 
 ## Ziel
@@ -24,7 +24,7 @@ Henry hat den Betrieb ohne Backup gewählt. Es werden weder Backupressourcen noc
 - [x] AK4 – Verbindung, Athletenbindung und Einzelfahrtfreigabe bleiben getrennt. Höchstens ein externer Upload-POST je Fahrt, keine blinde Wiederholung bei unklarem Ergebnis, bekannte Upload-IDs bleiben bei Pollfehlern und Neustarts erhalten.
 - [x] AK5 – Aktuelle offizielle Verträge für Multipart, VirtualRide, TCX, `visibility=only_me`, Scopes, Refreshrotation und appweite Limits sind belegt. Eine angefragte Sichtbarkeit wird nicht als tatsächlich bestätigte Strava-Privatsichtbarkeit ausgegeben.
 - [x] AK6 – Erforderliche Deautorisierungs-Webhooks haben einen engen, geprüften Vertrag. Ein ungeprüfter öffentlicher POST darf weder eigene Aufnahmen löschen noch eine neue Verbindung anhand eines alten Ereignisses dauerhaft sperren. Subscription-Setup verändert keine fremde bestehende Subscription.
-- [ ] AK7 – Normales Gate, Build, sichere Provisionierungs-/Containerproben, ursprüngliche zwölf gebaute Auslieferungsfälle, aktuelle Anbietergegenproben und unabhängiges Review bestehen. Keine Zeitlimits, Assertions, Datenfrische oder Grafikqualität gelockert.
+- [x] AK7 – Normales Gate, Build, sichere Provisionierungs-/Containerproben, ursprüngliche zwölf gebaute Auslieferungsfälle, aktuelle Anbietergegenproben und unabhängiges Review bestehen. Keine Zeitlimits, Assertions, Datenfrische oder Grafikqualität gelockert.
 - [ ] AK8 – Der tatsächliche Produktionsstand, private Konfigurationspräsenz, unverändertes OIDC, Callback-/Logprüfung und verbleibende menschliche Abnahmen sind belegt. Persönlicher OAuth, echte zulässige Fahrt und sichtbare Strava-Verarbeitung bleiben bis zum gemeinsamen Pilot explizit offen.
 
 ## Recherche und Architekturfragen
@@ -51,7 +51,7 @@ Das frische Budgetreview führt einen Angriff über 1000 kontrollierte Scheduler
 
 Das frische Parserreview sendet 102 reale HTTP-Requests. Dasselbe 1.048.723-Byte-JSON, das der alte Build über rohe Fragment- und Absolute-Form-Targets annahm, erhält im aktuellen Build 413. Exakt 8192 Byte bleiben zulässig, 8193 werden abgelehnt. Chunked, UTF-8, Charset, falscher Medientyp und Kompression sind geprüft. Allgemeine Fahrtenrequests behalten 8 MiB. Nachrichten unterscheiden 8 KiB und 8 MiB, ohne Nutzlasten auszugeben.
 
-Private Primärbelege liegen unter `$TMPDIR/opencode/`: `strava-independent-p1-c3f1wncn/`, `strava-independent-p2-0bYuNplJ/`, `strava-parser-root-fix.md`, `strava-parser-parent-final-proof.json` und `full-ride-delivery-proof-suite-wp1meZ/`. Diese Nachweise betreffen die isolierte Einheit mit vorläufiger Migration. Sie ersetzen weder die gemeinsame finale `0007` noch deren Integrationsprüfung oder CI. AK1 bis AK3 bleiben bis zur tatsächlichen privaten Produktionsprovisionierung und Aktivierung offen, AK7 bis zur vollständigen gemeinsamen Prüfung.
+Private Primärbelege liegen unter `$TMPDIR/opencode/`: `strava-independent-p1-c3f1wncn/`, `strava-independent-p2-0bYuNplJ/`, `strava-parser-root-fix.md`, `strava-parser-parent-final-proof.json` und `full-ride-delivery-proof-suite-wp1meZ/`. Diese Nachweise betreffen die isolierte Einheit mit vorläufiger Migration. Die folgenden gemeinsamen Prüfungen ergänzen sie. AK1 bis AK3 bleiben bis zur tatsächlichen privaten Produktionsprovisionierung und Aktivierung offen.
 
 ## Gemeinsame Migration
 
@@ -61,7 +61,7 @@ Die Elternintegration behält alle 14 veröffentlichten SQL- und Snapshot-Dateie
 
 Die anschließende gemeinsame Artefaktprüfung besteht mit normalem Build, dem unveränderten Admin-Browserfall und dem tatsächlichen Produktionspaket. Rollenvergabe, unabhängiges Pro/VIP, Kontowechsel, fortlaufende Sim-Fahrt und Netzwerkgrenzen sind geprüft. Der bestehende Paket-Smoke bestätigt alle acht Migrationen. Nach Korrektur einer lediglich noch im Git-Index erfassten gelöschten vorläufigen SQL-Datei bestehen auch die ursprünglichen zwölf Auslieferungsfälle unverändert. Alle zwölf Anwendungsquellmanifeste sind identisch und während des Laufs stabil. Der fehlgeschlagene Manifestvorlauf bleibt erhalten, keine Assertion wurde dafür geändert.
 
-Primärbelege sind `joined-software-verification.md`, `joined-membership-browser-fKHpcz/`, `joined-membership-package-46xozX/`, `joined-twelve-source-proof.json` und `full-ride-delivery-proof-suite-xyVdHo/` unter demselben privaten Belegverzeichnis. Der finale gemeinsame vollständige Gate-Lauf folgt nach Integration der gesondert freigegebenen CI-Reihenfolge. Keine Bereitstellung oder reale Fahrtabnahme behauptet.
+Primärbelege sind `joined-software-verification.md`, `joined-membership-browser-fKHpcz/`, `joined-membership-package-46xozX/`, `joined-twelve-source-proof.json` und `full-ride-delivery-proof-suite-xyVdHo/` unter demselben privaten Belegverzeichnis. Nach Integration der gesondert freigegebenen CI-Reihenfolge bestehen `E2E_PORT=5242 CI=1 mise run check` mit 889 Unit-Tests und den unveränderten 49 Browserfällen sowie der normale Build. Belege: `joined-final-sequenced-check.log` und `joined-final-sequenced-build.log`. Keine Bereitstellung oder reale Fahrtabnahme behauptet.
 
 ## Menschliche Abnahmen
 
