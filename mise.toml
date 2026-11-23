@@ -54,7 +54,8 @@ run = "pnpm --filter @voltonaut/web exec playwright test"
 
 [tasks.check]
 description = "MUSS grün sein, bevor eine Aufgabe als erledigt gilt"
-depends = ["fmt:check", "lint", "typecheck", "depcruise", "guard", "test", "test:e2e"]
+depends = ["fmt:check", "lint", "typecheck", "depcruise", "guard", "test"]
+run = "mise run test:e2e"
 
 [tasks."check:mutation"]
 run = "pnpm exec stryker run"
