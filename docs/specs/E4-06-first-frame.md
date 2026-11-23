@@ -1,36 +1,38 @@
 # Spec E4-06 – CI-Lastkorrektur für den ersten Renderframe
 
-## Ziel
+## Ziel und Freigabe
 
-Issue #26 durch einen passenden roten nativen x86-Lauf erklären und denselben unveränderten Fall nach der freigegebenen Gate-Sequenzierung grün prüfen. Keine behauptete Reparatur des Anwendungsrenderers. Diagnose allein schließt den Fehler nicht.
+Issue [#26](https://github.com/henrysachs/voltonaut/issues/26) durch einen passenden roten nativen x86-Lauf erklären und denselben unveränderten Fall nach der freigegebenen Gate-Sequenzierung grün prüfen. Keine behauptete Reparatur des Anwendungsrenderers und keine allgemeine Geschwindigkeits- oder FPS-Zusage.
 
-## Umfang
+Henry hat am 23.11.2026 genau die Änderung von `mise.toml` und [ADR-023](../decisions/ADR-023-sequence-browser-gate.md) freigegeben. Der Korrekturstand verwendet Mitgliedschafts-Main `3afcfc5` als Anwendungsbasis. Produktion, laufender Fahrstand, Geräte und Nutzerdaten bleiben unberührt.
 
-Isolierter Zweig `fix/render-first-frame`, für die Korrektur mit Main `3afcfc5` zusammengeführt. Henry hat am 23.11.2026 genau die Änderung von `mise.toml` und ADR-023 freigegeben. Kein Produktionsdeploy, kein Zugriff auf laufenden Fahrstand, Geräte oder Nutzerdaten. Originaler Menüfall und alle 49 Browserfälle bleiben unverändert erhalten.
+## Umsetzung
 
-Die Diagnose zeichnet den ursprünglichen Menüfall während des unveränderten Gesamtgates auf. Sein Testkörper, seine Assertions und seine Position zwischen den übrigen 49 Fällen bleiben erhalten. Eine Test-Fixture startet die native Chromium-Aufzeichnung. Die Aufzeichnung verändert Timing und gilt nicht als unveränderter Performancebeleg. JSON-Zusammenfassungen im CI-Log erhalten Threadnamen und native Ereignisse. Eine Fehleraufnahme erfolgt erst nach dem ursprünglichen Fehler und nach Ende der nativen Aufzeichnung. PNGs bis 128.000 Bytes bleiben unverändert und vollständig im CI-Log erhalten, weil der bestehende Workflow keine Artefakte hochlädt.
+`check` führt zuerst seine unveränderten Aufgaben `fmt:check`, `lint`, `typecheck`, `depcruise`, `guard` und `test` aus. Erst deren erfolgreicher Abschluss startet die vorhandene unveränderte Aufgabe `mise run test:e2e`. Jede fehlgeschlagene Phase lässt das gesamte Gate fehlschlagen.
+
+Alle ursprünglichen 49 Browserfälle einschließlich des vollständigen Menü-Testkörpers und des vorhandenen Fehlerhelfers sind bytegleich zu Main `3afcfc5`. Die eigenen temporären Capture-Fixtures, Zusatzfälle, Worker-Wrapper, CPU-Sampler und Trace-Helfer sind entfernt. Ihre Primärlogs, Bilder und Quellarchive bleiben als private Arbeitsartefakte erhalten.
 
 ## Abnahmekriterien
 
-- [x] Passender roter Erstframe-Fall auf nativem x86 mit unterscheidbarem Rohwert und lokalisierter Ursache.
-- [ ] Freigegebene Gate-Sequenzierung und derselbe Erfolgsfall ohne geänderte Zeitlimits, Assertions, Sim-Uhr, CPU-Limits oder Grafikqualität nativ geprüft.
-- [ ] Tatsächliche sichtbare Welt, weiterlaufende Fahrt und ehrlicher Fehlerfallback erhalten.
-- [ ] Temporäre Wiederholungen vor dem finalen Artefakt entfernt, vollständiges `mise run check`, Build und unabhängiges Review grün.
+- Passender nativer x86-Fehler mit fehlendem `data-calls`, tatsächlichem Init- und Snapshot-ACK sowie lokalisierter Software-GPU-CPU-Verdrängung ist erhalten.
+- Derselbe ursprüngliche Menüfall besteht nach der einzigen dauerhaften Laufzeitänderung, der Gate-Sequenzierung, nativ auf identischen Anwendungsquellen.
+- Keine Änderung an Assertions, ursprünglichen Fristen einschließlich 5000 ms, Testauswahl, Engine-Uhr, Datenfrische, Grafikqualität, CPU-Limits oder Prioritäten. Keine vorgewärmte Spielseite und kein Bereitschaftsfenster-Reset.
+- Das finale Artefakt enthält keine eigene temporäre Instrumentierung. Vollständiges `mise run check`, Build und die ursprünglichen 49 Browserfälle müssen am finalen Head grün sein. Unabhängiges Review erfolgt vor Merge durch den übernehmenden Agenten.
 
-## Nachweisstatus
+## Roter Befund und Korrekturprüfung
 
-Diagnose belegt. Freigegebene CI-Lastkorrektur wird implementiert und anschließend nativ gegen denselben Anwendungsstand geprüft. Hardware nicht geprüft. Nicht bereitgestellt. Keine Geschwindigkeits- oder FPS-Behauptung. Entscheidung und Freigabe stehen in [ADR-023](../decisions/ADR-023-sequence-browser-gate.md).
+Im [nativen Lauf 44900740106](https://github.com/henrysachs/voltonaut/actions/runs/44900740106/job/136835896390) scheitert der ursprüngliche 5000-ms-Poll. Der rohe Wert bleibt fehlend, nicht tatsächlich null Draw Calls. Init und Snapshot-ACK treffen ein; Chromiums erster Readback wartet auf Software-GPU-Arbeit. Während des beobachteten Readbacks sind die GPU-Prozessthreads überwiegend laufbereit, warten aber auf CPU.
 
-## Native Nachprüfung
+Eine temporäre Kontrolle auf demselben Rechner besteht den vollständigen identischen Testkörper in einem neuen Chromium-Prozess nach Ende von Coverage und Typecheck. Quelle, Konfiguration, GPU-Treiber und CPU-Modell stimmen überein. Das echte erste Weltbild stammt aus dem ursprünglichen Testkörper. Diese Kontrolle allein war keine Reparatur und ließ den ursprünglichen Fehler rot.
 
-Die x86-Läufe `44892791929` und `44892791893` auf `d93993c` bestehen einschließlich aller 61 Browserfälle. Die nativen Traces erfassen die Zusatzfälle jedoch erst nach Ende der parallelen Coverage. Sie belegen daher keinen passenden Fehler unter dieser Anfangslast.
+Die tatsächliche rote CI-Anwendung verwendete Mergecheckout `86edc641`, Eltern `3afcfc5` und Diagnose `6ad2c76`. Ihr gesamter Git-Baum stimmt mit dem lokalen zusammengeführten Ausgangsstand `6a280bd` überein. Der Korrekturcommit `f9ca298` ändert danach ausschließlich `mise.toml`, ADR-023 und diese Spec.
 
-Die zweite Diagnosefassung ordnete dieselben Zusatzfälle vor den übrigen Browserdateien ein. Die nativen Läufe `44893417202` und `44893417110` erfassen dadurch passende rote Erstframe-Prüfungen. Auch die uninstrumentierte Hälfte scheitert. Der Rohwert ist jeweils fehlend, nicht tatsächlich null Draw Calls. Bei instrumentierten Fehlern treffen Ready und Snapshot-ACK vor dem verspäteten Frame ein. Die vollständige Ursache ist noch nicht belegt.
+Die ersten korrigierten nativen Läufe [45196332618](https://github.com/henrysachs/voltonaut/actions/runs/45196332618) und [45196332844](https://github.com/henrysachs/voltonaut/actions/runs/45196332844) bestehen beide mit 850 Unit-Tests und vorübergehend 50 Browserfällen. Tatsächlicher Checkout `4419af19`, Eltern `3afcfc5` und `f9ca298`. Alle 423 Anwendungsquelldateien verwenden unverändert das Manifest `fcb3c2786a825d592e0ca11da2a162c3baed2f4b4bf89ea87c78138b5b1fcae6`. Die Browserphase beginnt nach den CPU-schweren Prüfungen. Die Weltaufnahme wurde geöffnet und zeigt echte Welt, Fahrer, Schatten und HUD.
 
-PR #30 liefert getrennt einen weiteren roten ursprünglichen Menüfall auf unverändertem Anwendungscode in Lauf `44894471791`. Die aktuelle Diagnosefassung entfernt deshalb die Zusatzfälle und zeichnet genau diesen ursprünglichen Fall in seiner bisherigen Reihenfolge auf. Coverage, Typecheck und Browser behalten ihre bestehenden Befehle und Ressourcen. Ein Worker-Wrapper protokolliert die erste echte Antwort jedes Render-Nachrichtentyps. Er verändert keine Nachricht und erzeugt keine Engine-Ereignisse. Sein Timing-Einfluss bleibt Teil der Nachweisgrenze. Native Dauern, offene Spannen und Performance-Markierungen unterscheiden Initialisierung, Snapshot, Render und folgende Tasks.
+Die Läufe [45197949967](https://github.com/henrysachs/voltonaut/actions/runs/45197949967) und [45197950322](https://github.com/henrysachs/voltonaut/actions/runs/45197950322) bestätigen zusätzlich den nativen x86-Build im temporären Diagnoseabschluss. Checkout `9dc6478c`, Eltern `3afcfc5` und `95f3804`, unverändertes Anwendungsmanifest. Die erzeugten Worker-Bundles sind bytegleich zum lokalen Build nach Entfernung der Instrumentierung. Der endgültige Quell- und Testbestand entspricht vollständig Main, nur die freigegebene Gate-Orchestrierung bleibt geändert.
 
-## Temporäre Kapazitätskontrolle
+Die abschließenden Prüfungen ohne Instrumentierung sind den Checks und Nachweisen des exakten finalen Heads in [PR #29](https://github.com/henrysachs/voltonaut/pull/29) zuzuordnen. PR-Head, tatsächlicher CI-Mergecheckout und Anwendungsmanifest dürfen nicht gleichgesetzt werden. Unterschiedliche CPU-Modelle gelten nicht als Beschleunigungsnachweis.
 
-Ein zusätzlicher Kontrollfall steht hinter allen 49 ursprünglichen Fällen. Er startet einen neuen Chromium-Prozess mit frischem Browserkontext und wiederholt den vollständigen ursprünglichen Testkörper unverändert. Er wärmt keine Spielseite vor, verändert keine CPU-Priorität und setzt kein Zeitbudget zurück. Der ursprüngliche Fall bleibt an seiner bisherigen Position und behält seinen Fehlerstatus.
+## Grenzen
 
-Die Kontrolle prüft dieselbe Welt auf demselben CI-Rechner. Nur wenn die tatsächlichen Log-Zeitstempel abgeschlossene CPU-schwere Gate-Teile belegen, zählt der Lauf als lastärmerer Gegentest. Quelle, Checkout, GPU-Treiber, CPU-Modell und Thread-Zähler werden mitprotokolliert. Das erste Weltbild stammt aus dem unveränderten Testkörper, nicht aus einer späteren Ersatzaufnahme. Ein grüner Kontrollfall gilt ausdrücklich nicht als Reparatur des roten ursprünglichen Falls. Die Kontrolle wird vor einem endgültigen Artefakt wieder entfernt.
+Implementiert ist eine CI- und lokale Gate-Lastkorrektur, keine Änderung des Renderers. Hardwareabnahme, physische GPU-FPS, Bereitstellung und Merge bleiben getrennte Schritte. An echter Hardware getestet: nein. Bereitgestellt: nein.
