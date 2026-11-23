@@ -20,11 +20,27 @@ volts_work   = floor(arbeit_kJ × 1.0)            // 1 Volt pro kJ mechanischer 
 volts_climb  = floor(hoehenmeter × 1.5)          // Bergbonus
 volts_pickup = Σ eingesammelte Blitze × 10       // nur Pickups, deren Distanzmarke laut Ride-Samples passiert wurde
 volts_bonus  = Segment-PB 50 · Badge 100–500 · erste Fahrt des Tages 25
-volts_total  = min(volts_work + volts_climb + volts_pickup + volts_bonus, tageslimit = 3000)
+volts_total  = min(volts_work + volts_climb + volts_pickup + volts_bonus, restbudget_des_tages)
 ```
 
 Größenordnung: 1 h @ 180 W ≈ 650 kJ, 300 Hm, 8 Pickups → ≈ 650 + 450 + 80 = **≈ 1 180 Volts/h**.
 Regeln: keine Volts im Sim-Modus und ohne echten Leistungsmesser; Abfahrt ohne Treten bringt 0 kJ. Werte sind Startwerte ⚠️, nach 2–3 Wochen Nutzung nachjustieren.
+
+Das Tageslimit beträgt **3000 Volts über alle Fahrten zusammen**, nicht je Fahrt. Der Server muss das verbleibende Budget rekonstruieren. Ein reines Zahlenangebot entscheidet nicht über Quellenakzeptanz oder tatsächliche Vergabe.
+
+### Reines Basisangebot aus E6-02
+
+`packages/rules` berechnet mit `calculateBaseRewards` ein unverbindliches `base_quote` aus validierten aggregierten Fahrtfakten. Das Angebot enthält ausschließlich Basis-XP und `volts_work + volts_climb`. Pickups, PBs, Badges und Erstfahrtboni bleiben offen. Die oben beschriebenen zusätzlichen Vergabefunktionen sind damit nicht implementiert.
+
+`energyKj` bezeichnet mechanische Arbeit, keine Kalorien. `elevationGainM` enthält die gesamten positiven Höhenmeter. Die Volts-Höhenformel verwendet nicht die für XP gefilterten aktiven Höhenmeter.
+
+`applyDailyLimit` erhält das Angebot und ein explizites Tagesrestbudget von 0 bis 3000. Es liefert `quotedVolts = min(candidate.total, budget)`, `withheldVolts = candidate.total - quotedVolts` und `remainingVolts = budget - quotedVolts`. Der Aufrufer reicht den Rest für weitere Angebote weiter. Rules besitzt keine Uhr, keinen Tageswechsel und keine Speicherung.
+
+Jede öffentliche Rechenfunktion validiert ihre Eingaben erneut mit den eigenen Shared-Schemas und rechnet ausschließlich mit der geparsten Kopie. Objektmarken und `readonly` ersetzen diese Prüfung nicht. Eine Spread-Kopie kann ihre TypeScript-Marke trotz ungültiger Feldänderung behalten. `BaseVoltsQuoteSchema` verlangt sichere nichtnegative Ganzzahlen und `total == work + climb`. Zusätzliche Objektfelder sind ungültig. Ungültige Eingaben werfen einen Validierungsfehler, statt ein geklemmtes Angebot zu erzeugen.
+
+Die Shared-Schemas begrenzen effektive Rohwerte wie die bestehenden Fahrtverträge auf 0–2000 W und 0–200 rpm. Aktive Zeit ist auf das bestehende Aufnahmefenster von sechs Stunden begrenzt. Strecke, gesamte und aktive Höhe sowie Arbeit sind jeweils auf `10^12` in ihrer benannten Einheit begrenzt. Diese reine Zahlengrenze hält die größten Basis-XP bei `2 020 000 000 360` und Basis-Volts bei `2 500 000 000 000`, sicher unter `Number.MAX_SAFE_INTEGER`. Sie ist kein physikalischer Plausibilitätsnachweis. Aktive Höhe darf die gesamte Höhe nicht übersteigen. Ungültige Eingaben werden verworfen, nicht geklemmt.
+
+Die spätere Ermittlung tatsächlicher aktiver Fakten und die serverseitige Vergabe bleiben getrennte Aufgaben. Der letzte Snapshot und eine Batchdauer reichen dafür nicht. Weder synthetische Fakten noch Replay-Konsistenz oder BLE-Selbstauskunft autorisieren eine Buchung. Hardwareabnahme und Bereitstellung gehören nicht zu E6-02.
 
 ### Shop & Freischalt-Ökonomie
 
@@ -55,8 +71,9 @@ Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magne
 ## XP & Level
 
 - XP pro Fahrt: **20 XP/km** + **2 XP/Hm** + **1 XP/Minute** + Boni (Segment-PB 50, Badge 100–500, erste Fahrt des Tages 25).
-- XP nur bei `powerW > 30` und `cadence > 20`; Sim-Modus vergibt keine XP.
-- Level-Kurve (kumulierte XP, ab der Level n erreicht ist): `xpForLevel(n) = round(500 · n^1.6)` → Level 2 ≈ 1 500 XP ≈ 1 h; Level 10 ≈ 20 000 XP ≈ 14 h. Max. Level 50 zunächst. ⚠️ justieren.
+- XP nur bei effektiven Rohwerten `powerW > 30` und `cadenceRpm > 20`, nicht bei geglätteten HUD-Werten. Beide Grenzen sind strikt. Sim-Modus vergibt keine XP. Das reine Schwellenprädikat `isXpActive` ermittelt noch keine aktiven Fahrtfakten.
+- Basis-XP werden aus `activeDistanceM`, `activeElevationGainM` und `activeTimeS` berechnet. Jeder Bestandteil wird **einmal nach Aggregation der ganzen Fahrt abgerundet**, danach werden die drei Ganzzahlen summiert. Nicht pro Tick und nicht erst die ungerundete Gesamtsumme abrunden.
+- Level 1 beginnt bei **0 Gesamt-XP**. Level 0 ist ungültig. Für Level 2 bis 50 gilt `xpForLevel(n) = round(500 · n^1.6)` → Level 2 = 1516 XP, Level 10 = 19 905 XP. `levelForXp` liefert die höchste erreichte Stufe, maximal 50. Gesamt-XP müssen sichere nichtnegative Ganzzahlen sein. ⚠️ Kurve justieren.
 - Jedes Level vergibt mindestens ein Item oder Volts-Bonus (`game/data/levels.json`, Server und Client teilen die Datei).
 
 ## Badges / Achievements (Startliste)
