@@ -1,44 +1,167 @@
-import * as THREE from "three";
+export const SECONDS_PER_DAY_S = 86_400;
 
-import { disposeObject } from "./resources.js";
-import { QUALITY_SETTINGS, type RenderSystem } from "./scheduler.js";
+export type WeatherKind = "clear" | "cloudy" | "fog" | "rain" | "storm";
 
-export function createEnvironmentSystem(): RenderSystem {
-  const root = new THREE.Group();
-  const sun = new THREE.DirectionalLight(0xffefd7, 3);
+export interface Direction {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface EnvironmentState {
+  readonly seed: number;
+  readonly timeOfDayS: number;
+  readonly weather: WeatherKind;
+  readonly sunDirection: Direction;
+  readonly sunIntensity: number;
+  readonly fogDensity: number;
+  readonly rainAmount: number;
+}
+
+export interface WeatherKeyframe {
+  readonly startS: number;
+  readonly weather: WeatherKind;
+}
+
+export type EnvironmentScript = readonly [WeatherKeyframe, ...WeatherKeyframe[]];
+
+export interface EnvironmentSettings {
+  readonly seed: number;
+  readonly startTimeS: number;
+  readonly script: EnvironmentScript;
+}
+
+interface WeatherPreset {
+  readonly sunIntensity: number;
+  readonly fogDensity: number;
+  readonly rainAmount: number;
+}
+
+const WEATHER_PRESETS: Readonly<Record<WeatherKind, WeatherPreset>> = {
+  clear: { sunIntensity: 3, fogDensity: 0.0015, rainAmount: 0 },
+  cloudy: { sunIntensity: 1.2, fogDensity: 0.003, rainAmount: 0 },
+  fog: { sunIntensity: 0.5, fogDensity: 0.012, rainAmount: 0 },
+  rain: { sunIntensity: 0.45, fogDensity: 0.006, rainAmount: 0.7 },
+  storm: { sunIntensity: 0.2, fogDensity: 0.008, rainAmount: 1 },
+};
+
+export const DEFAULT_ENVIRONMENT_SETTINGS: EnvironmentSettings = Object.freeze({
+  seed: 42,
+  startTimeS: 12 * 60 * 60,
+  script: Object.freeze<EnvironmentScript>([Object.freeze({ startS: 0, weather: "clear" })]),
+});
+
+function normalizeTime(timeS: number): number {
+  if (!Number.isFinite(timeS)) return 0;
+
+  return ((timeS % SECONDS_PER_DAY_S) + SECONDS_PER_DAY_S) % SECONDS_PER_DAY_S;
+}
+
+function seededUnit(seed: number): number {
+  let value = Number.isFinite(seed) ? Math.trunc(seed) : 0;
+
+  value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
+  value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
+  value ^= value >>> 16;
+
+  return (value >>> 0) / 0x1_0000_0000;
+}
+
+function weatherAt(timeOfDayS: number, script: EnvironmentScript): WeatherKind {
+  let selected = script[0];
+  let selectedStartS = Number.NEGATIVE_INFINITY;
+
+  for (const keyframe of script) {
+    const startS = normalizeTime(keyframe.startS);
+
+    if (startS <= timeOfDayS && startS >= selectedStartS) {
+      selected = keyframe;
+      selectedStartS = startS;
+    }
+  }
+
+  return selected.weather;
+}
+
+export function environmentAt(
+  seed: number,
+  timeS: number,
+  script: EnvironmentScript,
+): EnvironmentState {
+  const timeOfDayS = normalizeTime(timeS);
+  const weather = weatherAt(timeOfDayS, script);
+  const preset = WEATHER_PRESETS[weather];
+  const seedVariation = seededUnit(seed);
+  const solarPhase = (timeOfDayS / SECONDS_PER_DAY_S) * Math.PI * 2 - Math.PI / 2;
+  const x = Math.cos(solarPhase);
+  const y = Math.sin(solarPhase);
+  const z = 0.35;
+  const directionLength = Math.hypot(x, y, z);
+  const daylight = Math.max(0, y);
+
+  return Object.freeze({
+    seed: Number.isFinite(seed) ? Math.trunc(seed) : 0,
+    timeOfDayS,
+    weather,
+    sunDirection: Object.freeze({
+      x: x / directionLength,
+      y: y / directionLength,
+      z: z / directionLength,
+    }),
+    sunIntensity: preset.sunIntensity * Math.sqrt(daylight),
+    fogDensity: preset.fogDensity * (0.95 + seedVariation * 0.1),
+    rainAmount: preset.rainAmount * (0.9 + seedVariation * 0.1),
+  });
+}
+
+export function parseWeatherKind(value: string | null): WeatherKind {
+  if (value === null) return "clear";
+
+  switch (value) {
+    case "clear":
+    case "cloudy":
+    case "fog":
+    case "rain":
+    case "storm":
+      return value;
+    default:
+      return "clear";
+  }
+}
+
+interface EnvironmentQuery {
+  readonly get: (name: string) => string | null;
+}
+
+function parseSeed(value: string | null): number {
+  if (value === null || !/^-?\d+$/u.test(value)) return DEFAULT_ENVIRONMENT_SETTINGS.seed;
+
+  const seed = Number(value);
+
+  return Number.isSafeInteger(seed) ? seed : DEFAULT_ENVIRONMENT_SETTINGS.seed;
+}
+
+function parseTimeOfDay(value: string | null): number {
+  if (value === null) return DEFAULT_ENVIRONMENT_SETTINGS.startTimeS;
+
+  const match = /^(\d{2}):(\d{2})$/u.exec(value);
+
+  if (match === null) return DEFAULT_ENVIRONMENT_SETTINGS.startTimeS;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (hours > 23 || minutes > 59) return DEFAULT_ENVIRONMENT_SETTINGS.startTimeS;
+
+  return hours * 60 * 60 + minutes * 60;
+}
+
+export function parseEnvironmentSettings(query: EnvironmentQuery): EnvironmentSettings {
+  const weather = parseWeatherKind(query.get("weather"));
 
   return {
-    id: "environment",
-    order: 10,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- This system installs its objects into the owned Three scene.
-    init(context) {
-      context.scene.background = new THREE.Color(0xa6cbd3);
-      context.scene.fog = new THREE.Fog(0xa6cbd3, 100, 550);
-
-      sun.position.set(-25, 45, 30);
-      sun.castShadow = true;
-      sun.shadow.mapSize.set(1024, 1024);
-      sun.shadow.camera.left = -18;
-      sun.shadow.camera.right = 18;
-      sun.shadow.camera.top = 18;
-      sun.shadow.camera.bottom = -18;
-      sun.shadow.camera.far = 140;
-      sun.shadow.normalBias = 0.04;
-      root.add(sun, sun.target, new THREE.HemisphereLight(0xd5f2ff, 0x657b40, 2));
-      context.scene.add(root);
-    },
-    update(frame) {
-      const { x, y, z } = frame.ride.worldPos;
-
-      sun.position.set(x - 25, y + 45, z + 30);
-      sun.target.position.set(x, y, z);
-    },
-    setQuality(quality) {
-      sun.castShadow = QUALITY_SETTINGS[quality].shadows;
-    },
-    dispose() {
-      sun.shadow.dispose();
-      disposeObject(root);
-    },
+    seed: parseSeed(query.get("seed")),
+    startTimeS: parseTimeOfDay(query.get("time")),
+    script: [{ startS: 0, weather }],
   };
 }

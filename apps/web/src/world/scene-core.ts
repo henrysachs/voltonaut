@@ -3,8 +3,8 @@ import * as THREE from "three";
 
 import { createRider } from "../avatar/rider.js";
 import { createRideCamera, type CameraMode } from "./camera.js";
-import { createEnvironmentSystem } from "./environment.js";
-import { createFrameSampler } from "./frame.js";
+import { createEnvironmentSystem } from "./environmentSystem.js";
+import { createFrameSampler, type EnvironmentSettings, type FrameSampler } from "./frame.js";
 import { createLandscapeSystem } from "./landscape.js";
 import type { RenderViewport, SceneDiagnostics } from "./render-protocol.js";
 import { createRoadSystem } from "./road.js";
@@ -29,7 +29,7 @@ class ThreeSceneCore implements SceneCore {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1500);
   private readonly rideCamera = createRideCamera(this.camera);
-  private readonly sampler = createFrameSampler();
+  private readonly sampler: FrameSampler;
   private readonly rider;
   private readonly scheduler;
   private disposed = false;
@@ -39,8 +39,10 @@ class ThreeSceneCore implements SceneCore {
     private readonly renderer: THREE.WebGLRenderer,
     route: EngineRoute,
     wheelCircM: number,
+    environment: Readonly<EnvironmentSettings>,
   ) {
     this.rider = createRider(wheelCircM);
+    this.sampler = createFrameSampler(environment);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.shadowMap.enabled = QUALITY_SETTINGS.medium.shadows;
@@ -72,6 +74,9 @@ class ThreeSceneCore implements SceneCore {
       headingRad: this.rider.headingRad(),
       crankRad: this.rider.crankRad(),
       camera: this.rideCamera.mode(),
+      weather: frame.env.weather,
+      timeOfDayS: frame.env.timeOfDayS,
+      rainAmount: frame.env.rainAmount,
       cameraPosition: {
         x: this.camera.position.x,
         y: this.camera.position.y,
@@ -112,6 +117,7 @@ export function createSceneCore(
   renderer: THREE.WebGLRenderer,
   route: EngineRoute,
   wheelCircM: number,
+  environment: Readonly<EnvironmentSettings>,
 ): SceneCore {
-  return new ThreeSceneCore(renderer, route, wheelCircM);
+  return new ThreeSceneCore(renderer, route, wheelCircM, environment);
 }

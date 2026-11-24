@@ -1,6 +1,13 @@
 import type { RideSnapshot } from "@voltonaut/engine";
 
+import {
+  DEFAULT_ENVIRONMENT_SETTINGS,
+  environmentAt,
+  type EnvironmentSettings,
+} from "./environment.js";
 import type { FrameInput } from "./scheduler.js";
+
+export type { EnvironmentSettings } from "./environment.js";
 
 export function interpolateRide(
   previous: Readonly<RideSnapshot>,
@@ -32,7 +39,9 @@ export interface FrameSampler {
   readonly sample: (ride: Readonly<RideSnapshot>, nowMs: number) => FrameInput;
 }
 
-export function createFrameSampler(): FrameSampler {
+export function createFrameSampler(
+  environment: Readonly<EnvironmentSettings> = DEFAULT_ENVIRONMENT_SETTINGS,
+): FrameSampler {
   let previous: Readonly<RideSnapshot> | undefined;
   let current: Readonly<RideSnapshot> | undefined;
   let receivedMs = 0;
@@ -53,7 +62,18 @@ export function createFrameSampler(): FrameSampler {
 
       lastFrameMs = nowMs;
 
-      return { ride: interpolateRide(previous ?? ride, ride, alpha), dtS, alpha };
+      const sampledRide = interpolateRide(previous ?? ride, ride, alpha);
+
+      return {
+        ride: sampledRide,
+        dtS,
+        alpha,
+        env: environmentAt(
+          environment.seed,
+          environment.startTimeS + sampledRide.tS,
+          environment.script,
+        ),
+      };
     },
   };
 }

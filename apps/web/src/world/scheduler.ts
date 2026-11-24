@@ -1,24 +1,28 @@
 import type { EngineRoute, RideSnapshot } from "@voltonaut/engine";
 import type * as THREE from "three";
 
+import type { EnvironmentState } from "./environment.js";
+
 export type QualityLevel = "low" | "medium" | "high" | "ultra";
 
 interface QualitySettings {
   readonly pixelRatio: number;
   readonly shadows: boolean;
+  readonly rainDrops: number;
 }
 
 export const QUALITY_SETTINGS: Readonly<Record<QualityLevel, QualitySettings>> = {
-  low: { pixelRatio: 1, shadows: false },
-  medium: { pixelRatio: 1.25, shadows: true },
-  high: { pixelRatio: 1.5, shadows: true },
-  ultra: { pixelRatio: 2, shadows: true },
+  low: { pixelRatio: 1, shadows: false, rainDrops: 0 },
+  medium: { pixelRatio: 1.25, shadows: true, rainDrops: 500 },
+  high: { pixelRatio: 1.5, shadows: true, rainDrops: 900 },
+  ultra: { pixelRatio: 2, shadows: true, rainDrops: 1400 },
 };
 
 export interface FrameInput {
   readonly ride: Readonly<RideSnapshot>;
   readonly dtS: number;
   readonly alpha: number;
+  readonly env: EnvironmentState;
 }
 
 export interface SceneContext {
