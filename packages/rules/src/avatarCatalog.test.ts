@@ -93,6 +93,19 @@ describe("start avatar catalog", () => {
   });
 });
 
+describe("skin asset labels", () => {
+  it("uses neutral labels and asset references for skin colors", () => {
+    expect(avatarItemsForSlot("skin").map((item) => [item.name, item.assetRef])).toEqual([
+      ["Farbe 1", "procedural://skin/01"],
+      ["Farbe 2", "procedural://skin/02"],
+      ["Farbe 3", "procedural://skin/03"],
+      ["Farbe 4", "procedural://skin/04"],
+      ["Farbe 5", "procedural://skin/05"],
+      ["Farbe 6", "procedural://skin/06"],
+    ]);
+  });
+});
+
 describe("avatar preview config", () => {
   it("updates jersey ID and both colors without mutating the input config", () => {
     const item = catalogItem("jersey.aurora");
@@ -126,7 +139,11 @@ describe("avatar preview config", () => {
       ["glasses.clear", "glassesId"],
     ];
 
-    let config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(catalogItem("skin.04")));
+    let config = previewAvatarConfig(
+      DEFAULT_AVATAR_CONFIG,
+      preview(catalogItem("skin.04"), ["#98664f"]),
+    );
+
     expect(config.rider.skinTone).toBe("#98664f");
     expect(avatarItemIdForSlot(config, "skin")).toBe("skin.04");
 
@@ -151,10 +168,22 @@ describe("skin presets", () => {
   ];
 
   it.each(presets)("previews and maps %s", (itemId, skinTone) => {
-    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(catalogItem(itemId)));
+    const config = previewAvatarConfig(
+      DEFAULT_AVATAR_CONFIG,
+      preview(catalogItem(itemId), [skinTone]),
+    );
 
     expect(config.rider.skinTone).toBe(skinTone);
     expect(avatarItemIdForSlot(config, "skin")).toBe(itemId);
+  });
+
+  it("uses the selected color directly instead of the skin item name", () => {
+    const config = previewAvatarConfig(
+      DEFAULT_AVATAR_CONFIG,
+      preview(catalogItem("skin.03"), ["#112233"]),
+    );
+
+    expect(config.rider.skinTone).toBe("#112233");
   });
 });
 

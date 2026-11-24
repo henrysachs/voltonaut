@@ -13,3 +13,4 @@ The starter models are original Voltonaut work created in Blender without downlo
 | `../icons/icon-512.png`          | Raster export of `icon.svg`, 512 px               | CC0-1.0 | https://creativecommons.org/publicdomain/zero/1.0/ |
 | `../icons/apple-touch-icon.png`  | Raster export of `icon.svg`, 180 px               | CC0-1.0 | https://creativecommons.org/publicdomain/zero/1.0/ |
 | `../icons/icon-maskable-512.png` | Raster export of `icon-maskable.svg`, 512 px      | CC0-1.0 | https://creativecommons.org/publicdomain/zero/1.0/ |
+| `voltonaut-logo.png`             | Original Voltonaut app icon provided by Henry     | CC0-1.0 | https://creativecommons.org/publicdomain/zero/1.0/ |

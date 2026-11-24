@@ -1,5 +1,9 @@
 # Voltonaut
 
+<p align="center">
+  <img src="apps/web/public/assets/voltonaut-logo.png" width="128" height="128" alt="Voltonaut App-Icon">
+</p>
+
 Browserbasiertes Indoor-Cycling-Spiel in 3D – ein selbstgebauter Zwift-Ersatz. Läuft komplett im Browser (Chrome/Edge am Laptop), spricht per Web Bluetooth direkt mit Rollentrainer, Pulsgurt und Schalt-Controllern Web-App auf Cloudflare Pages, Solo-Fahrten funktionieren ohne Server; Accounts, Freischaltungen, Volts und Gruppenfahrten laufen über einen eigenen Server (TypeScript/NestJS auf einem Hetzner-VPS, ADR-004/005).
 
 > **Status:** Web und API sind [produktiv bereitgestellt](docs/specs/E0-04-production-rollout.md). Der Webstand `61ca9c0` ist öffentlich geprüft; die kompatible API auf `a504e35` hat Strava serverseitig aktiviert und die echte Anwendungssubscription geladen. Ingame-Menü, V2-Aufnahmen, TCX-Export, Browserkonto und kontogebundener manueller Sync sind implementiert und softwaregeprüft. Die Rollenschaltung ist vom Play-Tastendruck über den Engine-Worker bis zum bestätigten FTMS-Kommando softwaregeprüft. Persönlicher Login, Strava-OAuth-/Uploadpilot und gemeinsame Hardwarefahrt bleiben getrennte offene Abnahmen.
