@@ -37,14 +37,15 @@ while [ "$1" != config ] && [ "$1" != up ] && [ "$1" != stop ] && [ "$1" != pull
   options+=("$1"); shift
 done
 if [ "$1" = config ]; then
-  [ "$*" = 'config --images server' ]
+  [ "$*" = 'config --images server' ] || [ "$*" = config ]
   exec "$REAL_DOCKER" compose "${options[@]}" "$@"
 fi
 "$REAL_DOCKER" compose "${options[@]}" config --quiet
 case "$1" in
   up)
     printf '%s' "$VOLTONAUT_TAG" >"$TEST_ROOT/active"
-    cp "$env_file" "$TEST_ROOT/active-env"
+    # What Compose actually hands to the container, not just what the env file contains.
+    "$REAL_DOCKER" compose "${options[@]}" config >"$TEST_ROOT/active-env"
     [ "${FAIL_UP_TAG:-}" != "$VOLTONAUT_TAG" ]
     ;;
   run)
@@ -60,13 +61,13 @@ cat >"$temporary/bin/curl" <<'COMMAND'
 set -eu
 [ -f "$TEST_ROOT/active" ]
 [ "$(cat "$TEST_ROOT/active")" != "${UNHEALTHY_TAG:-}" ]
-# Optional model of ADR-026: the pre-ADR release only starts with the single OIDC_* set,
-# every later release only with OIDC_PROVIDERS.
+# Optional model of ADR-026, read from the rendered container environment: the pre-ADR release
+# only starts with the single OIDC_* set, every later release only with OIDC_PROVIDERS.
 if [ -n "${LEGACY_RELEASE:-}" ]; then
   if [ "$(cat "$TEST_ROOT/active")" = "$LEGACY_RELEASE" ]; then
-    grep -q '^OIDC_ISSUER=' "$TEST_ROOT/active-env"
+    grep -Eq '^[[:space:]]+OIDC_ISSUER: [^[:space:]]' "$TEST_ROOT/active-env"
   else
-    grep -q '^OIDC_PROVIDERS=' "$TEST_ROOT/active-env"
+    grep -Eq '^[[:space:]]+OIDC_PROVIDERS: [^[:space:]]' "$TEST_ROOT/active-env"
   fi
 fi
 COMMAND
@@ -165,20 +166,45 @@ provider_release_env() {
 
 expect_active() {
   test "$(cat "$temporary/active")" = "$1"
-  grep -q "^$2=" "$temporary/active-env"
+  grep -Eq "^[[:space:]]+$2: [^[:space:]]" "$temporary/active-env"
+}
+
+# compose.yaml as shipped before ADR-026: passes the single OIDC_* set through.
+legacy_compose() {
+  sed '/OIDC_/d' "$(dirname "$DEPLOY_SCRIPT")/compose.yaml" | sed '/CORS_ORIGINS:/a\
+      OIDC_ISSUER: ${OIDC_ISSUER:-}\
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}\
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}\
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}' >"$1"
 }
 
 adr025_transition_keeps_a_working_rollback() {
-  local snapshots="$VOLTONAUT_STATE_DIR/config"
+  local snapshots="$VOLTONAUT_STATE_DIR/config" live="$temporary/live" shipped="$VOLTONAUT_COMPOSE_FILE"
   reset_state
-  export LEGACY_RELEASE=legacy
-  # A release started by the previous deploy.sh, still running with the single OIDC_* set.
+  mkdir -p "$live" "$VOLTONAUT_STATE_DIR"
+  legacy_compose "$temporary/legacy-compose.yaml"
+  grep -q 'OIDC_ISSUER: ' "$temporary/legacy-compose.yaml"
+  export LEGACY_RELEASE=legacy VOLTONAUT_COMPOSE_FILE="$live/compose.yaml"
+  # A release started by the previous deploy.sh with the previous compose.yaml and deploy.env.
+  cp "$temporary/legacy-compose.yaml" "$live/compose.yaml"
   legacy_release_env
-  mkdir -p "$VOLTONAUT_STATE_DIR"
   printf legacy >"$VOLTONAUT_STATE_DIR/current-tag"
   printf legacy >"$temporary/active"
-  cp "$VOLTONAUT_ENV_FILE" "$temporary/active-env"
-  bash "$DEPLOY_SCRIPT" snapshot >"$temporary/output"
+  VOLTONAUT_TAG=legacy "$REAL_DOCKER" compose --project-directory "$live" --env-file "$VOLTONAUT_ENV_FILE" \
+    -f "$live/compose.yaml" config >"$temporary/active-env"
+  expect_active legacy OIDC_ISSUER
+
+  # An early main deploy ships the new compose.yaml first; the guard keeps the old container.
+  cp "$shipped" "$live/compose.yaml"
+  expect_failure deploy new
+  grep -q 'removed single OIDC_\* set' "$temporary/output"
+  expect_active legacy OIDC_ISSUER
+  # That shipped file would not pass the old settings: snapshot refuses the inconsistent pair.
+  expect_failure snapshot
+  grep -q 'does not pass the OIDC settings' "$temporary/output"
+  test ! -e "$snapshots/legacy"
+  bash "$DEPLOY_SCRIPT" snapshot "$temporary/legacy-compose.yaml" >"$temporary/output"
+  cmp -s "$temporary/legacy-compose.yaml" "$snapshots/legacy/compose.yaml"
   test "$(stat -c %a "$snapshots/legacy")" = 700
   test "$(stat -c %a "$snapshots/legacy/deploy.env")" = 600
   test "$(stat -c %a "$snapshots/legacy/compose.yaml")" = 600
@@ -219,8 +245,27 @@ adr025_transition_keeps_a_working_rollback() {
 
   bash "$DEPLOY_SCRIPT" deploy third >"$temporary/output"
   test "$(ls "$snapshots" | tr '\n' ' ')" = 'new third '
+  export VOLTONAUT_COMPOSE_FILE="$shipped"
   reset_state
   echo 'ADR-026 transition validates before the switch and recovers the previous release with its configuration.'
+}
+
+deploy_requires_saved_configuration_of_running_release() {
+  reset_state
+  provider_release_env
+  mkdir -p "$VOLTONAUT_STATE_DIR"
+  printf unsaved >"$VOLTONAUT_STATE_DIR/current-tag"
+  expect_failure deploy next
+  grep -q 'no saved configuration for the running release unsaved' "$temporary/output"
+  if grep -Eq ' (up|pull|run) ' "$temporary/commands"; then
+    echo 'a deploy without a recoverable running release must stop before any release step' >&2
+    return 1
+  fi
+  bash "$DEPLOY_SCRIPT" snapshot >"$temporary/output"
+  bash "$DEPLOY_SCRIPT" deploy next >"$temporary/output"
+  expect_tag current next
+  expect_tag previous unsaved
+  reset_state
 }
 
 expect_failure() {
@@ -341,4 +386,5 @@ fi
 selects_local_image
 legacy_oidc_config_blocks_release
 adr025_transition_keeps_a_working_rollback
+deploy_requires_saved_configuration_of_running_release
 echo 'Release command tests passed. Pull tag, health commit, recovery, rollback, preserved data.'

@@ -18,7 +18,7 @@ usage() {
   echo "usage: deploy.sh deploy <image-tag>" >&2
   echo "       deploy.sh rollback [image-tag]" >&2
   echo "       deploy.sh status" >&2
-  echo "       deploy.sh snapshot" >&2
+  echo "       deploy.sh snapshot [compose-file-of-running-release]" >&2
 }
 
 compose() {
@@ -76,6 +76,18 @@ with_release_config() {
     echo "deploy: no saved configuration for $tag; using the live configuration" >&2
     "$@"
   fi
+}
+
+# Every OIDC_* setting of the env file must reach the server container through this compose file.
+# The compose file of another release (e.g. one an aborted deploy already copied) fails this.
+# Values stay inside this function; only key names are compared.
+check_config_pair() {
+  local rendered key
+  rendered="$(VOLTONAUT_TAG="$1" compose config 2>/dev/null)" || return 1
+
+  while IFS= read -r key; do
+    grep -Eq "^[[:space:]]+$key: [^[:space:]]" <<<"$rendered" || return 1
+  done < <(grep -Eo '^OIDC_[A-Z0-9_]+' "$ENV_FILE" | sort -u)
 }
 
 # Lets the new image parse its configuration in a one-off container before the running
@@ -158,6 +170,12 @@ deploy_release() {
 
   if [ "$mode" = deploy ]; then
     check_auth_config || return 1
+
+    # Recovery must be able to restart the running release with the configuration it runs with.
+    if [ -n "$previous_tag" ] && ! has_snapshot "$previous_tag"; then
+      echo "deploy: no saved configuration for the running release $previous_tag; run 'deploy.sh snapshot' first" >&2
+      return 1
+    fi
   elif ! has_snapshot "$tag"; then
     check_auth_config || return 1
   fi
@@ -215,10 +233,11 @@ snapshot_config_of() {
     snapshot_config "$1" "$2"
 }
 
-# One-time bootstrap: records the live configuration for the running release, e.g. before the
-# ADR-026 provider-list migration replaces deploy.env.
+# One-time bootstrap: records the configuration of the running release, e.g. before the ADR-026
+# provider-list migration replaces deploy.env. If an aborted deploy already copied a newer
+# compose.yaml, pass the compose file of the running release explicitly.
 snapshot_current() {
-  local current_tag
+  local current_tag source="${1:-$COMPOSE_FILE}"
   current_tag="$(read_state current-tag)"
 
   if [ -z "$current_tag" ] || ! valid_tag "$current_tag"; then
@@ -231,7 +250,13 @@ snapshot_current() {
     return 0
   fi
 
-  snapshot_config "$current_tag" "$(read_state previous-tag)"
+  if [ ! -f "$source" ] || ! COMPOSE_FILE="$source" check_config_pair "$current_tag"; then
+    echo "snapshot: $source does not pass the OIDC settings of $ENV_FILE to the server." >&2
+    echo "snapshot: pass the compose.yaml of release $current_tag: deploy.sh snapshot <file>" >&2
+    return 1
+  fi
+
+  COMPOSE_FILE="$source" snapshot_config "$current_tag" "$(read_state previous-tag)"
   echo "snapshot: saved configuration for $current_tag"
 }
 
@@ -273,7 +298,7 @@ case "${1:-}" in
     show_status
     ;;
   snapshot)
-    snapshot_current
+    snapshot_current "${2:-}"
     ;;
   *)
     usage

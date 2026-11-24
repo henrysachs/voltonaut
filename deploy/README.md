@@ -31,7 +31,7 @@ Der Server kennt nur noch `OIDC_PROVIDERS` und `OIDC_<ID>_*` (siehe `deploy.env.
 
 - **Sperre:** `deploy` (und `rollback` ohne gespeicherte Konfiguration) bricht vor jedem Compose-, Pull- oder Startschritt ab, wenn `deploy.env` noch `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` oder `OIDC_REDIRECT_URI` enthält oder bei `AUTH_MODE=oidc` `OIDC_PROVIDERS` fehlt. Geprüft werden nur Schlüsselnamen, Werte werden nicht ausgegeben. Ein automatischer Main-Deploy vor der Umstellung schlägt sichtbar fehl, der laufende Release bleibt aktiv.
 - **Validierung vor dem Wechsel:** Vor `up` prüft das neue Image seine Konfiguration in einem Einmal-Container (`compose run --rm --no-deps -T --label traefik.enable=false server node dist/main.js check-config`). Der laufende Container wird dabei nicht angefasst; die Ausgabe wird verworfen.
-- **Konfiguration je Release:** Nach jedem gesunden Release sichert `deploy.sh` die verwendete `compose.yaml` und `deploy.env` unter `state/config/<tag>/` (Verzeichnis `700`, Dateien `600`), nur für aktuellen und vorigen Release. Die automatische Wiederherstellung nach einem fehlgeschlagenen Start und `rollback` starten den Ziel-Release mit dieser gespeicherten Konfiguration, relative Pfade (`strava.env`, Backup-Overlay) weiterhin aus dem Deploy-Verzeichnis. Ohne Snapshot wird wie bisher die aktuelle Konfiguration verwendet und das gemeldet.
+- **Konfiguration je Release:** Nach jedem gesunden Release sichert `deploy.sh` die verwendete `compose.yaml` und `deploy.env` unter `state/config/<tag>/` (Verzeichnis `700`, Dateien `600`), nur für aktuellen und vorigen Release. Die automatische Wiederherstellung nach einem fehlgeschlagenen Start und `rollback` starten den Ziel-Release mit dieser gespeicherten Konfiguration, relative Pfade (`strava.env`, Backup-Overlay) weiterhin aus dem Deploy-Verzeichnis. Ein neuer Release wird nur deployt, wenn für den laufenden Release ein Snapshot existiert; sonst bricht `deploy` vor jedem Compose-, Pull- oder Startschritt ab. Ein `rollback` auf einen Release ohne Snapshot verwendet die aktuelle Konfiguration und meldet das.
 
 **Einmalige Umstellung auf dem VPS (vor dem ersten Release mit ADR-026, gesonderte Freigabe):**
 
@@ -52,7 +52,17 @@ Der Server kennt nur noch `OIDC_PROVIDERS` und `OIDC_<ID>_*` (siehe `deploy.env.
    ssh <deploy-user>@<deploy-host> 'cd /srv/voltonaut && bash .migrate-deploy.sh snapshot && python3 .migrate-provision_env.py migrate; status=$?; rm -f .migrate-deploy.sh .migrate-provision_env.py; exit $status'
    ```
 
-   `snapshot` legt `state/config/<laufender-tag>/` mit der bisherigen `compose.yaml` und `deploy.env` an. `migrate` gibt `migrated` oder bei Wiederholung `unchanged` aus. Akzeptiert wird nur genau die vom Provisionierer geschriebene Alt-Datei (gleiche Schlüssel, alte Callback-URI, Eigentümer Deploy-Nutzer, Modus `600`). Alles andere, etwa zusätzliche Backup-Werte, wird unverändert abgelehnt (`provisioning failed`) und ist von Hand umzustellen. Die Werte bleiben gleich, nur die Redirect-URI wechselt. Die alte Datei bleibt zusätzlich als `deploy.env.legacy` (Modus `600`) erhalten; ein vorhandenes Backup wird nie ersetzt.
+   `snapshot` legt `state/config/<laufender-tag>/` mit der bisherigen `compose.yaml` und `deploy.env` an. Es prüft vorher mit `docker compose config`, dass die Compose-Datei jede `OIDC_*`-Einstellung der Env-Datei an den Server-Container weitergibt (nur Schlüsselnamen, keine Werte in der Ausgabe). Hat ein vorzeitiger Main-Deploy schon die neue `compose.yaml` auf den Host gelegt (die Sperre hält den alten Container am Laufen), lehnt `snapshot` dieses inkonsistente Paar ab und nichts wird umgestellt. Dann die `compose.yaml` des laufenden Releases ausdrücklich übergeben, z. B. aus dem Repository des laufenden Commits:
+
+   ```bash
+   git show <laufender-commit>:deploy/compose.yaml > compose.running.yaml
+   ```
+
+   ```bash
+   scp compose.running.yaml <deploy-user>@<deploy-host>:/srv/voltonaut/.running-compose.yaml
+   ```
+
+   und im Befehl oben `bash .migrate-deploy.sh snapshot .running-compose.yaml` verwenden (danach die Datei löschen). `migrate` gibt `migrated` oder bei Wiederholung `unchanged` aus. Akzeptiert wird nur genau die vom Provisionierer geschriebene Alt-Datei (gleiche Schlüssel, alte Callback-URI, Eigentümer Deploy-Nutzer, Modus `600`). Alles andere, etwa zusätzliche Backup-Werte, wird unverändert abgelehnt (`provisioning failed`) und ist von Hand umzustellen. Die Werte bleiben gleich, nur die Redirect-URI wechselt. Die alte Datei bleibt zusätzlich als `deploy.env.legacy` (Modus `600`) erhalten; ein vorhandenes Backup wird nie ersetzt.
 
 4. Den Release deployen. Scheitert Validierung oder Start, läuft bzw. startet der bisherige Release mit seiner gesicherten Alt-Konfiguration. Danach einen echten Login über Cloudflare bestätigen.
 5. Erst danach die alte Redirect-URI entfernen und `deploy.env.legacy` löschen. Der Snapshot des alten Releases entfällt automatisch mit dem übernächsten Release.
