@@ -187,7 +187,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] Remote-Fahrer als `RiderView` (Name-Tag, Avatar aus Server); Windschatten hinter Freunden (v2, Latenz prüfen)
 - [ ] `mise run sim:crowd` (Fake-Clients für Lasttest)
 - [ ] Domänen-Metriken: aktive Fahrten, offene WebSocket-Verbindungen, Gruppenfahrt-Räume
-- [ ] Spaß-Modus ([E9-01](specs/E9-01-fun-mode-items.md), #45): Phase 1 (Item-Boxen, Power-ups solo) in Arbeit; Malus gegen Bots nach #70, gegen Freunde nach #73/#74
+- [ ] Spaß-Modus ([E9-01](specs/E9-01-fun-mode-items.md), #45): Phase 1 (Item-Boxen, Power-ups solo) im Sim-Modus softwaregeprüft, Hardware und Review offen; Malus gegen Bots nach #70, gegen Freunde nach #73/#74
       **Abnahme:** Zwei Accounts sehen sich flüssig auf derselben Strecke; Server übersteht Client-Abbrüche; 30 Fake-Clients ohne Ruckeln.
 
 ## E10 – Mehr Spiel: Inhalte & Extras
