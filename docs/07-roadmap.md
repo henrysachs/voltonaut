@@ -131,6 +131,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 - [ ] `progression/`: XP/Level serverseitig aus akzeptierten Fahrten; Level-Up-Effekt im Client
   - [x] [E6-02](specs/E6-02-base-reward-quotes.md): reine Basisangebote für XP, Level und Volts mit explizitem Tagesrestbudget softwaregeprüft. Keine Vergabe oder Kontobuchung.
+  - [x] [E6-03](specs/E6-03-native-ride-facts.md): native Tickfakten für spätere laufende Auswertung. Gate, Mutation, Build, Basisvergleich und unabhängiges Review softwaregeprüft. Keine Uploads, Freigaben oder Belohnungsbuchungen; Deployment folgt mit dem Merge.
 - [ ] `economy/`: Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ"
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung

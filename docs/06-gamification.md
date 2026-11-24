@@ -10,7 +10,7 @@ Der Client zeigt die laufende Entwicklung. Der Server prüft und bestätigt aufe
 
 Die abschnittsweise Prüfung muss Bruchteile, die bestehenden Rundungsregeln und das gemeinsame Tageslimit erhalten. Sim-Fahrten erhalten keine Kontobelohnungen. Eine BLE-Selbstauskunft ist kein Hardwareattest. Numerische Fahrtfakten ersetzen keine Quellen- und Plausibilitätsprüfung.
 
-Dies ist der beauftragte Zielzustand, noch keine implementierte oder bereitgestellte Vergabe. E6-02 liefert weiterhin ausschließlich reine Zahlenangebote. Bestehende Aufnahmen und Strava-Zuordnungen werden nicht stillschweigend neu bewertet.
+Dies ist der beauftragte Zielzustand, noch keine implementierte oder bereitgestellte Vergabe. E6-02 liefert reine Zahlenangebote. [E6-03](specs/E6-03-native-ride-facts.md) liefert die unveränderlichen nativen Tickfakten als numerische Grundlage. Upload, persönliche Freigabe, Quellenprüfung und Buchung bleiben eigene Schritte. Bestehende Aufnahmen und Strava-Zuordnungen werden nicht stillschweigend neu bewertet.
 
 ## Volts – die Ingame-Währung
 
