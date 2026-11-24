@@ -128,7 +128,7 @@ function withFixture(run: (paths: Readonly<FixturePaths>) => void): void {
 
 await test("validates the generated starter pack and derives GLB triangles", () => {
   const report = validateAssets(rootDirectory);
-  assert.equal(report.assetCount, 3);
+  assert.equal(report.assetCount, 4);
   assert.equal(report.glbCount, 3);
   assert.equal(report.totalTriangles, 5802);
 });
