@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0c201e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Voltonaut" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Voltonaut</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
@@ -149,6 +156,16 @@
             tabindex="-1"
           >
             Strava
+          </button>
+          <button
+            id="game-tab-app"
+            role="tab"
+            type="button"
+            aria-controls="game-panel-app"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            App
           </button>
           <button
             id="game-tab-garage"
@@ -335,6 +352,19 @@
                 kein Strava-Upload.
               </p>
             </div>
+          </section>
+          <section
+            id="game-panel-app"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="game-tab-app"
+            data-game-panel
+            hidden
+            lang="de"
+            tabindex="0"
+          >
+            <h2>App installieren</h2>
+            <div id="pwa-panel"></div>
           </section>
           <section
             id="game-panel-garage"

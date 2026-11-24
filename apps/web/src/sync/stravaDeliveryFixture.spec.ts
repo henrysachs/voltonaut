@@ -110,7 +110,8 @@ export class StravaDeliveryFixture {
       throw new Error("no automatic login");
     },
     transport: {
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       exchange: (code) =>
         Promise.resolve({
           sessionToken: `token-${code}`,
@@ -160,7 +161,7 @@ export class StravaDeliveryFixture {
   private transport(): PrivateAuthTransport {
     return {
       authorize: (authorization): AccountLease => ({
-        ...unexpectedMembership,
+        ...unexpectedAccountParts,
         apiOrigin: "http://localhost:3000",
         userId: authorization.userId,
         generation: authorization.generation,
@@ -205,4 +206,4 @@ export class StravaDeliveryFixture {
   }
 }
 
-import { unexpectedMembership } from "./testdata/unusedStravaLease.js";
+import { unexpectedAccountParts } from "./testdata/unusedStravaLease.js";

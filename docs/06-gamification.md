@@ -80,7 +80,7 @@ type UnlockRule =
 
 Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magnet, `04-world-3d.md` §7). Aktivierung per Play-Power-up-Taste; physikrelevant → im Ride-Upload protokolliert, serverseitig nachgerechnet; Segmentzeiten mit Power-up werden getrennt markiert. Kosten nichts, bringen keine Volts.
 
-Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-025](decisions/ADR-025-fun-mode-trainer-effects.md)). Er hat eigene Item-Boxen und Items, und für ihn gilt die Protokollierung oben ausdrücklich nicht: Er erzeugt keine Belohnungen, keine Fortschritts-Checkpoints und keine Aufnahme. Wer ihn in einer Sitzung betritt, macht alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `fun_mode`), weil das Aufnahmeprotokoll keinen Spaß-Modus kennt und der Server nur im normalen Modus nachrechnet. Eine nachrechenbare Variante wäre ein eigener Schritt (Modus- und Item-Einträge in RecordingV2).
+Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-027](decisions/ADR-027-fun-mode-trainer-effects.md)). Er hat eigene Item-Boxen und Items, und für ihn gilt die Protokollierung oben ausdrücklich nicht: Er erzeugt keine Belohnungen, keine Fortschritts-Checkpoints und keine Aufnahme. Wer ihn in einer Sitzung betritt, macht alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `fun_mode`), weil das Aufnahmeprotokoll keinen Spaß-Modus kennt und der Server nur im normalen Modus nachrechnet. Eine nachrechenbare Variante wäre ein eigener Schritt (Modus- und Item-Einträge in RecordingV2).
 
 ## XP & Level
 

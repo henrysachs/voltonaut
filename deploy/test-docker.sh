@@ -10,7 +10,7 @@ image="$project:proof"
 replica="$project-replica"
 restored="$project-restored"
 legacy="$project-legacy"
-unset AUTH_MODE CLIENT_ORIGIN OIDC_ISSUER OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_REDIRECT_URI
+unset AUTH_MODE CLIENT_ORIGIN OIDC_PROVIDERS OIDC_CLOUDFLARE_ISSUER OIDC_CLOUDFLARE_CLIENT_ID OIDC_CLOUDFLARE_CLIENT_SECRET OIDC_CLOUDFLARE_REDIRECT_URI
 unset LITESTREAM_BUCKET LITESTREAM_ENDPOINT LITESTREAM_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY
 export VOLTONAUT_IMAGE="$project" VOLTONAUT_TAG=proof
 compose() {
@@ -38,10 +38,11 @@ printf 'project=%s\nbase-project=%s\nimage=%s\nreplica=%s\nrestored=%s\nlegacy=%
 cat >"$temporary/local.env" <<ENV
 AUTH_MODE=disabled
 CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev
-OIDC_ISSUER=https://identity.example.invalid/oidc/proof
-OIDC_CLIENT_ID=$project
-OIDC_CLIENT_SECRET='$project-local-only'
-OIDC_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback
+OIDC_PROVIDERS=cloudflare
+OIDC_CLOUDFLARE_ISSUER=https://identity.example.invalid/oidc/proof
+OIDC_CLOUDFLARE_CLIENT_ID=$project
+OIDC_CLOUDFLARE_CLIENT_SECRET='$project-local-only'
+OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback
 LITESTREAM_ENDPOINT=https://storage.example.invalid
 LITESTREAM_BUCKET=$project
 LITESTREAM_ACCESS_KEY_ID=$project
@@ -149,12 +150,13 @@ docker run --rm -i --network none "$image" node --input-type=module >"$temporary
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 const valid = { PATH: process.env.PATH, NODE_ENV: 'production', AUTH_MODE: 'oidc',
-  OIDC_ISSUER: 'https://identity.example.invalid/oidc/proof', OIDC_CLIENT_ID: crypto.randomUUID(),
-  OIDC_CLIENT_SECRET: crypto.randomUUID(), CLIENT_ORIGIN: 'https://voltonaut.stammkneipe.dev',
-  OIDC_REDIRECT_URI: 'https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback' };
-const invalid = ['AUTH_MODE','OIDC_ISSUER','OIDC_CLIENT_ID','OIDC_CLIENT_SECRET','OIDC_REDIRECT_URI']
+  OIDC_PROVIDERS: 'cloudflare', OIDC_CLOUDFLARE_ISSUER: 'https://identity.example.invalid/oidc/proof',
+  OIDC_CLOUDFLARE_CLIENT_ID: crypto.randomUUID(), OIDC_CLOUDFLARE_CLIENT_SECRET: crypto.randomUUID(),
+  CLIENT_ORIGIN: 'https://voltonaut.stammkneipe.dev',
+  OIDC_CLOUDFLARE_REDIRECT_URI: 'https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback' };
+const invalid = ['AUTH_MODE','OIDC_PROVIDERS','OIDC_CLOUDFLARE_ISSUER','OIDC_CLOUDFLARE_CLIENT_ID','OIDC_CLOUDFLARE_CLIENT_SECRET','OIDC_CLOUDFLARE_REDIRECT_URI']
   .map((key) => ({ ...valid, [key]: undefined }));
-invalid.push({ ...valid, OIDC_REDIRECT_URI: 'https://api.voltonaut.stammkneipe.dev/wrong' });
+invalid.push({ ...valid, OIDC_CLOUDFLARE_REDIRECT_URI: 'https://api.voltonaut.stammkneipe.dev/wrong' });
 invalid.push({ ...valid, AUTH_MODE: 'magic-link', MAIL_PROVIDER: 'memory' });
 for (const env of invalid) {
   const result = spawnSync(process.execPath, ['dist/main.js'], { env, stdio: 'ignore', timeout: 5000 });

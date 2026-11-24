@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, mkdirSync, copyFileSync, readFileSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import request from "supertest";
+import type { OidcProviderConfig } from "../oidc-config.js";
 import { expect, it } from "vitest";
 import { z } from "zod";
 
@@ -64,7 +65,7 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(8);
+    expect(migrations).toHaveLength(9);
     db.$client
       .prepare("INSERT INTO users VALUES ('persisted', 'persist@example.com', 0, NULL)")
       .run();
@@ -136,6 +137,18 @@ function legacyMigrations(directory: string): string {
   return folder;
 }
 
+const LEGACY_TEST_PROVIDER: OidcProviderConfig = {
+  id: "test",
+  displayName: "Test",
+  issuer: "https://identity.example",
+  clientId: "test",
+  clientSecret: "test-secret",
+  redirectUri: "https://api.example/v1/auth/oidc/test/callback",
+  scopes: ["openid", "email"],
+  requireEmailVerified: true,
+  idTokenAlg: "RS256",
+};
+
 it("upgrades the original migration without replacing legacy users, tokens, or sessions", async () => {
   const directory = mkdtempSync(join(tmpdir(), "voltonaut-oidc-upgrade-"));
   const path = join(directory, "legacy.db");
@@ -156,10 +169,7 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
         database: { path, migrationsDir: "drizzle" },
         auth: {
           mode: "oidc",
-          issuer: "https://identity.example",
-          clientId: "test",
-          clientSecret: "test-secret",
-          redirectUri: "https://api.example/v1/auth/oidc/callback",
+          providers: [LEGACY_TEST_PROVIDER],
           allowLoopbackHttp: false,
         },
       },
@@ -167,7 +177,7 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
 
     try {
       const db = getDatabase(next.app).$client;
-      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(8);
+      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(9);
       expect(db.prepare("SELECT id FROM users").all()).toEqual([{ id: session.user.id }]);
       expect(db.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
       await request(httpServerOf(next.app))

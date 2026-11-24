@@ -53,7 +53,7 @@ export function createInitialGarageState(slot: AvatarSlot = "jersey"): GarageSta
     kind: "preview",
     slot,
     item,
-    colors: defaultPreviewColors(item),
+    colors: previewColors(item, config),
   });
 
   return { kind: "preview", selection, config };
@@ -85,7 +85,7 @@ function selectSlot(state: Readonly<GarageState>, action: Readonly<SlotAction>):
   return updateSelection(state, {
     slot: action.slot,
     item,
-    colors: defaultPreviewColors(item),
+    colors: previewColors(item, state.config),
   });
 }
 
@@ -95,7 +95,7 @@ function selectItem(state: Readonly<GarageState>, action: Readonly<ItemAction>):
   return updateSelection(state, {
     slot: action.slot,
     item: action.item,
-    colors: defaultPreviewColors(action.item),
+    colors: previewColors(action.item, state.config),
   });
 }
 
@@ -136,6 +136,13 @@ function selectionFields(state: Readonly<GarageState>): SelectionFields {
     item: state.selection.item,
     colors: state.selection.colors,
   };
+}
+
+function previewColors(
+  item: Readonly<ItemDef>,
+  config: Readonly<AvatarConfig>,
+): readonly AvatarColor[] {
+  return item.slot === "skin" ? [config.rider.skinTone] : defaultPreviewColors(item);
 }
 
 function updateSelection(

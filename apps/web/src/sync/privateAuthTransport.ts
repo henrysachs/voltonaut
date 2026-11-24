@@ -34,6 +34,7 @@ import {
   type StravaDelivery,
 } from "@voltonaut/shared";
 import type { ProfileWriteLease } from "./profile-store.js";
+import { identityLease, type IdentityLease } from "./identityLease.js";
 
 export type SyncFailure =
   | "reauth"
@@ -61,6 +62,7 @@ export interface AccountLease extends ProfileWriteLease {
   readonly detail: (rideId: string) => Promise<RideDetail>;
   readonly upload: (ride: RideUpload) => Promise<RideReceipt>;
   readonly strava: StravaLease;
+  readonly identities: IdentityLease;
   readonly accountStatus: () => Promise<AccountStatus>;
   readonly adminUsers: (cursor: string | null) => Promise<AdminUsers>;
   readonly saveMembership: (
@@ -162,6 +164,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         signal: authorization.signal,
         current: authorization.current,
         strava: stravaLease(request),
+        identities: identityLease(request),
         ...membershipLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>
@@ -223,6 +226,8 @@ type PrivatePath =
   | "/v1/strava/connect-start"
   | "/v1/strava/confirm"
   | "/v1/strava/disconnect"
+  | "/v1/auth/identities"
+  | `/v1/auth/oidc/${string}/link`
   | `/v1/strava/rides/${string}`;
 
 function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization) {

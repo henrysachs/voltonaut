@@ -22,6 +22,7 @@ interface ProviderControl {
   fault: TokenFault;
   subject: string;
   email: string;
+  emailVerified: boolean | undefined;
   tokenCalls: number;
   discoveryCalls: number;
   jwksCalls: number;
@@ -59,6 +60,7 @@ export class LocalOidcProvider {
     fault: "none",
     subject: "local-test-subject",
     email: "rider@example.com",
+    emailVerified: true,
     tokenCalls: 0,
     discoveryCalls: 0,
     jwksCalls: 0,
@@ -69,6 +71,11 @@ export class LocalOidcProvider {
     tokenGate: undefined,
   };
   public issuer = "";
+  private base = "";
+
+  /** `pathPrefix` mimics providers with per-application issuers, e.g. `/application/o/voltonaut/`. */
+  public constructor(private readonly pathPrefix = "") {}
+
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Node HTTP invokes this adapter with mutable native request/response handles.
   private readonly server = createServer((req, res) => {
     this.handle(req, res).catch(() => {
@@ -81,7 +88,8 @@ export class LocalOidcProvider {
     this.server.listen(port, "127.0.0.1");
     await once(this.server, "listening");
     const address = z.object({ port: z.number() }).parse(this.server.address());
-    this.issuer = `http://127.0.0.1:${address.port}`;
+    this.base = `http://127.0.0.1:${address.port}`;
+    this.issuer = `${this.base}${this.pathPrefix}`;
   }
 
   public async close(): Promise<void> {
@@ -100,10 +108,18 @@ export class LocalOidcProvider {
   }
 
   private async handle(req: ProviderRequest, res: ProviderResponse): Promise<void> {
-    const url = new URL(req.url ?? "/", this.issuer);
+    const url = new URL(req.url ?? "/", this.base);
     res.setHeader("Content-Type", "application/json");
+    const prefix = this.pathPrefix === "" ? "/" : this.pathPrefix;
 
-    switch (url.pathname) {
+    if (!url.pathname.startsWith(prefix)) {
+      res.writeHead(404);
+      res.end("{}");
+
+      return;
+    }
+
+    switch (url.pathname.slice(prefix.length - 1)) {
       case "/.well-known/openid-configuration":
         this.discovery(res);
         break;
@@ -147,11 +163,11 @@ export class LocalOidcProvider {
     res.end(
       JSON.stringify({
         issuer: this.issuer,
-        authorization_endpoint: `${this.issuer}/authorize`,
+        authorization_endpoint: `${this.base}${this.pathPrefix.replace(/\/$/u, "")}/authorize`,
         token_endpoint: this.control.insecureEndpoint
           ? "http://remote.invalid/token"
-          : `${this.issuer}/token`,
-        jwks_uri: `${this.issuer}/jwks`,
+          : `${this.base}${this.pathPrefix.replace(/\/$/u, "")}/token`,
+        jwks_uri: `${this.base}${this.pathPrefix.replace(/\/$/u, "")}/jwks`,
         response_types_supported: ["code"],
         subject_types_supported: ["public"],
         id_token_signing_alg_values_supported: ["RS256"],
@@ -243,16 +259,22 @@ export class LocalOidcProvider {
       "base64url",
     );
 
+    const claims = {
+      iss: this.control.fault === "issuer" ? "https://wrong.example" : this.issuer,
+      sub: this.control.subject,
+      aud: this.control.fault === "audience" ? "wrong-client" : "test-client",
+      iat: nowS,
+      exp: this.control.fault === "expired" ? nowS - 60 : nowS + 300,
+      nonce: this.control.fault === "nonce" ? "wrong-nonce" : authorization.nonce,
+      email: this.control.email,
+    };
+
     const payload = Buffer.from(
-      JSON.stringify({
-        iss: this.control.fault === "issuer" ? "https://wrong.example" : this.issuer,
-        sub: this.control.subject,
-        aud: this.control.fault === "audience" ? "wrong-client" : "test-client",
-        iat: nowS,
-        exp: this.control.fault === "expired" ? nowS - 60 : nowS + 300,
-        nonce: this.control.fault === "nonce" ? "wrong-nonce" : authorization.nonce,
-        email: this.control.email,
-      }),
+      JSON.stringify(
+        this.control.emailVerified === undefined
+          ? claims
+          : { ...claims, email_verified: this.control.emailVerified },
+      ),
     ).toString("base64url");
 
     const signingInput = `${header}.${payload}`;
@@ -267,8 +289,8 @@ export class LocalOidcProvider {
   }
 }
 
-export async function createOidcProvider(): Promise<LocalOidcProvider> {
-  const provider = new LocalOidcProvider();
+export async function createOidcProvider(pathPrefix = ""): Promise<LocalOidcProvider> {
+  const provider = new LocalOidcProvider(pathPrefix);
   await provider.listen();
 
   return provider;

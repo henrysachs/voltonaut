@@ -19,7 +19,8 @@ export class AdministrationFixture {
   profileApplies = 0;
   readonly session = new ApplicationSession({
     transport: {
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       me: () => Promise.reject(new Error("unexpected restore")),
       exchange: (id) =>
         Promise.resolve({

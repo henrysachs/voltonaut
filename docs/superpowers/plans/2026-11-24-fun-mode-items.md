@@ -53,7 +53,7 @@ Phase 1 ist ein PR. Phase 2 und 3 bekommen eigene Pläne, sobald die Voraussetzu
 - Create: `docs/specs/E9-01-fun-mode-items.md` (aus `_template.md`)
 - Create: `docs/decisions/ADR-0xx-fun-mode-trainer-effects.md` (nächste freie Nummer)
 - Modify: `docs/07-roadmap.md` (E10 „Power-ups": auf Spec verweisen; E9: Unterpunkt „Spaß-Modus Phase 3")
-- Modify: `docs/04-world-3d.md` §7, `docs/06-gamification.md` „Power-ups“: Spaß-Modus als eigener Modus. Abweichend von der Power-up-Regel dort (Protokollierung im Ride-Upload, Nachrechnung) gilt: keine Belohnungen, keine Aufnahme, spätere Aufnahmen der Sitzung nur lokal (`fun_mode`). Begründung in ADR-025 Punkt 5.
+- Modify: `docs/04-world-3d.md` §7, `docs/06-gamification.md` „Power-ups“: Spaß-Modus als eigener Modus. Abweichend von der Power-up-Regel dort (Protokollierung im Ride-Upload, Nachrechnung) gilt: keine Belohnungen, keine Aufnahme, spätere Aufnahmen der Sitzung nur lokal (`fun_mode`). Begründung in ADR-027 Punkt 5.
 
 - [ ] **Step 1:** Spec mit den AK aus Issue #45 für Phase 1 schreiben und die Global Constraints oben als messbare AK übernehmen, zum Beispiel: „Golden-Läufe ohne `mode` unverändert", „100 Box-Überfahrten mit Seed 42 ⇒ identische Itemfolge".
 - [ ] **Step 2:** ADR: Power-ups dürfen die Trainerlast nur senken. Ein Malus mit Lasterhöhung braucht eine eigene Grenze (Vorschlag: höchstens +2 % effektive Steigung, höchstens 10 s, Opt-out „nur visuell") und Henrys Freigabe.

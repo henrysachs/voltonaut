@@ -4,13 +4,16 @@ import { AuthConfigResponseSchema, MeResponseSchema, ErrorEnvelopeSchema } from 
 import type { TokenFault } from "../testing/oidc-provider.spec.js";
 import { getDatabase, httpServerOf, bodyOf, bearer } from "../testing/test-app.spec.js";
 import { setup, start, handoff, login, noSessions, ORIGIN } from "../testing/oidc-flow.spec.js";
-import { OIDC_HANDOFF_TTL_MS, OIDC_TRANSACTION_TTL_MS } from "./oidc.service.js";
+import { OIDC_HANDOFF_TTL_MS, OIDC_TRANSACTION_TTL_MS } from "./oidc-store.js";
 
 it("completes signed HTTP OIDC without advertised PKCE metadata or mail and reuses stable identity", async () => {
   const context = await setup();
   const server = httpServerOf(context.app);
   const capability = await request(server).get("/v1/auth/config").expect(200);
-  expect(AuthConfigResponseSchema.parse(bodyOf(capability))).toEqual({ mode: "oidc" });
+  expect(AuthConfigResponseSchema.parse(bodyOf(capability))).toEqual({
+    mode: "oidc",
+    providers: [{ id: "test", displayName: "test" }],
+  });
   const first = await login(context);
   context.provider.control.email = "changed@example.com";
   const second = await login(context);
@@ -200,9 +203,11 @@ it("preserves existing account and sessions on email collision without auto-link
   const failed = await request(httpServerOf(context.app))
     .get(flow.callback)
     .set("Cookie", flow.cookie)
-    .expect(409);
+    .expect(302);
 
-  expect(ErrorEnvelopeSchema.parse(bodyOf(failed)).error.code).toBe("identity_conflict");
+  expect(new URL(String(failed.headers["location"])).searchParams.get("error")).toBe(
+    "identity_conflict",
+  );
   const db = getDatabase(context.app);
   expect(db.$client.prepare("SELECT id FROM users").all()).toEqual([{ id: original.user.id }]);
   expect(db.$client.prepare("SELECT * FROM auth_identities").all()).toHaveLength(1);
@@ -245,7 +250,7 @@ it("recovers discovery after failure and rejects discovered remote HTTP endpoint
   const context = await setup();
   context.provider.control.failDiscovery = true;
   const server = httpServerOf(context.app);
-  const failed = await request(server).get("/v1/auth/oidc/start").expect(503);
+  const failed = await request(server).get("/v1/auth/oidc/test/start").expect(503);
   expect(failed.text).not.toContain("private-provider-diagnostic");
   expect(getDatabase(context.app).$client.prepare("SELECT * FROM oidc_transactions").all()).toEqual(
     [],
@@ -265,7 +270,7 @@ it("sets host-bound cookies, fixed redirects, exact credential CORS and rejects 
   expect(flow.setCookie).toContain("HttpOnly; SameSite=Lax");
   expect(flow.setCookie).not.toContain("Domain=");
   const server = httpServerOf(context.app);
-  await request(server).get("/v1/auth/oidc/start?returnTo=https://evil.example").expect(422);
+  await request(server).get("/v1/auth/oidc/test/start?returnTo=https://evil.example").expect(422);
 
   const preflight = await request(server)
     .options("/v1/auth/oidc/exchange")

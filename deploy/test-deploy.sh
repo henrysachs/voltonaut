@@ -11,7 +11,7 @@ export VOLTONAUT_STATE_DIR="$temporary/state" VOLTONAUT_HEALTH_ATTEMPTS=1
 export VOLTONAUT_COMPOSE_FILE="$(dirname "$DEPLOY_SCRIPT")/compose.yaml"
 export VOLTONAUT_ENV_FILE="$temporary/deploy.env"
 unset VOLTONAUT_IMAGE VOLTONAUT_TAG VOLTONAUT_BACKUP_FILE
-unset AUTH_MODE CLIENT_ORIGIN OIDC_ISSUER OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_REDIRECT_URI
+unset AUTH_MODE CLIENT_ORIGIN OIDC_PROVIDERS OIDC_CLOUDFLARE_ISSUER OIDC_CLOUDFLARE_CLIENT_ID OIDC_CLOUDFLARE_CLIENT_SECRET OIDC_CLOUDFLARE_REDIRECT_URI
 unset LITESTREAM_BUCKET LITESTREAM_ENDPOINT LITESTREAM_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY
 cat >"$temporary/base.env" <<ENV
 AUTH_MODE=disabled
@@ -30,18 +30,27 @@ if [ "$1 $2" = 'image inspect' ]; then
 fi
 [ "$1" = compose ]; shift
 options=()
-while [ "$1" != config ] && [ "$1" != up ] && [ "$1" != stop ] && [ "$1" != pull ] && [ "$1" != ps ]; do
+env_file=''
+while [ "$1" != config ] && [ "$1" != up ] && [ "$1" != stop ] && [ "$1" != pull ] && [ "$1" != ps ] \
+  && [ "$1" != run ]; do
+  if [ "$1" = --env-file ]; then env_file="$2"; fi
   options+=("$1"); shift
 done
 if [ "$1" = config ]; then
-  [ "$*" = 'config --images server' ]
+  [ "$*" = 'config --images server' ] || [ "$*" = config ]
   exec "$REAL_DOCKER" compose "${options[@]}" "$@"
 fi
 "$REAL_DOCKER" compose "${options[@]}" config --quiet
 case "$1" in
   up)
     printf '%s' "$VOLTONAUT_TAG" >"$TEST_ROOT/active"
+    # What Compose actually hands to the container, not just what the env file contains.
+    "$REAL_DOCKER" compose "${options[@]}" config >"$TEST_ROOT/active-env"
     [ "${FAIL_UP_TAG:-}" != "$VOLTONAUT_TAG" ]
+    ;;
+  run)
+    [ "$*" = 'run --rm --no-deps -T --label traefik.enable=false server node dist/main.js check-config' ]
+    [ "${INVALID_CONFIG_TAG:-}" != "$VOLTONAUT_TAG" ]
     ;;
   stop) rm -f "$TEST_ROOT/active" ;;
   pull) [ "${OFFLINE_REGISTRY:-false}" != true ] ;;
@@ -52,16 +61,26 @@ cat >"$temporary/bin/curl" <<'COMMAND'
 set -eu
 [ -f "$TEST_ROOT/active" ]
 [ "$(cat "$TEST_ROOT/active")" != "${UNHEALTHY_TAG:-}" ]
+# Optional model of ADR-026, read from the rendered container environment: the pre-ADR release
+# only starts with the single OIDC_* set, every later release only with OIDC_PROVIDERS.
+if [ -n "${LEGACY_RELEASE:-}" ]; then
+  if [ "$(cat "$TEST_ROOT/active")" = "$LEGACY_RELEASE" ]; then
+    grep -Eq '^[[:space:]]+OIDC_ISSUER: [^[:space:]]' "$TEST_ROOT/active-env"
+  else
+    grep -Eq '^[[:space:]]+OIDC_PROVIDERS: [^[:space:]]' "$TEST_ROOT/active-env"
+  fi
+fi
 COMMAND
 printf '#!/usr/bin/env bash\nexit 0\n' >"$temporary/bin/sleep"
 chmod +x "$temporary/bin/"*
 
 reset_state() {
   rm -rf "$VOLTONAUT_STATE_DIR"
-  rm -f "$temporary/active"
+  rm -f "$temporary/active" "$temporary/active-env"
   : >"$temporary/commands"
   cp "$temporary/base.env" "$VOLTONAUT_ENV_FILE"
   unset MISSING_IMAGE UNHEALTHY_TAG FAIL_UP_TAG LOCAL_IMAGE OFFLINE_REGISTRY VOLTONAUT_IMAGE VOLTONAUT_BACKUP_FILE
+  unset INVALID_CONFIG_TAG LEGACY_RELEASE
 }
 
 base_without_backup() {
@@ -95,6 +114,157 @@ optional_backup_requires_credentials() {
   printf '\nLITESTREAM_ENDPOINT=https://storage.example.invalid\nLITESTREAM_BUCKET=release-proof\nLITESTREAM_ACCESS_KEY_ID=release-proof\nLITESTREAM_SECRET_ACCESS_KEY=release-proof\n' >>"$VOLTONAUT_ENV_FILE"
   bash "$DEPLOY_SCRIPT" deploy with-backup >"$temporary/output"
   expect_tag current with-backup
+  reset_state
+}
+
+oidc_env() {
+  printf 'AUTH_MODE=oidc\nCLIENT_ORIGIN=https://voltonaut.stammkneipe.dev\n' >"$VOLTONAUT_ENV_FILE"
+  printf '%s\n' "$@" >>"$VOLTONAUT_ENV_FILE"
+}
+
+legacy_oidc_config_blocks_release() {
+  reset_state
+  oidc_env OIDC_ISSUER=https://login.example.invalid/oidc OIDC_CLIENT_ID=synthetic-client \
+    "OIDC_CLIENT_SECRET=\"legacy-secret-must-not-print\"" \
+    OIDC_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback
+  expect_failure deploy legacy
+  grep -q 'removed single OIDC_\* set' "$temporary/output"
+  grep -q 'provision_env.py migrate' "$temporary/output"
+  if grep -q 'legacy-secret-must-not-print' "$temporary/output"; then
+    echo 'the release check must not print configuration values' >&2
+    return 1
+  fi
+  reset_state
+  oidc_env OIDC_CLOUDFLARE_ISSUER=https://login.example.invalid/oidc
+  expect_failure deploy without-providers
+  grep -q 'requires OIDC_PROVIDERS' "$temporary/output"
+  expect_tag current ''
+  if grep -Eq ' (up|pull|config) ' "$temporary/commands"; then
+    echo 'a legacy OIDC configuration must fail before Compose, pulls or starts' >&2
+    return 1
+  fi
+  reset_state
+  oidc_env 'OIDC_PROVIDERS="cloudflare"' OIDC_CLOUDFLARE_ISSUER=https://login.example.invalid/oidc \
+    OIDC_CLOUDFLARE_CLIENT_ID=synthetic-client OIDC_CLOUDFLARE_CLIENT_SECRET=synthetic-secret \
+    OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback
+  bash "$DEPLOY_SCRIPT" deploy provider-list >"$temporary/output"
+  expect_tag current provider-list
+  echo 'Legacy single-set OIDC configuration is refused before any release step.'
+}
+
+legacy_release_env() {
+  oidc_env OIDC_ISSUER=https://login.example.invalid/oidc OIDC_CLIENT_ID=synthetic-client \
+    OIDC_CLIENT_SECRET=synthetic-secret \
+    OIDC_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback
+}
+
+provider_release_env() {
+  oidc_env 'OIDC_PROVIDERS="cloudflare"' OIDC_CLOUDFLARE_ISSUER=https://login.example.invalid/oidc \
+    OIDC_CLOUDFLARE_CLIENT_ID=synthetic-client OIDC_CLOUDFLARE_CLIENT_SECRET=synthetic-secret \
+    OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback
+}
+
+expect_active() {
+  test "$(cat "$temporary/active")" = "$1"
+  grep -Eq "^[[:space:]]+$2: [^[:space:]]" "$temporary/active-env"
+}
+
+# compose.yaml as shipped before ADR-026: passes the single OIDC_* set through.
+legacy_compose() {
+  sed '/OIDC_/d' "$(dirname "$DEPLOY_SCRIPT")/compose.yaml" | sed '/CORS_ORIGINS:/a\
+      OIDC_ISSUER: ${OIDC_ISSUER:-}\
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}\
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}\
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}' >"$1"
+}
+
+adr025_transition_keeps_a_working_rollback() {
+  local snapshots="$VOLTONAUT_STATE_DIR/config" live="$temporary/live" shipped="$VOLTONAUT_COMPOSE_FILE"
+  reset_state
+  mkdir -p "$live" "$VOLTONAUT_STATE_DIR"
+  legacy_compose "$temporary/legacy-compose.yaml"
+  grep -q 'OIDC_ISSUER: ' "$temporary/legacy-compose.yaml"
+  export LEGACY_RELEASE=legacy VOLTONAUT_COMPOSE_FILE="$live/compose.yaml"
+  # A release started by the previous deploy.sh with the previous compose.yaml and deploy.env.
+  cp "$temporary/legacy-compose.yaml" "$live/compose.yaml"
+  legacy_release_env
+  printf legacy >"$VOLTONAUT_STATE_DIR/current-tag"
+  printf legacy >"$temporary/active"
+  VOLTONAUT_TAG=legacy "$REAL_DOCKER" compose --project-directory "$live" --env-file "$VOLTONAUT_ENV_FILE" \
+    -f "$live/compose.yaml" config >"$temporary/active-env"
+  expect_active legacy OIDC_ISSUER
+
+  # An early main deploy ships the new compose.yaml first; the guard keeps the old container.
+  cp "$shipped" "$live/compose.yaml"
+  expect_failure deploy new
+  grep -q 'removed single OIDC_\* set' "$temporary/output"
+  expect_active legacy OIDC_ISSUER
+  # That shipped file would not pass the old settings: snapshot refuses the inconsistent pair.
+  expect_failure snapshot
+  grep -q 'does not pass the OIDC settings' "$temporary/output"
+  test ! -e "$snapshots/legacy"
+  bash "$DEPLOY_SCRIPT" snapshot "$temporary/legacy-compose.yaml" >"$temporary/output"
+  cmp -s "$temporary/legacy-compose.yaml" "$snapshots/legacy/compose.yaml"
+  test "$(stat -c %a "$snapshots/legacy")" = 700
+  test "$(stat -c %a "$snapshots/legacy/deploy.env")" = 600
+  test "$(stat -c %a "$snapshots/legacy/compose.yaml")" = 600
+  provider_release_env
+
+  export INVALID_CONFIG_TAG=new
+  expect_failure deploy new
+  grep -q 'rejected its configuration before the switch' "$temporary/output"
+  if grep -Eq '^new\|.* up ' "$temporary/commands"; then
+    echo 'a rejected configuration must not replace the running release' >&2
+    return 1
+  fi
+  expect_active legacy OIDC_ISSUER
+  expect_tag current legacy
+  unset INVALID_CONFIG_TAG
+
+  export UNHEALTHY_TAG=new
+  expect_failure deploy new
+  if grep -q 'recovery failed' "$temporary/output"; then
+    echo 'the previous release must recover with its own saved configuration' >&2
+    return 1
+  fi
+  expect_active legacy OIDC_ISSUER
+  expect_tag current legacy
+  unset UNHEALTHY_TAG
+
+  bash "$DEPLOY_SCRIPT" deploy new >"$temporary/output"
+  expect_active new OIDC_PROVIDERS
+  expect_tag current new
+  expect_tag previous legacy
+  bash "$DEPLOY_SCRIPT" rollback >"$temporary/output"
+  expect_active legacy OIDC_ISSUER
+  expect_tag current legacy
+  grep -q '^OIDC_PROVIDERS=' "$VOLTONAUT_ENV_FILE"
+  bash "$DEPLOY_SCRIPT" rollback >"$temporary/output"
+  expect_active new OIDC_PROVIDERS
+  expect_tag current new
+
+  bash "$DEPLOY_SCRIPT" deploy third >"$temporary/output"
+  test "$(ls "$snapshots" | tr '\n' ' ')" = 'new third '
+  export VOLTONAUT_COMPOSE_FILE="$shipped"
+  reset_state
+  echo 'ADR-026 transition validates before the switch and recovers the previous release with its configuration.'
+}
+
+deploy_requires_saved_configuration_of_running_release() {
+  reset_state
+  provider_release_env
+  mkdir -p "$VOLTONAUT_STATE_DIR"
+  printf unsaved >"$VOLTONAUT_STATE_DIR/current-tag"
+  expect_failure deploy next
+  grep -q 'no saved configuration for the running release unsaved' "$temporary/output"
+  if grep -Eq ' (up|pull|run) ' "$temporary/commands"; then
+    echo 'a deploy without a recoverable running release must stop before any release step' >&2
+    return 1
+  fi
+  bash "$DEPLOY_SCRIPT" snapshot >"$temporary/output"
+  bash "$DEPLOY_SCRIPT" deploy next >"$temporary/output"
+  expect_tag current next
+  expect_tag previous unsaved
   reset_state
 }
 
@@ -214,4 +384,7 @@ if grep -Eq 'remove-orphans| down|prune|volume rm' "$temporary/commands"; then
   exit 1
 fi
 selects_local_image
+legacy_oidc_config_blocks_release
+adr025_transition_keeps_a_working_rollback
+deploy_requires_saved_configuration_of_running_release
 echo 'Release command tests passed. Pull tag, health commit, recovery, rollback, preserved data.'

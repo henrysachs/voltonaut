@@ -1,4 +1,4 @@
-# ADR-025 – Trainerwirkung von Spaß-Modus-Items
+# ADR-027 – Trainerwirkung von Spaß-Modus-Items
 
 - **Status:** Vorgeschlagen für Phase 1 von E9-01. Phase 2 (Malus) benötigt Henrys Freigabe.
 - **Bezug:** Issue #45, Spec E9-01, AGENTS.md §3.9, Issue #84 (getrennte normale Power-ups).

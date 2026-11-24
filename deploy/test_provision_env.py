@@ -13,15 +13,20 @@ import unittest
 import provision_env as provision
 
 
-def config(secret: str = "synthetic-only") -> provision.Config:
-    return provision.parse_config({
+def secret_input(secret: str = "synthetic-only") -> dict[str, str]:
+    """The workflow's input format: GitHub secret names plus fixed public values."""
+    return {
         "AUTH_MODE": "oidc",
         "CLIENT_ORIGIN": "https://voltonaut.stammkneipe.dev",
-        "OIDC_REDIRECT_URI": "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback",
+        "OIDC_REDIRECT_URI": "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback",
         "OIDC_ISSUER": "https://login.example.com/oidc",
         "OIDC_CLIENT_ID": "synthetic-client",
         "OIDC_CLIENT_SECRET": secret,
-    })
+    }
+
+
+def config(secret: str = "synthetic-only") -> provision.Config:
+    return provision.parse_config(secret_input(secret))
 
 
 class WriterTests(unittest.TestCase):
@@ -152,7 +157,7 @@ sys.exit(2)
 
 class ValidationTests(unittest.TestCase):
     def test_exact_schema_and_nonempty_strings(self):
-        valid = config().values()
+        valid = secret_input()
         for key in valid:
             for value in (None, 42, False, [], {}, "", " \t", "a\rb", "a\nb", "a\0b"):
                 with self.subTest(key=key, kind=type(value).__name__):
@@ -177,10 +182,48 @@ class ValidationTests(unittest.TestCase):
                        "https://login.example.com\\elsewhere", "https://login example.com",
                        "https://invalid.", "https://127.0.0.2", "https://0.0.0.0"):
             with self.subTest(issuer=issuer), self.assertRaises(provision.ProvisionError):
-                provision.parse_config({**config().values(), "OIDC_ISSUER": issuer})
+                provision.parse_config({**secret_input(), "OIDC_ISSUER": issuer})
         for secret in ("changeme", "replace-me", "placeholder", "your-client-secret"):
             with self.assertRaises(provision.ProvisionError):
                 config(secret)
+
+    def test_writes_the_server_provider_list_format(self):
+        self.assertEqual(config().values(), {
+            "AUTH_MODE": "oidc",
+            "CLIENT_ORIGIN": "https://voltonaut.stammkneipe.dev",
+            "OIDC_PROVIDERS": "cloudflare",
+            "OIDC_CLOUDFLARE_REDIRECT_URI":
+                "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback",
+            "OIDC_CLOUDFLARE_ISSUER": "https://login.example.com/oidc",
+            "OIDC_CLOUDFLARE_CLIENT_ID": "synthetic-client",
+            "OIDC_CLOUDFLARE_CLIENT_SECRET": "synthetic-only",
+        })
+        self.assertEqual(tuple(config().values()), provision.WRITTEN_KEYS)
+
+    def test_written_payload_has_exact_schema(self):
+        valid = config().values()
+        for key in valid:
+            for value in (None, 42, "", " \t", "a\nb"):
+                with self.subTest(key=key, value=value), self.assertRaises(provision.ProvisionError):
+                    provision.parse_payload(json.dumps({**valid, key: value}).encode())
+            missing = valid.copy()
+            del missing[key]
+            with self.subTest(missing=key), self.assertRaises(provision.ProvisionError):
+                provision.parse_payload(json.dumps(missing).encode())
+        for invalid in ({**valid, "OIDC_PROVIDERS": "cloudflare,authentik"},
+                        {**valid, "OIDC_PROVIDERS": "authentik"},
+                        {**valid, "OIDC_CLOUDFLARE_REDIRECT_URI":
+                            "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"},
+                        {**valid, "OIDC_ISSUER": "https://login.example.com/oidc"},
+                        secret_input()):
+            with self.subTest(invalid=sorted(invalid)), self.assertRaises(provision.ProvisionError):
+                provision.parse_payload(json.dumps(invalid).encode())
+
+    def test_legacy_single_set_redirect_uri_is_rejected_as_input(self):
+        legacy = {**secret_input(), "OIDC_REDIRECT_URI":
+                  "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"}
+        with self.assertRaises(provision.ProvisionError):
+            provision.parse_config(legacy)
 
     def test_bounded_json_and_duplicate_fields(self):
         for payload in (b"{", b"\xff", b"[]", b" " * (provision.MAX_PAYLOAD_BYTES + 1),
@@ -200,6 +243,75 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, b"")
         self.assertEqual(completed.stderr, b"provisioning failed\n")
+
+
+def legacy_values(secret: str = "synthetic-only") -> dict[str, str]:
+    """The exact deploy.env this provisioner wrote before ADR-026."""
+    return {**secret_input(secret), "OIDC_REDIRECT_URI": provision.LEGACY_REDIRECT_URI}
+
+
+class MigrationTests(unittest.TestCase):
+    def write(self, directory: str, values: dict[str, str]) -> Path:
+        path = Path(directory) / "deploy.env"
+        path.write_bytes(provision.render_values(values))
+        path.chmod(0o600)
+        return path
+
+    def test_migrates_the_legacy_file_once_and_keeps_a_private_backup(self):
+        for secret in ("x", " $'\"\\Grüße\t ", "${DO_NOT_EXPAND}$USER$$"):
+            with self.subTest(secret=secret), tempfile.TemporaryDirectory() as directory:
+                path = self.write(directory, legacy_values(secret))
+                original = path.read_bytes()
+                self.assertEqual(provision.migrate_legacy(path), provision.Result.MIGRATED)
+                self.assertEqual(provision.private_values(path), config(secret).values())
+                backup = path.with_name("deploy.env.legacy")
+                self.assertEqual(backup.read_bytes(), original)
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+                self.assertEqual(stat.S_IMODE(backup.stat().st_mode), 0o600)
+                self.assertEqual(provision.migrate_legacy(path), provision.Result.UNCHANGED)
+                self.assertEqual(backup.read_bytes(), original)
+                self.assertEqual(sorted(p.name for p in Path(directory).iterdir()),
+                                 ["deploy.env", "deploy.env.legacy"])
+
+    def test_rejects_anything_but_the_exact_legacy_file_without_changes(self):
+        invalid = (
+            {**legacy_values(), "LITESTREAM_BUCKET": "synthetic"},
+            {**legacy_values(), "OIDC_REDIRECT_URI": provision.REDIRECT_URI},
+            {**legacy_values(), "OIDC_ISSUER": "http://login.example.com"},
+            {**legacy_values(), "AUTH_MODE": "disabled"},
+            legacy_values("changeme"),
+            {key: value for key, value in legacy_values().items() if key != "OIDC_CLIENT_ID"},
+            {**config().values(), "OIDC_PROVIDERS": "cloudflare,authentik"},
+        )
+        for values in invalid:
+            with self.subTest(keys=sorted(values)), tempfile.TemporaryDirectory() as directory:
+                path = self.write(directory, values)
+                original = path.read_bytes()
+                with self.assertRaises(provision.ProvisionError):
+                    provision.migrate_legacy(path)
+                self.assertEqual(path.read_bytes(), original)
+                self.assertEqual([p.name for p in Path(directory).iterdir()], ["deploy.env"])
+
+    def test_never_replaces_an_existing_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write(directory, legacy_values())
+            original = path.read_bytes()
+            backup = path.with_name("deploy.env.legacy")
+            backup.write_bytes(b"earlier")
+            with self.assertRaises(provision.ProvisionError):
+                provision.migrate_legacy(path)
+            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual(backup.read_bytes(), b"earlier")
+            self.assertEqual(sorted(p.name for p in Path(directory).iterdir()),
+                             ["deploy.env", "deploy.env.legacy"])
+
+    def test_rejects_unsafe_existing_file_modes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write(directory, legacy_values())
+            path.chmod(0o644)
+            with self.assertRaises(provision.ProvisionError):
+                provision.migrate_legacy(path)
+            self.assertEqual([p.name for p in Path(directory).iterdir()], ["deploy.env"])
 
 
 class FakeRunner:
