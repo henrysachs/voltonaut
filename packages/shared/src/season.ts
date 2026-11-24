@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { RewardFactsSchema } from "./rewards.js";
+
 const DAY_MS = 86_400_000;
 
 /** Season length bounds from issue #44: 8 to 12 weeks. */
@@ -9,13 +11,9 @@ export const SEASON_MIN_TIERS = 20;
 
 export const SeasonIdSchema = z.string().regex(/^season-\d{2}$/u);
 
-export const SeasonPointsSchema = z
-  .number()
-  .finite()
-  .int()
-  .min(0)
-  .max(Number.MAX_SAFE_INTEGER)
-  .brand<"SeasonPoints">();
+const seasonPointsValue = z.number().finite().int().min(0).max(Number.MAX_SAFE_INTEGER);
+
+export const SeasonPointsSchema = seasonPointsValue.brand<"SeasonPoints">();
 
 export const SeasonRewardSchema = z.union([
   z
@@ -31,7 +29,7 @@ export const SeasonRewardSchema = z.union([
 export const SeasonTierSchema = z
   .object({
     tier: z.number().finite().int().min(1),
-    pointsRequired: SeasonPointsSchema,
+    pointsRequired: seasonPointsValue,
     rewards: z.array(SeasonRewardSchema).min(1).readonly(),
   })
   .strict()
@@ -92,6 +90,23 @@ export const SeasonDefinitionSchema = z
   .strict()
   .superRefine(validateSeason)
   .readonly();
+
+/** Millisecond timestamp; rules receive time explicitly instead of reading a clock. */
+export const EpochMsSchema = z.number().finite().int().min(0).max(8_640_000_000_000_000);
+
+/** One confirmed ride section: cumulative ride facts before and after it, and when it was ridden. */
+export const SeasonSectionSchema = z
+  .object({
+    season: SeasonDefinitionSchema,
+    currentPoints: SeasonPointsSchema,
+    before: RewardFactsSchema.optional(),
+    after: RewardFactsSchema,
+    sectionAtMs: EpochMsSchema,
+  })
+  .strict()
+  .readonly();
+
+export type SeasonSection = z.input<typeof SeasonSectionSchema>;
 
 export type SeasonPoints = z.infer<typeof SeasonPointsSchema>;
 
