@@ -1,18 +1,18 @@
 import {
   RiderProfileSchema,
   type DeviceEvent,
+  type NativeTickFacts,
   type RideEvent,
+  type RideProgressCheckpoint,
   type RiderProfile,
   type TrainerCommand,
 } from "@voltonaut/shared";
+import { createEngine, createRoute, TEST_ROUTES, type Engine } from "@voltonaut/engine";
 import {
-  createEngine,
-  createRoute,
-  TEST_ROUTES,
-  type Engine,
-  type RideSnapshot,
-} from "@voltonaut/engine";
-
+  createEngineWorkerProgress,
+  projectEngineWorkerProgress,
+  type EngineWorkerProgress,
+} from "./engineWorkerProgress.js";
 import { createRideRecorder, type RideRecorder } from "./rideRecorder.js";
 import type { CaptureCommand, CaptureResult, CaptureView } from "./rideCaptureProtocol.js";
 import { isNewCaptureRequest } from "./rideCaptureProtocol.js";
@@ -39,10 +39,11 @@ export type EngineWorkerResponse =
   | {
       readonly type: "engine.update";
       readonly actorId: string;
-      readonly snapshot: RideSnapshot;
+      readonly snapshot: ReturnType<Engine["snapshot"]>;
       readonly events: readonly RideEvent[];
       readonly commands: readonly TrainerCommand[];
       readonly recording: CaptureView;
+      readonly progress?: RideProgressCheckpoint | undefined;
     }
   | {
       readonly type: "recording.reply";
@@ -70,6 +71,7 @@ interface Actor {
   readonly actorId: string;
   readonly engine: Engine;
   readonly recorder: RideRecorder;
+  readonly progress: EngineWorkerProgress;
   readonly clockScale: number;
   lastWakeMs: number | undefined;
   lastRequestId: number;
@@ -80,6 +82,7 @@ function initializeActor(
   message: Extract<EngineWorkerRequest, { readonly type: "engine.init" }>,
   initializedWorkerMs: number,
   timeOriginMs: number,
+  newId: () => string,
 ): Actor {
   const routeData = TEST_ROUTES[message.routeId];
 
@@ -89,6 +92,8 @@ function initializeActor(
     throw new Error("Invalid engine clock scale");
   const profile = RiderProfileSchema.parse(message.profile);
   const engine = createEngine({ route: createRoute(routeData), profile });
+
+  const progress = createEngineWorkerProgress({ ...message, profile, newId });
 
   const recorder = createRideRecorder({
     initializedAt: new Date(timeOriginMs + initializedWorkerMs).toISOString(),
@@ -108,6 +113,7 @@ function initializeActor(
     actorId: message.actorId,
     engine,
     recorder,
+    progress,
     clockScale: message.clockScale,
     lastWakeMs: undefined,
     lastRequestId: 0,
@@ -124,12 +130,28 @@ class WorkerDriver {
     private readonly schedule: ScheduleInterval,
     private readonly cancel: CancelInterval,
     private readonly timeOriginMs: number,
+    private readonly newId: () => string,
   ) {}
 
-  private update(actor: Readonly<Actor>, atMs: number): void {
+  private update(
+    actor: Readonly<Actor>,
+    atMs: number,
+    startedAtMs: number | undefined,
+    facts: readonly NativeTickFacts[],
+  ): void {
     const snapshot = actor.engine.snapshot();
     const events = actor.engine.drainEvents();
     const commands = actor.engine.drainCommands();
+
+    const progress = projectEngineWorkerProgress(actor.progress, {
+      startedAtMs,
+      endedAtMs: atMs,
+      facts,
+      paused: snapshot.paused,
+      dataAgeS: snapshot.dataAgeS,
+      clockSkipped: events.some((event) => event.type === "ride.clockSkipped"),
+    });
+
     actor.recorder.outputs(events, commands);
     actor.recorder.sample(atMs, snapshot);
     this.post({
@@ -139,6 +161,7 @@ class WorkerDriver {
       events,
       commands,
       recording: actor.recorder.view(atMs),
+      progress,
     });
   }
 
@@ -160,11 +183,14 @@ class WorkerDriver {
       return;
     }
 
-    const elapsedRealS = (atMs - actor.lastWakeMs) / 1000;
+    const previousWakeMs = actor.lastWakeMs;
+    const elapsedRealS = (atMs - previousWakeMs) / 1000;
     actor.lastWakeMs = atMs;
     actor.recorder.advance(atMs, elapsedRealS);
-    actor.engine.advance(elapsedRealS * actor.clockScale);
-    this.update(actor, atMs);
+
+    const facts = actor.engine.advance(elapsedRealS * actor.clockScale);
+
+    this.update(actor, atMs, previousWakeMs, facts);
   };
 
   private init(message: Extract<EngineWorkerRequest, { readonly type: "engine.init" }>): void {
@@ -180,11 +206,10 @@ class WorkerDriver {
 
     try {
       const initializedWorkerMs = this.nowMs();
-      const actor = initializeActor(message, initializedWorkerMs, this.timeOriginMs);
-
+      const actor = initializeActor(message, initializedWorkerMs, this.timeOriginMs, this.newId);
       this.actor = actor;
       actor.intervalId = this.schedule(this.wake, WAKE_INTERVAL_MS);
-      this.update(actor, initializedWorkerMs);
+      this.update(actor, initializedWorkerMs, undefined, []);
     } catch (cause) {
       this.post({
         type: "engine.initFailed",
@@ -266,8 +291,9 @@ export function bindEngineWorker(
   schedule: ScheduleInterval,
   cancel: CancelInterval,
   timeOriginMs = 0,
+  newId: () => string = () => crypto.randomUUID(),
 ): void {
-  const driver = new WorkerDriver(scope, nowMs, schedule, cancel, timeOriginMs);
+  const driver = new WorkerDriver(scope, nowMs, schedule, cancel, timeOriginMs, newId);
   scope.addEventListener("message", (event) => {
     driver.handle(event.data);
   });

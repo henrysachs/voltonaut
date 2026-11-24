@@ -47,7 +47,7 @@ function createWorkerPort(): EngineWorkerPort {
 
 export function createRideSession(
   routeId: string,
-  callbacks: Pick<EngineLinkCallbacks, "onCommands" | "onSnapshot">,
+  callbacks: Pick<EngineLinkCallbacks, "onCommands" | "onSnapshot" | "onProgress">,
   newPort: () => EngineWorkerPort = createWorkerPort,
 ) {
   const route = TEST_ROUTES[routeId];

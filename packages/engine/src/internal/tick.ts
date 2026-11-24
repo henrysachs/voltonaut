@@ -1,4 +1,11 @@
-import type { Meters, RideEvent, Seconds, TickInputs, TrainerCommand } from "@voltonaut/shared";
+import type {
+  Meters,
+  NativeTickFacts,
+  RideEvent,
+  Seconds,
+  TickInputs,
+  TrainerCommand,
+} from "@voltonaut/shared";
 
 import type { EngineRoute } from "../elevation/route.js";
 import { advanceSpeedMps } from "../physics/integrate.js";
@@ -15,15 +22,6 @@ export interface EngineContext {
   readonly gearRatios: readonly number[];
   readonly physicalRatio: number;
   readonly trainerMassKg: number;
-}
-
-export interface NativeTickFacts {
-  readonly powerW: number;
-  readonly cadenceRpm: number;
-  readonly timeS: Seconds;
-  readonly distanceM: Meters;
-  readonly elevationGainM: Meters;
-  readonly energyKj: number;
 }
 
 interface TickContributions {

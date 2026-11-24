@@ -1,4 +1,10 @@
-import type { DeviceEvent, RideEvent, RiderProfile, TrainerCommand } from "@voltonaut/shared";
+import type {
+  DeviceEvent,
+  RideEvent,
+  RideProgressCheckpoint,
+  RiderProfile,
+  TrainerCommand,
+} from "@voltonaut/shared";
 import type { RideSnapshot } from "@voltonaut/engine";
 
 import type { EngineWorkerRequest, EngineWorkerResponse } from "./engineWorkerCore.js";
@@ -19,6 +25,7 @@ export interface EngineLinkCallbacks {
   readonly onSnapshot?: (snapshot: RideSnapshot) => void;
   readonly onEvents?: (events: readonly RideEvent[]) => void;
   readonly onCommands?: (commands: readonly TrainerCommand[]) => void;
+  readonly onProgress?: (checkpoint: RideProgressCheckpoint | undefined) => void;
   readonly onInitFailed?: (message: string) => void;
 }
 
@@ -109,6 +116,7 @@ class WorkerLink implements EngineLink {
     this.callbacks.onSnapshot?.(message.snapshot);
     this.callbacks.onEvents?.(message.events);
     this.callbacks.onCommands?.(message.commands);
+    this.callbacks.onProgress?.(message.progress);
   }
 
   init(options: EngineLinkInit): void {

@@ -28,6 +28,10 @@ Ab E3 läuft die Engine im Dedicated Web Worker (ADR-011, Freigabe ausstehend). 
 
 [E6-03](specs/E6-03-native-ride-facts.md) gibt zusätzlich zu jedem tatsächlich verarbeiteten Tick `NativeTickFacts` zurück. Die Werte enthalten effektive Rohleistung und Rohkadenz nach Frischeprüfung sowie die lokalen Beiträge zu Zeit, Strecke, positiver Höhe und mechanischer Arbeit. Pausierte Ticks haben vier Nullbeiträge. Das äußere Array und jeder Eintrag sind eingefroren. Die Fakten ändern weder Advancepartition noch Snapshots, Events oder Trainerkommandos. Sie sind keine Quellenfreigabe und keine Belohnungsbuchung.
 
+[E6-04](specs/E6-04-ride-progress-journal.md) definiert diesen Typ gemeinsam in `packages/shared`; die Engine exportiert denselben Vertrag. Der Worker projiziert die Fakten genau einmal je regulärem Wake in unveränderliche, auf 120 Fakten begrenzte Checkpoints. Vorherige und aktuelle Wake-Zeit, Quelle, Takt, Revisionen, enge Physikparameter sowie Pause, Datenalter und Zeitlücken gehören dazu. Leistung und Kadenz haben keine Protokoll- oder Reward-Obergrenze; berechnete CPS-Kadenz kann größer als der FTMS-Wertebereich sein. Pulsdaten bleiben außen vor. Der Projector speichert nichts, entscheidet keine Quellen- oder Belohnungsfreigabe und verändert die bestehende Aufnahme nicht.
+
+Die Checkpoint-Qualität ist der terminale Batch-Zustand. Pausierte Ticks haben faktisch `timeS === 0`; `timeS`, `distanceM`, `elevationGainM` und `energyKj` sind null. Bei konstanten Eingaben je Advance bedeutet terminales `paused: false`, dass der Batch keine pausierten Ticks enthält. Finales `dataAgeS` plus Faktenzahl rekonstruiert den einzigen Frischewechsel, weil frische Trainerdaten nur im ersten Tick eines Advances zurücksetzen und danach jeder Tick 0,05 s addiert. `clockSkipped` gilt für den ganzen Batch, sobald ein abgeleientes `ride.clockSkipped` vorliegt.
+
 ## 2. Physikmodell (virtuelles Tempo aus Leistung)
 
 Kräfte am Rad (θ = atan(grade/100)):

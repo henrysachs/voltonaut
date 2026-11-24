@@ -1,7 +1,12 @@
 import { expect, it } from "vitest";
 import { createEngine, createRoute, FLAT_LOOP } from "@voltonaut/engine";
-import { DEFAULT_RIDER_PROFILE, type CapturedRide } from "@voltonaut/shared";
+import {
+  DEFAULT_RIDER_PROFILE,
+  type CapturedRide,
+  type RideProgressCheckpoint,
+} from "@voltonaut/shared";
 
+import type { EngineWorkerResponse } from "./engineWorkerCore.js";
 import type { EngineLink } from "./engine-link.js";
 import { createEngineLink } from "./engine-link.js";
 import { localRide } from "../sync/testdata/localRide.js";
@@ -11,6 +16,26 @@ import { createFakePort } from "./testdata/enginePort.js";
 const profile = DEFAULT_RIDER_PROFILE;
 const snapshot = createEngine({ route: createRoute(FLAT_LOOP), profile }).snapshot();
 const idle = { kind: "idle", availability: { kind: "journal" } } satisfies CaptureView;
+
+const progress = {
+  schemaVersion: 1,
+  journalId: "550e8400-e29b-41d4-a716-446655440000",
+  sequence: 0,
+  startTick: 0,
+  endTick: 1,
+  startedAtMs: 0,
+  endedAtMs: 50,
+  source: "sim",
+  clockScale: 1,
+  physicsRevision: "engine-v1",
+  routeId: "test-loop",
+  routeRevision: "1",
+  physics: { massKg: 75, bikeMassKg: 8, cdaM2: 0.32, crr: 0.004, wheelCircM: 2.105 },
+  facts: [
+    { powerW: 200, cadenceRpm: 90, timeS: 0.05, distanceM: 1, elevationGainM: 0, energyKj: 0.01 },
+  ],
+  quality: { paused: false, dataAgeS: 0, clockSkipped: false },
+} satisfies RideProgressCheckpoint;
 
 const recording = {
   kind: "recording",
@@ -134,6 +159,51 @@ it("delivers snapshot before commands on every update, including empty command a
   await start;
   expect(calls).toEqual(["snapshot", "events", "commands:0", "snapshot", "events", "commands:0"]);
   expect(observed).toEqual([0, 2]);
+});
+
+it("delivers undefined and real progress after the existing callbacks", () => {
+  const fake = createFakePort();
+  const calls: string[] = [];
+  const seen: (RideProgressCheckpoint | undefined)[] = [];
+
+  const link = createEngineLink(
+    fake.port,
+    {
+      onSnapshot: () => {
+        calls.push("snapshot");
+      },
+      onEvents: () => {
+        calls.push("events");
+      },
+      onCommands: () => {
+        calls.push("commands");
+      },
+      onProgress: (checkpoint) => {
+        calls.push("progress");
+        seen.push(checkpoint);
+      },
+    },
+    () => "actor",
+  );
+
+  const update = {
+    type: "engine.update",
+    actorId: "actor",
+    snapshot,
+    events: [],
+    commands: [],
+    recording: idle,
+  } satisfies EngineWorkerResponse;
+
+  link.init({ source: "sim", routeId: "test-loop", profile });
+  fake.deliver(update);
+  fake.deliver({ ...update, progress: undefined });
+  fake.deliver({ ...update, progress });
+
+  expect(seen).toEqual([undefined, undefined, progress]);
+  expect(calls).toEqual(
+    Array.from({ length: 3 }, () => ["snapshot", "events", "commands", "progress"]).flat(),
+  );
 });
 
 it("correlates recording acknowledgements and ignores duplicate and late replies", async () => {
