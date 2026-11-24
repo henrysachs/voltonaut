@@ -142,7 +142,19 @@ Das Browserkonto aus E5-08 verwendet `VITE_API_ORIGIN` als validierte Origin ohn
 
 `AUTH_MODE` ist in Produktion Pflicht. Erlaubt sind `disabled`, `oidc`, `magic-link`. Nur Entwicklung und Test verwenden ohne Angabe weiter den bisherigen Magic Link. OIDC und Disabled erstellen keinen Mailtransport; beide lehnen Legacy-Loginendpunkte ab. Expliziter Legacy-Produktionsbetrieb verlangt weiterhin einen echten Mailprovider und dessen Zugangsdaten.
 
-OIDC benötigt `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI` und den festen `CLIENT_ORIGIN`. Der Callbackpfad ist `/v1/auth/oidc/callback`, ohne Query oder Fragment. Produktion verlangt HTTPS. HTTP ist nur in Entwicklung und Test für Loopback zulässig, auch bei entdeckten Anbieterendpunkten. Keine Zugangsdatenwerte im Repo. Die Anwendung liest die Konfiguration, nicht GitHub-Secrets direkt.
+OIDC benötigt `OIDC_PROVIDERS` (Liste der Provider-IDs, ADR-025), je Provider `OIDC_<ID>_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET`, `_REDIRECT_URI` sowie den festen `CLIENT_ORIGIN`. Optional je Provider: `_DISPLAY_NAME`, `_SCOPES` (Standard `openid email`), `_REQUIRE_EMAIL_VERIFIED` (Standard `true`), `_ID_TOKEN_ALG` (Standard `RS256`). Der Callbackpfad ist `/v1/auth/oidc/<id>/callback`, ohne Query oder Fragment, pro Provider exakt registriert. Produktion verlangt HTTPS. HTTP ist nur in Entwicklung und Test für Loopback zulässig, auch bei entdeckten Anbieterendpunkten. Ein fehlerhafter Providereintrag lässt den Start scheitern. Keine Zugangsdatenwerte im Repo. Die Anwendung liest die Konfiguration, nicht GitHub-Secrets direkt.
+
+Ohne bestätigte E-Mail (`email_verified !== true`) legt ein Provider mit `requireEmailVerified` kein Konto an; der Browser landet auf `/auth/finish?error=email_not_verified`. Das gilt ebenso für `identity_conflict`.
+
+#### authentik einrichten
+
+1. In authentik einen **OAuth2/OpenID-Provider** samt Anwendung anlegen. Client-Typ _confidential_; Client-ID und Secret notieren.
+2. **Redirect-URI** exakt eintragen (Modus _Strict_, keine Wildcards): `https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/authentik/callback`.
+3. **Signing Key** setzen, z. B. das Self-signed Certificate. Ohne Schlüssel signiert authentik mit HS256, der Server erwartet RS256 (oder per `_ID_TOKEN_ALG` ES256/PS256/EdDSA).
+4. **Subject-Modus:** gehashte Benutzer-ID oder UUID. Nicht Benutzername oder E-Mail, sonst verliert ein Nutzer bei Umbenennung sein Konto.
+5. **`email_verified`:** Seit authentik 2025.10 ist der Standardwert `false`. Ein eigenes Scope-Mapping für `email` mit `email_verified: True` anlegen (nur wenn authentik die Adressen wirklich prüft) und dem Provider zuordnen; sonst wird der Login abgelehnt.
+6. **Issuer** exakt kopieren, mit Slash am Ende: `https://<host>/application/o/<slug>/`. Der Issuer-Check vergleicht zeichengenau.
+7. Wer sich anmelden darf, steuert die Policy der authentik-Anwendung (Gruppen werden von Voltonaut nicht ausgewertet).
 
 Im OIDC-Modus enthält `CORS_ORIGINS` genau `CLIENT_ORIGIN`. CORS erlaubt Credentials. Web und API müssen dieselbe Site verwenden; lokal wird derselbe Loopback-Hostname verwendet. Das hostgebundene HttpOnly-Cookie hat `SameSite=Lax`, in Produktion zusätzlich `Secure` und den Namen `__Host-voltonaut-oidc`. Es enthält keine Anwendungssession.
 

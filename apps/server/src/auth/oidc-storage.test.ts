@@ -19,9 +19,11 @@ it("keeps existing legacy owner and session on an OIDC email collision", async (
   const failed = await request(httpServerOf(context.app))
     .get(flow.callback)
     .set("Cookie", flow.cookie)
-    .expect(409);
+    .expect(302);
 
-  expect(ErrorEnvelopeSchema.parse(bodyOf(failed)).error.code).toBe("identity_conflict");
+  expect(new URL(String(failed.headers["location"])).searchParams.get("error")).toBe(
+    "identity_conflict",
+  );
   expect(db.$client.prepare("SELECT id FROM users").all()).toEqual([{ id: userId }]);
   expect(db.$client.prepare("SELECT * FROM auth_identities").all()).toEqual([]);
   await request(httpServerOf(context.app)).get("/v1/me").set(bearer(sessionToken)).expect(200);
@@ -123,7 +125,7 @@ it("cleans expired artifacts in bounded batches and caps outstanding anonymous a
   });
 
   fill();
-  await request(httpServerOf(context.app)).get("/v1/auth/oidc/start").expect(429);
+  await request(httpServerOf(context.app)).get("/v1/auth/oidc/test/start").expect(429);
   expect(context.provider.control.discoveryCalls).toBe(1);
   noSessions(context);
 });
@@ -133,10 +135,10 @@ it("rate limits anonymous starts before adding database rows", async () => {
   const server = httpServerOf(context.app);
 
   await Promise.all(
-    Array.from({ length: 100 }, () => request(server).get("/v1/auth/oidc/start").expect(302)),
+    Array.from({ length: 100 }, () => request(server).get("/v1/auth/oidc/test/start").expect(302)),
   );
 
-  const response = await request(server).get("/v1/auth/oidc/start").expect(429);
+  const response = await request(server).get("/v1/auth/oidc/test/start").expect(429);
   expect(ErrorEnvelopeSchema.parse(bodyOf(response)).error.code).toBe("rate_limited");
   expect(Number(response.headers["retry-after"])).toBeGreaterThan(0);
   expect(

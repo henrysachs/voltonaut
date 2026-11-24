@@ -135,8 +135,14 @@ it.each([1, 2])(
       try {
         const db = getDatabase(app);
 
-        expect(readAuthState(db.$client, migrationCount)).toEqual(authState);
-        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(8);
+        // Migration 0008 only adds the provider column; legacy transactions keep every prior value.
+        expect(readAuthState(db.$client, migrationCount)).toEqual({
+          ...authState,
+          transactions: authState.transactions.map((row) =>
+            Object.assign(z.object({}).passthrough().parse(row), { provider: "" }),
+          ),
+        });
+        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(9);
         assertOwnedForeignKeys(db);
       } finally {
         await app.close();

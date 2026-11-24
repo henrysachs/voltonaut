@@ -18,7 +18,8 @@ it("binds tokenless leases to validated identity/generation/origin and aborts on
   const session = new ApplicationSession({
     transport: {
       me: () => Promise.resolve(user),
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       logout: () => Promise.resolve(),
       exchange: () => Promise.resolve({ user, sessionToken: "s".repeat(43) }),
     },

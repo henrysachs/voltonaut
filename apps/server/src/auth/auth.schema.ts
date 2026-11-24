@@ -54,6 +54,7 @@ export const oidcTransactions = sqliteTable(
   "oidc_transactions",
   {
     stateHash: text("state_hash").primaryKey(),
+    provider: text("provider").notNull().default(""),
     bindingHash: text("binding_hash").notNull(),
     nonce: text("nonce").notNull(),
     verifier: text("verifier").notNull(),

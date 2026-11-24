@@ -1,6 +1,6 @@
 import { ApplicationSession } from "./sync/applicationSession.js";
 import { apiOrigin, CANONICAL_AUTH_ORIGIN, isPreviewOrigin } from "./sync/authOrigin.js";
-import { takeAuthHandoff } from "./sync/authHandoff.js";
+import { handoffErrorText, takeAuthHandoff } from "./sync/authHandoff.js";
 import { authTransport } from "./sync/authTransport.js";
 import { sessionPersistence } from "./sync/sessionPersistence.js";
 import { mountAccountPanel } from "./ui/accountPanel.js";
@@ -40,8 +40,8 @@ export function setupBrowserAccount(
       transport: authTransport(origin),
       privateTransport: privateAuthTransport(origin),
       persistence: sessionPersistence(origin, () => window.localStorage),
-      navigate: () => {
-        window.location.assign(`${origin}/v1/auth/oidc/start`);
+      navigate: (providerId) => {
+        window.location.assign(`${origin}/v1/auth/oidc/${encodeURIComponent(providerId)}/start`);
       },
     });
 
@@ -51,6 +51,7 @@ export function setupBrowserAccount(
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
     else if (handoff.kind === "none") void session.restore();
+    else if (handoff.kind === "error") host?.append(handoffErrorText(handoff.error));
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");
 
     return session;

@@ -30,9 +30,23 @@ export const SessionResponseSchema = z.object({
 
 export type SessionResponse = z.infer<typeof SessionResponseSchema>;
 
+export const OidcProviderChoiceSchema = z
+  .object({
+    id: z.string().regex(/^[a-z][a-z0-9-]{0,31}$/u),
+    displayName: z.string().min(1).max(40),
+  })
+  .strict();
+
+export type OidcProviderChoice = z.infer<typeof OidcProviderChoiceSchema>;
+
 export const AuthConfigResponseSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("disabled") }).strict(),
-  z.object({ mode: z.literal("oidc") }).strict(),
+  z
+    .object({
+      mode: z.literal("oidc"),
+      providers: z.array(OidcProviderChoiceSchema).min(1),
+    })
+    .strict(),
   z.object({ mode: z.literal("magic-link") }).strict(),
 ]);
 
@@ -41,6 +55,11 @@ export type AuthConfigResponse = z.infer<typeof AuthConfigResponseSchema>;
 export const OidcExchangeRequestSchema = z
   .object({ code: z.string().regex(/^[A-Za-z0-9_-]{43}$/u) })
   .strict();
+
+/** Failures the browser callback reports to the client as `/auth/finish?error=<code>`. */
+export const OidcFinishErrorSchema = z.enum(["identity_conflict", "email_not_verified"]);
+
+export type OidcFinishError = z.infer<typeof OidcFinishErrorSchema>;
 
 export type OidcExchangeRequest = z.infer<typeof OidcExchangeRequestSchema>;
 

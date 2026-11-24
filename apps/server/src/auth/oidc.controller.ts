@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Inject,
   Headers,
@@ -46,38 +47,45 @@ export class OidcController {
   @Get("config")
   @Header("Cache-Control", "no-store")
   public capability(): AuthConfigResponse {
-    return { mode: this.config.auth.mode };
+    if (this.config.auth.mode !== "oidc") return { mode: this.config.auth.mode };
+
+    return {
+      mode: "oidc",
+      providers: this.config.auth.providers.map(({ id, displayName }) => ({ id, displayName })),
+    };
   }
 
-  @Get("oidc/start")
+  @Get("oidc/:provider/start")
   @Header("Cache-Control", "no-store")
   @Header("Referrer-Policy", "no-referrer")
   @UseGuards(AuthRateLimitGuard)
   @Throttle({ [SESSION_IP_THROTTLER]: {} })
   @SkipThrottle({ [MAGIC_LINK_EMAIL_THROTTLER]: true, [MAGIC_LINK_IP_THROTTLER]: true })
   public async start(
+    @Param("provider") provider: string,
     @Req() req: { readonly originalUrl: string },
     @Res() res: RedirectResponse,
   ): Promise<void> {
     if (req.originalUrl.includes("?"))
       throw new ApiError(422, "validation_failed", "login start accepts no parameters");
-    const result = await this.oidc.start();
+    const result = await this.oidc.start(provider);
     res.setHeader("Set-Cookie", result.cookie);
     res.redirect(302, result.location);
   }
 
-  @Get("oidc/callback")
+  @Get("oidc/:provider/callback")
   @Header("Cache-Control", "no-store")
   @Header("Referrer-Policy", "no-referrer")
   @UseGuards(AuthRateLimitGuard)
   @Throttle({ [SESSION_IP_THROTTLER]: {} })
   @SkipThrottle({ [MAGIC_LINK_EMAIL_THROTTLER]: true, [MAGIC_LINK_IP_THROTTLER]: true })
   public async callback(
+    @Param("provider") provider: string,
     @Req() req: { readonly originalUrl: string },
     @Headers("cookie") cookie: string | undefined,
     @Res() res: RedirectResponse,
   ): Promise<void> {
-    res.redirect(302, await this.oidc.callback(req.originalUrl, cookie));
+    res.redirect(302, await this.oidc.callback(provider, req.originalUrl, cookie));
   }
 
   @Post("oidc/exchange")

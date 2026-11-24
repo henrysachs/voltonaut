@@ -21,7 +21,9 @@ Die Konfiguration entsteht atomar unter `/srv/voltonaut/deploy.env`, mit Eigent�
 
 Secrets bleiben aus Prozessargumenten, Chat, Logs, Repository, Frontend, Image und CI-Artefakten heraus. Die bestehende lokale Cloudflare-Anmeldung wird nicht nach GitHub kopiert. Werte nicht per `source deploy.env`, `. deploy.env` oder `eval` laden. Docker Compose liest die Datei als Konfiguration, nicht als Shellprogramm.
 
-Die Anwendung verwendet ausdrücklich `AUTH_MODE=oidc`, `CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev` und `OIDC_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback`. Fehlende OIDC-Werte führen zu einem Fehler, nicht zu Disabled oder einem Speicher-Mailer. Ein vorhandener OIDC-Modus belegt noch keinen erfolgreichen persönlichen Anbieterlogin.
+Die Anwendung verwendet ausdrücklich `AUTH_MODE=oidc`, `CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev` und `OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback`. Fehlende OIDC-Werte führen zu einem Fehler, nicht zu Disabled oder einem Speicher-Mailer. Ein vorhandener OIDC-Modus belegt noch keinen erfolgreichen persönlichen Anbieterlogin.
+
+**Umstellung auf Provider-Liste (ADR-025):** Die Server-Konfiguration kennt nur noch `OIDC_PROVIDERS` und `OIDC_<ID>_*` (siehe `deploy.env.example`). Eine bestehende `/srv/voltonaut/deploy.env` mit `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI` muss vor dem Deploy von Hand auf `OIDC_PROVIDERS=cloudflare` und `OIDC_CLOUDFLARE_*` umgestellt werden (gleiche Werte, nur die Redirect-URI wechselt auf `/cloudflare/callback` und muss in der Cloudflare-Access-Anwendung ergänzt werden). `provision_env.py` und der Workflow schreiben noch das alte Format. Neue Secrets für authentik nur nach gesonderter Freigabe.
 
 ## Standarddeploy ohne Backup
 

@@ -110,7 +110,8 @@ export class StravaDeliveryFixture {
       throw new Error("no automatic login");
     },
     transport: {
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       exchange: (code) =>
         Promise.resolve({
           sessionToken: `token-${code}`,
