@@ -2,6 +2,7 @@ import { createEngine, createRoute, TEST_LOOP } from "@voltonaut/engine";
 import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
 import { expect, it } from "vitest";
 
+import { DEFAULT_ENVIRONMENT_SETTINGS, environmentAt } from "./environment.js";
 import { createScheduler, QUALITY_SETTINGS, type RenderSystem } from "./scheduler.js";
 
 const EXPECTED_ORDER = ["environment", "road", "riders", "camera", "debug"];
@@ -10,6 +11,11 @@ const FRAME = {
   ride: createEngine({ route: createRoute(TEST_LOOP), profile: DEFAULT_RIDER_PROFILE }).snapshot(),
   dtS: 0.05,
   alpha: 1,
+  env: environmentAt(
+    DEFAULT_ENVIRONMENT_SETTINGS.seed,
+    DEFAULT_ENVIRONMENT_SETTINGS.startTimeS,
+    DEFAULT_ENVIRONMENT_SETTINGS.script,
+  ),
 };
 
 it("initializes, updates and changes quality in order, then disposes once in reverse", () => {
@@ -96,5 +102,8 @@ it("keeps one explicit monotonic quality table without automatic tuning", () => 
     1, 1.25, 1.5, 2,
   ]);
   expect(QUALITY_SETTINGS.low.shadows).toBe(false);
+  expect(QUALITY_SETTINGS.low.rainDrops).toBe(0);
   expect(QUALITY_SETTINGS.medium.shadows).toBe(true);
+  expect(QUALITY_SETTINGS.medium.rainDrops).toBeLessThan(QUALITY_SETTINGS.high.rainDrops);
+  expect(QUALITY_SETTINGS.high.rainDrops).toBeLessThan(QUALITY_SETTINGS.ultra.rainDrops);
 });
