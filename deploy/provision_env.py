@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 import base64
 import binascii
+import contextlib
 import ipaddress
 import json
 import os
@@ -26,6 +27,9 @@ CLIENT_ORIGIN = "https://voltonaut.stammkneipe.dev"
 PROVIDER_ID = "cloudflare"
 REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback"
 SECRET_KEYS = ("OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET")
+# Format written before ADR-025; only `migrate` still reads it.
+LEGACY_REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"
+LEGACY_KEYS = ("AUTH_MODE", "CLIENT_ORIGIN", "OIDC_REDIRECT_URI", *SECRET_KEYS)
 WRITTEN_KEYS = ("AUTH_MODE", "CLIENT_ORIGIN", "OIDC_PROVIDERS", "OIDC_CLOUDFLARE_REDIRECT_URI",
                 "OIDC_CLOUDFLARE_ISSUER", "OIDC_CLOUDFLARE_CLIENT_ID", "OIDC_CLOUDFLARE_CLIENT_SECRET")
 STRAVA_TARGET = Path("/srv/voltonaut/strava.env")
@@ -40,6 +44,7 @@ class ProvisionError(Exception):
 class Result(Enum):
     CREATED = "created"
     UNCHANGED = "unchanged"
+    MIGRATED = "migrated"
 
 
 class EnvironmentValues(Protocol):
@@ -326,6 +331,45 @@ def write_config(path: Path, config: EnvironmentValues) -> Result:
         os.close(directory_fd)
 
 
+def migrate_legacy(path: Path) -> Result:
+    """Rewrites a provisioned single-set deploy.env into the provider-list format.
+
+    Only the exact file this provisioner wrote before ADR-025 is accepted. The values stay the
+    same; only the redirect URI moves to the provider route. The previous file is kept as
+    `<name>.legacy` (same owner and mode) and an existing backup is never replaced.
+    """
+    values = private_values(path)
+    if set(values) == set(WRITTEN_KEYS):
+        parse_written(values)
+        return Result.UNCHANGED
+    if set(values) != set(LEGACY_KEYS) or values["OIDC_REDIRECT_URI"] != LEGACY_REDIRECT_URI:
+        raise ProvisionError("existing configuration rejected")
+    expected = render_config(parse_config({**values, "OIDC_REDIRECT_URI": REDIRECT_URI}))
+    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        fd, staged = tempfile.mkstemp(prefix=".provision-env-", dir=path.parent)
+        staged_name = Path(staged).name
+        try:
+            with os.fdopen(fd, "wb") as output:
+                os.fchmod(output.fileno(), 0o600)
+                output.write(expected)
+                output.flush()
+                os.fsync(output.fileno())
+            try:
+                os.link(path.name, f"{path.name}.legacy", src_dir_fd=directory_fd,
+                        dst_dir_fd=directory_fd, follow_symlinks=False)
+            except FileExistsError:
+                raise ProvisionError("legacy backup already exists") from None
+            os.replace(staged_name, path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+            os.fsync(directory_fd)
+            return Result.MIGRATED
+        finally:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(staged_name, dir_fd=directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 @dataclass(frozen=True, repr=False)
 class CommandResult:
     code: int
@@ -395,7 +439,9 @@ def send(user: str, host: str, config: Config | StravaConfig, runner: Runner = r
 
 def main(argv: list[str]) -> int:
     try:
-        if argv == ["receive"]:
+        if argv == ["migrate"]:
+            result = migrate_legacy(TARGET)
+        elif argv == ["receive"]:
             config = parse_payload(sys.stdin.buffer.read(MAX_PAYLOAD_BYTES + 1))
             result = (write_strava(STRAVA_TARGET, config) if isinstance(config, StravaConfig)
                       else write_config(TARGET, config))

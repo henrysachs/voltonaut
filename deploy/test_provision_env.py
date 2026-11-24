@@ -245,6 +245,75 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(completed.stderr, b"provisioning failed\n")
 
 
+def legacy_values(secret: str = "synthetic-only") -> dict[str, str]:
+    """The exact deploy.env this provisioner wrote before ADR-025."""
+    return {**secret_input(secret), "OIDC_REDIRECT_URI": provision.LEGACY_REDIRECT_URI}
+
+
+class MigrationTests(unittest.TestCase):
+    def write(self, directory: str, values: dict[str, str]) -> Path:
+        path = Path(directory) / "deploy.env"
+        path.write_bytes(provision.render_values(values))
+        path.chmod(0o600)
+        return path
+
+    def test_migrates_the_legacy_file_once_and_keeps_a_private_backup(self):
+        for secret in ("x", " $'\"\\Grüße\t ", "${DO_NOT_EXPAND}$USER$$"):
+            with self.subTest(secret=secret), tempfile.TemporaryDirectory() as directory:
+                path = self.write(directory, legacy_values(secret))
+                original = path.read_bytes()
+                self.assertEqual(provision.migrate_legacy(path), provision.Result.MIGRATED)
+                self.assertEqual(provision.private_values(path), config(secret).values())
+                backup = path.with_name("deploy.env.legacy")
+                self.assertEqual(backup.read_bytes(), original)
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+                self.assertEqual(stat.S_IMODE(backup.stat().st_mode), 0o600)
+                self.assertEqual(provision.migrate_legacy(path), provision.Result.UNCHANGED)
+                self.assertEqual(backup.read_bytes(), original)
+                self.assertEqual(sorted(p.name for p in Path(directory).iterdir()),
+                                 ["deploy.env", "deploy.env.legacy"])
+
+    def test_rejects_anything_but_the_exact_legacy_file_without_changes(self):
+        invalid = (
+            {**legacy_values(), "LITESTREAM_BUCKET": "synthetic"},
+            {**legacy_values(), "OIDC_REDIRECT_URI": provision.REDIRECT_URI},
+            {**legacy_values(), "OIDC_ISSUER": "http://login.example.com"},
+            {**legacy_values(), "AUTH_MODE": "disabled"},
+            legacy_values("changeme"),
+            {key: value for key, value in legacy_values().items() if key != "OIDC_CLIENT_ID"},
+            {**config().values(), "OIDC_PROVIDERS": "cloudflare,authentik"},
+        )
+        for values in invalid:
+            with self.subTest(keys=sorted(values)), tempfile.TemporaryDirectory() as directory:
+                path = self.write(directory, values)
+                original = path.read_bytes()
+                with self.assertRaises(provision.ProvisionError):
+                    provision.migrate_legacy(path)
+                self.assertEqual(path.read_bytes(), original)
+                self.assertEqual([p.name for p in Path(directory).iterdir()], ["deploy.env"])
+
+    def test_never_replaces_an_existing_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write(directory, legacy_values())
+            original = path.read_bytes()
+            backup = path.with_name("deploy.env.legacy")
+            backup.write_bytes(b"earlier")
+            with self.assertRaises(provision.ProvisionError):
+                provision.migrate_legacy(path)
+            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual(backup.read_bytes(), b"earlier")
+            self.assertEqual(sorted(p.name for p in Path(directory).iterdir()),
+                             ["deploy.env", "deploy.env.legacy"])
+
+    def test_rejects_unsafe_existing_file_modes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write(directory, legacy_values())
+            path.chmod(0o644)
+            with self.assertRaises(provision.ProvisionError):
+                provision.migrate_legacy(path)
+            self.assertEqual([p.name for p in Path(directory).iterdir()], ["deploy.env"])
+
+
 class FakeRunner:
     def __init__(self, fail_at: int = -1, response: bytes = b"created\n"):
         self.calls: list[tuple[list[str], bytes]] = []

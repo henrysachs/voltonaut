@@ -50,6 +50,25 @@ wait_for_health() {
   return 1
 }
 
+# Refuses a release before touching containers when deploy.env still holds the single OIDC_*
+# set removed by ADR-025. Only matches key names with grep -q; never prints or sources values.
+check_auth_config() {
+  if [ ! -f "$ENV_FILE" ]; then
+    return 0
+  fi
+
+  if grep -Eq '^OIDC_(ISSUER|CLIENT_ID|CLIENT_SECRET|REDIRECT_URI)=' "$ENV_FILE"; then
+    echo "deploy: $ENV_FILE still uses the removed single OIDC_* set (ADR-025)." >&2
+    echo "deploy: run 'python3 provision_env.py migrate' and register /v1/auth/oidc/cloudflare/callback first" >&2
+    return 1
+  fi
+
+  if grep -Eq '^AUTH_MODE="?oidc"?$' "$ENV_FILE" && ! grep -Eq '^OIDC_PROVIDERS="?[a-z]' "$ENV_FILE"; then
+    echo "deploy: AUTH_MODE=oidc requires OIDC_PROVIDERS in $ENV_FILE (ADR-025)" >&2
+    return 1
+  fi
+}
+
 up_with_tag() {
   VOLTONAUT_TAG="$1" compose up -d --wait --wait-timeout 90
 }
@@ -61,6 +80,8 @@ deploy_release() {
     usage
     return 1
   fi
+
+  check_auth_config || return 1
 
   local previous_tag
   previous_tag="$(read_state current-tag)"

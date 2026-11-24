@@ -17,6 +17,6 @@
 
 ## Folgen
 
-- Deployment: `deploy/compose.yaml` reicht die Sätze `OIDC_CLOUDFLARE_*` und `OIDC_AUTHENTIK_*` durch. Weitere Provider brauchen dort einen Eintrag. Eine bestehende `/srv/voltonaut/deploy.env` mit dem alten Einzelsatz muss einmalig von Hand umgestellt werden (Server startet sonst nicht, siehe `deploy/README.md`). `deploy/provision_env.py` liest weiter die bisherigen Secret-Namen und schreibt das neue Format mit genau dem Provider `cloudflare`; der geschützte Workflow bleibt unverändert.
+- Deployment: `deploy/compose.yaml` reicht die Sätze `OIDC_CLOUDFLARE_*` und `OIDC_AUTHENTIK_*` durch. Weitere Provider brauchen dort einen Eintrag. Eine bestehende `/srv/voltonaut/deploy.env` mit dem alten Einzelsatz muss einmalig umgestellt werden (`provision_env.py migrate`, siehe `deploy/README.md`); bis dahin sperrt `deploy.sh` jeden Release, statt einen Server ohne gültige Auth-Konfiguration zu starten. `deploy/provision_env.py` liest weiter die bisherigen Secret-Namen und schreibt das neue Format mit genau dem Provider `cloudflare`; der geschützte Workflow bleibt unverändert.
 - Abwägung: `requireEmailVerified` ist pro Provider abschaltbar, Standard ist an. Abschalten ist nur für Provider vertretbar, deren Betreiber E-Mails selbst prüft.
 - Offen (eigene Aufträge): Identitäten verknüpfen (Besitznachweis, ADR-013), Gruppen/Rollen aus Claims, RP-Initiated Logout.

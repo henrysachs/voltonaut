@@ -98,6 +98,41 @@ optional_backup_requires_credentials() {
   reset_state
 }
 
+oidc_env() {
+  printf 'AUTH_MODE=oidc\nCLIENT_ORIGIN=https://voltonaut.stammkneipe.dev\n' >"$VOLTONAUT_ENV_FILE"
+  printf '%s\n' "$@" >>"$VOLTONAUT_ENV_FILE"
+}
+
+legacy_oidc_config_blocks_release() {
+  reset_state
+  oidc_env OIDC_ISSUER=https://login.example.invalid/oidc OIDC_CLIENT_ID=synthetic-client \
+    "OIDC_CLIENT_SECRET=\"legacy-secret-must-not-print\"" \
+    OIDC_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback
+  expect_failure deploy legacy
+  grep -q 'removed single OIDC_\* set' "$temporary/output"
+  grep -q 'provision_env.py migrate' "$temporary/output"
+  if grep -q 'legacy-secret-must-not-print' "$temporary/output"; then
+    echo 'the release check must not print configuration values' >&2
+    return 1
+  fi
+  reset_state
+  oidc_env OIDC_CLOUDFLARE_ISSUER=https://login.example.invalid/oidc
+  expect_failure deploy without-providers
+  grep -q 'requires OIDC_PROVIDERS' "$temporary/output"
+  expect_tag current ''
+  if grep -Eq ' (up|pull|config) ' "$temporary/commands"; then
+    echo 'a legacy OIDC configuration must fail before Compose, pulls or starts' >&2
+    return 1
+  fi
+  reset_state
+  oidc_env 'OIDC_PROVIDERS="cloudflare"' OIDC_CLOUDFLARE_ISSUER=https://login.example.invalid/oidc \
+    OIDC_CLOUDFLARE_CLIENT_ID=synthetic-client OIDC_CLOUDFLARE_CLIENT_SECRET=synthetic-secret \
+    OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback
+  bash "$DEPLOY_SCRIPT" deploy provider-list >"$temporary/output"
+  expect_tag current provider-list
+  echo 'Legacy single-set OIDC configuration is refused before any release step.'
+}
+
 expect_failure() {
   if bash "$DEPLOY_SCRIPT" "$@" >"$temporary/output" 2>&1; then
     echo "unexpected success: $*" >&2
@@ -214,4 +249,5 @@ if grep -Eq 'remove-orphans| down|prune|volume rm' "$temporary/commands"; then
   exit 1
 fi
 selects_local_image
+legacy_oidc_config_blocks_release
 echo 'Release command tests passed. Pull tag, health commit, recovery, rollback, preserved data.'

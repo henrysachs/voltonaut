@@ -23,7 +23,29 @@ Secrets bleiben aus Prozessargumenten, Chat, Logs, Repository, Frontend, Image u
 
 Die Anwendung verwendet ausdrücklich `AUTH_MODE=oidc`, `CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev` und `OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback`. Fehlende OIDC-Werte führen zu einem Fehler, nicht zu Disabled oder einem Speicher-Mailer. Ein vorhandener OIDC-Modus belegt noch keinen erfolgreichen persönlichen Anbieterlogin.
 
-**Umstellung auf Provider-Liste (ADR-025):** Die Server-Konfiguration kennt nur noch `OIDC_PROVIDERS` und `OIDC_<ID>_*` (siehe `deploy.env.example`). `provision_env.py` liest weiterhin die Environment-Secrets `OIDC_ISSUER`, `OIDC_CLIENT_ID` und `OIDC_CLIENT_SECRET`, schreibt daraus aber `OIDC_PROVIDERS=cloudflare` und `OIDC_CLOUDFLARE_*`. Der Workflow bleibt unverändert, neue Secrets sind dafür nicht nötig. Eine bestehende `/srv/voltonaut/deploy.env` im alten Einzelsatzformat wird wie jede abweichende Datei nicht überschrieben. Sie muss vor dem Deploy von Hand umgestellt werden (gleiche Werte unter den neuen Namen), sonst startet der Server nicht. Die Redirect-URI wechselt auf `/v1/auth/oidc/cloudflare/callback` und muss in der Cloudflare-Access-Anwendung ergänzt werden. Secrets für authentik nur nach gesonderter Freigabe.
+### Umstellung auf Provider-Liste (ADR-025)
+
+Der Server kennt nur noch `OIDC_PROVIDERS` und `OIDC_<ID>_*` (siehe `deploy.env.example`). `provision_env.py` liest weiterhin die Environment-Secrets `OIDC_ISSUER`, `OIDC_CLIENT_ID` und `OIDC_CLIENT_SECRET`, schreibt daraus aber `OIDC_PROVIDERS=cloudflare` und `OIDC_CLOUDFLARE_*`. Der Workflow bleibt unverändert, neue Secrets sind nicht nötig.
+
+**Deploy-Sperre:** `deploy.sh deploy` und `rollback` brechen vor jedem Compose-, Pull- oder Startschritt ab, wenn `deploy.env` noch `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` oder `OIDC_REDIRECT_URI` enthält oder bei `AUTH_MODE=oidc` `OIDC_PROVIDERS` fehlt. Die Prüfung vergleicht nur Schlüsselnamen und gibt keine Werte aus. Ein automatischer Main-Deploy vor der Umstellung schlägt damit sichtbar fehl, und der laufende Release bleibt aktiv.
+
+**Einmalige Umstellung auf dem VPS (vor dem ersten Release mit ADR-025, gesonderte Freigabe):**
+
+1. In der Cloudflare-Access-Anwendung zusätzlich `https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback` als Redirect-URI eintragen. Die alte URI bleibt bis zum bestätigten Login eingetragen.
+2. Das Skript des freigegebenen Commits als Deploy-Nutzer übertragen und ausführen (SSH mit dem geprüften Hostschlüssel, siehe oben):
+
+   ```bash
+   scp deploy/provision_env.py <deploy-user>@<deploy-host>:/srv/voltonaut/.migrate-provision_env.py
+   ```
+
+   ```bash
+   ssh <deploy-user>@<deploy-host> 'python3 /srv/voltonaut/.migrate-provision_env.py migrate; status=$?; rm -f /srv/voltonaut/.migrate-provision_env.py; exit $status'
+   ```
+
+   Ausgabe `migrated` oder bei Wiederholung `unchanged`. Akzeptiert wird nur genau die vom Provisionierer geschriebene Alt-Datei (gleiche Schlüssel, alte Callback-URI, Eigentümer Deploy-Nutzer, Modus `600`). Alles andere, etwa zusätzliche Backup-Werte, wird unverändert abgelehnt (`provisioning failed`) und ist von Hand umzustellen. Die Werte bleiben gleich, nur die Redirect-URI wechselt. Die alte Datei bleibt als `deploy.env.legacy` (Modus `600`) erhalten; ein vorhandenes Backup wird nie ersetzt.
+3. Den Release deployen und einen echten Login über Cloudflare bestätigen. Erst danach die alte Redirect-URI entfernen und `deploy.env.legacy` löschen.
+
+**Rückweg:** Ein Rollback auf einen Release vor ADR-025 braucht wieder die alte Datei und die alte `compose.yaml`. Dafür `deploy.env.legacy` zurückkopieren und die `deploy/`-Dateien jenes Commits ausliefern, einschließlich seines `deploy.sh` ohne Sperre. Mit der neuen Datei startet ein alter Release nicht. Secrets für authentik nur nach gesonderter Freigabe.
 
 ## Standarddeploy ohne Backup
 
