@@ -25,7 +25,7 @@ Phase A:
 - [x] AK1 – `SeasonDefinitionSchema` in `packages/shared` validiert eine Saison: ID `season-NN`, Dauer 56 bis 84 Tage, mindestens 20 Stufen, Stufen 1..n lückenlos, Schwellen streng steigend und größer 0, Belohnungen `item` oder `volts`, keine Zusatzfelder.
 - [x] AK2 – `UnlockRuleSchema` kennt `{ kind: "season"; seasonId; tier }`. Die Garage zeigt dafür „Saison <NN> · Stufe <n>" (z. B. „Saison 01 · Stufe 12").
 - [x] AK3 – Saisonpunkte = Basis-XP (`calculateBaseXp(...).total`). Je bestätigtem Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, sodass die Rundung der ganzen Fahrt erhalten bleibt.
-- [x] AK4 – Ein Abschnitt zählt, wenn `Start ≤ Abschnittszeit < Ende`. Maßgeblich ist die Fahrzeit, nicht die Bestätigungszeit.
+- [x] AK4 – Ein Abschnitt zählt ganz, wenn `Saisonstart ≤ Abschnittsbeginn < Saisonende`. Abschnittsbeginn ist die Fahrzeit, zu der der bestätigte Abschnitt beginnt (`sectionAtMs`), nicht die Bestätigungs- oder Uploadzeit. Ein Abschnitt, der kurz vor Saisonende beginnt und danach endet, zählt also vollständig. Bestätigte Abschnitte sind kurz.
 - [x] AK5 – `dueTiers(a, b)` liefert genau die Stufen mit `a < Schwelle ≤ b`. Für `a ≤ b ≤ c` gilt `dueTiers(a, b) ++ dueTiers(b, c) = dueTiers(a, c)` (Property-Test).
 - [x] AK6 – `season-01`: 4.1.2027 bis 15.3.2027, 20 Stufen zu je 1 800 Punkten (⚠️ Startwert). Jede Item-Belohnung verweist auf ein Saison-Item (`SEASON_AVATAR_ITEMS`: `jersey.season-01` ab Stufe 10, `wheels.season-01` ab Stufe 20) mit passender Saison-Freischaltung und umgekehrt. Die Saison-Items gehören nicht zum dokumentierten Start-Katalog. Die Garage zeigt sie erst mit Phase C.
 - [ ] AK7 – Keine `Date.now()` in `packages/rules`. Lint, Typecheck, depcruise, guard, Unit-Tests und Stryker (`season.ts`, `seasonData.ts`: 100 %) sind einzeln grün. `mise run check` als Ganzes und CI stehen aus.
@@ -47,6 +47,8 @@ Phase B und C: Kriterien aus Issue #44 (Vergabe genau einmal, Sim-Fahrten ohne F
 Keine Echtgeld-Käufe, kein Premium-Track, keine Maps als Belohnung, kein Stufenkauf mit Volts. In Phase A keine Vergabe, keine Kontobuchung und keine Anzeige im Menü.
 
 ## Offene Fragen / Risiken
+
+- Voraussetzung für Phase B/C: `avatarItemsForSlot` und `avatarItemForSlot` durchsuchen nur `START_AVATAR_CATALOG`. Bevor ein Saison-Item vergeben oder ausgerüstet werden kann, müssen sie auch `SEASON_AVATAR_ITEMS` kennen. Sonst wirft das Ausrüsten „Missing avatar item“.
 
 - Saisonpunkte: Annahme 1:1 aus Basis-XP. Alternativen wären eigene Punkte pro km/Hm oder Wochenaufgaben. Henry bestätigt.
 - Saisonlänge und Stufenzahl: Annahme 10 Wochen und 20 Stufen. Bei drei Stundenfahrten pro Woche (rund 1 250 XP je Fahrt) wird die letzte Stufe knapp erreicht.

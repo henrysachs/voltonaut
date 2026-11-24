@@ -101,6 +101,7 @@ export const SeasonSectionSchema = z
     currentPoints: SeasonPointsSchema,
     before: RewardFactsSchema.optional(),
     after: RewardFactsSchema,
+    /** Ride time at which the section starts; decides the season window (spec E6-05 AK4). */
     sectionAtMs: EpochMsSchema,
   })
   .strict()
