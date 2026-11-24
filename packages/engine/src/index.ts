@@ -18,4 +18,8 @@ export * from "./trainer/gradeMap.js";
 
 export * from "./trainer/commands.js";
 
+export * from "./fun/effects.js";
+
+export * from "./fun/rng.js";
+
 export * from "./internal/engine.js";
