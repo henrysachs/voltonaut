@@ -50,7 +50,7 @@ function validateSeason(
 ): void {
   const durationDays = (Date.parse(season.endsAt) - Date.parse(season.startsAt)) / DAY_MS;
 
-  if (!(durationDays >= SEASON_MIN_DAYS && durationDays <= SEASON_MAX_DAYS)) {
+  if (durationDays < SEASON_MIN_DAYS || durationDays > SEASON_MAX_DAYS) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       message: `Season must last ${SEASON_MIN_DAYS} to ${SEASON_MAX_DAYS} days`,
