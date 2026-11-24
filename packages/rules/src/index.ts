@@ -10,4 +10,12 @@ export type { BaseVoltsQuote } from "@voltonaut/shared";
 
 export { applyDailyLimit, type DailyVoltsQuote } from "./economy.js";
 
+export {
+  applyVoltsDelta,
+  hasRewardFactsRegressed,
+  quoteVoltsIncrement,
+  type VoltsDeltaApplication,
+  type VoltsIncrementQuote,
+} from "./voltsLedger.js";
+
 export { calculateBaseRewards, type BaseRewardQuote } from "./rewards.js";

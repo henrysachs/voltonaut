@@ -135,7 +135,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
   - [x] [E6-02](specs/E6-02-base-reward-quotes.md): reine Basisangebote für XP, Level und Volts mit explizitem Tagesrestbudget softwaregeprüft. Keine Vergabe oder Kontobuchung.
   - [x] [E6-03](specs/E6-03-native-ride-facts.md): native Tickfakten für spätere laufende Auswertung. Gate, Mutation, Build, Basisvergleich und unabhängiges Review softwaregeprüft. Keine Uploads, Freigaben oder Belohnungsbuchungen; Deployment folgt mit dem Merge.
   - [x] [E6-04](specs/E6-04-ride-progress-journal.md): HR-freie, unveränderliche Checkpoint-Projektion aus genau einem Advance pro Wake. Gesamtgate, Mutation, Build, Basisverhalten und unabhängiges Review softwaregeprüft. Keine Persistenz, Uploads, Freigaben, Belohnungsbuchungen oder dauerhafte Progress-UI; Merge und CI stehen noch aus.
-- [ ] `economy/`: Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ"
+- [x] [E6-05](specs/E6-05-volts-ledger.md): `economy/`-Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ". Kumulative Tickbereiche, Tagesbudget und echte SQLite-Konkurrenz softwaregeprüft; automatische Vergabe, Shop-Kauf und Deployment folgen getrennt.
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
