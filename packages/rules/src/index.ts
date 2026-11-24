@@ -20,3 +20,5 @@ export {
   tierForPoints,
   type SeasonSectionResult,
 } from "./season.js";
+
+export { SEASON_AVATAR_ITEMS, SEASONS, seasonAt } from "./seasonData.js";
