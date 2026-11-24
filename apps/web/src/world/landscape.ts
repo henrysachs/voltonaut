@@ -22,7 +22,7 @@ export function createLandscapeSystem(): RenderSystem {
         createTerrain(plan),
         createLake(plan),
         createScenery(plan),
-        createBillboards(planBillboards(plan)),
+        createBillboards(planBillboards(plan).billboards),
       );
       context.scene.add(root);
     },

@@ -1,7 +1,12 @@
 import * as THREE from "three";
 
 import { createBillboardMotifTexture } from "./billboard-motif.js";
-import { BILLBOARD_HEIGHT_M, BILLBOARD_WIDTH_M, type Billboard } from "./billboard-plan.js";
+import {
+  BILLBOARD_HEIGHT_M,
+  BILLBOARD_VARIANTS,
+  BILLBOARD_WIDTH_M,
+  type Billboard,
+} from "./billboard-plan.js";
 
 /** Height of the board centre above the ground point. */
 const BOARD_CENTER_Y_M = 3;
@@ -57,11 +62,22 @@ function structureInstances(billboards: readonly Billboard[]): THREE.InstancedMe
   }
 
   mesh.name = "billboard-structure";
-  mesh.castShadow = true;
+  // No shadow casting: the shadow pass would add a third draw call (#42: all billboards ≤ 2).
+  mesh.castShadow = false;
   mesh.receiveShadow = true;
   mesh.computeBoundingSphere();
 
   return mesh;
+}
+
+/** Moves the map UV of each instance into its atlas cell (one cell per motif variant). */
+export function withVariantUv(vertexShader: string): string {
+  return vertexShader
+    .replace("#include <common>", "#include <common>\nattribute float instanceVariant;")
+    .replace(
+      "#include <uv_vertex>",
+      `#include <uv_vertex>\n#ifdef USE_MAP\n\tvMapUv.x = ( vMapUv.x + instanceVariant ) / ${BILLBOARD_VARIANTS}.0;\n#endif`,
+    );
 }
 
 function faceInstances(billboards: readonly Billboard[]): THREE.InstancedMesh {
@@ -71,12 +87,22 @@ function faceInstances(billboards: readonly Billboard[]): THREE.InstancedMesh {
   material.addEventListener("dispose", () => {
     texture.dispose();
   });
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three hands the mutable shader source to this hook for patching.
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = withVariantUv(shader.vertexShader);
+  };
 
-  const mesh = new THREE.InstancedMesh(
-    new THREE.PlaneGeometry(BILLBOARD_WIDTH_M, BILLBOARD_HEIGHT_M),
-    material,
-    billboards.length,
+  const geometry = new THREE.PlaneGeometry(BILLBOARD_WIDTH_M, BILLBOARD_HEIGHT_M);
+
+  geometry.setAttribute(
+    "instanceVariant",
+    new THREE.InstancedBufferAttribute(
+      Float32Array.from(billboards, (billboard) => billboard.variant),
+      1,
+    ),
   );
+
+  const mesh = new THREE.InstancedMesh(geometry, material, billboards.length);
 
   const transform = new THREE.Object3D();
 
