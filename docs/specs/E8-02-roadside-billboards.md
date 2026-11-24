@@ -1,4 +1,4 @@
-# Spec E8-01 – Werbe-Billboards am Streckenrand
+# Spec E8-02 – Werbe-Billboards am Streckenrand
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E8, Checkbox „Roadside life"
 - **Issue:** #42

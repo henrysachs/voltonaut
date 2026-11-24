@@ -171,7 +171,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] **Day/Night-Zyklus** (Sonne, Sky, Sterne, Laternen, Radlicht) und **Wetter** (Wolken, Nebel, Regen mit nasser Straße, Wind-Animation)
 - [ ] **Post-Processing:** SMAA, Bloom, SSAO (High), Farb-LUT pro Biom, Tiefenunschärfe für Cinematic
 - [ ] **Roadside life:** Zuschauer mit Vertex-Animation an KOM/Sprint/Ziel, Fahnen, Tiere, Vögel, Verpflegungsstand
-  - [ ] [E8-01](specs/E8-01-roadside-billboards.md): Billboards an Start/Ziel, Segmenten und alle 500 m, deterministisch, 2 Draw Calls, mit eigenem Platzhaltermotiv softwaregeprüft. Kongstrong-Motiv mit Lizenz und Messung auf Henrys Laptop stehen aus.
+  - [ ] [E8-02](specs/E8-02-roadside-billboards.md): Billboards an Start/Ziel, Segmenten und alle 500 m, deterministisch, 2 Draw Calls, mit eigenem Platzhaltermotiv softwaregeprüft. Kongstrong-Motiv mit Lizenz und Messung auf Henrys Laptop stehen aus.
 - [ ] **Kameras:** TV-Seitenkamera, **Cinematic-Modus** mit automatischem Schnitt, Fotomodus
 - [ ] **Audio/Musik:** räumlicher Jubel, Reifen/Untergrund, Wetter-Ambience, Biom-Musik (CC0/eigen), Mixer
 - [ ] Performance-Budget-Szene „Peloton am KOM" (30 Bots, Regen, Abend) im Budget
