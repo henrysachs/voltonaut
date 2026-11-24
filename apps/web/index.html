@@ -130,6 +130,16 @@
           >
             Strava
           </button>
+          <button
+            id="game-tab-garage"
+            role="tab"
+            type="button"
+            aria-controls="game-panel-garage"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Garage / Shop
+          </button>
         </div>
         <div class="game-menu__content">
           <section
@@ -305,6 +315,17 @@
                 kein Strava-Upload.
               </p>
             </div>
+          </section>
+          <section
+            id="game-panel-garage"
+            class="panel garage-panel"
+            role="tabpanel"
+            aria-labelledby="game-tab-garage"
+            data-game-panel
+            hidden
+            tabindex="0"
+          >
+            <div id="garage-shop"></div>
           </section>
         </div>
         <footer class="game-menu__footer">

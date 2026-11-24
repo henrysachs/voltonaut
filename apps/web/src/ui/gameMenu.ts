@@ -1,3 +1,5 @@
+import { mountGarage } from "./garage/garage.js";
+
 // oxlint-disable typescript/prefer-readonly-parameter-types -- Browser-owned DOM nodes and event handles retain native mutable members; this module updates navigation attributes and focus.
 interface MenuTab {
   readonly button: HTMLButtonElement;
@@ -108,7 +110,13 @@ function mountEscapeShortcut(show: () => void): void {
   });
 }
 
-export function mountGameMenu(): void {
+export function mountGameMenu(wheelCircM?: number): void {
+  if (wheelCircM !== undefined) {
+    const garage = document.querySelector("#garage-shop");
+
+    if (garage instanceof HTMLElement) mountGarage(garage, wheelCircM);
+  }
+
   const dialog = document.querySelector("#game-menu");
   const open = document.querySelector("#game-menu-open");
   const close = document.querySelector("#game-menu-close");

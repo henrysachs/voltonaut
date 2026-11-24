@@ -150,6 +150,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 **Ziel:** Eigener Fahrer, eigenes Rad, Freischalten mit Volts.
 
+[E7-01](specs/E7-01-garage-shop-foundation.md) liefert den softwaregeprüften Tab „Garage / Shop" mit striktem Katalog, Slot- und Farbauswahl, provisorischer 3D-Vorschau sowie Freischaltbedingungen und Preisen. Vollständiges Gate, Mutation, Build und unabhängiges Review sind grün. Käufe, Besitz und dauerhaftes Ausrüsten bleiben deaktiviert. Die vollständigen E7-Kriterien, Merge und Bereitstellung bleiben offen.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
 - [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items
@@ -160,6 +162,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 ## E8 – Lebendige Welt: Bots, Windschatten, Tageszeit, Wetter, Atmosphäre
 
 **Ziel:** Aus der Strecke wird eine Spielwelt.
+
+[E8-01](specs/E8-01-deterministic-environment.md) ergänzt den ersten deterministischen Umweltschnitt im Render-Worker. Tageszeit und Wetter steuern Himmel, Sonne, Nebel und Regen ohne Änderung an Physik oder Fahrereingaben. Low deaktiviert Regen und Schatten. Der korrigierte Regen ist im Browser-Screenshot sichtbar. Vollständiges Gate, Build und unabhängiges Review sind grün. Merge, CI und Bereitstellung stehen noch aus. Nasse Straßen, Wolken, Sterne, Mond, Radlicht und vollständige Wetterübergänge bleiben offen.
 
 - [ ] **AI-Bots** (`packages/engine/bots`): Persönlichkeiten, Gruppen, Attacken, Sprints; Fahrer-LODs + Impostoren
 - [ ] **Windschatten** in der Engine (auch Trainer-Widerstand) + sichtbarer Effekt (HUD-Indikator, Luftstrom-Partikel, leiserer Wind)

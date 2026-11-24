@@ -5,12 +5,19 @@ import { expect, it } from "vitest";
 
 import { createRider } from "../avatar/rider.js";
 import { createRideCamera } from "./camera.js";
-import { createEnvironmentSystem } from "./environment.js";
+import { DEFAULT_ENVIRONMENT_SETTINGS, environmentAt } from "./environment.js";
+import { createEnvironmentSystem } from "./environmentSystem.js";
 import { createRoadSystem, sampleRoad } from "./road.js";
 import { createScheduler } from "./scheduler.js";
 
 const route = createRoute(TEST_LOOP);
 const snapshot = createEngine({ route, profile: DEFAULT_RIDER_PROFILE }).snapshot();
+
+const env = environmentAt(
+  DEFAULT_ENVIRONMENT_SETTINGS.seed,
+  DEFAULT_ENVIRONMENT_SETTINGS.startTimeS,
+  DEFAULT_ENVIRONMENT_SETTINGS.script,
+);
 
 interface DisposalEvents {
   readonly addEventListener: (type: "dispose", listener: () => void) => void;
@@ -26,7 +33,7 @@ it("keeps the follow camera near the rider even with accelerated snapshot transl
   for (let frame = 0; frame < 60; frame += 1) {
     const ride = { ...snapshot, headingRad: 0, worldPos: { x: frame * 4, y: 100, z: 0 } };
 
-    rideCamera.system.update({ ride, dtS: 1 / 60, alpha: 1 });
+    rideCamera.system.update({ ride, dtS: 1 / 60, alpha: 1, env });
     expect(camera.position.distanceTo(new THREE.Vector3(ride.worldPos.x, 100, 0))).toBeLessThan(7);
   }
 });
@@ -68,8 +75,8 @@ it("uses the actual snapshot pose and cadence, changes camera, then releases eve
     worldPos: Object.freeze({ x: 10, y: 20, z: 30 }),
   });
 
-  scheduler.update({ ride: snapshot, dtS: 0, alpha: 1 });
-  scheduler.update({ ride: next, dtS: 0.05, alpha: 1 });
+  scheduler.update({ ride: snapshot, dtS: 0, alpha: 1, env });
+  scheduler.update({ ride: next, dtS: 0.05, alpha: 1, env });
   expect(rider.position()).toEqual({ x: 10, y: 20.04, z: 30 });
   expect(rider.headingRad()).toBe(1.2);
   expect(rider.crankRad()).toBeCloseTo(Math.PI * 3);
@@ -77,7 +84,7 @@ it("uses the actual snapshot pose and cadence, changes camera, then releases eve
   const chase = camera.position.clone();
 
   rideCamera.toggle();
-  scheduler.update({ ride: next, dtS: 0.1, alpha: 1 });
+  scheduler.update({ ride: next, dtS: 0.1, alpha: 1, env });
   expect(rideCamera.mode()).toBe("overview");
   expect(camera.position.distanceTo(chase)).toBeGreaterThan(1);
   rideCamera.toggle();
