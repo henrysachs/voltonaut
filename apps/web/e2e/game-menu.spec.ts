@@ -50,7 +50,7 @@ test("native menu traps focus, supports named keyboard tabs and restores focus o
   await expect(menu.getByRole("tab", { name: "Aufnahmen", exact: true })).toBeFocused();
   await expect(menu.getByRole("tabpanel", { name: "Aufnahmen", exact: true })).toBeVisible();
   await page.keyboard.press("End");
-  await expect(menu.getByRole("tab", { name: "Strava", exact: true })).toBeFocused();
+  await expect(menu.getByRole("tab", { name: "Garage / Shop", exact: true })).toBeFocused();
   await page.keyboard.press("Home");
   await expect(profile).toBeFocused();
   await page.keyboard.press("Escape");
