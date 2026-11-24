@@ -21,6 +21,9 @@ function sessionText(view: SessionView): string {
 export function mountAccountPanel(
   session: Readonly<Pick<ApplicationSession, "subscribe" | "login" | "logout">>,
 ): void {
+  const choices = document.createElement("div");
+  choices.setAttribute("role", "group");
+  choices.setAttribute("aria-label", "Anmeldeanbieter");
   const host = document.querySelector("#account-panel");
   const status = document.createElement("p");
   const login = document.createElement("button");
@@ -39,6 +42,17 @@ export function mountAccountPanel(
     login.hidden = view.kind === "authenticated";
     login.disabled = view.kind === "busy";
     logout.hidden = view.kind === "guest";
+    choices.replaceChildren(
+      ...(view.kind === "guest" ? (view.providers ?? []) : []).map((provider) => {
+        const button = document.createElement("button");
+        button.textContent = `Anmelden mit ${provider.displayName}`;
+        button.addEventListener("click", () => {
+          void session.login(provider.id);
+        });
+
+        return button;
+      }),
+    );
   });
-  host?.append(status, login, logout);
+  host?.append(status, login, choices, logout);
 }

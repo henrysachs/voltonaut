@@ -8,7 +8,8 @@ import { deferred } from "./testdata/deferred.js";
 function sessionFor(origin: string): ApplicationSession {
   return new ApplicationSession({
     transport: {
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       me: () => Promise.reject(new Error("unexpected restore")),
       exchange: (id) =>
         Promise.resolve({

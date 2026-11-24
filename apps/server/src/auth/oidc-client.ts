@@ -1,14 +1,18 @@
 import * as oidc from "openid-client";
 import { z } from "zod";
-import { safeOidcUrl } from "../config.js";
-import type { AuthConfig } from "../config.js";
+import { safeOidcUrl } from "../oidc-config.js";
+import type { OidcProviderConfig } from "../oidc-config.js";
 
-export type OidcConfig = Extract<AuthConfig, { mode: "oidc" }>;
+export interface OidcClientConfig {
+  readonly provider: OidcProviderConfig;
+  readonly allowLoopbackHttp: boolean;
+}
 
 const IdentityClaimsSchema = z.object({
   iss: z.string().url(),
   sub: z.string().min(1).max(255),
   email: z.string().trim().toLowerCase().email().max(254),
+  email_verified: z.boolean().optional(),
 });
 
 export type IdentityClaims = z.infer<typeof IdentityClaimsSchema>;
@@ -22,15 +26,15 @@ export interface OidcChecks {
 export class OidcClient {
   private configuration: Promise<oidc.Configuration> | undefined;
 
-  public constructor(private readonly config: OidcConfig) {}
+  public constructor(private readonly config: OidcClientConfig) {}
 
   public async authorizationUrl(checks: OidcChecks): Promise<string> {
     const configuration = await this.getConfiguration();
 
     const url = oidc.buildAuthorizationUrl(configuration, {
-      redirect_uri: this.config.redirectUri,
+      redirect_uri: this.config.provider.redirectUri,
       response_type: "code",
-      scope: "openid email",
+      scope: this.config.provider.scopes.join(" "),
       code_challenge_method: "S256",
       code_challenge: await oidc.calculatePKCECodeChallenge(checks.verifier),
       state: checks.state,
@@ -69,6 +73,7 @@ export class OidcClient {
 
   private async discover(): Promise<oidc.Configuration> {
     const config = this.config;
+    const { provider } = config;
 
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Implements the library fetch boundary; native request bodies have no readonly view.
     const guardedFetch: oidc.CustomFetch = (url, options: Readonly<oidc.CustomFetchOptions>) => {
@@ -85,10 +90,10 @@ export class OidcClient {
     }
 
     const configuration = await oidc.discovery(
-      new URL(config.issuer),
-      config.clientId,
-      { id_token_signed_response_alg: "RS256", [oidc.clockTolerance]: 0 },
-      oidc.ClientSecretBasic(config.clientSecret),
+      new URL(provider.issuer),
+      provider.clientId,
+      { id_token_signed_response_alg: provider.idTokenAlg, [oidc.clockTolerance]: 0 },
+      oidc.ClientSecretBasic(provider.clientSecret),
       {
         timeout: 2,
         [oidc.customFetch]: guardedFetch,
@@ -96,7 +101,7 @@ export class OidcClient {
       },
     );
 
-    if (configuration.serverMetadata().issuer !== config.issuer)
+    if (configuration.serverMetadata().issuer !== provider.issuer)
       throw new Error("unexpected OIDC issuer");
 
     return configuration;

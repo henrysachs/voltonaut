@@ -1,4 +1,5 @@
 import type { StravaLease } from "../privateAuthTransport.js";
+import type { IdentityLease } from "../identityLease.js";
 
 const unexpected = (): Promise<never> =>
   Promise.reject(new Error("Strava was not requested by this account test"));
@@ -16,4 +17,16 @@ export const unexpectedMembership = {
   accountStatus: () => Promise.reject(new Error("unexpected account status")),
   adminUsers: () => Promise.reject(new Error("unexpected admin directory")),
   saveMembership: () => Promise.reject(new Error("unexpected membership write")),
+};
+
+export const unusedIdentityLease: IdentityLease = {
+  list: () => Promise.reject(new Error("identities were not requested by this account test")),
+  startLink: () => Promise.reject(new Error("unexpected identity link")),
+  completeLink: () => Promise.reject(new Error("unexpected identity link completion")),
+};
+
+/** Account-lease members an account test does not exercise. */
+export const unexpectedAccountParts = {
+  ...unexpectedMembership,
+  identities: unusedIdentityLease,
 };

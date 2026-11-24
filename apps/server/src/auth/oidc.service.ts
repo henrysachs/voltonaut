@@ -1,28 +1,35 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, eq, gt, lte, inArray, count, isNull } from "drizzle-orm";
 import { SERVER_CONFIG, CLOCK } from "../config.module.js";
 import type { ServerConfig, Clock } from "../config.module.js";
+import type { OidcProviderConfig } from "../oidc-config.js";
 import { DRIZZLE } from "../database/drizzle.provider.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
 import { ApiError } from "../api-error.js";
 import { AuthService } from "./auth.service.js";
-import { users, authIdentities, oidcTransactions, oidcHandoffs } from "./auth.schema.js";
 import { createToken, hashToken } from "./tokens.js";
-import { OidcClient } from "./oidc-client.js";
-import type { IdentityClaims, OidcConfig } from "./oidc-client.js";
+import { OidcClient, type IdentityClaims } from "./oidc-client.js";
 import {
   OidcOpaqueSchema,
   invalidOidcLogin,
   oidcBrowserBinding,
   oidcBindingCookie,
+  oidcFinishError,
+  oidcCookieSecure,
 } from "./oidc-cookie.js";
-
-export const OIDC_TRANSACTION_TTL_MS = 5 * 60_000;
-export const OIDC_HANDOFF_TTL_MS = 60_000;
+import {
+  claimTransaction,
+  cleanupOidcRows,
+  deleteTransaction,
+  insertTransaction,
+  replaceTransactionByHandoff,
+  replaceTransactionByLinkHandoff,
+  type OidcTransactionRow,
+  takeHandoff,
+} from "./oidc-store.js";
 
 @Injectable()
 export class OidcService {
-  private readonly client: OidcClient | undefined;
+  private readonly clients = new Map<string, OidcClient>();
 
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
@@ -31,40 +38,38 @@ export class OidcService {
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(AuthService) private readonly auth: Pick<AuthService, "issueSession" | "currentUser">,
   ) {
-    if (config.auth.mode === "oidc") this.client = new OidcClient(config.auth);
+    if (config.auth.mode === "oidc") {
+      for (const provider of config.auth.providers)
+        this.clients.set(
+          provider.id,
+          new OidcClient({ provider, allowLoopbackHttp: config.auth.allowLoopbackHttp }),
+        );
+    }
   }
 
   public cookie(value: string, clear = false): string {
-    return oidcBindingCookie(value, this.oidcConfig().redirectUri.startsWith("https:"), clear);
+    return oidcBindingCookie(value, this.secure(), clear);
   }
 
-  public async start(): Promise<{ readonly location: string; readonly cookie: string }> {
-    const client = this.requireClient();
+  /**
+   * Starts a provider login. With `link`, the transaction is bound to the signed-in account and
+   * session that explicitly asked to connect this provider.
+   */
+  public async start(
+    providerId: string,
+    link?: Readonly<{ userId: string; sessionHash: string }>,
+  ): Promise<{ readonly location: string; readonly cookie: string }> {
+    const client = this.requireClient(providerId);
     const state = createToken();
     const binding = createToken();
     const nonce = createToken();
     const verifier = createToken();
     const nowMs = this.clock.nowMs();
-    this.cleanup(nowMs);
-    this.db.transaction(
-      () => {
-        const active = this.db.select({ total: count() }).from(oidcTransactions).get();
-        const handoffs = this.db.select({ total: count() }).from(oidcHandoffs).get();
-
-        if ((active?.total ?? 0) + (handoffs?.total ?? 0) >= 1000)
-          throw new ApiError(429, "rate_limited", "too many login attempts");
-        this.db
-          .insert(oidcTransactions)
-          .values({
-            stateHash: hashToken(state),
-            bindingHash: hashToken(binding),
-            nonce,
-            verifier,
-            expiresAt: nowMs + OIDC_TRANSACTION_TTL_MS,
-          })
-          .run();
-      },
-      { behavior: "immediate" },
+    cleanupOidcRows(this.db, nowMs);
+    insertTransaction(
+      this.db,
+      { state, binding, provider: providerId, nonce, verifier, link },
+      nowMs,
     );
 
     try {
@@ -73,22 +78,25 @@ export class OidcService {
         cookie: this.cookie(binding),
       };
     } catch {
-      this.db
-        .delete(oidcTransactions)
-        .where(eq(oidcTransactions.stateHash, hashToken(state)))
-        .run();
+      deleteTransaction(this.db, hashToken(state));
       throw new ApiError(503, "internal_error", "login provider unavailable");
     }
   }
 
-  public async callback(originalUrl: string, cookie: string | undefined): Promise<string> {
-    const client = this.requireClient();
-    const { callbackUrl, state, transaction } = this.claimCallback(originalUrl, cookie);
+  public async callback(
+    providerId: string,
+    originalUrl: string,
+    cookie: string | undefined,
+  ): Promise<string> {
+    const client = this.requireClient(providerId);
+    const provider = this.providerConfig(providerId);
+    const claimed = this.claimCallback(provider, originalUrl, cookie);
+    const { transaction } = claimed;
 
     try {
       const identity = await client
-        .identity(callbackUrl, {
-          state,
+        .identity(claimed.callbackUrl, {
+          state: claimed.state,
           nonce: transaction.nonce,
           verifier: transaction.verifier,
         })
@@ -96,22 +104,72 @@ export class OidcService {
           throw invalidOidcLogin();
         });
 
-      const nowMs = this.clock.nowMs();
+      return this.completeCallback(provider, identity, transaction);
+    } catch (error) {
+      const finishError = error instanceof ApiError ? oidcFinishError(error.code) : undefined;
 
-      if (transaction.expiresAt <= nowMs) throw invalidOidcLogin();
+      if (finishError !== undefined) return this.finishUrl("error", finishError);
 
-      return this.createHandoff(identity, transaction, nowMs);
+      throw error;
     } finally {
-      this.db
-        .delete(oidcTransactions)
-        .where(eq(oidcTransactions.stateHash, transaction.stateHash))
-        .run();
+      deleteTransaction(this.db, transaction.stateHash);
     }
   }
 
-  private claimCallback(originalUrl: string, cookie: string | undefined) {
-    const binding = oidcBrowserBinding(cookie, this.oidcConfig().redirectUri.startsWith("https:"));
-    const callback = new URL(this.oidcConfig().redirectUri);
+  /** Turns a verified identity into a login or account-link handoff and its finish URL. */
+  private completeCallback(
+    provider: Readonly<OidcProviderConfig>,
+    identity: Readonly<IdentityClaims>,
+    transaction: OidcTransactionRow,
+  ): string {
+    const nowMs = this.clock.nowMs();
+
+    if (transaction.expiresAt <= nowMs) throw invalidOidcLogin();
+    const code = createToken();
+
+    // An account link never creates or selects an account by email, so the provider's email
+    // verification (which only gates new accounts) does not apply; the same session completes it.
+    if (transaction.linkUserId !== null) {
+      replaceTransactionByLinkHandoff(this.db, { identity, transaction, code }, nowMs);
+
+      return this.finishUrl("link", code);
+    }
+
+    const { requireEmailVerified } = provider;
+    const grant = { identity, requireEmailVerified, transaction, code };
+    replaceTransactionByHandoff(this.db, this.auth, grant, nowMs);
+
+    return this.finishUrl("code", code);
+  }
+
+  public exchange(
+    code: string,
+    cookie: string | undefined,
+    userAgent: string | undefined,
+  ): ReturnType<AuthService["issueSession"]> {
+    this.oidcProviders();
+    const binding = oidcBrowserBinding(cookie, this.secure());
+    const nowMs = this.clock.nowMs();
+
+    return this.db.transaction(
+      () => {
+        const userId = takeHandoff(this.db, { code, binding }, nowMs);
+
+        if (userId === undefined) throw invalidOidcLogin();
+
+        return this.auth.issueSession(userId, userAgent, nowMs);
+      },
+      { behavior: "immediate" },
+    );
+  }
+
+  private claimCallback(
+    provider: Readonly<OidcProviderConfig>,
+    originalUrl: string,
+    cookie: string | undefined,
+  ) {
+    const binding = oidcBrowserBinding(cookie, this.secure());
+    const callback = new URL(provider.redirectUri);
     const incoming = new URL(originalUrl, callback.origin);
 
     if (incoming.pathname !== callback.pathname) throw invalidOidcLogin();
@@ -121,165 +179,48 @@ export class OidcService {
 
     if (!state.success) throw invalidOidcLogin();
 
-    const row = this.db
-      .update(oidcTransactions)
-      .set({ claimedAt: this.clock.nowMs() })
-      .where(
-        and(
-          eq(oidcTransactions.stateHash, hashToken(state.data)),
-          eq(oidcTransactions.bindingHash, hashToken(binding)),
-          gt(oidcTransactions.expiresAt, this.clock.nowMs()),
-          isNull(oidcTransactions.claimedAt),
-        ),
-      )
-      .returning()
-      .get();
+    const transaction = claimTransaction(
+      this.db,
+      { state: state.data, binding, provider: provider.id },
+      this.clock.nowMs(),
+    );
 
-    if (row === undefined) throw invalidOidcLogin();
+    if (transaction === undefined) throw invalidOidcLogin();
 
-    return { callbackUrl: callback.href, state: state.data, transaction: row };
+    return { callbackUrl: callback.href, state: state.data, transaction };
   }
 
-  private createHandoff(
-    identity: IdentityClaims,
-    transaction: Readonly<typeof oidcTransactions.$inferSelect>,
-    nowMs: number,
-  ): string {
-    const code = createToken();
-    this.db.transaction(
-      () => {
-        const reservation = this.db
-          .delete(oidcTransactions)
-          .where(
-            and(
-              eq(oidcTransactions.stateHash, transaction.stateHash),
-              gt(oidcTransactions.expiresAt, nowMs),
-            ),
-          )
-          .returning()
-          .get();
-
-        if (reservation === undefined) throw invalidOidcLogin();
-
-        const userId = this.identityUser(identity, nowMs);
-        this.cleanup(nowMs);
-        this.db
-          .insert(oidcHandoffs)
-          .values({
-            codeHash: hashToken(code),
-            bindingHash: transaction.bindingHash,
-            userId,
-            expiresAt: nowMs + OIDC_HANDOFF_TTL_MS,
-          })
-          .run();
-      },
-      { behavior: "immediate" },
-    );
+  private finishUrl(key: "code" | "error" | "link", value: string): string {
     const finish = new URL("/auth/finish", this.config.clientOrigin);
-    finish.searchParams.set("code", code);
+    finish.searchParams.set(key, value);
 
     return finish.href;
   }
 
-  public exchange(
-    code: string,
-    cookie: string | undefined,
-    userAgent: string | undefined,
-  ): ReturnType<AuthService["issueSession"]> {
-    this.requireClient();
-    const binding = oidcBrowserBinding(cookie, this.oidcConfig().redirectUri.startsWith("https:"));
-    const nowMs = this.clock.nowMs();
-
-    return this.db.transaction(
-      () => {
-        const row = this.db
-          .delete(oidcHandoffs)
-          .where(
-            and(
-              eq(oidcHandoffs.codeHash, hashToken(code)),
-              eq(oidcHandoffs.bindingHash, hashToken(binding)),
-              gt(oidcHandoffs.expiresAt, nowMs),
-            ),
-          )
-          .returning()
-          .get();
-
-        if (row === undefined) throw invalidOidcLogin();
-
-        return this.auth.issueSession(row.userId, userAgent, nowMs);
-      },
-      { behavior: "immediate" },
-    );
-  }
-
-  private identityUser(identity: IdentityClaims, nowMs: number): string {
-    const existing = this.db
-      .select()
-      .from(authIdentities)
-      .where(and(eq(authIdentities.issuer, identity.iss), eq(authIdentities.subject, identity.sub)))
-      .get();
-
-    if (existing !== undefined) {
-      this.auth.currentUser(existing.userId);
-
-      return existing.userId;
-    }
-
-    if (this.db.select().from(users).where(eq(users.email, identity.email)).get() !== undefined) {
-      throw new ApiError(409, "identity_conflict", "existing account ownership must be proven");
-    }
-
-    const userId = crypto.randomUUID();
-    this.db.insert(users).values({ id: userId, email: identity.email, createdAt: nowMs }).run();
-    this.db
-      .insert(authIdentities)
-      .values({ issuer: identity.iss, subject: identity.sub, userId })
-      .run();
-
-    return userId;
-  }
-
-  private cleanup(nowMs: number): void {
-    this.db
-      .delete(oidcTransactions)
-      .where(
-        inArray(
-          oidcTransactions.stateHash,
-          this.db
-            .select({ key: oidcTransactions.stateHash })
-            .from(oidcTransactions)
-            .where(lte(oidcTransactions.expiresAt, nowMs))
-            .limit(100),
-        ),
-      )
-      .run();
-    this.db
-      .delete(oidcHandoffs)
-      .where(
-        inArray(
-          oidcHandoffs.codeHash,
-          this.db
-            .select({ key: oidcHandoffs.codeHash })
-            .from(oidcHandoffs)
-            .where(lte(oidcHandoffs.expiresAt, nowMs))
-            .limit(100),
-        ),
-      )
-      .run();
-  }
-
-  private oidcConfig(): OidcConfig {
+  private oidcProviders(): readonly OidcProviderConfig[] {
     if (this.config.auth.mode !== "oidc")
       throw new ApiError(404, "not_found", "login method unavailable");
 
-    return this.config.auth;
+    return this.config.auth.providers;
   }
 
-  private requireClient(): OidcClient {
-    this.oidcConfig();
+  private providerConfig(providerId: string): OidcProviderConfig {
+    const provider = this.oidcProviders().find((candidate) => candidate.id === providerId);
 
-    if (this.client === undefined) throw new ApiError(404, "not_found", "login method unavailable");
+    if (provider === undefined) throw new ApiError(404, "not_found", "login method unavailable");
 
-    return this.client;
+    return provider;
+  }
+
+  private secure(): boolean {
+    return oidcCookieSecure(this.oidcProviders().map((provider) => provider.redirectUri));
+  }
+
+  private requireClient(providerId: string): OidcClient {
+    const client = this.clients.get(providerId);
+
+    if (client === undefined) throw new ApiError(404, "not_found", "login method unavailable");
+
+    return client;
   }
 }

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { parseStravaConfig } from "./strava/strava.config.js";
 import type { StravaConfig } from "./strava/strava.config.js";
+import { parseOidcConfig, safeOidcUrl } from "./oidc-config.js";
+import type { OidcAuthConfig } from "./oidc-config.js";
 
 const OriginSchema = z
   .string()
@@ -50,31 +52,7 @@ export interface ServerConfig {
 export type AuthConfig =
   | { readonly mode: "disabled" }
   | { readonly mode: "magic-link" }
-  | {
-      readonly mode: "oidc";
-      readonly issuer: string;
-      readonly clientId: string;
-      readonly clientSecret: string;
-      readonly redirectUri: string;
-      readonly allowLoopbackHttp: boolean;
-    };
-
-export function safeOidcUrl(value: string, allowLoopbackHttp: boolean): boolean {
-  const parsed = z.string().url().safeParse(value);
-
-  if (!parsed.success) return false;
-  const url = new URL(parsed.data);
-
-  return (
-    url.username === "" &&
-    url.password === "" &&
-    url.hash === "" &&
-    (url.protocol === "https:" ||
-      (allowLoopbackHttp &&
-        url.protocol === "http:" &&
-        ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
-  );
-}
+  | OidcAuthConfig;
 
 function parseAuthConfig(
   env: Readonly<Record<string, string | undefined>>,
@@ -85,33 +63,8 @@ function parseAuthConfig(
     .parse(env["AUTH_MODE"] ?? (nodeEnv === "production" ? undefined : "magic-link"));
 
   if (mode !== "oidc") return { mode };
-  const allowLoopbackHttp = nodeEnv === "development" || nodeEnv === "test";
 
-  const urlSchema = z
-    .string()
-    .url()
-    .refine((value) => safeOidcUrl(value, allowLoopbackHttp));
-
-  const issuer = urlSchema
-    .refine((value) => !value.includes("/.well-known/") && new URL(value).search === "")
-    .parse(env["OIDC_ISSUER"]);
-
-  const redirectUri = urlSchema
-    .refine((value) => {
-      const url = new URL(value);
-
-      return url.pathname === "/v1/auth/oidc/callback" && url.search === "";
-    })
-    .parse(env["OIDC_REDIRECT_URI"]);
-
-  return {
-    mode,
-    issuer,
-    redirectUri,
-    allowLoopbackHttp,
-    clientId: z.string().trim().min(1).parse(env["OIDC_CLIENT_ID"]),
-    clientSecret: z.string().trim().min(1).parse(env["OIDC_CLIENT_SECRET"]),
-  };
+  return parseOidcConfig(env, nodeEnv === "development" || nodeEnv === "test");
 }
 
 function envInt(

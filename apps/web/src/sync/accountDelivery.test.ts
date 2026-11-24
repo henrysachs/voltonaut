@@ -5,7 +5,7 @@ import { deliverAccountRow } from "./accountDelivery.js";
 import { newOutboxRow, type AccountOutbox, type OutboxRow } from "./accountOutbox.js";
 import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
 import { localRide } from "./testdata/localRide.js";
-import { unusedStravaLease, unexpectedMembership } from "./testdata/unusedStravaLease.js";
+import { unusedStravaLease, unexpectedAccountParts } from "./testdata/unusedStravaLease.js";
 
 const owner = {
   apiOrigin: "http://localhost:3000",
@@ -18,7 +18,7 @@ class DeliveryFixture {
   failure: PrivateRequestError | undefined;
   row: OutboxRow = newOutboxRow(owner, localRide, 1000);
   readonly lease: AccountLease = {
-    ...unexpectedMembership,
+    ...unexpectedAccountParts,
     strava: unusedStravaLease,
     signal: new AbortController().signal,
     ...owner,

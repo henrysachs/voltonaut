@@ -36,7 +36,7 @@
     for (const account of ["a", "b"]) {
       document.querySelector(`#login-${account}`).onclick = () => {
         sessionStorage.setItem("current", account);
-        location.href = `${api}/v1/auth/oidc/start`;
+        location.href = `${api}/v1/auth/oidc/test/start`;
       };
       document.querySelector(`#switch-${account}`).onclick = () => {
         sessionStorage.setItem("current", account);

@@ -26,10 +26,11 @@ export async function setup() {
   const config = parseServerConfig(
     {
       AUTH_MODE: "oidc",
-      OIDC_ISSUER: provider.issuer,
-      OIDC_CLIENT_ID: "test-client",
-      OIDC_CLIENT_SECRET: "test-secret",
-      OIDC_REDIRECT_URI: "http://127.0.0.1:3000/v1/auth/oidc/callback",
+      OIDC_PROVIDERS: "test",
+      OIDC_TEST_ISSUER: provider.issuer,
+      OIDC_TEST_CLIENT_ID: "test-client",
+      OIDC_TEST_CLIENT_SECRET: "test-secret",
+      OIDC_TEST_REDIRECT_URI: "http://127.0.0.1:3000/v1/auth/oidc/test/callback",
       CLIENT_ORIGIN: ORIGIN,
       THROTTLER_SESSION_IP_PER_MIN: "100",
     },
@@ -42,8 +43,11 @@ export async function setup() {
   return { ...result, provider, time };
 }
 
-export async function start(context: OidcApp) {
-  const response = await request(httpServerOf(context.app)).get("/v1/auth/oidc/start").expect(302);
+export async function start(context: OidcApp, providerId = "test") {
+  const response = await request(httpServerOf(context.app))
+    .get(`/v1/auth/oidc/${providerId}/start`)
+    .expect(302);
+
   const cookies = z.array(z.string()).parse(response.headers["set-cookie"]);
   const cookie = z.string().parse(cookies[0]?.split(";")[0]);
   const location = z.string().url().parse(response.headers["location"]);

@@ -34,7 +34,7 @@ function fixture() {
     mode: () => {
       calls.push("mode");
 
-      return Promise.resolve({ mode: "oidc" });
+      return Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] });
     },
     me: () => {
       calls.push("me");
@@ -196,7 +196,7 @@ it("does not navigate on a mode response received after cancellation", async () 
 
   const login = client.login();
   await client.logout();
-  waiting.resolve({ mode: "oidc" });
+  waiting.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] });
   await login;
   expect(options.calls).not.toContain("navigate");
   expect(client.view().kind).toBe("guest");
@@ -266,7 +266,7 @@ it("keeps a memory session if storage is denied, and reports unconfirmed remote 
 
 it.each([{ mode: "disabled" }, { mode: "magic-link" }] satisfies readonly AuthConfigResponse[])(
   "does not navigate for $mode mode",
-  async (config: Readonly<AuthConfigResponse>) => {
+  async (config: Readonly<{ mode: "disabled" | "magic-link" }>) => {
     const options = fixture();
 
     const client = new ApplicationSession({

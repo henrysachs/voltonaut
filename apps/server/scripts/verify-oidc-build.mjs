@@ -37,7 +37,7 @@ async function waitForHealth(api, attempts = 100) {
 async function verifyFlow(api) {
   const capability = await fetch(`${api}/v1/auth/config`);
   assert.deepEqual(await capability.json(), { mode: "oidc" });
-  const started = await fetch(`${api}/v1/auth/oidc/start`, { redirect: "manual" });
+  const started = await fetch(`${api}/v1/auth/oidc/test/start`, { redirect: "manual" });
   assert.equal(started.status, 302);
   const cookie = z.string().parse(started.headers.get("set-cookie")?.split(";")[0]);
 
@@ -95,10 +95,11 @@ const child = spawn(process.execPath, ["dist/main.js"], {
     DATABASE_PATH: ":memory:",
     HOST: "127.0.0.1",
     PORT: String(port),
-    OIDC_ISSUER: provider.issuer,
-    OIDC_CLIENT_ID: "test-client",
-    OIDC_CLIENT_SECRET: "test-secret",
-    OIDC_REDIRECT_URI: `${api}/v1/auth/oidc/callback`,
+    OIDC_PROVIDERS: "test",
+    OIDC_TEST_ISSUER: provider.issuer,
+    OIDC_TEST_CLIENT_ID: "test-client",
+    OIDC_TEST_CLIENT_SECRET: "test-secret",
+    OIDC_TEST_REDIRECT_URI: `${api}/v1/auth/oidc/test/callback`,
     CLIENT_ORIGIN: origin,
   },
   stdio: "ignore",
