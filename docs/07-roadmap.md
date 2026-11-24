@@ -198,6 +198,9 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
 - [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
+- [ ] Installierbare PWA ([E10-09](specs/E10-09-installable-pwa.md), [Issue #88](https://github.com/henrysachs/voltonaut/issues/88))
+  - [x] Manifest, Icons, versionierter App-Shell-Cache, kontrolliertes Update und Menü „App" am gebauten Artefakt softwaregeprüft (Offline-Reload, kein Cache für API-Daten).
+  - [ ] Installation und Standalone-Start auf echtem Desktop- und Android-Gerät; Web Bluetooth in der installierten PWA an Henrys Trainer.
 - [ ] Optionale Client-Telemetrie (ADR-010): aggregierte FPS/Framezeit und BLE-Trennungen sowie Fehler-Signaturen an einen eigenen Server-Endpunkt, keine Third-Party-Tracker
 - [ ] Strava-Integration (optional): OAuth-Verbindung eines Strava-Kontos, akzeptierte Fahrt als Activity hochladen
   - [x] [E10-04](specs/E10-04-complete-ride-delivery.md): Worker-Journal, kanonische API und ausdrücklicher dauerhafter TCX-Versand gegen lokale Testanbieter softwaregeprüft. Bestehende Aufnahmen bleiben erhalten.
