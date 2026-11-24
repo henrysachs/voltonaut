@@ -4,6 +4,8 @@ import * as THREE from "three";
 import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import { AvatarConfigSchema } from "@voltonaut/shared";
 
+import { bikeGeometry, pedalPoint } from "./bikeGeometry.js";
+import { DEFAULT_FRAME_SPEC, DEFAULT_WHEEL_SPEC } from "./bikeSpecs.js";
 import { createAvatarPreview } from "./customize.js";
 
 function meshByName(
@@ -69,18 +71,27 @@ describe("avatar preview model", () => {
 });
 
 describe("avatar preview pose", () => {
-  it("initializes both shoes at the static preview pedals", () => {
+  it("puts both shoes on the opposed pedals of the preview crank", () => {
     const preview = createAvatarPreview(2.105);
+    const geometry = bikeGeometry(2.105, DEFAULT_FRAME_SPEC, DEFAULT_WHEEL_SPEC);
 
     try {
-      const right = meshByName(preview.root, "shoe-right");
-      const left = meshByName(preview.root, "shoe-left");
-      expect(right.position.x).toBeCloseTo(-0.045);
-      expect(right.position.y).toBeCloseTo(0.285);
-      expect(right.position.z).toBeCloseTo(0.14);
-      expect(left.position.x).toBeCloseTo(-0.045);
-      expect(left.position.y).toBeCloseTo(0.625);
-      expect(left.position.z).toBeCloseTo(-0.14);
+      for (const [name, side] of [
+        ["shoe-right", 1],
+        ["shoe-left", -1],
+      ] as const) {
+        const shoe = meshByName(preview.root, name);
+        const pedal = pedalPoint(geometry, Math.PI / 2, side);
+
+        expect(Math.abs(shoe.position.x - pedal[0])).toBeLessThan(0.05);
+        expect(shoe.position.y - pedal[1]).toBeGreaterThan(0.015);
+        expect(shoe.position.y - pedal[1]).toBeLessThan(0.06);
+        expect(Math.sign(shoe.position.z)).toBe(side);
+      }
+
+      expect(meshByName(preview.root, "shoe-right").position.y).toBeLessThan(
+        meshByName(preview.root, "shoe-left").position.y - 0.3,
+      );
     } finally {
       preview.dispose();
     }

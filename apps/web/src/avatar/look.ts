@@ -1,36 +1,29 @@
-import type { AvatarConfig } from "@voltonaut/shared";
+import { START_AVATAR_CATALOG } from "@voltonaut/rules";
+import type { AvatarConfig, ItemDef } from "@voltonaut/shared";
+
+import { frameSpecFor, wheelSpecFor, type FrameSpec, type WheelSpec } from "./bikeSpecs.js";
 
 export interface AvatarLook {
-  readonly frameRadiusM: number;
-  readonly rimColor: number;
-  readonly rimRoughness: number;
+  readonly frame: FrameSpec;
+  readonly wheels: WheelSpec;
   readonly shoeColor: number;
   readonly glassesVisible: boolean;
   readonly jerseyAccentRadiusM: number;
   readonly jerseyAccentRoughness: number;
 }
 
-export function avatarLook(config: Readonly<AvatarConfig>): AvatarLook {
-  const frameRadiusM =
-    config.bike.frameId === "frame.aero"
-      ? 0.032
-      : config.bike.frameId === "frame.gravel"
-        ? 0.023
-        : 0.025;
+function assetRefOf(itemId: string, catalog: readonly Readonly<ItemDef>[]): string | undefined {
+  return catalog.find((item) => item.id === itemId)?.assetRef;
+}
 
-  const rimColor =
-    config.bike.wheelsId === "wheels.alloy"
-      ? 0xd3dadb
-      : config.bike.wheelsId === "wheels.carbon-flat"
-        ? 0x58666b
-        : config.bike.wheelsId === "wheels.carbon-deep"
-          ? 0x263238
-          : 0x7d898d;
-
+/** Resolves catalog items to render specs through their `assetRef`; unknown items fall back to defaults. */
+export function avatarLook(
+  config: Readonly<AvatarConfig>,
+  catalog: readonly Readonly<ItemDef>[] = START_AVATAR_CATALOG,
+): AvatarLook {
   return {
-    frameRadiusM,
-    rimColor,
-    rimRoughness: config.bike.wheelsId === "wheels.alloy" ? 0.25 : 0.5,
+    frame: frameSpecFor(assetRefOf(config.bike.frameId, catalog)),
+    wheels: wheelSpecFor(assetRefOf(config.bike.wheelsId, catalog)),
     shoeColor: config.rider.shoesId === "shoes.white" ? 0xf5ebca : 0x18272e,
     glassesVisible: config.rider.glassesId !== "glasses.none",
     ...jerseyAccentLook(config.rider.jerseyId),
