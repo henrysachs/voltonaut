@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { FunItemId, RideMode } from "./funMode.js";
 import type { Bpm, Meters, Mps, Pct, Rpm, Seconds, Watts } from "./units.js";
 
 import { RiderProfileSchema } from "./profile.js";
@@ -35,7 +36,15 @@ export type RideEvent =
       readonly tS: Seconds;
     }
   | { readonly type: "lap.completed"; readonly lap: number; readonly tS: Seconds }
-  | { readonly type: "ride.clockSkipped"; readonly skippedS: Seconds };
+  | { readonly type: "ride.clockSkipped"; readonly skippedS: Seconds }
+  | { readonly type: "item.collected"; readonly item: FunItemId; readonly tS: Seconds }
+  | {
+      readonly type: "item.activated";
+      readonly item: FunItemId;
+      readonly durationS: Seconds;
+      readonly tS: Seconds;
+    }
+  | { readonly type: "item.expired"; readonly item: FunItemId; readonly tS: Seconds };
 
 /** Raw per-tick engine inputs; physics uses these unsmoothed values. */
 export interface TickInputs {
@@ -46,6 +55,10 @@ export interface TickInputs {
   readonly shifts: number;
   /** Whether a trainer.data event arrived since the last tick. */
   readonly trainerDataFresh: boolean;
+  /** Power-up button pressed since the last tick (several presses count once). */
+  readonly useItem: boolean;
+  /** Requested ride mode; switching to "normal" drops held and active items. */
+  readonly mode: RideMode;
 }
 
 /** Trainer resistance strategy; E3 implements effectiveGrade (FTMS 0x11). */

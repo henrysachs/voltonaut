@@ -41,6 +41,8 @@ function inputs(overrides: Partial<TickInputs> = {}): TickInputs {
     hrBpm: undefined,
     shifts: 0,
     trainerDataFresh: true,
+    useItem: false,
+    mode: "normal",
     ...overrides,
   };
 }

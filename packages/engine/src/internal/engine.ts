@@ -152,6 +152,23 @@ class RideEngine implements Engine {
     }
   };
 
+  /** Inputs for the next tick; one-shot intents are consumed by exactly one tick. */
+  private takeInputs(): TickInputs {
+    const inputs: TickInputs = {
+      powerW: this.buffered.powerW,
+      cadenceRpm: this.buffered.cadenceRpm,
+      hrBpm: this.buffered.hrBpm,
+      shifts: this.buffered.shifts,
+      trainerDataFresh: this.buffered.trainerDataFresh,
+      useItem: false,
+      mode: "normal",
+    };
+
+    this.buffered = { ...this.buffered, shifts: 0, trainerDataFresh: false };
+
+    return inputs;
+  }
+
   readonly advance = (elapsedS: Seconds): readonly NativeTickFacts[] => {
     const facts: NativeTickFacts[] = [];
 
@@ -174,21 +191,7 @@ class RideEngine implements Engine {
     }
 
     for (let tickNumber = 0; tickNumber < plan.ticksToRun; tickNumber += 1) {
-      const inputs: TickInputs = {
-        powerW: this.buffered.powerW,
-        cadenceRpm: this.buffered.cadenceRpm,
-        hrBpm: this.buffered.hrBpm,
-        shifts: this.buffered.shifts,
-        trainerDataFresh: this.buffered.trainerDataFresh,
-      };
-
-      this.buffered = {
-        ...this.buffered,
-        shifts: 0,
-        trainerDataFresh: false,
-      };
-
-      const result = tick(this.state, inputs, this.ctx, TICK_S);
+      const result = tick(this.state, this.takeInputs(), this.ctx, TICK_S);
 
       this.state = result.state;
       facts.push(result.facts);
