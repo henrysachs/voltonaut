@@ -14,9 +14,11 @@ import { GEAR_PRESETS, physicalRatioFor, START_GEAR_INDEX } from "../gears/prese
 import { DEFAULT_TRAINER_MASS_KG } from "../trainer/gradeMap.js";
 import { riderParamsFromProfile } from "../physics/params.js";
 import { planCatchup, TICK_S } from "./catchup.js";
-import type { EngineContext } from "./tick.js";
+import type { EngineContext, NativeTickFacts } from "./tick.js";
 import { tick } from "./tick.js";
 import { createRideState, type RideState } from "./state.js";
+
+export type { NativeTickFacts } from "./tick.js";
 
 /** Public read-only view of the ride; frozen at every snapshot() call. */
 export interface RideSnapshot {
@@ -57,8 +59,9 @@ export interface Engine {
    * Feeds elapsed seconds into the accumulator and runs floor(elapsed / 0.05)
    * ticks, capped at 120 (6 s); excess gaps emit ride.clockSkipped and the
    * data-loss rule takes over (rolling out instead of standing still).
+   * Returns one immutable fact per processed tick in native order.
    */
-  readonly advance: (elapsedS: Seconds) => void;
+  readonly advance: (elapsedS: Seconds) => readonly NativeTickFacts[];
   readonly snapshot: () => RideSnapshot;
   readonly drainEvents: () => readonly RideEvent[];
   readonly drainCommands: () => readonly TrainerCommand[];
@@ -148,7 +151,9 @@ class RideEngine implements Engine {
     }
   };
 
-  readonly advance = (elapsedS: Seconds): void => {
+  readonly advance = (elapsedS: Seconds): readonly NativeTickFacts[] => {
+    const facts: NativeTickFacts[] = [];
+
     if (!this.started) {
       this.started = true;
       this.events.push({ type: "ride.started" });
@@ -185,6 +190,7 @@ class RideEngine implements Engine {
       const result = tick(this.state, inputs, this.ctx, TICK_S);
 
       this.state = result.state;
+      facts.push(result.facts);
 
       if (result.trainerCommand !== undefined) {
         this.commands.push(result.trainerCommand);
@@ -192,6 +198,8 @@ class RideEngine implements Engine {
 
       this.events.push(...result.events);
     }
+
+    return Object.freeze(facts);
   };
 
   readonly snapshot = (): RideSnapshot => {

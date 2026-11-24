@@ -17,10 +17,42 @@ export interface EngineContext {
   readonly trainerMassKg: number;
 }
 
+export interface NativeTickFacts {
+  readonly powerW: number;
+  readonly cadenceRpm: number;
+  readonly timeS: Seconds;
+  readonly distanceM: Meters;
+  readonly elevationGainM: Meters;
+  readonly energyKj: number;
+}
+
+interface TickContributions {
+  readonly timeS: Seconds;
+  readonly distanceM: Meters;
+  readonly elevationGainM: Meters;
+  readonly energyKj: number;
+}
+
+function nativeFacts(
+  raw: Readonly<RawReadings>,
+  contributions: TickContributions,
+): NativeTickFacts {
+  return Object.freeze({
+    powerW: raw.powerW,
+    cadenceRpm: raw.cadenceRpm,
+    ...contributions,
+  });
+}
+
+function pausedFacts(raw: Readonly<RawReadings>): NativeTickFacts {
+  return nativeFacts(raw, { timeS: 0, distanceM: 0, elevationGainM: 0, energyKj: 0 });
+}
+
 export interface TickResult {
   readonly state: RideState;
   readonly events: readonly RideEvent[];
   readonly trainerCommand: TrainerCommand | undefined;
+  readonly facts: NativeTickFacts;
 }
 
 const EMA_TAU_S: Seconds = 1;
@@ -147,7 +179,7 @@ function advanceRide(
   dtS: Seconds,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives distance, lap and segment events.
   events: RideEvent[],
-): void {
+): TickContributions {
   state.gradePct = ctx.route.profile.gradeAt(state.routePosM);
 
   state.speedMps = advanceSpeedMps(
@@ -160,21 +192,23 @@ function advanceRide(
   );
 
   const previousRoutePosM = state.routePosM;
-  const deltaM = state.speedMps * dtS;
+  const distanceM = state.speedMps * dtS;
+  const energyKj = energyDeltaKj(rawPowerW, dtS);
 
-  state.distanceM += deltaM;
+  state.distanceM += distanceM;
   state.routePosM = routePositionM(state.distanceM, ctx.route.lengthM, ctx.route.loop);
   state.tS += dtS;
-  state.energyKj += energyDeltaKj(rawPowerW, dtS);
+  state.energyKj += energyKj;
 
   const previousElevationM = ctx.route.profile.elevationAt(previousRoutePosM);
   const nextElevationM = ctx.route.profile.elevationAt(state.routePosM);
   const deltaElevM = nextElevationM - previousElevationM;
+  const elevationGainM = elevationGainDeltaM(previousElevationM, nextElevationM);
 
-  state.elevationGainM += elevationGainDeltaM(previousElevationM, nextElevationM);
+  state.elevationGainM += elevationGainM;
 
-  if (deltaM > 0) {
-    events.push({ type: "distance.tick", deltaM, deltaElevM });
+  if (distanceM > 0) {
+    events.push({ type: "distance.tick", deltaM: distanceM, deltaElevM });
   }
 
   if (ctx.route.loop && state.routePosM < previousRoutePosM) {
@@ -183,6 +217,8 @@ function advanceRide(
   }
 
   events.push(...applySegments(state, ctx.route, previousRoutePosM, state.routePosM, state.tS));
+
+  return { timeS: dtS, distanceM, elevationGainM, energyKj };
 }
 
 function applyPause(
@@ -233,10 +269,11 @@ export function tick(
   const pause = applyPause(state, raw);
 
   if (pause === "paused") {
-    return { state, events, trainerCommand: undefined };
+    return { state, events, trainerCommand: undefined, facts: pausedFacts(raw) };
   }
 
-  advanceRide(state, ctx, raw.powerW, dtS, events);
+  const contributions = advanceRide(state, ctx, raw.powerW, dtS, events);
+  const facts = nativeFacts(raw, contributions);
 
   if (isStationary(state.speedMps, raw.cadenceRpm)) {
     state.stationaryS += dtS;
@@ -258,5 +295,5 @@ export function tick(
 
   state.tickIndex += 1;
 
-  return { state, events, trainerCommand };
+  return { state, events, trainerCommand, facts };
 }
