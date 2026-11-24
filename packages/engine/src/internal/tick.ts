@@ -198,7 +198,7 @@ function accumulateStationary(state: RideState, rawCadenceRpm: number, dtS: Seco
   state.stationaryS = isStationary(state.speedMps, rawCadenceRpm) ? state.stationaryS + dtS : 0;
 }
 
-/** Rate-limited trainer command from the profile params; items never reach it (ADR-027). */
+/** Rate-limited trainer command from the profile params; items never reach it (ADR-028). */
 function trainerCommandFor(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The command gate inside RideState is engine-owned mutable state; nextCommand advances it.
   state: RideState,

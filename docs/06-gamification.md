@@ -54,6 +54,8 @@ Die Shared-Schemas begrenzen effektive Rohwerte wie die bestehenden Fahrtverträ
 
 Die spätere Ermittlung tatsächlicher aktiver Fakten und die serverseitige Vergabe bleiben getrennte Aufgaben. Der letzte Snapshot und eine Batchdauer reichen dafür nicht. Weder synthetische Fakten noch Replay-Konsistenz oder BLE-Selbstauskunft autorisieren eine Buchung. Hardwareabnahme und Bereitstellung gehören nicht zu E6-02.
 
+[E6-05](specs/E6-05-volts-ledger.md) ergänzt das serverseitige SQLite-Journal. Belohnung und Abbuchung sind idempotent und atomar; Kontostand und Tagesbudget werden aus dem Journal summiert. Zusammenhängende Bereiche erhalten kumulative Fakten; das Ledger bucht die Differenz zur vorherigen kumulierten Rundung. Dadurch ergibt die Summe aller Bereiche exakt die Ganzfahrt-Rundung. Checkpoint-Freigabe, Quellenpolitik, Mitternachtsfahrten, Shop-Käufe und bestehende Fahrten bleiben ausdrücklich unverändert.
+
 ### Shop & Freischalt-Ökonomie
 
 | Seltenheit | Preis (Volts) | ≈ Fahrstunden | Zusätzliche Bedingung |
@@ -80,7 +82,7 @@ type UnlockRule =
 
 Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magnet, `04-world-3d.md` §7). Aktivierung per Play-Power-up-Taste; physikrelevant → im Ride-Upload protokolliert, serverseitig nachgerechnet; Segmentzeiten mit Power-up werden getrennt markiert. Kosten nichts, bringen keine Volts.
 
-Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-027](decisions/ADR-027-fun-mode-trainer-effects.md)). Er hat eigene Item-Boxen und Items, und für ihn gilt die Protokollierung oben ausdrücklich nicht: Er erzeugt keine Belohnungen, keine Fortschritts-Checkpoints und keine Aufnahme. Wer ihn in einer Sitzung betritt, macht alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `fun_mode`), weil das Aufnahmeprotokoll keinen Spaß-Modus kennt und der Server nur im normalen Modus nachrechnet. Eine nachrechenbare Variante wäre ein eigener Schritt (Modus- und Item-Einträge in RecordingV2).
+Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-028](decisions/ADR-028-fun-mode-trainer-effects.md)). Er hat eigene Item-Boxen und Items, und für ihn gilt die Protokollierung oben ausdrücklich nicht: Er erzeugt keine Belohnungen, keine Fortschritts-Checkpoints und keine Aufnahme. Wer ihn in einer Sitzung betritt, macht alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `fun_mode`), weil das Aufnahmeprotokoll keinen Spaß-Modus kennt und der Server nur im normalen Modus nachrechnet. Eine nachrechenbare Variante wäre ein eigener Schritt (Modus- und Item-Einträge in RecordingV2).
 
 ## XP & Level
 
@@ -92,7 +94,7 @@ Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.m
 
 ## Season Pass
 
-Spec: [E6-05](specs/E6-05-season-pass.md). Eine Saison dauert 8 bis 12 Wochen und hat mindestens 20 Stufen. Saisonpunkte entsprechen den Basis-XP derselben bestätigten Fahrtabschnitte. Pro Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, damit die Rundung der ganzen Fahrt gilt. Ein Abschnitt zählt, wenn seine Fahrzeit im Zeitraum liegt (Start inklusive, Ende exklusiv). Jede Stufe vergibt ein Saison-Item (`UnlockRule` `{ kind: "season" }`) oder einen Volts-Bonus, und zwar genau einmal. Verdiente Items bleiben nach Saisonende. `season-01`: 20 Stufen zu je 1 800 Punkten ⚠️ Startwert. Bisher sind nur Schemas, Rechenlogik und Daten umgesetzt, keine Vergabe.
+Spec: [E6-06](specs/E6-06-season-pass.md). Eine Saison dauert 8 bis 12 Wochen und hat mindestens 20 Stufen. Saisonpunkte entsprechen den Basis-XP derselben bestätigten Fahrtabschnitte. Pro Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, damit die Rundung der ganzen Fahrt gilt. Ein Abschnitt zählt, wenn seine Fahrzeit im Zeitraum liegt (Start inklusive, Ende exklusiv). Jede Stufe vergibt ein Saison-Item (`UnlockRule` `{ kind: "season" }`) oder einen Volts-Bonus, und zwar genau einmal. Verdiente Items bleiben nach Saisonende. `season-01`: 20 Stufen zu je 1 800 Punkten ⚠️ Startwert. Bisher sind nur Schemas, Rechenlogik und Daten umgesetzt, keine Vergabe.
 
 ## Badges / Achievements (Startliste)
 

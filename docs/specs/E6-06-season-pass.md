@@ -1,4 +1,4 @@
-# Spec E6-05 – Season Pass
+# Spec E6-06 – Season Pass
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E6, Unterpunkt „Season Pass"
 - **Issue:** #44

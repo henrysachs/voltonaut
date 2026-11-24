@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Zod, Vitest + fast-check, Stryker (rules), NestJS + Drizzle/SQLite (Server), Playwright (E2E).
 
-**Spec:** GitHub-Issue #44. Task 1 überführt es in `docs/specs/E6-05-season-pass.md`. Ausführende lesen Issue und Spec.
+**Spec:** GitHub-Issue #44. Task 1 überführt es in `docs/specs/E6-06-season-pass.md`. Ausführende lesen Issue und Spec.
 
 ## Abhängigkeiten und Phasen
 
@@ -47,7 +47,7 @@ Phase A endet mit einem eigenen PR. Phase B und C starten erst, wenn die Vorauss
 
 **Files:**
 
-- Create: `docs/specs/E6-05-season-pass.md` (aus `docs/specs/_template.md`)
+- Create: `docs/specs/E6-06-season-pass.md` (aus `docs/specs/_template.md`)
 - Modify: `docs/07-roadmap.md` (E6: Unterpunkt „Season Pass" mit Spec-Link, offen)
 - Modify: `docs/06-gamification.md` (neuer Abschnitt „Season Pass" mit Punkte-Regel und Stufenkurve, ⚠️ Startwerte)
 
@@ -62,8 +62,8 @@ Phase A endet mit einem eigenen PR. Phase B und C starten erst, wenn die Vorauss
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/specs/E6-05-season-pass.md docs/07-roadmap.md docs/06-gamification.md
-git commit -m "docs(rules): specify season pass (E6-05)"
+git add docs/specs/E6-06-season-pass.md docs/07-roadmap.md docs/06-gamification.md
+git commit -m "docs(rules): specify season pass (E6-06)"
 ```
 
 ---

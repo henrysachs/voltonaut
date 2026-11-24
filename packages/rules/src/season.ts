@@ -13,7 +13,7 @@ import {
 
 import { calculateBaseXp } from "./xp.js";
 
-/** Start inclusive, end exclusive (spec E6-05 AK4). */
+/** Start inclusive, end exclusive (spec E6-06 AK4). */
 export function isSeasonOpen(season: SeasonDefinition, atMs: number): boolean {
   const parsedSeason = SeasonDefinitionSchema.parse(season);
   const parsedAtMs = EpochMsSchema.parse(atMs);

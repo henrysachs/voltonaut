@@ -6,6 +6,8 @@ export * from "./bus.js";
 
 export * from "./events.js";
 
+export * from "./economy.js";
+
 export * from "./profile.js";
 
 export * from "./ride.js";

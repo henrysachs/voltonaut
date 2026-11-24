@@ -16,6 +16,8 @@ export const ErrorCodeSchema = z.enum([
   "validation_failed",
   "not_found",
   "ride_id_conflict",
+  "insufficient_volts",
+  "ledger_conflict",
   "payload_too_large",
   "unsupported_media_type",
   "internal_error",

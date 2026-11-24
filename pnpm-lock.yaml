@@ -66,6 +66,9 @@ importers:
       '@voltonaut/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@voltonaut/rules':
+        specifier: workspace:*
+        version: link:../../packages/rules
       '@voltonaut/shared':
         specifier: workspace:*
         version: link:../../packages/shared

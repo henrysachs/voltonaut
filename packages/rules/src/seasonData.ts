@@ -40,7 +40,7 @@ export const SEASONS: readonly SeasonDefinition[] = Object.freeze([
 
 /**
  * Season-exclusive avatar items. They are not part of the documented start
- * catalog; the garage lists them once season progress exists (spec E6-05 phase C).
+ * catalog; the garage lists them once season progress exists (spec E6-06 phase C).
  */
 export const SEASON_AVATAR_ITEMS: readonly ItemDef[] = Object.freeze([
   ItemDefSchema.parse({
