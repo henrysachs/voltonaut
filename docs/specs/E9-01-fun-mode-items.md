@@ -23,7 +23,7 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Auf der Strecke l
 
 - [x] AK1 – Ohne Spaß-Modus bleiben alle Golden-Läufe (`fixtures/rides/*.golden.json`) unverändert. Golden-Dateien werden nicht angepasst.
 - [x] AK2 – Item-Boxen liegen deterministisch: die erste bei 300 m, dann alle 800 m. Eine Box innerhalb eines Sprint- oder KOM-Segments wandert an dessen Ende. Pro Runde stehen sie erneut bereit.
-- [x] AK3 – Der Inhalt kommt aus einem Seed (Standard 42). Gleicher Seed, gleiche Itemfolge: in der Engine über zwei Runden (mindestens 20 Boxen), im Zufallsgenerator über 100 Ziehungen.
+- [x] AK3 – Der Inhalt kommt aus einem Seed (Standard 42). Die Engine sammelt über zwei Runden (mindestens 20 Boxen) genau die Itemfolge, die mulberry32 mit diesem Seed vorgibt. Im Zufallsgenerator wiederholen sich 100 Ziehungen exakt.
 - [x] AK4 – Es gibt höchstens ein gehaltenes Item. Eine Box bei vollem Slot bleibt wirkungslos. Ein Doppeldruck vor dem nächsten Tick aktiviert einmal. Aktivieren während eines Effekts wird ignoriert.
 - [x] AK5 – Items (⚠️ Startwerte): Aero-Boost (CdA × 0,85, 15 s), Leichtgewicht (Fahrer- und Radmasse × 0,90 bei Steigung ≥ 0, 20 s), Rückenwind (−3 m/s Wind nur in der Physik, 10 s). Die Effektzeit läuft nur in fahrenden Ticks.
 - [x] AK6 – Trainer: Items wirken nur in der Fahrphysik. Das Trainerkommando eines Ticks ist mit und ohne aktives Item bei gleichem Zustand und gleichen Eingaben identisch. Es gibt keinen neuen Kommandopfad (ADR-027).

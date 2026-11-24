@@ -5,6 +5,7 @@ import { DEFAULT_RIDER_PROFILE, type RideEvent, type RideMode } from "@voltonaut
 import { KOM_CLIMB } from "../elevation/data/kom-climb.js";
 import { TEST_LOOP } from "../elevation/data/test-loop.js";
 import { createRoute } from "../elevation/route.js";
+import { nextRandom, pickItem } from "../fun/rng.js";
 import { createEngine, type Engine } from "./engine.js";
 
 const route = createRoute(TEST_LOOP);
@@ -168,23 +169,37 @@ it("switching to normal clears items and restores params", () => {
   });
 });
 
-/** Collects and immediately uses every box for the given ride time. */
+/** Collects and immediately uses every box; 1000 W keeps two laps short in simulated time. */
 function itemSequence(seed: number, seconds: number): readonly string[] {
   const engine = engineAt(290, "fun", seed);
   const sequence: string[] = [];
 
   for (let elapsedS = 0; elapsedS < seconds; elapsedS += 30) {
-    sequence.push(...itemEvents(ride(engine, 30)).filter((event) => event.includes("collected")));
+    sequence.push(
+      ...itemEvents(ride(engine, 30, 1000)).filter((event) => event.includes("collected")),
+    );
     press(engine);
   }
 
   return sequence;
 }
 
-it("the same seed yields the same item sequence over two laps", () => {
-  const sequence = itemSequence(42, 2100);
+/** The first picks of the seeded generator, as collection events. */
+function seededPicks(seed: number, count: number): readonly string[] {
+  let state = seed;
+
+  return Array.from({ length: count }, () => {
+    const draw = nextRandom(state);
+
+    state = draw.state;
+
+    return `item.collected:${pickItem(draw.value)}`;
+  });
+}
+
+it("collects items in exactly the seeded order over two laps", () => {
+  const sequence = itemSequence(42, 1500);
 
   expect(sequence.length).toBeGreaterThanOrEqual(20);
-  expect(itemSequence(42, 2100)).toEqual(sequence);
-  expect(itemSequence(AERO_SEED, 2100)).not.toEqual(sequence);
+  expect(sequence).toEqual(seededPicks(42, sequence.length));
 });
