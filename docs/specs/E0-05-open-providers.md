@@ -34,3 +34,4 @@ Keine globalen Einstellungen, Zugangsdaten, Modellwechsel oder Änderungen am Sp
 ## Doku-Updates
 
 - [x] `AGENTS.md` aktualisiert. Keine funktionale Roadmap-Checkbox betroffen.
+- [x] Henrys zusätzliche Vorgabe vom 24.11.2026 dokumentiert: bestätigte Review-Befunde zeitnah im betroffenen PR veröffentlichen, ohne Secrets oder private Belegwerte.
