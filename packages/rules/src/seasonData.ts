@@ -18,7 +18,7 @@ function seasonOneReward(tier: number): SeasonReward {
   const itemId = SEASON_01_ITEMS.get(tier);
 
   return itemId === undefined
-    ? { kind: "volts", amount: 200 + 20 * tier }
+    ? { kind: "volts", amountVolts: 200 + 20 * tier }
     : { kind: "item", itemId };
 }
 

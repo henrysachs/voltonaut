@@ -38,8 +38,12 @@ function funState(activeItem?: FunItemId): RideState {
     seed: 42,
   });
 
-  state.activeItem = activeItem;
-  state.activeRemainingS = activeItem === undefined ? 0 : 10;
+  state.mode = {
+    kind: "fun",
+    heldItem: undefined,
+    activeItem,
+    activeRemainingS: activeItem === undefined ? 0 : 10,
+  };
 
   return state;
 }
@@ -51,4 +55,27 @@ it.each(FUN_ITEM_IDS)("%s changes speed but leaves the trainer command unchanged
   expect(without.trainerCommand).toBeDefined();
   expect(withItem.trainerCommand).toEqual(without.trainerCommand);
   expect(withItem.state.speedMps).toBeGreaterThan(without.state.speedMps);
+});
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The probe ticks the engine-owned mutable RideState.
+function commandsOver(state: RideState, mode: TickInputs["mode"]) {
+  return Array.from(
+    { length: 40 },
+    () => tick(state, { ...inputs, mode }, context, 0.05).trainerCommand,
+  );
+}
+
+function normalState(): RideState {
+  return createRideState({
+    gearIndex: START_GEAR_INDEX,
+    gearRatio: GEAR_RATIOS[START_GEAR_INDEX] ?? 2.3,
+    speedMps: 6,
+    routePosM: 400,
+    mode: "normal",
+    seed: 42,
+  });
+}
+
+it("normal and fun mode without an active item send identical trainer commands", () => {
+  expect(commandsOver(normalState(), "normal")).toEqual(commandsOver(funState(), "fun"));
 });

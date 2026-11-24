@@ -23,5 +23,5 @@ export function pickItem(value: number): FunItemId {
     Math.min(FUN_ITEM_IDS.length - 1, Math.floor(value * FUN_ITEM_IDS.length)),
   );
 
-  return FUN_ITEM_IDS[index] ?? "aeroBoost";
+  return FUN_ITEM_IDS[index] ?? FUN_ITEM_IDS[0];
 }

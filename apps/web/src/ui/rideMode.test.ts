@@ -5,10 +5,13 @@ import type { RideMode } from "@voltonaut/shared";
 import type { CaptureView } from "../game/rideCaptureProtocol.js";
 import {
   bindRideMode,
-  FUN_MODE_HINT,
-  FUN_MODE_LOCKED_HINT,
+  RIDE_MODE_COPY,
+  UNRECORDABLE_LOCKED_HINT,
   type RideModeView,
 } from "./rideMode.js";
+
+const FUN_MODE_HINT = RIDE_MODE_COPY.fun.hint;
+const FUN_MODE_LOCKED_HINT = UNRECORDABLE_LOCKED_HINT;
 
 const idle: CaptureView = { kind: "idle", availability: { kind: "journal" } };
 
@@ -43,8 +46,9 @@ function fakeView(shown: ShownPicker, listeners: Listeners): RideModeView {
 
       return ignore;
     },
-    setFunEnabled: (enabled) => {
-      shown.funEnabled = enabled;
+    setEnabled: (mode, enabled) => {
+      if (mode === "fun") shown.funEnabled = enabled;
+      else if (!enabled) throw new Error(`${mode} must stay selectable`);
     },
     setHint: (text) => {
       shown.hint = text;

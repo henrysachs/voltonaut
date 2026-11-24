@@ -9,7 +9,9 @@ function tiers(thresholds: readonly number[]): SeasonCandidate["tiers"] {
   return thresholds.map((pointsRequired, index) => ({
     tier: index + 1,
     pointsRequired,
-    rewards: [index % 2 === 0 ? { kind: "volts", amount: 250 } : { kind: "item", itemId: "x" }],
+    rewards: [
+      index % 2 === 0 ? { kind: "volts", amountVolts: 250 } : { kind: "item", itemId: "x" },
+    ],
   }));
 }
 

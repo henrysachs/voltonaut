@@ -44,9 +44,16 @@ function ride(engine: Readonly<Engine>, seconds: number, powerW = 250): readonly
   return events;
 }
 
+/** The fun slice of the snapshot; undefined in any other mode. */
+function funView(engine: Readonly<Engine>) {
+  const mode = engine.snapshot().mode;
+
+  return mode.kind === "fun" ? mode : undefined;
+}
+
 /** Remaining effect seconds; -1 when the snapshot has no fun view. */
 function remainingS(engine: Readonly<Engine>): number {
-  return engine.snapshot().fun?.activeRemainingS ?? -1;
+  return funView(engine)?.activeRemainingS ?? -1;
 }
 
 function press(engine: Readonly<Engine>): void {
@@ -79,14 +86,15 @@ it("normal mode never collects items or emits item events", () => {
 
   press(engine);
   expect(itemEvents(ride(engine, 5))).toEqual([]);
-  expect(engine.snapshot().fun).toBeUndefined();
+  expect(engine.snapshot().mode).toEqual({ kind: "normal" });
 });
 
 it("fun mode collects an item when crossing a box", () => {
   const engine = engineAt(290);
 
   expect(itemEvents(ride(engine, 3))).toEqual(["item.collected:featherweight"]);
-  expect(engine.snapshot().fun).toEqual({
+  expect(engine.snapshot().mode).toEqual({
+    kind: "fun",
     heldItem: "featherweight",
     activeItem: undefined,
     activeRemainingS: 0,
@@ -106,7 +114,7 @@ it("powerUp activates the held item once, even on a double press", () => {
   press(engine);
   press(engine);
   expect(itemEvents(ride(engine, 0.5))).toEqual(["item.activated:featherweight"]);
-  expect(engine.snapshot().fun).toMatchObject({
+  expect(funView(engine)).toMatchObject({
     heldItem: undefined,
     activeItem: "featherweight",
   });
@@ -121,7 +129,7 @@ it("the effect expires after its duration and emits item.expired", () => {
   ride(engine, 0.5);
   expect(itemEvents(ride(engine, 19))).toEqual([]);
   expect(itemEvents(ride(engine, 1))).toEqual(["item.expired:featherweight"]);
-  expect(engine.snapshot().fun?.activeItem).toBeUndefined();
+  expect(funView(engine)?.activeItem).toBeUndefined();
 });
 
 it("paused ticks do not consume effect time", () => {
@@ -144,7 +152,7 @@ it("an active aeroBoost makes the rider faster at equal power", () => {
   const boosted = collected(AERO_SEED);
   const plain = collected(AERO_SEED);
 
-  expect(boosted.snapshot().fun?.heldItem).toBe("aeroBoost");
+  expect(funView(boosted)?.heldItem).toBe("aeroBoost");
 
   press(boosted);
   ride(boosted, 15);
@@ -159,10 +167,11 @@ it("switching to normal clears items and restores params", () => {
   ride(engine, 0.5);
   engine.setMode("normal");
   ride(engine, 0.5);
-  expect(engine.snapshot().fun).toBeUndefined();
+  expect(engine.snapshot().mode).toEqual({ kind: "normal" });
   engine.setMode("fun");
   ride(engine, 0.5);
-  expect(engine.snapshot().fun).toEqual({
+  expect(engine.snapshot().mode).toEqual({
+    kind: "fun",
     heldItem: undefined,
     activeItem: undefined,
     activeRemainingS: 0,

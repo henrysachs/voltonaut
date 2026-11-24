@@ -78,7 +78,8 @@ Verfolger (Standard, Feder-gedämpft), Nah-Verfolger, Seitlich/TV-Kamera (fährt
 - **Ziel/Runde:** Zielbogen mit Partikelregen, Rundenanzeige.
 - **Rad/Fahrer:** Staub/Spray auf nasser Straße, Atemwolken bei Kälte (Nacht/Berg), Bremslicht beim Ausrollen.
 - **Partikelsystem:** eigenes GPU-instanziertes System (ein Draw Call pro Emitter-Typ), Seed-basiert.
-- **Power-ups (sinnvoll, optional, E9):** Zwift-ähnlich, z. B. „Aero-Boost" (CdA −15 % für 15 s), „Leichtgewicht" (−10 % Masse am Berg für 20 s), „Windschatten-Magnet" (stärkerer Draft 20 s). Einsammeln an seltenen Spots; aktivieren per Play-Taste (Power-up-Taste). **Physikrelevant** → Aktivierung wird im Ride-Upload protokolliert und vom Server identisch nachgerechnet; in Bestzeit-Wertungen getrennt markiert.
+- **Power-ups (sinnvoll, optional, E9, #84):** Zwift-ähnlich, z. B. „Aero-Boost" (CdA −15 % für 15 s), „Leichtgewicht" (−10 % Masse am Berg für 20 s), „Windschatten-Magnet" (stärkerer Draft 20 s). Einsammeln an seltenen Spots; aktivieren per Play-Taste (Power-up-Taste). **Physikrelevant** → Aktivierung wird im Ride-Upload protokolliert und vom Server identisch nachgerechnet; in Bestzeit-Wertungen getrennt markiert. Noch nicht umgesetzt.
+- **Spaß-Modus ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-028](decisions/ADR-028-ride-modes-and-fun-items.md)):** eigener Spielmodus mit gelben Item-Boxen über der Fahrbahn (ein instanzierter Draw Call, nur in diesem Modus sichtbar). Anders als die Power-ups oben: keine Belohnungen, keine Aufnahme, spätere Aufnahmen der Sitzung nur lokal (`ride_mode`). Auslösen bisher nur mit `p`.
 
 ## 8. Audio & Musik
 

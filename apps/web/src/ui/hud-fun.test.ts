@@ -17,11 +17,13 @@ const base: RideHudModel = {
   paused: false,
   dataAgeS: 0,
   connected: true,
-  fun: undefined,
+  mode: { kind: "normal" },
 };
 
-function itemText(fun: RideHudModel["fun"]): string {
-  return hudText({ ...base, fun }).item;
+type FunSlot = Omit<Extract<RideHudModel["mode"], { readonly kind: "fun" }>, "kind">;
+
+function itemText(slot: FunSlot): string {
+  return hudText({ ...base, mode: { kind: "fun", ...slot } }).item;
 }
 
 it("hides the item slot in normal mode", () => {
@@ -36,10 +38,10 @@ it("invites to collect a box in fun mode with an empty slot", () => {
 
 it("shows the held item name and how to trigger it", () => {
   expect(itemText({ heldItem: "aeroBoost", activeItem: undefined, activeRemainingS: 0 })).toBe(
-    "Aero-Boost bereit · P oder Power-up-Taste",
+    "Aero-Boost bereit · Taste P",
   );
   expect(itemText({ heldItem: "featherweight", activeItem: undefined, activeRemainingS: 0 })).toBe(
-    "Leichtgewicht bereit · P oder Power-up-Taste",
+    "Leichtgewicht bereit · Taste P",
   );
 });
 
@@ -52,14 +54,15 @@ it("shows remaining whole seconds while an effect is active", () => {
   );
 });
 
-it("copies the fun view from the engine snapshot", () => {
+it("copies the mode view from the engine snapshot", () => {
   const engine = createEngine({
     route: createRoute(TEST_LOOP),
     profile: DEFAULT_RIDER_PROFILE,
     mode: "fun",
   });
 
-  expect(rideHudModelFrom(engine.snapshot(), true).fun).toEqual({
+  expect(rideHudModelFrom(engine.snapshot(), true).mode).toEqual({
+    kind: "fun",
     heldItem: undefined,
     activeItem: undefined,
     activeRemainingS: 0,

@@ -1,4 +1,4 @@
-import type { FunSnapshot, RideSnapshot } from "@voltonaut/engine";
+import type { ModeSnapshot, RideSnapshot } from "@voltonaut/engine";
 import type { FunItemId } from "@voltonaut/shared";
 import { gearLabel } from "@voltonaut/rules";
 import type { SegmentHudRow, SegmentHudView, SegmentProgress } from "../game/segments.js";
@@ -16,8 +16,8 @@ export interface RideHudModel {
   readonly paused: boolean;
   readonly dataAgeS: number;
   readonly connected: boolean;
-  /** Fun mode item slot (spec E9-01); undefined in normal mode. */
-  readonly fun: FunSnapshot | undefined;
+  /** Ride mode and its state (ADR-028); the item slot shows only in fun mode. */
+  readonly mode: ModeSnapshot;
 }
 
 /** Builds the HUD model from a snapshot plus the device connection state. */
@@ -34,7 +34,7 @@ export function rideHudModelFrom(snapshot: RideSnapshot, connected: boolean): Ri
     paused: snapshot.paused,
     dataAgeS: snapshot.dataAgeS,
     connected,
-    fun: snapshot.fun,
+    mode: snapshot.mode,
   };
 }
 
@@ -125,17 +125,25 @@ const FUN_ITEM_NAMES: Readonly<Record<FunItemId, string>> = {
   tailwind: "Rückenwind",
 };
 
-/** Item slot text; empty (and hidden by CSS) in normal mode. */
-function itemText(fun: FunSnapshot | undefined): string {
-  if (fun === undefined) return "";
+/** Item slot text of a mode; empty (and hidden by CSS) for modes without items. */
+function itemText(mode: ModeSnapshot): string {
+  switch (mode.kind) {
+    case "normal":
+      return "";
+    case "fun":
+      if (mode.activeItem !== undefined)
+        return `${FUN_ITEM_NAMES[mode.activeItem]} aktiv · ${Math.ceil(mode.activeRemainingS)} s`;
 
-  if (fun.activeItem !== undefined)
-    return `${FUN_ITEM_NAMES[fun.activeItem]} aktiv · ${Math.ceil(fun.activeRemainingS)} s`;
+      // The Play grip's power-up field is unmeasured and has no game action yet (docs/02-bluetooth.md).
+      if (mode.heldItem !== undefined) return `${FUN_ITEM_NAMES[mode.heldItem]} bereit · Taste P`;
 
-  if (fun.heldItem !== undefined)
-    return `${FUN_ITEM_NAMES[fun.heldItem]} bereit · P oder Power-up-Taste`;
+      return "Spaß-Modus · nächste Item-Box sammeln";
+    default: {
+      const exhaustive: never = mode;
 
-  return "Spaß-Modus · nächste Item-Box sammeln";
+      return exhaustive;
+    }
+  }
 }
 
 /** Data-loss warning threshold from docs/03 section 1 (> 3 s without data). */
@@ -159,7 +167,7 @@ export function hudText(model: RideHudModel, connectedLabel = "Sim connected"): 
     elevationGain: `${Math.round(model.elevationGainM)} m`,
     energy: `${Math.round(model.energyKj)} kJ`,
     warning: model.dataAgeS > DATA_AGE_WARNING_S ? "No trainer data" : "",
-    item: itemText(model.fun),
+    item: itemText(model.mode),
   };
 }
 

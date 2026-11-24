@@ -50,6 +50,9 @@ Keine Echtgeld-Käufe, kein Premium-Track, keine Maps als Belohnung, kein Stufen
 
 - Voraussetzung für Phase B/C: `avatarItemsForSlot` und `avatarItemForSlot` durchsuchen nur `START_AVATAR_CATALOG`. Bevor ein Saison-Item vergeben oder ausgerüstet werden kann, müssen sie auch `SEASON_AVATAR_ITEMS` kennen. Sonst wirft das Ausrüsten „Missing avatar item“.
 
+- Voraussetzung für Phase B: Volts-Boni bucht ausschließlich `EconomyService` aus `volts_ledger` ([E6-05](E6-05-volts-ledger.md), [ADR-027](../decisions/ADR-027-server-volts-ledger.md)). Das Ledger kennt bisher nur die Schlüssel `ride:` und `purchase:`; Saisonbelohnungen brauchen ein eigenes Schema (Vorschlag `season:<seasonId>:<tier>`) und eine Buchungsart ohne Fahrtbereich.
+- Offen: Zählen Saison-Volts gegen das Tageslimit 3000? Das Ledger zählt bisher nur Fahrtbelohnungen. Henry entscheidet.
+
 - Saisonpunkte: Annahme 1:1 aus Basis-XP. Alternativen wären eigene Punkte pro km/Hm oder Wochenaufgaben. Henry bestätigt.
 - Saisonlänge und Stufenzahl: Annahme 10 Wochen und 20 Stufen. Bei drei Stundenfahrten pro Woche (rund 1 250 XP je Fahrt) wird die letzte Stufe knapp erreicht.
 - Premium-Track: nicht vorgesehen. Bräuchte eine eigene ADR.

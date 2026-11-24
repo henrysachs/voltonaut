@@ -1,15 +1,16 @@
-import type {
-  DeviceEvent,
-  FunItemId,
-  Meters,
-  Mps,
-  NativeTickFacts,
-  RideEvent,
-  RideMode,
-  RiderProfile,
-  Seconds,
-  TickInputs,
-  TrainerCommand,
+import {
+  RIDE_MODES,
+  type DeviceEvent,
+  type Meters,
+  type Mps,
+  type NativeTickFacts,
+  type RideEvent,
+  type RideMode,
+  type RideModeTraits,
+  type RiderProfile,
+  type Seconds,
+  type TickInputs,
+  type TrainerCommand,
 } from "@voltonaut/shared";
 
 import type { EngineRoute } from "../elevation/route.js";
@@ -20,19 +21,15 @@ import { riderParamsFromProfile } from "../physics/params.js";
 import { planCatchup, TICK_S } from "./catchup.js";
 import type { EngineContext } from "./tick.js";
 import { tick } from "./tick.js";
+import { modeSnapshot, type ModeSnapshot } from "./modeSnapshot.js";
 import { createRideState, type RideState } from "./state.js";
 
 export type { NativeTickFacts } from "@voltonaut/shared";
 
-/** Default item seed (spec E9-01 AK3). */
-export const DEFAULT_FUN_SEED = 42;
+export type { ModeSnapshot } from "./modeSnapshot.js";
 
-/** Fun mode view (spec E9-01); undefined in normal mode. */
-export interface FunSnapshot {
-  readonly heldItem: FunItemId | undefined;
-  readonly activeItem: FunItemId | undefined;
-  readonly activeRemainingS: Seconds;
-}
+/** Default seed for mode content such as item boxes (spec E9-01 AK3). */
+export const DEFAULT_MODE_SEED = 42;
 
 /** Public read-only view of the ride; frozen at every snapshot() call. */
 export interface RideSnapshot {
@@ -50,10 +47,10 @@ export interface RideSnapshot {
   readonly energyKj: number;
   readonly paused: boolean;
   readonly dataAgeS: Seconds;
-  readonly trainerMode: "simulation";
+  readonly trainerMode: RideModeTraits["trainer"];
   readonly worldPos: { readonly x: number; readonly y: number; readonly z: number };
   readonly headingRad: number;
-  readonly fun: FunSnapshot | undefined;
+  readonly mode: ModeSnapshot;
 }
 
 export interface CreateEngineOptions {
@@ -67,7 +64,7 @@ export interface CreateEngineOptions {
   readonly trainerMassKg?: number;
   /** Initial ride mode; default "normal". */
   readonly mode?: RideMode;
-  /** Seed for item box contents; default 42. */
+  /** Seed for mode content such as item boxes; default 42. */
   readonly seed?: number;
 }
 
@@ -86,6 +83,8 @@ export interface Engine {
   readonly drainCommands: () => readonly TrainerCommand[];
   /** Mode intent; takes effect on the next tick. */
   readonly setMode: (mode: RideMode) => void;
+  /** Latest mode intent; the snapshot shows the mode the last tick ran in. */
+  readonly requestedMode: () => RideMode;
 }
 
 interface BufferedInputs {
@@ -148,9 +147,9 @@ class RideEngine implements Engine {
       speedMps: options.initialSpeedMps ?? 0,
       routePosM: options.initialRoutePosM ?? 0,
       mode: options.mode ?? "normal",
-      seed: options.seed ?? DEFAULT_FUN_SEED,
+      seed: options.seed ?? DEFAULT_MODE_SEED,
     });
-    this.buffered = { ...this.buffered, mode: this.state.mode };
+    this.buffered = { ...this.buffered, mode: this.state.mode.kind };
   }
 
   readonly ingest = (event: DeviceEvent): void => {
@@ -254,17 +253,10 @@ class RideEngine implements Engine {
       energyKj: state.energyKj,
       paused: state.paused,
       dataAgeS: state.dataAgeS,
-      trainerMode: "simulation",
+      trainerMode: RIDE_MODES[state.mode.kind].trainer,
       worldPos: frozenWorldPos(this.ctx.route, state.routePosM),
       headingRad: this.ctx.route.headingRad(state.routePosM),
-      fun:
-        state.mode === "fun"
-          ? Object.freeze({
-              heldItem: state.heldItem,
-              activeItem: state.activeItem,
-              activeRemainingS: state.activeRemainingS,
-            })
-          : undefined,
+      mode: modeSnapshot(state.mode),
     });
   };
 
@@ -279,6 +271,8 @@ class RideEngine implements Engine {
   readonly setMode = (mode: RideMode): void => {
     this.buffered = { ...this.buffered, mode };
   };
+
+  readonly requestedMode = (): RideMode => this.buffered.mode;
 
   readonly drainCommands = (): readonly TrainerCommand[] => {
     const drained = this.commands;

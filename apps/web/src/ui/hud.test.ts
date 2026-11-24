@@ -40,7 +40,7 @@ function model(overrides: Partial<RideHudModel> = {}): RideHudModel {
     paused: false,
     dataAgeS: 0,
     connected: true,
-    fun: undefined,
+    mode: { kind: "normal" },
     ...overrides,
   };
 }

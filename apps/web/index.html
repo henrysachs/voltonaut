@@ -105,16 +105,8 @@
           <button id="game-menu-close" type="button" autofocus>Zurück zur Fahrt</button>
         </header>
         <p class="game-menu__hint">Die Fahrt läuft weiter. Escape schließt das Menü.</p>
-        <fieldset class="game-menu__mode" lang="de">
+        <fieldset id="ride-mode" class="game-menu__mode" lang="de">
           <legend>Spielmodus</legend>
-          <label>
-            <input type="radio" name="ride-mode" id="ride-mode-normal" value="normal" checked />
-            Normal
-          </label>
-          <label>
-            <input type="radio" name="ride-mode" id="ride-mode-fun" value="fun" />
-            Spaß (Item-Boxen)
-          </label>
           <p id="ride-mode-hint" class="game-menu__mode-hint" aria-live="polite"></p>
         </fieldset>
         <div class="game-menu__tabs" role="tablist" aria-label="Fahrtmenü-Bereiche">

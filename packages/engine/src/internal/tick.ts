@@ -12,7 +12,8 @@ import type { RiderParams } from "../physics/params.js";
 import { nextCommand as computeNextCommand } from "../trainer/commands.js";
 import type { RideState } from "./state.js";
 import { isStationary, rawValuesZeroed, shouldAutoPause, shouldResume } from "./autopause.js";
-import { afterAdvance, applyFunIntents, nextSpeedMps } from "./funTick.js";
+import { advanceSpeedWithEffectMps, type PhysicsEffect } from "../physics/effects.js";
+import { enterMode } from "./modeTick.js";
 import { applySegments } from "./segments.js";
 import { elevationGainDeltaM, energyDeltaKj, routePositionM } from "./sums.js";
 
@@ -23,7 +24,7 @@ export interface EngineContext {
   readonly gearRatios: readonly number[];
   readonly physicalRatio: number;
   readonly trainerMassKg: number;
-  /** Item box positions; only used in fun mode (spec E9-01). */
+  /** Item box positions; only the fun mode reads them (spec E9-01). */
   readonly itemBoxesM: readonly Meters[];
 }
 
@@ -122,19 +123,30 @@ function applyMeasurements(state: RideState, inputs: TickInputs, dtS: Seconds): 
   return { powerW: rawPowerW, cadenceRpm: rawCadenceRpm };
 }
 
-/** Steps 4-6: grade, Euler speed step, odometer, sums, lap and segment events. */
+/**
+ * Steps 4-6: grade, Euler speed step, odometer, sums, lap and segment events.
+ * The mode effect changes physics only; the trainer command keeps ctx.riderParams (ADR-028).
+ */
 function advanceRide(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; only packages/engine/src/internal mutates it (depcruise engine-internal-private).
   state: RideState,
   ctx: EngineContext,
   rawPowerW: number,
+  effect: PhysicsEffect,
   dtS: Seconds,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives distance, lap and segment events.
   events: RideEvent[],
 ): TickContributions {
   state.gradePct = ctx.route.profile.gradeAt(state.routePosM);
 
-  state.speedMps = nextSpeedMps(state, ctx.riderParams, rawPowerW, dtS);
+  state.speedMps = advanceSpeedWithEffectMps(
+    state.speedMps,
+    state.gradePct,
+    rawPowerW,
+    ctx.riderParams,
+    effect,
+    dtS,
+  );
 
   const previousRoutePosM = state.routePosM;
   const distanceM = state.speedMps * dtS;
@@ -221,9 +233,10 @@ function trainerCommandFor(
 
 /**
  * One deterministic engine tick (docs/03 section 1). Order: shifts -> raw
- * readings + data age + display EMA -> auto-pause state machine -> grade ->
- * speed integration -> position/sums/segments/lap -> stationary accumulation ->
- * rate-limited trainer command.
+ * readings + data age + display EMA -> mode switch + mode intents -> auto-pause
+ * state machine -> grade -> speed integration (with the mode's physics effect) ->
+ * position/sums/segments/lap -> mode steps after the move -> stationary
+ * accumulation -> rate-limited trainer command.
  */
 export function tick(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; tick is its single writer (docs/01 section "ein Besitzer pro State").
@@ -238,7 +251,9 @@ export function tick(
 
   const raw = applyMeasurements(state, inputs, dtS);
 
-  applyFunIntents(state, inputs, events);
+  const mode = enterMode(state, inputs.mode, { positionsM: ctx.itemBoxesM, loop: ctx.route.loop });
+
+  events.push(...mode.applyIntents(inputs));
 
   const pause = applyPause(state, raw);
 
@@ -247,15 +262,9 @@ export function tick(
   }
 
   const previousRoutePosM = state.routePosM;
-  const contributions = advanceRide(state, ctx, raw.powerW, dtS, events);
+  const contributions = advanceRide(state, ctx, raw.powerW, mode.effect(), dtS, events);
 
-  afterAdvance(
-    state,
-    { positionsM: ctx.itemBoxesM, loop: ctx.route.loop },
-    previousRoutePosM,
-    dtS,
-    events,
-  );
+  events.push(...mode.afterAdvance(previousRoutePosM, dtS));
 
   const facts = nativeFacts(raw, contributions);
 

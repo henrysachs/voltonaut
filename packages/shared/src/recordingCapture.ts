@@ -11,8 +11,8 @@ export const CaptureUnavailabilityReasonSchema = z.enum([
   "journal_observations",
   "journal_age",
   "invalid_input",
-  // Fun mode changes physics without journal entries (spec E9-01 AK8).
-  "fun_mode",
+  // A ride mode without journal replay was entered in this session (ADR-028).
+  "ride_mode",
 ]);
 
 const journal = z

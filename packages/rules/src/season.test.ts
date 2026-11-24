@@ -23,7 +23,7 @@ const season = SeasonDefinitionSchema.parse({
   tiers: Array.from({ length: 20 }, (_, index) => ({
     tier: index + 1,
     pointsRequired: 1800 * (index + 1),
-    rewards: [{ kind: "volts", amount: 100 }],
+    rewards: [{ kind: "volts", amountVolts: 100 }],
   })),
 });
 

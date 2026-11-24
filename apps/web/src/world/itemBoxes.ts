@@ -67,7 +67,7 @@ export function createItemBoxSystem(): RenderSystem {
     update(frame) {
       if (mesh === undefined) return;
 
-      mesh.visible = frame.ride.fun !== undefined;
+      mesh.visible = frame.ride.mode.kind === "fun";
 
       if (mesh.visible) place(frame.ride.tS * SPIN_RAD_PER_S);
     },

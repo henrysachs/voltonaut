@@ -1,16 +1,18 @@
-import type {
-  DeviceEvent,
-  NativeTickFacts,
-  RideEvent,
-  RideMode,
-  RideProgressCheckpoint,
-  TrainerCommand,
+import {
+  RIDE_MODES,
+  type DeviceEvent,
+  type NativeTickFacts,
+  type RideEvent,
+  type RideMode,
+  type RideProgressCheckpoint,
+  type TrainerCommand,
 } from "@voltonaut/shared";
 import type { Engine } from "@voltonaut/engine";
 import {
-  FUN_MODE_RECORDING_REFUSAL,
   initializeActor,
+  requestedModeTraits,
   setActorMode,
+  UNRECORDABLE_MODE_REFUSAL,
   type Actor,
   type ActorInit,
 } from "./engineWorkerActor.js";
@@ -84,18 +86,17 @@ class WorkerDriver {
     const events = actor.engine.drainEvents();
     const commands = actor.engine.drainCommands();
 
-    // Fun mode yields no progress checkpoints (spec E9-01 AK8).
-    const progress =
-      actor.mode === "fun"
-        ? undefined
-        : projectEngineWorkerProgress(actor.progress, {
-            startedAtMs,
-            endedAtMs: atMs,
-            facts,
-            paused: snapshot.paused,
-            dataAgeS: snapshot.dataAgeS,
-            clockSkipped: events.some((event) => event.type === "ride.clockSkipped"),
-          });
+    // Modes without progress post no checkpoints (ADR-028).
+    const progress = RIDE_MODES[snapshot.mode.kind].progress
+      ? projectEngineWorkerProgress(actor.progress, {
+          startedAtMs,
+          endedAtMs: atMs,
+          facts,
+          paused: snapshot.paused,
+          dataAgeS: snapshot.dataAgeS,
+          clockSkipped: events.some((event) => event.type === "ride.clockSkipped"),
+        })
+      : undefined;
 
     actor.recorder.outputs(events, commands);
     actor.recorder.sample(atMs, snapshot);
@@ -227,14 +228,14 @@ class WorkerDriver {
       view: actor.recorder.view(atMs),
     });
 
-    if (!isNewCaptureRequest(message.requestId, actor.lastRequestId))
+    if (
+      !isNewCaptureRequest(message.requestId, actor.lastRequestId) ||
+      (message.command.kind === "start" && actor.intervalId === undefined)
+    )
       return refusal("Veralteter oder doppelter Aufnahmebefehl.");
 
-    if (message.command.kind === "start" && actor.intervalId === undefined)
-      return refusal("Veralteter oder doppelter Aufnahmebefehl.");
-
-    if (message.command.kind === "start" && actor.mode === "fun")
-      return refusal(FUN_MODE_RECORDING_REFUSAL);
+    if (message.command.kind === "start" && !requestedModeTraits(actor).recordable)
+      return refusal(UNRECORDABLE_MODE_REFUSAL);
 
     return actor.recorder.command(message.command, atMs, actor.engine.snapshot());
   }

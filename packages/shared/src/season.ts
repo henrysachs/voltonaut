@@ -21,7 +21,7 @@ export const SeasonRewardSchema = z.union([
     .strict()
     .readonly(),
   z
-    .object({ kind: z.literal("volts"), amount: z.number().finite().int().min(1).max(10_000) })
+    .object({ kind: z.literal("volts"), amountVolts: z.number().finite().int().min(1).max(10_000) })
     .strict()
     .readonly(),
 ]);

@@ -35,3 +35,5 @@ export * from "./rewards.js";
 export * from "./season.js";
 
 export * from "./funMode.js";
+
+export * from "./rideMode.js";

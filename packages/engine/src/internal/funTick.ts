@@ -1,130 +1,90 @@
-import {
-  FUN_ITEMS,
-  type Meters,
-  type RideEvent,
-  type Seconds,
-  type TickInputs,
-} from "@voltonaut/shared";
+import { FUN_ITEMS, type Meters, type RideEvent, type Seconds } from "@voltonaut/shared";
 
-import { effectiveRiderParams, effectWindMps } from "../fun/effects.js";
 import { nextRandom, pickItem } from "../fun/rng.js";
-import { advanceSpeedMps } from "../physics/integrate.js";
-import type { RiderParams } from "../physics/params.js";
+import { NO_EFFECT, type PhysicsEffect } from "../physics/effects.js";
 import { crossedBoundaryM } from "./segments.js";
-import type { RideState } from "./state.js";
+import type { FunModeState } from "./state.js";
 
-/**
- * Mode switch and item activation, applied at tick start (also while paused).
- * Switching to "normal" drops held and active items at once (spec E9-01 AK7).
- */
-export function applyFunIntents(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; only packages/engine/src/internal mutates it.
-  state: RideState,
-  inputs: TickInputs,
+/** Item positions and wrap rule of the route (spec E9-01 AK2). */
+export interface ItemBoxes {
+  readonly positionsM: readonly Meters[];
+  readonly loop: boolean;
+}
+
+/** Activates the held item; ignored while another effect runs (AK4). */
+export function activateItem(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The fun slice is engine-owned mutable state; only packages/engine/src/internal mutates it.
+  fun: FunModeState,
+  tS: Seconds,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives the activation event.
   events: RideEvent[],
 ): void {
-  if (inputs.mode !== state.mode) {
-    state.mode = inputs.mode;
-    state.heldItem = undefined;
-    state.activeItem = undefined;
-    state.activeRemainingS = 0;
-  }
+  const item = fun.heldItem;
 
-  if (
-    state.mode !== "fun" ||
-    !inputs.useItem ||
-    state.heldItem === undefined ||
-    state.activeItem !== undefined
-  )
-    return;
+  if (item === undefined || fun.activeItem !== undefined) return;
 
-  const item = state.heldItem;
   const durationS = FUN_ITEMS[item].durationS;
 
-  state.heldItem = undefined;
-  state.activeItem = item;
-  state.activeRemainingS = durationS;
-  events.push({ type: "item.activated", item, durationS, tS: state.tS });
+  fun.heldItem = undefined;
+  fun.activeItem = item;
+  fun.activeRemainingS = durationS;
+  events.push({ type: "item.activated", item, durationS, tS });
 }
 
 /** Counts the active effect down; called for running (non-paused) ticks only (AK5). */
 export function countDownEffect(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; only packages/engine/src/internal mutates it.
-  state: RideState,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The fun slice is engine-owned mutable state; only packages/engine/src/internal mutates it.
+  fun: FunModeState,
   dtS: Seconds,
+  tS: Seconds,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives the expiry event.
   events: RideEvent[],
 ): void {
-  const item = state.activeItem;
+  const item = fun.activeItem;
 
   if (item === undefined) return;
 
-  state.activeRemainingS -= dtS;
+  fun.activeRemainingS -= dtS;
 
   // Half a tick absorbs float drift from repeated subtraction.
-  if (state.activeRemainingS > dtS / 2) return;
+  if (fun.activeRemainingS > dtS / 2) return;
 
-  state.activeItem = undefined;
-  state.activeRemainingS = 0;
-  events.push({ type: "item.expired", item, tS: state.tS });
-}
-
-/** Fills an empty slot from the seed when the rider crosses an item box (AK2–AK4). */
-export function collectItemBoxes(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; only packages/engine/src/internal mutates it.
-  state: RideState,
-  boxes: { readonly positionsM: readonly Meters[]; readonly loop: boolean },
-  previousRoutePosM: Meters,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives the collection event.
-  events: RideEvent[],
-): void {
-  if (state.mode !== "fun" || state.heldItem !== undefined) return;
-
-  const crossed = boxes.positionsM.some((boxM) =>
-    crossedBoundaryM(previousRoutePosM, state.routePosM, boxM, boxes.loop),
-  );
-
-  if (!crossed) return;
-
-  const draw = nextRandom(state.rngState);
-  const item = pickItem(draw.value);
-
-  state.rngState = draw.state;
-  state.heldItem = item;
-  events.push({ type: "item.collected", item, tS: state.tS });
+  fun.activeItem = undefined;
+  fun.activeRemainingS = 0;
+  events.push({ type: "item.expired", item, tS });
 }
 
 /**
- * One Euler speed step with the active item applied. Items change physics only;
- * the trainer command keeps the profile params (ADR-028).
+ * Fills an empty slot from the seed when the rider crosses an item box (AK2–AK4).
+ * Returns the next rng state; unchanged when nothing was drawn.
  */
-export function nextSpeedMps(
-  state: Readonly<Pick<RideState, "activeItem" | "gradePct" | "speedMps">>,
-  base: RiderParams,
-  rawPowerW: number,
-  dtS: Seconds,
+export function collectItemBox(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The fun slice is engine-owned mutable state; only packages/engine/src/internal mutates it.
+  fun: FunModeState,
+  boxes: ItemBoxes,
+  move: { readonly fromM: Meters; readonly toM: Meters; readonly tS: Seconds },
+  rngState: number,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives the collection event.
+  events: RideEvent[],
 ): number {
-  return advanceSpeedMps(
-    state.speedMps,
-    state.gradePct,
-    rawPowerW,
-    effectiveRiderParams(base, state.activeItem, state.gradePct),
-    effectWindMps(state.activeItem),
-    dtS,
+  if (fun.heldItem !== undefined) return rngState;
+
+  const crossed = boxes.positionsM.some((boxM) =>
+    crossedBoundaryM(move.fromM, move.toM, boxM, boxes.loop),
   );
+
+  if (!crossed) return rngState;
+
+  const draw = nextRandom(rngState);
+  const item = pickItem(draw.value);
+
+  fun.heldItem = item;
+  events.push({ type: "item.collected", item, tS: move.tS });
+
+  return draw.state;
 }
 
-/** Steps after the position update of a running tick: effect countdown, then box pickup. */
-export function afterAdvance(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; only packages/engine/src/internal mutates it.
-  state: RideState,
-  boxes: { readonly positionsM: readonly Meters[]; readonly loop: boolean },
-  previousRoutePosM: Meters,
-  dtS: Seconds,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The tick's event accumulator receives expiry and pickup events.
-  events: RideEvent[],
-): void {
-  countDownEffect(state, dtS, events);
-  collectItemBoxes(state, boxes, previousRoutePosM, events);
+/** Physics effect of the active item; NO_EFFECT without one. */
+export function funEffect(fun: Readonly<FunModeState>): PhysicsEffect {
+  return fun.activeItem === undefined ? NO_EFFECT : FUN_ITEMS[fun.activeItem];
 }

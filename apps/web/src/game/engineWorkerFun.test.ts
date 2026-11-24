@@ -88,7 +88,7 @@ it("setMode reaches the engine and fun mode posts no progress checkpoints", () =
 
   const update = worker.wake();
 
-  expect(update?.snapshot.fun).toBeDefined();
+  expect(update?.snapshot.mode.kind).toBe("fun");
   expect(update?.progress).toBeUndefined();
 });
 
@@ -101,7 +101,7 @@ it("switching back to normal resumes progress", () => {
 
   const update = worker.wake();
 
-  expect(update?.snapshot.fun).toBeUndefined();
+  expect(update?.snapshot.mode.kind).toBe("normal");
   expect(update?.progress).toBeDefined();
 });
 
@@ -112,7 +112,7 @@ it("refuses to start a recording in fun mode", () => {
   worker.wake();
   expect(worker.startRecording()?.result).toMatchObject({
     kind: "failed",
-    message: "Im Spaß-Modus gibt es keine Aufnahme.",
+    message: "In diesem Spielmodus gibt es keine Aufnahme.",
   });
 });
 
@@ -124,11 +124,11 @@ it("ignores a switch to fun mode while a recording is running", () => {
 
   const update = worker.wake();
 
-  expect(update?.snapshot.fun).toBeUndefined();
+  expect(update?.snapshot.mode.kind).toBe("normal");
   expect(update?.progress).toBeDefined();
 });
 
-it("marks later recordings of the session local-only with reason fun_mode", () => {
+it("marks later recordings of the session local-only with reason ride_mode", () => {
   const worker = startedWorker();
 
   worker.setMode("fun");
@@ -139,7 +139,7 @@ it("marks later recordings of the session local-only with reason fun_mode", () =
   worker.rideFor(1.5);
   expect(worker.finishRecording()?.result).toMatchObject({
     kind: "finished",
-    capture: { kind: "local_only", reason: "fun_mode" },
+    capture: { kind: "local_only", reason: "ride_mode" },
   });
 });
 

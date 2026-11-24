@@ -1,9 +1,9 @@
 import type { Mps, Seconds } from "./units.js";
 
-/** "normal" is the default ride; "fun" enables item boxes (spec E9-01). */
-export type RideMode = "normal" | "fun";
+/** Phase 1 items of the fun ride mode (spec E9-01). Order defines the seeded pick order. */
+export const FUN_ITEM_IDS = Object.freeze(["aeroBoost", "featherweight", "tailwind"] as const);
 
-export type FunItemId = "aeroBoost" | "featherweight" | "tailwind";
+export type FunItemId = (typeof FUN_ITEM_IDS)[number];
 
 export interface FunItemEffect {
   readonly durationS: Seconds;
@@ -15,15 +15,9 @@ export interface FunItemEffect {
   readonly windMps: Mps;
 }
 
-/** Phase 1 items, ⚠️ starting values. Order defines the seeded pick order. */
+/** ⚠️ Starting values. */
 export const FUN_ITEMS: Readonly<Record<FunItemId, FunItemEffect>> = Object.freeze({
   aeroBoost: Object.freeze({ durationS: 15, cdaFactor: 0.85, massFactor: 1, windMps: 0 }),
   featherweight: Object.freeze({ durationS: 20, cdaFactor: 1, massFactor: 0.9, windMps: 0 }),
   tailwind: Object.freeze({ durationS: 10, cdaFactor: 1, massFactor: 1, windMps: -3 }),
 });
-
-export const FUN_ITEM_IDS: readonly FunItemId[] = Object.freeze([
-  "aeroBoost",
-  "featherweight",
-  "tailwind",
-]);

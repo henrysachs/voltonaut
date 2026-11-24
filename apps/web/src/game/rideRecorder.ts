@@ -27,8 +27,6 @@ import type {
 } from "./rideCaptureProtocol.js";
 import { validCaptureReading } from "./rideCaptureProtocol.js";
 
-export type { RideRecorder } from "./rideCaptureProtocol.js";
-
 type RecorderState =
   | { readonly kind: "idle" }
   | {

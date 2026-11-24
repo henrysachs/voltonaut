@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import type { FunItemId, RideMode } from "./funMode.js";
+import type { FunItemId } from "./funMode.js";
+import type { RideMode } from "./rideMode.js";
 import type { Bpm, Meters, Mps, Pct, Rpm, Seconds, Watts } from "./units.js";
 
 import { RiderProfileSchema } from "./profile.js";
@@ -57,7 +58,7 @@ export interface TickInputs {
   readonly trainerDataFresh: boolean;
   /** Power-up button pressed since the last tick (several presses count once). */
   readonly useItem: boolean;
-  /** Requested ride mode; switching to "normal" drops held and active items. */
+  /** Requested ride mode; a switch resets the mode state (ADR-028). */
   readonly mode: RideMode;
 }
 
