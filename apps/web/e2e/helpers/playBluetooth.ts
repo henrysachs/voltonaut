@@ -265,7 +265,7 @@ function installPlayBluetoothFake(): void {
           document.activeElement?.closest("section")?.querySelector("h3")?.textContent ??
           "";
 
-        const chosen = label.includes("links") ? left : right;
+        const chosen = label.includes("links") || label.includes("Linker") ? left : right;
 
         return Promise.resolve(chosen);
       }

@@ -19,14 +19,14 @@ async function connect(page: Page, query = "?debug=1"): Promise<void> {
   await page.goto(`/${query}`);
   await page.getByRole("button", { name: "Geräte verbinden" }).click();
   await choose(page, "Trainer");
-  await choose(page, "Play links (Ziel)");
-  await choose(page, "Play rechts (Ziel)");
+  await choose(page, "Linker Play-Griff");
+  await choose(page, "Rechter Play-Griff");
   await expect(page.getByTestId("hud-power")).toHaveText("244 W", { timeout: 10_000 });
   await expect(page.locator("body")).not.toHaveAttribute("data-control-count");
 }
 
 async function enable(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Rollenschaltung aktivieren", exact: true }).click();
+  await page.getByRole("button", { name: "Widerstand aktivieren", exact: true }).click();
   await expect(page.getByRole("group", { name: "Rollenschaltung", exact: true })).toHaveAttribute(
     "data-authority",
     "active",
@@ -178,7 +178,7 @@ test("menu/form arrows never shift an enabled trainer, body arrows and physical 
 
 test("native accelerated clock refuses authority, zero trainer writes", async ({ page }) => {
   await connect(page, "?clock=fast");
-  await page.getByRole("button", { name: "Rollenschaltung aktivieren", exact: true }).click();
+  await page.getByRole("button", { name: "Widerstand aktivieren", exact: true }).click();
   await expect(page.getByLabel("Rollenschaltung Status")).toContainText("Echtzeit");
   await expect(page.locator("body")).not.toHaveAttribute("data-control-count");
 });
@@ -197,7 +197,7 @@ test("permission loss keeps watts alive and cannot silently reacquire", async ({
   await expect(page.getByTestId("hud-power")).toHaveText("244 W");
   await expect(page.locator("body")).toHaveAttribute("data-control-count", count);
   await expect(
-    page.getByRole("button", { name: "Rollenschaltung aktivieren", exact: true }),
+    page.getByRole("button", { name: "Widerstand aktivieren", exact: true }),
   ).toBeDisabled();
 });
 

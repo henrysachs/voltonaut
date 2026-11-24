@@ -2,7 +2,7 @@
 
 - **Auftrag:** Henry beanstandet am 24.11.2026 nach eigener Nutzung den formularartigen Aufbau und wünscht stärker ins Spiel integrierte Bedienung. Hardware steht derzeit nicht zur Verfügung und blockiert die Softwarearbeit nicht.
 - **Roadmap-Bezug:** E4, Spiel-HUD und Ingame-Menü aus `04-world-3d.md` §9.
-- **Status:** Implementiert, regulär und unabhängig am tatsächlich gebauten Artefakt softwaregeprüft. Exakte PR-CI, Merge und Bereitstellung stehen aus.
+- **Status:** Implementiert, regulär und unabhängig am tatsächlich gebauten Artefakt softwaregeprüft. Als `c0e300f` bereitgestellt und öffentlich geprüft; der spätere Betriebsnachtrag in PR #38 präzisiert diesen Stand.
 - **Basis:** `9a9652e0736ab112a2e6a5388b05006766e2fdf5`.
 - **Betroffene Module:** `apps/web/index.html`, `src/styles.css`, Browserprüfungen und diese Dokumentation. Zustandsbesitzer und Netzwerkverträge bleiben unverändert.
 

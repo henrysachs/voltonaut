@@ -259,7 +259,11 @@ function install(): void {
         document.activeElement?.closest("section")?.querySelector("h3")?.textContent ?? "";
 
       return Promise.resolve(
-        isPlay ? (label.includes("links") ? sensors.left : sensors.right) : sensors.trainer,
+        isPlay
+          ? label.includes("links") || label.includes("Linker")
+            ? sensors.left
+            : sensors.right
+          : sensors.trainer,
       );
     },
   };

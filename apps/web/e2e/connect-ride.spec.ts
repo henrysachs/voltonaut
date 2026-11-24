@@ -29,12 +29,12 @@ test("BLE cancellation and retry lead through adapters and E3 worker to the ride
 
   const heartRate = dialog
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Puls", exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: "Pulsgurt", exact: true }) });
 
   const status = page.getByTestId("hud-status");
 
   await heartRate.getByRole("button", { name: "Gerät wählen" }).click();
-  await expect(heartRate.getByLabel("Puls Status")).toHaveText("ready");
+  await expect(heartRate.getByLabel("Pulsgurt Status")).toHaveText("ready");
   await expect(status).not.toHaveText("Bluetooth connected");
   await trainer.getByRole("button", { name: "Gerät wählen" }).click();
   await expect(trainer.getByLabel("Trainer Status")).toHaveText("error");

@@ -471,14 +471,132 @@ body > dialog:not(.game-menu) {
   background: #102a27;
   color: #f4f6ed;
 }
-body > dialog:not(.game-menu) section {
-  padding-block: 12px;
-  border-bottom: 1px solid #3c4855;
+body > dialog.connect-dialog {
+  display: none;
+  width: min(620px, calc(100vw - 40px));
+  padding: 0;
+  overflow: hidden;
 }
-body > dialog:not(.game-menu) button {
-  margin: 4px;
+body > dialog.connect-dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
-body > dialog:not(.game-menu) output {
+.connect-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--cockpit-border);
+}
+.connect-dialog__header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.connect-dialog__header button {
+  flex: 0 0 auto;
+}
+.connect-dialog__body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 24px 24px;
+}
+.connect-dialog__body > p {
+  margin: 0 0 20px;
+  color: var(--cockpit-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.connect-dialog__setup {
+  margin-bottom: 20px;
+  border: 1px solid var(--cockpit-border);
+  border-radius: 0.65rem;
+  color: var(--cockpit-muted);
+}
+.connect-dialog__setup summary,
+.device-card__details summary {
+  min-height: 44px;
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.connect-dialog__setup p,
+.device-card__details p {
+  margin: 0;
+  padding: 0 14px 14px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.device-card {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--cockpit-border);
+}
+.device-card:last-child {
+  border-bottom: 0;
+}
+.device-card h3 {
+  display: inline-block;
+  margin: 0 12px 0 0;
+  font-size: 1rem;
+}
+.device-card h4 {
+  margin: 24px 0 8px;
+  font-size: 0.9rem;
+}
+.device-card__status {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #29473f;
+  color: #d7e5dc;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+.device-card[data-state="ready"] .device-card__status {
+  background: #d7ecb0;
+  color: #15291b;
+}
+.device-card[data-state="error"] .device-card__status {
+  background: #ffb7a7;
+  color: #44150e;
+}
+.device-card > p {
+  margin: 12px 0;
+  color: var(--cockpit-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.device-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.device-card__actions button {
+  margin: 0;
+}
+.device-card [role="group"] > button {
+  margin: 8px 8px 0 0;
+}
+.device-card [role="group"] > p output {
+  color: var(--cockpit-accent);
+}
+.device-card__details {
+  margin-top: 16px;
+  border: 1px solid var(--cockpit-border);
+  border-radius: 0.65rem;
+}
+.device-card__diagnostics {
+  padding: 4px 14px 14px;
+  color: var(--cockpit-muted);
+}
+.device-card__diagnostics p {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.device-card__diagnostics output {
   color: var(--cockpit-accent);
 }
 
