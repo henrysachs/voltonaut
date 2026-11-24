@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+import { planBillboards } from "./billboard-plan.js";
+import { createBillboards } from "./billboards.js";
 import { createLandscapePlan } from "./landscape-plan.js";
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
@@ -16,7 +18,12 @@ export function createLandscapeSystem(): RenderSystem {
     init(context) {
       const plan = createLandscapePlan(context.route);
 
-      root.add(createTerrain(plan), createLake(plan), createScenery(plan));
+      root.add(
+        createTerrain(plan),
+        createLake(plan),
+        createScenery(plan),
+        createBillboards(planBillboards(plan)),
+      );
       context.scene.add(root);
     },
     update() {},
