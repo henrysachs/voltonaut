@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { OidcFinishErrorSchema } from "@voltonaut/shared";
+import type { ErrorCode, OidcFinishError } from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
 
 export const OidcOpaqueSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
@@ -30,4 +32,11 @@ export function oidcBrowserBinding(cookie: string | undefined, secure: boolean):
 
 export function oidcBindingCookie(value: string, secure: boolean, clear: boolean): string {
   return `${oidcCookieName(secure)}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 360}${secure ? "; Secure" : ""}`;
+}
+
+/** The callback failures the browser shows as `/auth/finish?error=<code>`; others stay API errors. */
+export function oidcFinishError(code: ErrorCode): OidcFinishError | undefined {
+  const parsed = OidcFinishErrorSchema.safeParse(code);
+
+  return parsed.success ? parsed.data : undefined;
 }

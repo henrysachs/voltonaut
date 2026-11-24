@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OidcProviderChoiceSchema } from "@voltonaut/shared";
 
 export interface OidcProviderConfig {
   readonly id: string;
@@ -17,8 +18,6 @@ export interface OidcAuthConfig {
   readonly providers: readonly OidcProviderConfig[];
   readonly allowLoopbackHttp: boolean;
 }
-
-const ProviderIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,31}$/u);
 
 const ScopeSchema = z.string().regex(/^[\w.:/-]+$/u);
 
@@ -92,12 +91,10 @@ function parseProvider(
     id,
     issuer,
     redirectUri,
-    displayName: z
-      .string()
-      .trim()
-      .min(1)
-      .max(40)
-      .parse(read("DISPLAY_NAME") ?? id),
+    // The public provider choice contract decides what an ID and a display name may be.
+    displayName: OidcProviderChoiceSchema.shape.displayName.parse(
+      (read("DISPLAY_NAME") ?? id).trim(),
+    ),
     clientId: z.string().trim().min(1).parse(read("CLIENT_ID")),
     clientSecret: z.string().trim().min(1).parse(read("CLIENT_SECRET")),
     scopes: parseScopes(read("SCOPES")),
@@ -114,7 +111,7 @@ export function parseOidcConfig(
   allowLoopbackHttp: boolean,
 ): OidcAuthConfig {
   const ids = z
-    .array(ProviderIdSchema)
+    .array(OidcProviderChoiceSchema.shape.id)
     .nonempty()
     .refine(
       (values: readonly string[]) => new Set(values).size === values.length,

@@ -85,6 +85,7 @@ it.each([
   ["scopes without openid", { OIDC_AUTHENTIK_SCOPES: "email" }],
   ["an unknown token algorithm", { OIDC_AUTHENTIK_ID_TOKEN_ALG: "none" }],
   ["a non-boolean email policy", { OIDC_AUTHENTIK_REQUIRE_EMAIL_VERIFIED: "maybe" }],
+  ["a display name over the public limit", { OIDC_AUTHENTIK_DISPLAY_NAME: "x".repeat(41) }],
   ["an insecure issuer", { OIDC_AUTHENTIK_ISSUER: "http://auth.example/application/o/x/" }],
 ])(
   "fails startup configuration for %s instead of ignoring it",

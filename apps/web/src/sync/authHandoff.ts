@@ -7,10 +7,15 @@ export type AuthHandoff =
   | { readonly kind: "code"; readonly code: string }
   | { readonly kind: "error"; readonly error: OidcFinishError };
 
+const HANDOFF_ERROR_TEXT = {
+  email_not_verified:
+    "Anmeldung abgelehnt: Der Anbieter hat die E-Mail-Adresse nicht bestätigt. Adresse dort bestätigen und erneut anmelden.",
+  identity_conflict:
+    "Anmeldung abgelehnt: Zu dieser E-Mail-Adresse gibt es bereits ein Voltonaut-Konto mit anderer Anmeldung. Automatisch verknüpft wird nicht.",
+} as const satisfies Readonly<Record<OidcFinishError, string>>;
+
 export function handoffErrorText(error: OidcFinishError): string {
-  return error === "email_not_verified"
-    ? "Anmeldung abgelehnt: Der Anbieter hat die E-Mail-Adresse nicht bestätigt. Adresse dort bestätigen und erneut anmelden."
-    : "Anmeldung abgelehnt: Zu dieser E-Mail-Adresse gibt es bereits ein Voltonaut-Konto mit anderer Anmeldung. Automatisch verknüpft wird nicht.";
+  return HANDOFF_ERROR_TEXT[error];
 }
 
 export function takeAuthHandoff(href: string, replace: (path: string) => void): AuthHandoff {

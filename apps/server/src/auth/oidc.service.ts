@@ -13,6 +13,7 @@ import {
   invalidOidcLogin,
   oidcBrowserBinding,
   oidcBindingCookie,
+  oidcFinishError,
 } from "./oidc-cookie.js";
 import {
   claimTransaction,
@@ -22,8 +23,6 @@ import {
   replaceTransactionByHandoff,
   takeHandoff,
 } from "./oidc-store.js";
-
-const FINISH_ERRORS = new Set(["identity_conflict", "email_not_verified"]);
 
 @Injectable()
 export class OidcService {
@@ -108,8 +107,9 @@ export class OidcService {
 
       return this.finishUrl("code", code);
     } catch (error) {
-      if (error instanceof ApiError && FINISH_ERRORS.has(error.code))
-        return this.finishUrl("error", error.code);
+      const finishError = error instanceof ApiError ? oidcFinishError(error.code) : undefined;
+
+      if (finishError !== undefined) return this.finishUrl("error", finishError);
 
       throw error;
     } finally {
