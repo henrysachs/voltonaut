@@ -56,18 +56,25 @@ export async function deleteAccountData(
   }
 
   const owner: DeletionOwner = { apiOrigin: lease.apiOrigin, userId: lease.userId };
-  options.session.endAfterAccountDeletion();
+  const sessionCleared = options.session.endAfterAccountDeletion();
   const remembered = options.deletions.remember(owner);
   const cleaned = await cleanupOwner(owner, options);
+  const messages: string[] = [];
 
-  let message =
-    "Konto gelöscht. Lokale Session und zugeordnete Outbox-Einträge wurden entfernt. Lokale Fahrten und Gastprofil bleiben erhalten.";
+  if (sessionCleared) messages.push("Lokale Session entfernt.");
+  else messages.push("Lokale Session konnte nicht entfernt werden; Browserdaten prüfen.");
 
-  if (!cleaned)
-    message = remembered
-      ? "Konto gelöscht. Lokale Bereinigung noch nicht bestätigt und für einen späteren Versuch vermerkt. Lokale Fahrten und Gastprofil bleiben erhalten."
-      : "Konto gelöscht. Lokale Bereinigung ist nicht bestätigt und konnte nicht dauerhaft vermerkt werden; Browserdaten prüfen.";
-  publish({ kind: "guest", message });
+  if (cleaned) messages.push("Zugeordnete Outbox-Einträge entfernt.");
+  else
+    messages.push(
+      remembered
+        ? "Lokale Bereinigung noch nicht bestätigt und für einen späteren Versuch vermerkt."
+        : "Lokale Bereinigung ist nicht bestätigt und konnte nicht dauerhaft vermerkt werden; Browserdaten prüfen.",
+    );
+  publish({
+    kind: "guest",
+    message: `Konto gelöscht. ${messages.join(" ")} Lokale Fahrten und Gastprofil bleiben erhalten.`,
+  });
 
   return true;
 }

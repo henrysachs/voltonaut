@@ -5,7 +5,7 @@ import type { DynamicModule } from "@nestjs/common";
 import { ACCOUNTS_TABLES } from "./accounts.schema.js";
 import type { AccountsTables } from "./accounts.schema.js";
 import { AccountsController } from "./accounts.controller.js";
-import { AccountDataService } from "./account-data.service.js";
+import { AccountDataService, AuthAccountDataService } from "./account-data.service.js";
 import { AccountsService } from "./accounts.service.js";
 import { AdminUsersController } from "./admin-users.controller.js";
 import { AdminGuard } from "./admin.guard.js";
@@ -28,6 +28,7 @@ export class AccountsModule {
       providers: [
         AccountsService,
         AccountDataService,
+        AuthAccountDataService,
         AuthDirectory,
         AdminGuard,
         AdminOriginGuard,

@@ -29,35 +29,24 @@ export class AuthService {
   ) {}
 
   /**
-   * Creates a one-time login token and mails the magic link. Unknown addresses
-   * receive a link too: login is registration, the account row appears at the
-   * session exchange.
+   * Creates a one-time login token and mails the magic link. Unknown and deleted
+   * addresses receive the same response; a deleted address never creates an account.
    */
   public async requestMagicLink(email: string, nowMs: number): Promise<void> {
     this.requireMagicLink();
 
-    if (this.isDeletedEmail(email)) return;
-
     if (this.mail === null) throw new ApiError(503, "internal_error", "mail delivery unavailable");
     const token = createToken();
 
-    this.db.transaction(
-      () => {
-        if (this.isDeletedEmail(email)) return;
-        this.db
-          .insert(loginTokens)
-          .values({
-            tokenHash: hashToken(token),
-            email,
-            expiresAt: nowMs + LOGIN_TOKEN_TTL_MS,
-            usedAt: null,
-          })
-          .run();
-      },
-      { behavior: "immediate" },
-    );
-
-    if (this.isDeletedEmail(email)) return;
+    this.db
+      .insert(loginTokens)
+      .values({
+        tokenHash: hashToken(token),
+        email,
+        expiresAt: nowMs + LOGIN_TOKEN_TTL_MS,
+        usedAt: null,
+      })
+      .run();
 
     try {
       await this.mail.sendMagicLink(email, `${this.config.mail.clientOrigin}/#login=${token}`);
@@ -67,6 +56,12 @@ export class AuthService {
         .where(eq(loginTokens.tokenHash, hashToken(token)))
         .run();
       throw new ApiError(503, "internal_error", "mail delivery unavailable");
+    } finally {
+      if (this.isDeletedEmail(email))
+        this.db
+          .delete(loginTokens)
+          .where(eq(loginTokens.tokenHash, hashToken(token)))
+          .run();
     }
   }
 

@@ -5,11 +5,7 @@ import { StravaSync } from "./stravaSync.js";
 import type { PrivateAuthTransport } from "./privateAuthTransport.js";
 import type { StravaPopup, StravaChannel } from "./stravaBridge.js";
 import { deferred } from "./testdata/deferred.js";
-import {
-  unusedStravaLease,
-  unexpectedAccountData,
-  unexpectedMembership,
-} from "./testdata/unusedStravaLease.js";
+import { unusedStravaLease, unexpectedAccountParts } from "./testdata/unusedStravaLease.js";
 
 export const channelId = "00000000-0000-4000-8000-000000000001";
 const authorizationUrl = `https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=${encodeURIComponent("http://localhost:3000/v1/strava/callback")}&response_type=code&approval_prompt=force&scope=activity%3Awrite&state=${"s".repeat(43)}`;
@@ -31,7 +27,8 @@ export class StravaFixture {
       throw new Error("no automatic login");
     },
     transport: {
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       exchange: (code) =>
         Promise.resolve({
           sessionToken: `token-${code}`,
@@ -88,8 +85,7 @@ export class StravaFixture {
   private transport(): PrivateAuthTransport {
     return {
       authorize: (authorization) => ({
-        ...unexpectedMembership,
-        ...unexpectedAccountData,
+        ...unexpectedAccountParts,
         apiOrigin: "http://localhost:3000",
         userId: authorization.userId,
         generation: authorization.generation,

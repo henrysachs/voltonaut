@@ -47,7 +47,7 @@ it("keeps in-flight callbacks in the capacity bound and atomically replaces clai
     expect(
       client.prepare("SELECT * FROM oidc_transactions WHERE claimed_at IS NOT NULL").all(),
     ).toHaveLength(2);
-    await request(server).get("/v1/auth/oidc/start").expect(429);
+    await request(server).get("/v1/auth/oidc/test/start").expect(429);
   } finally {
     gate.release();
     context.provider.control.tokenGate = undefined;
@@ -60,7 +60,7 @@ it("keeps in-flight callbacks in the capacity bound and atomically replaces clai
   ]);
   expect(client.prepare("SELECT * FROM oidc_transactions").all()).toHaveLength(998);
   expect(client.prepare("SELECT * FROM oidc_handoffs").all()).toHaveLength(2);
-  await request(server).get("/v1/auth/oidc/start").expect(429);
+  await request(server).get("/v1/auth/oidc/test/start").expect(429);
   const firstLocation = new URL(z.string().url().parse(completed[0]?.headers["location"]));
   await request(server)
     .post("/v1/auth/oidc/exchange")
@@ -68,7 +68,7 @@ it("keeps in-flight callbacks in the capacity bound and atomically replaces clai
     .set("Cookie", first.cookie)
     .send({ code: firstLocation.searchParams.get("code") })
     .expect(200);
-  await request(server).get("/v1/auth/oidc/start").expect(302);
+  await request(server).get("/v1/auth/oidc/test/start").expect(302);
   expect(client.prepare("SELECT * FROM oidc_transactions").all()).toHaveLength(999);
   expect(client.prepare("SELECT * FROM oidc_handoffs").all()).toHaveLength(1);
 });
@@ -90,7 +90,7 @@ it("expires an in-flight reservation without allowing a late callback to create 
   try {
     await gate.ready;
     context.time.nowMs += 300_000;
-    await request(server).get("/v1/auth/oidc/start").expect(302);
+    await request(server).get("/v1/auth/oidc/test/start").expect(302);
     expect(client.prepare("SELECT * FROM oidc_transactions").all()).toHaveLength(901);
   } finally {
     gate.release();
@@ -117,20 +117,23 @@ it("commits bounded expired cleanup despite rejected starts and recovers legacy 
     "INSERT INTO oidc_transactions (state_hash, binding_hash, nonce, verifier, expires_at) VALUES (?, 'binding', 'nonce', 'verifier', 0)",
   );
 
-  const handoff = client.prepare("INSERT INTO oidc_handoffs VALUES (?, 'binding', ?, 0)");
+  const handoff = client.prepare(
+    "INSERT INTO oidc_handoffs (code_hash, binding_hash, user_id, expires_at) VALUES (?, 'binding', ?, 0)",
+  );
+
   client.transaction(() => {
     for (let index = 0; index < 1000; index += 1) transaction.run(`expired-${index}`);
 
     for (let index = 0; index < 250; index += 1) handoff.run(`expired-${index}`, userId);
   })();
   const server = httpServerOf(context.app);
-  await request(server).get("/v1/auth/oidc/start").expect(429);
+  await request(server).get("/v1/auth/oidc/test/start").expect(429);
   expect(client.prepare("SELECT * FROM oidc_transactions").all()).toHaveLength(900);
   expect(client.prepare("SELECT * FROM oidc_handoffs").all()).toHaveLength(150);
-  await request(server).get("/v1/auth/oidc/start").expect(302);
+  await request(server).get("/v1/auth/oidc/test/start").expect(302);
   expect(client.prepare("SELECT * FROM oidc_transactions").all()).toHaveLength(801);
   expect(client.prepare("SELECT * FROM oidc_handoffs").all()).toHaveLength(50);
-  await request(server).get("/v1/auth/oidc/start").expect(302);
+  await request(server).get("/v1/auth/oidc/test/start").expect(302);
   expect(client.prepare("SELECT * FROM oidc_transactions").all()).toHaveLength(702);
   expect(client.prepare("SELECT * FROM oidc_handoffs").all()).toHaveLength(0);
 });

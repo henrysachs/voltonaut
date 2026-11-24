@@ -12,6 +12,8 @@ import { AccountsService } from "./accounts.service.js";
 import { ACCOUNTS_TABLES } from "./accounts.schema.js";
 import type { AccountsTables } from "./accounts.schema.js";
 
+export { AuthAccountDataService } from "../auth/auth-account-data.service.js";
+
 @Injectable()
 export class AccountDataService {
   public constructor(

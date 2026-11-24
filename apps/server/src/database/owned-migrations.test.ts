@@ -137,8 +137,25 @@ it.each([1, 2])(
       try {
         const db = getDatabase(app);
 
-        expect(readAuthState(db.$client, migrationCount)).toEqual(authState);
-        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(9);
+        // Migration 0008 only adds nullable/defaulted columns; legacy rows keep every prior value.
+        expect(readAuthState(db.$client, migrationCount)).toEqual({
+          ...authState,
+          transactions: authState.transactions.map((row) =>
+            Object.assign(z.object({}).passthrough().parse(row), {
+              provider: "",
+              link_user_id: null,
+              link_session_hash: null,
+            }),
+          ),
+          handoffs: authState.handoffs.map((row) =>
+            Object.assign(z.object({}).passthrough().parse(row), {
+              link_issuer: null,
+              link_subject: null,
+              link_session_hash: null,
+            }),
+          ),
+        });
+        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(10);
         assertOwnedForeignKeys(db);
       } finally {
         await app.close();

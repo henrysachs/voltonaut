@@ -269,7 +269,7 @@ it("deletes only the confirmed owner, revokes sessions and blocks silent recreat
     .post("/v1/auth/magic-link")
     .send({ email: f.owner.user.email })
     .expect(204);
-  expect(f.mail.readSent()).toHaveLength(mailCount);
+  expect(f.mail.readSent()).toHaveLength(mailCount + 1);
   expect(
     f.db.$client.prepare("SELECT * FROM login_tokens WHERE email = ?").all(f.owner.user.email),
   ).toEqual([]);

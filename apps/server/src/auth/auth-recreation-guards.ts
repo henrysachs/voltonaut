@@ -1,9 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { IdentityClaims } from "./oidc-client.js";
 import { invalidOidcLogin } from "./oidc-cookie.js";
-import { authIdentities, authIdentityTombstones, users } from "./auth.schema.js";
-import type { AuthService } from "./auth.service.js";
-import { ApiError } from "../api-error.js";
+import { authIdentityTombstones, users } from "./auth.schema.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
 import { hashIdentity, hashToken } from "./tokens.js";
 
@@ -20,46 +18,25 @@ export function isDeletedEmail(
   );
 }
 
-export function assertOidcIdentityAvailable(
+export function assertIdentityNotTombstoned(
   db: Readonly<Pick<ServerDatabase, "select">>,
-  identity: Readonly<IdentityClaims>,
+  issuer: string,
+  subject: string,
 ): void {
   const tombstone = db
     .select({ identityHash: authIdentityTombstones.identityHash })
     .from(authIdentityTombstones)
-    .where(eq(authIdentityTombstones.identityHash, hashIdentity(identity.iss, identity.sub)))
+    .where(eq(authIdentityTombstones.identityHash, hashIdentity(issuer, subject)))
     .get();
 
-  if (tombstone !== undefined || isDeletedEmail(db, identity.email)) throw invalidOidcLogin();
+  if (tombstone !== undefined) throw invalidOidcLogin();
 }
 
-export function resolveOidcUser(
-  db: Readonly<Pick<ServerDatabase, "select" | "insert">>,
-  auth: Readonly<Pick<AuthService, "currentUser">>,
+export function assertOidcIdentityAvailable(
+  db: Readonly<Pick<ServerDatabase, "select">>,
   identity: Readonly<IdentityClaims>,
-  nowMs: number,
-): string {
-  const existing = db
-    .select()
-    .from(authIdentities)
-    .where(and(eq(authIdentities.issuer, identity.iss), eq(authIdentities.subject, identity.sub)))
-    .get();
+): void {
+  assertIdentityNotTombstoned(db, identity.iss, identity.sub);
 
-  if (existing !== undefined) {
-    auth.currentUser(existing.userId);
-
-    return existing.userId;
-  }
-
-  assertOidcIdentityAvailable(db, identity);
-
-  if (db.select().from(users).where(eq(users.email, identity.email)).get() !== undefined) {
-    throw new ApiError(409, "identity_conflict", "existing account ownership must be proven");
-  }
-
-  const userId = crypto.randomUUID();
-  db.insert(users).values({ id: userId, email: identity.email, createdAt: nowMs }).run();
-  db.insert(authIdentities).values({ issuer: identity.iss, subject: identity.sub, userId }).run();
-
-  return userId;
+  if (isDeletedEmail(db, identity.email)) throw invalidOidcLogin();
 }

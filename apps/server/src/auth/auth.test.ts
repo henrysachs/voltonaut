@@ -196,6 +196,27 @@ it("slides session expiry and never authenticates deleted accounts", async () =>
     .expect(401);
 });
 
+it("keeps magic-link delivery failures indistinguishable for deleted and unknown addresses", async () => {
+  const { app, mail, config } = await setup();
+  const server = httpServerOf(app);
+  const session = await loginTestUser(app, mail, "deleted@example.com");
+  await request(server)
+    .delete("/v1/me")
+    .set(bearer(session.sessionToken))
+    .set("Origin", config.clientOrigin)
+    .send({ confirmation: session.user.email })
+    .expect(204);
+
+  mail.failNext();
+  await request(server)
+    .post("/v1/auth/magic-link")
+    .send({ email: "unknown@example.com" })
+    .expect(503);
+  mail.failNext();
+  await request(server).post("/v1/auth/magic-link").send({ email: session.user.email }).expect(503);
+  expect(getDatabase(app).$client.prepare("SELECT * FROM login_tokens").all()).toEqual([]);
+});
+
 it("returns authenticated account and owned rides but exposes no development mailbox", async () => {
   const { app, mail } = await setup();
   const session = await loginTestUser(app, mail, "scope@example.com");

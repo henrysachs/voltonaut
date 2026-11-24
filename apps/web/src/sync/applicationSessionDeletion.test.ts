@@ -43,7 +43,8 @@ it("ends a deleted account locally without another logout request", async () => 
 
   const client = new ApplicationSession({
     transport: {
-      mode: () => Promise.resolve({ mode: "oidc" }),
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
       exchange: () => {
         calls.push("exchange");
 
@@ -65,11 +66,46 @@ it("ends a deleted account locally without another logout request", async () => 
 
   await client.exchange("a".repeat(43));
   const lease = required(client.authorize());
-  client.endAfterAccountDeletion();
+  expect(client.endAfterAccountDeletion()).toBe(true);
   expect(JSON.stringify(client.view())).toContain("Konto gelöscht");
   expect(lease.current()).toBe(false);
   expect(lease.signal.aborted).toBe(true);
   expect(client.view().kind).toBe("guest");
   expect(values.size).toBe(0);
   expect(calls).toEqual(["exchange"]);
+});
+
+it("reports when a persisted session cannot be removed after account deletion", async () => {
+  const values = new Map<string, string>();
+  const storage = memoryStorage(values);
+
+  const persistence = sessionPersistence("http://localhost:3000", () => ({
+    ...storage,
+    removeItem: () => {
+      throw new Error("storage denied");
+    },
+  }));
+
+  persistence.save(token);
+
+  const client = new ApplicationSession({
+    transport: {
+      mode: () =>
+        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
+      exchange: () => Promise.resolve(session),
+      me: () => Promise.resolve(user),
+      logout: () => Promise.resolve(),
+    },
+    persistence,
+    navigate: () => {
+      throw new Error("unexpected navigation");
+    },
+    privateTransport: privateAuthTransport("http://localhost:3000"),
+  });
+
+  await client.restore();
+
+  expect(client.endAfterAccountDeletion()).toBe(false);
+  expect(values.size).toBe(1);
+  expect(JSON.stringify(client.view())).toContain("Lokale Session konnte nicht entfernt werden");
 });

@@ -76,6 +76,7 @@ it("does not lose one tab's marker when another tab writes during its setItem", 
 it("fails explicitly when durable cleanup cannot be recorded and ignores corrupted markers", () => {
   expect(storageFixture(true).intents.remember(A)).toBe(false);
   const f = storageFixture();
+  f.intents.remember(B);
   f.values.set(`voltonaut.account-deletion-cleanup:${deletionOwnerKey(A)}`, "not-json");
-  expect(f.intents.load()).toEqual([]);
+  expect(f.intents.load().map((owner) => deletionOwnerKey(owner))).toEqual([deletionOwnerKey(B)]);
 });

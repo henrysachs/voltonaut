@@ -59,6 +59,10 @@ export const oidcTransactions = sqliteTable(
   "oidc_transactions",
   {
     stateHash: text("state_hash").primaryKey(),
+    provider: text("provider").notNull().default(""),
+    /** Set only for an explicit account link: the account and session that asked for it. */
+    linkUserId: text("link_user_id"),
+    linkSessionHash: text("link_session_hash"),
     bindingHash: text("binding_hash").notNull(),
     nonce: text("nonce").notNull(),
     verifier: text("verifier").notNull(),
@@ -78,6 +82,10 @@ export const oidcHandoffs = sqliteTable(
       .notNull()
       .references(() => users.id),
     expiresAt: integer("expires_at").notNull(),
+    /** Set only for an account link handoff: the verified identity and the requesting session. */
+    linkIssuer: text("link_issuer"),
+    linkSubject: text("link_subject"),
+    linkSessionHash: text("link_session_hash"),
   },
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle supplies native mutable column builders to its schema callback.
   (table) => [index("oidc_handoffs_expiry").on(table.expiresAt)],

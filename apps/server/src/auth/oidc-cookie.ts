@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { OidcFinishErrorSchema } from "@voltonaut/shared";
+import type { ErrorCode, OidcFinishError } from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
 
 export { ApiError } from "../api-error.js";
@@ -32,4 +34,16 @@ export function oidcBrowserBinding(cookie: string | undefined, secure: boolean):
 
 export function oidcBindingCookie(value: string, secure: boolean, clear: boolean): string {
   return `${oidcCookieName(secure)}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 360}${secure ? "; Secure" : ""}`;
+}
+
+/** The callback failures the browser shows as `/auth/finish?error=<code>`; others stay API errors. */
+export function oidcFinishError(code: ErrorCode): OidcFinishError | undefined {
+  const parsed = OidcFinishErrorSchema.safeParse(code);
+
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** The binding cookie is `Secure`/`__Host-` only when every provider callback uses HTTPS. */
+export function oidcCookieSecure(redirectUris: readonly string[]): boolean {
+  return redirectUris.every((uri) => uri.startsWith("https:"));
 }

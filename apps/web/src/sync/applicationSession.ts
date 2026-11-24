@@ -1,11 +1,16 @@
-import type { SessionResponse, User } from "@voltonaut/shared";
+import type { OidcProviderChoice, SessionResponse, User } from "@voltonaut/shared";
 
 import type { AuthTransport } from "./authTransport.js";
 import type { SessionPersistence } from "./sessionPersistence.js";
 import type { AccountLease, PrivateAuthTransport } from "./privateAuthTransport.js";
 
 export type SessionView =
-  | { readonly kind: "guest"; readonly message: string }
+  | {
+      readonly kind: "guest";
+      readonly message: string;
+      /** Set while the visitor still has to pick one of several login providers. */
+      readonly providers?: readonly OidcProviderChoice[];
+    }
   | { readonly kind: "busy"; readonly operation: "restoring" | "exchanging" | "login" }
   | { readonly kind: "authenticated"; readonly user: Readonly<User>; readonly persistent: boolean };
 
@@ -22,7 +27,7 @@ type SessionState =
 interface SessionOptions {
   readonly transport: AuthTransport;
   readonly persistence: SessionPersistence;
-  readonly navigate: () => void;
+  readonly navigate: (providerId: string) => void;
   readonly privateTransport: PrivateAuthTransport;
 }
 
@@ -132,7 +137,7 @@ export class ApplicationSession {
     }
   }
 
-  async login(): Promise<void> {
+  async login(providerId?: string): Promise<void> {
     if (this.#state.kind !== "guest") return;
     const operation = this.begin();
     this.publish({ kind: "busy", operation: "login" });
@@ -143,8 +148,28 @@ export class ApplicationSession {
       if (operation.generation !== this.#generation) return;
 
       if (config.mode === "oidc") {
-        this.#options.navigate();
-        this.publish({ kind: "guest", message: "Gast. Anmeldung bei Bedarf erneut starten." });
+        const chosen =
+          providerId === undefined
+            ? config.providers.length === 1
+              ? config.providers[0]
+              : undefined
+            : config.providers.find((provider) => provider.id === providerId);
+
+        if (chosen !== undefined) {
+          this.#options.navigate(chosen.id);
+          this.publish({ kind: "guest", message: "Gast. Anmeldung bei Bedarf erneut starten." });
+        } else if (providerId === undefined) {
+          this.publish({
+            kind: "guest",
+            message: "Anbieter für die Anmeldung wählen. Fahren ohne Anmeldung bleibt möglich.",
+            providers: config.providers,
+          });
+        } else {
+          this.publish({
+            kind: "guest",
+            message: "Dieser Anmeldeanbieter ist nicht mehr verfügbar.",
+          });
+        }
       } else {
         this.publish({
           kind: "guest",
@@ -163,7 +188,7 @@ export class ApplicationSession {
     }
   }
 
-  public endAfterAccountDeletion(): void {
+  public endAfterAccountDeletion(): boolean {
     this.begin();
     const cleared = this.#options.persistence.clear();
     this.publish({
@@ -172,6 +197,8 @@ export class ApplicationSession {
         ? "Konto gelöscht. Lokale Session entfernt; Aufräumarbeiten laufen."
         : "Konto gelöscht. Lokale Session konnte nicht entfernt werden; Browserdaten prüfen.",
     });
+
+    return cleared;
   }
 
   async logout(): Promise<void> {

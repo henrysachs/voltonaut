@@ -12,7 +12,7 @@ import type { AccountLease, PrivateRequestError } from "../privateAuthTransport.
 import type { SessionView } from "../applicationSession.js";
 import { deletionOwnerKey, type DeletionOwner } from "../accountDeletion.js";
 import { localRide } from "./localRide.js";
-import { unusedStravaLease, unexpectedMembership } from "./unusedStravaLease.js";
+import { unusedStravaLease, unexpectedAccountParts } from "./unusedStravaLease.js";
 
 export const A = "00000000-0000-4000-8000-000000000001";
 export const B = "00000000-0000-4000-8000-000000000002";
@@ -52,6 +52,7 @@ export class SyncFixture {
   exportFailure = false;
   exportResponse: Promise<AccountExport> | undefined;
   sessionEnded = false;
+  sessionClearResult = true;
   archive: readonly ArchivedRide[] = [{ kind: "legacy", recording: localRide }];
   readonly outbox: AccountOutbox = {
     list: (owner) =>
@@ -77,6 +78,8 @@ export class SyncFixture {
       endAfterAccountDeletion: () => {
         this.sessionEnded = true;
         this.logout();
+
+        return this.sessionClearResult;
       },
     },
     outbox: () => Promise.resolve(this.outbox),
@@ -142,7 +145,7 @@ export class SyncFixture {
 
   private lease(userId: string): AccountLease {
     const lease: AccountLease = {
-      ...unexpectedMembership,
+      ...unexpectedAccountParts,
       strava: unusedStravaLease,
       signal: new AbortController().signal,
       userId,

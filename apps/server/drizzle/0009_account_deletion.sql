@@ -2,8 +2,7 @@ CREATE TABLE `auth_identity_tombstones` (
 	`identity_hash` text PRIMARY KEY NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE `users` ADD `deleted_email_hash` text;
---> statement-breakpoint
+ALTER TABLE `users` ADD `deleted_email_hash` text;--> statement-breakpoint
 CREATE UNIQUE INDEX `users_deleted_email_hash_unique` ON `users` (`deleted_email_hash`) WHERE `deleted_email_hash` IS NOT NULL;
 --> statement-breakpoint
 CREATE TRIGGER `users_reject_deleted_tombstone_update` BEFORE UPDATE ON `users`

@@ -26,26 +26,34 @@ function intentKey(owner: DeletionOwner): string {
   return `${STORAGE_PREFIX}${deletionOwnerKey(owner)}`;
 }
 
+function loadIntents(target: DeletionStorage): readonly DeletionOwner[] {
+  const pending: DeletionOwner[] = [];
+
+  for (let index = 0; index < target.length; index += 1) {
+    const key = target.key(index);
+
+    if (key === null || !key.startsWith(STORAGE_PREFIX)) continue;
+
+    try {
+      const raw = target.getItem(key);
+
+      if (raw === null) continue;
+      const parsed = AccountDataOwnerSchema.safeParse(JSON.parse(raw));
+
+      if (parsed.success) pending.push(parsed.data);
+    } catch {
+      continue;
+    }
+  }
+
+  return pending;
+}
+
 export function accountDeletionIntents(storage: () => DeletionStorage): DeletionIntents {
   return {
     load() {
       try {
-        const target = storage();
-        const pending: DeletionOwner[] = [];
-
-        for (let index = 0; index < target.length; index += 1) {
-          const key = target.key(index);
-
-          if (key === null || !key.startsWith(STORAGE_PREFIX)) continue;
-          const raw = target.getItem(key);
-
-          if (raw === null) continue;
-          const parsed = AccountDataOwnerSchema.safeParse(JSON.parse(raw));
-
-          if (parsed.success) pending.push(parsed.data);
-        }
-
-        return pending;
+        return loadIntents(storage());
       } catch {
         return [];
       }

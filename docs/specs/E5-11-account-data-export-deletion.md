@@ -45,7 +45,7 @@ Ein angemeldeter Kontoinhaber kann alle serverseitig gespeicherten eigenen Daten
 ## Nachweisstand
 
 - **Implementiert:** Export-/Löschvertrag, Servertransaktion, Tombstones/Trigger, Browser-Overlay und Outbox-Bereinigung.
-- **Am tatsächlichen Artefakt softwaregeprüft:** Serverintegration, Migration, OIDC-Neuanlage-Sperre, Web-Unit-Tests und Playwright gegen die gebaute Web-App mit gerouteten API-Antworten. `CI=1 MISE_AUTO_INSTALL=0 mise run --skip-tools -j 1 check` ist grün: 1229 Unit-/Integrationstests und 72 E2E-Tests. `mise run --skip-tools check:mutation` erreicht 95,84 %. Die drei Befunde des unabhängigen Reviews (bestehende OIDC-Identität, nebenläufige Aufräummarker, IndexedDB-v1-Migration) sind mit Regressionstests behoben.
+- **Am tatsächlichen Artefakt softwaregeprüft:** Serverintegration, Migration, OIDC-Neuanlage-Sperre, Web-Unit-Tests und Playwright gegen die gebaute Web-App mit gerouteten API-Antworten. `CI=1 MISE_AUTO_INSTALL=0 mise run --skip-tools -j 1 check` ist grün: 1299 Unit-/Integrationstests und 72 E2E-Tests. `mise run --skip-tools check:mutation` erreicht 95,84 %. Die Befunde der unabhängigen Reviews (bestehende OIDC-Identität, nebenläufige Aufräummarker, IndexedDB-v1-Migration, Magic-Link-Timing, beschädigte Marker und Session-Cleanup-Meldung) sind mit Regressionstests behoben.
 - **An echter Hardware geprüft:** nein, nicht hardwarerelevant.
 - **Bereitgestellt:** nein, kein Produktionsdeploy in dieser Aufgabe.
 

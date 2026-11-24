@@ -80,3 +80,15 @@ it("does not return a late export after the owning session ends", async () => {
   response.resolve(accountExport);
   await expect(exporting).resolves.toBeUndefined();
 });
+
+it("reports a persisted session that could not be removed after confirmed deletion", async () => {
+  const f = fixture();
+  const lease = f.login(A);
+  await f.sync.refresh();
+  await f.write(newOutboxRow(lease, localRide, 1000));
+  f.sessionClearResult = false;
+
+  await expect(f.sync.deleteAccount(`${A}@example.com`)).resolves.toBe(true);
+  expect(f.rows.size).toBe(0);
+  expect(JSON.stringify(f.sync.view())).toContain("Lokale Session konnte nicht entfernt werden");
+});
