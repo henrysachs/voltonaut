@@ -1,5 +1,6 @@
 import type { RideSnapshot } from "@voltonaut/engine";
 
+import type { EnvironmentSettings } from "./environment.js";
 import { createRenderLink } from "./render-link.js";
 import { BrowserRenderPort } from "./render-port.js";
 import {
@@ -13,6 +14,7 @@ export interface RideSceneOptions {
   readonly routeId: string;
   readonly snapshot: () => Readonly<RideSnapshot> | undefined;
   readonly wheelCircM: number;
+  readonly environment: EnvironmentSettings;
   readonly debug: boolean;
 }
 
@@ -79,8 +81,12 @@ class RideSceneBridge implements RideScene {
     window.addEventListener("keydown", this.onKey);
     window.addEventListener("pagehide", this.dispose);
     this.link = createRenderLink(
-      new BrowserRenderPort(this.canvas, options.routeId, options.wheelCircM, () =>
-        this.viewport(),
+      new BrowserRenderPort(
+        this.canvas,
+        options.routeId,
+        options.wheelCircM,
+        options.environment,
+        () => this.viewport(),
       ),
       {
         failed: () => {
@@ -127,6 +133,9 @@ class RideSceneBridge implements RideScene {
     this.debug.dataset["crankRad"] = String(d.crankRad);
     this.debug.dataset["distanceM"] = String(d.distanceM);
     this.debug.dataset["camera"] = d.camera;
+    this.debug.dataset["weather"] = d.weather;
+    this.debug.dataset["timeOfDay"] = String(d.timeOfDayS);
+    this.debug.dataset["rainAmount"] = String(d.rainAmount);
     this.debug.dataset["cameraX"] = String(d.cameraPosition.x);
     this.debug.dataset["cameraY"] = String(d.cameraPosition.y);
     this.debug.dataset["cameraZ"] = String(d.cameraPosition.z);

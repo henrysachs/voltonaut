@@ -1,3 +1,4 @@
+import type { EnvironmentSettings } from "./environment.js";
 import type { RenderPort } from "./render-link.js";
 import type {
   RenderCommand,
@@ -17,6 +18,7 @@ export class BrowserRenderPort implements RenderPort {
     private readonly canvas: HTMLCanvasElement,
     private readonly routeId: string,
     private readonly wheelCircM: number,
+    private readonly environment: EnvironmentSettings,
     private readonly viewport: () => RenderViewport,
   ) {}
 
@@ -43,6 +45,7 @@ export class BrowserRenderPort implements RenderPort {
       canvas: offscreen,
       routeId: this.routeId,
       wheelCircM: this.wheelCircM,
+      environment: this.environment,
       viewport: this.viewport(),
     };
 

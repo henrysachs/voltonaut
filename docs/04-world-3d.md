@@ -29,6 +29,8 @@ Jedes System besitzt seine three.js-Objekte; keines schreibt in Engine-State. Ga
 
 [E4-04](specs/E4-04-render-worker-isolation.md) verschiebt diese bestehenden Systeme und WebGL in einen eigenen Render-Worker. Main überträgt den Canvas einmal und behält DOM, Kameraeingaben und Snapshot-Pull. Die erforderliche `routeId` wird im Worker über die vorhandenen Routendaten aufgelöst. Ein unbestätigter Snapshot plus ein ersetzbarer letzter Wert begrenzen ausschließlich die Darstellungsnachrichten. Engine, BLE und Aufnahmen behalten ihre bisherigen Besitzer. Details und Grenzen stehen in [ADR-019](decisions/ADR-019-render-worker-isolation.md).
 
+[E8-01](specs/E8-01-deterministic-environment.md) berechnet `EnvironmentState` rein aus `(seed, timeS, script)`. `FrameInput` führt ihn als Snapshot in den Scheduler. Das `environment`-System besitzt Himmel, Sonne, Nebel und Regen und läuft vor Terrain und Straße. Niedrige Qualität deaktiviert Regen und Schatten. Die Regentropfen sind begrenzt auf Low 0, Medium 500, High 900 und Ultra 1400. Die tatsächliche Zahl hängt zusätzlich von `rainAmount` ab. Schatten laufen nur bei positiver Sonnenintensität.
+
 Während des Starts bleibt ein zugänglicher Ladestatus sichtbar. Renderdiagnostik stammt nach `renderer.render` aus den echten Three-Zählern und Posen. `after-render-task` bezeichnet die folgende Worker-Task, keine bestätigte sichtbare Präsentation. Fehlende Worker- oder OffscreenCanvas-Unterstützung, Initfehler und Kontextverlust zeigen `3D unavailable`; Fahrt und HUD laufen weiter. Ein Main-WebGL- oder CPU-Bildkopie-Fallback existiert nicht.
 
 ## 2. Rendering & Licht
@@ -41,8 +43,10 @@ Während des Starts bleibt ein zugänglicher Ladestatus sichtbar. Renderdiagnost
 ## 3. Umwelt: Tageszeit & Wetter
 
 - **Day/Night-Zyklus:** Sonnenstand aus Uhrzeit (realer Lokalzeit oder Spielzeit, beschleunigbar), `Sky`-Shader + Sterne/Mond nachts, Laternen und beleuchtete Torbögen (Emissive + Bloom), Scheinwerfer am Rad bei Nacht.
-- **Wetter:** `clear | cloudy | fog | rain | storm` mit Übergängen; Regen als GPU-Partikel + nasse Straße (Roughness runter, Pfützen-Reflexe), Nebeldichte, Wolkendecke, Wind sichtbar (Vegetation-Wind-Shader, Fahnen). **Wind ist rein visuell oder optional physikalisch** (Gegenwind über FTMS `windSpeed`, Einstellung, Standard aus).
-- `EnvironmentState` ist deterministisch aus `(seed, time, weatherScript)` → visuelle Tests reproduzierbar.
+- **Wetter:** `clear | cloudy | fog | rain | storm` mit Übergängen; Regen als GPU-Partikel + nasse Straße (Roughness runter, Pfützen-Reflexe), Nebeldichte, Wolkendecke, Wind sichtbar (Vegetation-Wind-Shader, Fahnen). Wind bleibt visuell. E8-01 sendet keine Wind- oder Widerstandsbefehle an den Trainer.
+- `EnvironmentState` enthält `seed`, `timeOfDayS`, `weather`, `sunDirection`, `sunIntensity`, `fogDensity` und `rainAmount`. `environmentAt(seed, timeS, script)` ist rein und deterministisch. Das Wetterskript wählt den größten normalisierten Startzeitpunkt kleiner oder gleich `timeOfDayS`. Bei doppelten Startzeitpunkten gewinnt der spätere Skripteintrag. Wenn kein Eintrag infrage kommt, gilt der erste Eintrag.
+- Die URL-Parameter `seed`, `time=HH:MM` und `weather` setzen den Startwert. Standard sind `seed=42`, `time=12:00` und `weather=clear`. Ungültige Werte fallen einzeln auf diese Standardwerte zurück. Die Tageszeit folgt zunächst der Fahrzeit.
+- Der erste Wetterschnitt zeigt Regensstreifen und Nebel. Die Startpunkte der Tropfen liegen in einer 24 m hohen Säule um den Fahrer. Nasse Straßen, Wolkenmeshes, Sterne, Mond und Radlicht bleiben offen.
 
 ## 4. Strecke, Terrain, Umgebung
 

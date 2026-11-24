@@ -1,6 +1,7 @@
 import type { RideSnapshot } from "@voltonaut/engine";
 
 import type { CameraMode } from "./camera.js";
+import type { EnvironmentSettings, WeatherKind } from "./environment.js";
 
 export interface RenderViewport {
   readonly widthCssPx: number;
@@ -34,6 +35,9 @@ export interface SceneDiagnostics {
   readonly headingRad: number;
   readonly crankRad: number;
   readonly camera: CameraMode;
+  readonly weather: WeatherKind;
+  readonly timeOfDayS: number;
+  readonly rainAmount: number;
   readonly cameraPosition: Position;
   readonly widthPx: number;
   readonly heightPx: number;
@@ -56,6 +60,7 @@ export type RenderCommand =
       readonly canvas: OffscreenCanvas;
       readonly routeId: string;
       readonly wheelCircM: number;
+      readonly environment: EnvironmentSettings;
       readonly viewport: RenderViewport;
     };
 

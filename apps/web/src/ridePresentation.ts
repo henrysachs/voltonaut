@@ -4,6 +4,7 @@ import type { LocalRideMetadata } from "@voltonaut/shared";
 import type { RecordingControls } from "./game/rideCaptureProtocol.js";
 
 import { setupRideRecording } from "./rideRecording.js";
+import type { EnvironmentSettings } from "./world/environment.js";
 import { startRideScene } from "./world/scene.js";
 
 interface RidePresentationOptions {
@@ -11,6 +12,7 @@ interface RidePresentationOptions {
   readonly profile: LocalRideMetadata["profile"];
   readonly routeId: string;
   readonly sceneHost: Readonly<Element> | null;
+  readonly environment: EnvironmentSettings;
   readonly debug: boolean;
   readonly recording: RecordingControls;
 }
@@ -29,6 +31,7 @@ export function setupRidePresentation(
       routeId: options.routeId,
       snapshot: options.snapshot,
       wheelCircM: options.profile.bike.wheelCircM,
+      environment: options.environment,
       debug: options.debug,
     });
   }

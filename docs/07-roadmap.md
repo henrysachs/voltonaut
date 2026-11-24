@@ -161,6 +161,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 **Ziel:** Aus der Strecke wird eine Spielwelt.
 
+[E8-01](specs/E8-01-deterministic-environment.md) ergänzt den ersten deterministischen Umweltschnitt im Render-Worker. Tageszeit und Wetter steuern Himmel, Sonne, Nebel und Regen ohne Änderung an Physik oder Fahrereingaben. Low deaktiviert Regen und Schatten. Der korrigierte Regen ist im Browser-Screenshot sichtbar. Vollständiges Gate, Build und unabhängiges Review sind grün. Merge, CI und Bereitstellung stehen noch aus. Nasse Straßen, Wolken, Sterne, Mond, Radlicht und vollständige Wetterübergänge bleiben offen.
+
 - [ ] **AI-Bots** (`packages/engine/bots`): Persönlichkeiten, Gruppen, Attacken, Sprints; Fahrer-LODs + Impostoren
 - [ ] **Windschatten** in der Engine (auch Trainer-Widerstand) + sichtbarer Effekt (HUD-Indikator, Luftstrom-Partikel, leiserer Wind)
 - [ ] Spurwahl/Überholen (laterale Position)

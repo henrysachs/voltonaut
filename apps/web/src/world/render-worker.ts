@@ -32,7 +32,7 @@ function initialize(
   };
 
   try {
-    core = createSceneCore(renderer, route, command.wheelCircM);
+    core = createSceneCore(renderer, route, command.wheelCircM, command.environment);
     core.resize(command.viewport);
     command.canvas.addEventListener("webglcontextlost", onLost);
     const owned = core;
