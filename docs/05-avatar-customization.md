@@ -41,13 +41,13 @@ interface ItemDef {
 - `AvatarConfig` referenziert nur IDs und Farben. Besitz prüft später der Server (`inventory/`), der Client nur gegen den Cache.
 - Körpergröße aus dem Rider-Profil (`heightCm`) skaliert das Skelett. Sattelhöhe und Reach folgen daraus.
 - [E7-01](specs/E7-01-garage-shop-foundation.md) integriert den Tab „Garage / Shop" in das bestehende Fahrtmenü. Slot- und Item-Auswahl ändert die provisorische 3D-Vorschau. Preise und Freischaltbedingungen sind sichtbar. Käufe bleiben deaktiviert, weil Server-Inventar und Volts-Buchung fehlen. Die Vorschau wird weder gespeichert noch als Besitz dargestellt.
-- Hautton: sechs Presets in der Vorschau. Ein freier Farbwähler folgt mit dem finalen Customizing.
+- Hautton: direkte Hex-Farbauswahl in der Vorschau. Die bisherigen Preset-IDs bleiben als Kompatibilitätsdaten erhalten, werden aber nicht als Namen angezeigt.
 
 ## Start-Katalog (E7)
 
 | Slot      | Anzahl                                   | Default             |
 | --------- | ---------------------------------------- | ------------------- |
-| Haut      | 6 Presets                                | Kupfer              |
+| Haut      | 6 direkte Farben                         | Kupfer              |
 | Trikot    | 6 Designs × Farben                       | „Voltonaut Classic" |
 | Helm      | 3                                        | Standard            |
 | Schuhe    | 2                                        | weiß                |

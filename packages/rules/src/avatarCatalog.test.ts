@@ -126,7 +126,11 @@ describe("avatar preview config", () => {
       ["glasses.clear", "glassesId"],
     ];
 
-    let config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(catalogItem("skin.04")));
+    let config = previewAvatarConfig(
+      DEFAULT_AVATAR_CONFIG,
+      preview(catalogItem("skin.04"), ["#98664f"]),
+    );
+
     expect(config.rider.skinTone).toBe("#98664f");
     expect(avatarItemIdForSlot(config, "skin")).toBe("skin.04");
 
@@ -151,10 +155,22 @@ describe("skin presets", () => {
   ];
 
   it.each(presets)("previews and maps %s", (itemId, skinTone) => {
-    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(catalogItem(itemId)));
+    const config = previewAvatarConfig(
+      DEFAULT_AVATAR_CONFIG,
+      preview(catalogItem(itemId), [skinTone]),
+    );
 
     expect(config.rider.skinTone).toBe(skinTone);
     expect(avatarItemIdForSlot(config, "skin")).toBe(itemId);
+  });
+
+  it("uses the selected color directly instead of the skin item name", () => {
+    const config = previewAvatarConfig(
+      DEFAULT_AVATAR_CONFIG,
+      preview(catalogItem("skin.03"), ["#112233"]),
+    );
+
+    expect(config.rider.skinTone).toBe("#112233");
   });
 });
 

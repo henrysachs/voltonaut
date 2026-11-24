@@ -109,6 +109,20 @@ describe("garage colors and unavailable preview", () => {
     expect(initial.config.rider.jerseyColors).toEqual(["#ec6b48", "#f5ebca"]);
   });
 
+  it("changes skin tone directly by color without selecting a named skin item", () => {
+    const skin = garageReducer(createInitialGarageState(), { kind: "selectSlot", slot: "skin" });
+
+    expect(skin.selection.colors).toEqual(["#c98d68"]);
+
+    const changed = garageReducer(skin, { kind: "selectColor", index: 0, color: "#112233" });
+
+    expect(changed.selection.colors).toEqual(["#112233"]);
+    expect(changed.config.rider.skinTone).toBe("#112233");
+    expect(skin.config.rider.skinTone).toBe("#c98d68");
+  });
+});
+
+describe("garage color boundaries and unavailable preview", () => {
   it("ignores invalid color indexes and malformed colors", () => {
     const initial = createInitialGarageState();
 
