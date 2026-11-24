@@ -26,24 +26,28 @@
       <aside id="game-notices" class="game-notices" aria-label="Gerätehinweise"></aside>
       <section id="ride-scene" class="scene" aria-label="Ride world"></section>
       <section class="panel hud" aria-label="Ride HUD">
-        <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
-        <dl class="hud__values">
-          <div class="hud__value">
-            <dt>Power</dt>
-            <dd id="hud-powerW" data-testid="hud-power">0 W</dd>
-          </div>
-          <div class="hud__value">
-            <dt>Cadence</dt>
-            <dd id="hud-cadenceRpm" data-testid="hud-cadence">0 rpm</dd>
-          </div>
-          <div class="hud__value">
-            <dt>Heart rate</dt>
-            <dd id="hud-heartRateBpm" data-testid="hud-heart-rate">0 bpm</dd>
-          </div>
-          <div class="hud__value">
-            <dt>Gear</dt>
-            <dd id="hud-gear" data-testid="hud-gear">12</dd>
-          </div>
+        <div class="hud__effort">
+          <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
+          <dl class="hud__values hud__effort-values">
+            <div class="hud__value">
+              <dt>Power</dt>
+              <dd id="hud-powerW" data-testid="hud-power">0 W</dd>
+            </div>
+            <div class="hud__value">
+              <dt>Cadence</dt>
+              <dd id="hud-cadenceRpm" data-testid="hud-cadence">0 rpm</dd>
+            </div>
+            <div class="hud__value">
+              <dt>Heart rate</dt>
+              <dd id="hud-heartRateBpm" data-testid="hud-heart-rate">0 bpm</dd>
+            </div>
+            <div class="hud__value">
+              <dt>Gear</dt>
+              <dd id="hud-gear" data-testid="hud-gear">12</dd>
+            </div>
+          </dl>
+        </div>
+        <dl class="hud__values hud__ride-values">
           <div class="hud__value">
             <dt>Speed</dt>
             <dd id="hud-speed" data-testid="hud-speed">0.0 km/h</dd>
@@ -94,7 +98,7 @@
             id="game-tab-recordings"
             role="tab"
             type="button"
-            aria-controls="ride-recording"
+            aria-controls="game-panel-recordings"
             aria-selected="false"
             tabindex="-1"
           >
@@ -124,7 +128,7 @@
         <div class="game-menu__content">
           <section
             class="panel recording"
-            id="ride-recording"
+            id="game-panel-recordings"
             role="tabpanel"
             aria-labelledby="game-tab-recordings"
             data-game-panel
@@ -137,20 +141,24 @@
               Aufnahme beenden stoppt nicht die Fahrtphysik. Ausrollen wird aufgenommen. Ein Reload
               verwirft die laufende Aufnahme.
             </p>
-            <p>
-              TCX-Download ist kein Strava-Upload. Sim-Dateien sind als Simulation markiert.
-              Virtuelle Distanz, kein GPS.
-            </p>
-            <p>
-              Journalaufnahmen enthalten für die Nachrechnung auch Messwerte und Fahrteingaben seit
-              Beginn dieser Sitzung, einschließlich verworfener Fenster. Diese Vorlaufdaten werden
-              bei der Kontosynchronisierung mitgesendet. TCX und Strava erhalten nur das gewählte
-              Aufnahmefenster.
-            </p>
-            <p>
-              Maximal 6 Stunden pro Aufnahme und 20 Fahrten lokal in diesem Browser. Keine
-              automatische Löschung. Browserdaten sind kein Backup.
-            </p>
+            <div id="ride-recording"></div>
+            <details class="game-menu__details">
+              <summary>Aufnahme und Datenschutz</summary>
+              <p>
+                TCX-Download ist kein Strava-Upload. Sim-Dateien sind als Simulation markiert.
+                Virtuelle Distanz, kein GPS.
+              </p>
+              <p>
+                Journalaufnahmen enthalten für die Nachrechnung auch Messwerte und Fahrteingaben
+                seit Beginn dieser Sitzung, einschließlich verworfener Fenster. Diese Vorlaufdaten
+                werden bei der Kontosynchronisierung mitgesendet. TCX und Strava erhalten nur das
+                gewählte Aufnahmefenster.
+              </p>
+              <p>
+                Maximal 6 Stunden pro Aufnahme und 20 Fahrten lokal in diesem Browser. Keine
+                automatische Löschung. Browserdaten sind kein Backup.
+              </p>
+            </details>
           </section>
 
           <section
