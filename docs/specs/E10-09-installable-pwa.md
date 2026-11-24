@@ -52,7 +52,7 @@ Voltonaut lässt sich auf unterstützten Geräten installieren und startet im ei
 
 ## Nicht-Ziele
 
-Keine native App, keine Push- oder Hintergrundsynchronisation, keine Umgehung von Web-Bluetooth-Limits, kein Offline-Fahrbetrieb mit Kontodaten. Keine Workbox oder `vite-plugin-pwa` (ADR-025).
+Keine native App, keine Push- oder Hintergrundsynchronisation, keine Umgehung von Web-Bluetooth-Limits, kein Offline-Fahrbetrieb mit Kontodaten. Keine Workbox oder `vite-plugin-pwa` (ADR-026).
 
 ## Offene Fragen / Risiken
 
@@ -62,4 +62,4 @@ Keine native App, keine Push- oder Hintergrundsynchronisation, keine Umgehung vo
 
 ## Doku-Updates
 
-- [x] Roadmap-Checkbox · [x] `docs/02-bluetooth.md` · [x] ADR-025
+- [x] Roadmap-Checkbox · [x] `docs/02-bluetooth.md` · [x] ADR-026

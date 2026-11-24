@@ -24,4 +24,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [018](ADR-018-actor-recording-and-explicit-delivery.md) | Actor-Aufnahme und ausdrückliche Strava-Auslieferung | Gewählte Softwareform für E10-04 |
 | [019](ADR-019-render-worker-isolation.md) | WebGL im getrennten Render-Worker | Softwaregeprüft für E4-04; Hardware-FPS offen |
 | [020](ADR-020-explicit-production-provisioning.md) | Einmalige Produktionsprovisionierung und optionales Backup | Angenommen; ausdrückliche Freigabe vom 21.11.2026 |
-| [025](ADR-025-handwritten-service-worker.md) | Handgeschriebener Service Worker für die installierbare PWA | Angenommen für E10-09 |
+| [026](ADR-026-handwritten-service-worker.md) | Handgeschriebener Service Worker für die installierbare PWA | Angenommen für E10-09 |

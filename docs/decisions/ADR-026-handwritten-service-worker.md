@@ -1,4 +1,4 @@
-# ADR-025 – Handgeschriebener Service Worker für die installierbare PWA
+# ADR-026 – Handgeschriebener Service Worker für die installierbare PWA
 
 **Status:** Angenommen für E10-09 ([Issue #88](https://github.com/henrysachs/voltonaut/issues/88)).
 
