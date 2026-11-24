@@ -158,6 +158,9 @@ interface RideState {
   energyKj: number;
   paused: boolean;
   trainerMode: "simulation" | "erg" | "passive";
+  mode:
+    | { kind: "normal" }
+    | { kind: "fun"; heldItem?: FunItemId; activeItem?: FunItemId; activeRemainingS: Seconds }; // Spielmodus als Union (ADR-028)
 }
 type RideSnapshot = Readonly<RideState> & {
   worldPos: { x: number; y: number; z: number };

@@ -3,7 +3,13 @@
  * read these traits instead of asking for a specific mode. ERG (#78) is the next
  * planned entry.
  */
-export type RideMode = "normal" | "fun";
+/** Menu order; the default comes first. */
+export const RIDE_MODE_IDS = Object.freeze(["normal", "fun"] as const);
+
+export type RideMode = (typeof RIDE_MODE_IDS)[number];
+
+/** Default mode at ride start and the fallback while a recording locks other modes. */
+export const DEFAULT_RIDE_MODE: RideMode = RIDE_MODE_IDS[0];
 
 export interface RideModeTraits {
   /**
@@ -22,9 +28,3 @@ export const RIDE_MODES: Readonly<Record<RideMode, RideModeTraits>> = Object.fre
   normal: Object.freeze({ recordable: true, progress: true, trainer: "simulation" }),
   fun: Object.freeze({ recordable: false, progress: false, trainer: "simulation" }),
 });
-
-/** Default mode at ride start and the fallback while a recording locks other modes. */
-export const DEFAULT_RIDE_MODE: RideMode = "normal";
-
-/** Menu order; the default comes first. */
-export const RIDE_MODE_IDS: readonly RideMode[] = Object.freeze(["normal", "fun"]);

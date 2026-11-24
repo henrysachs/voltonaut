@@ -17,6 +17,8 @@ interface TickInputs {
   cadenceRpm: number;
   hrBpm?: number;
   shifts: number /* +n hoch, -n runter */;
+  useItem: boolean /* Power-up-Taste seit dem letzten Tick */;
+  mode: RideMode /* angeforderter Spielmodus, ADR-028 */;
 }
 ```
 

@@ -16,9 +16,9 @@ Im Spaß-Modus verändern Items die Fahrphysik: weniger Luftwiderstand, weniger 
 1. **Ein Modusvertrag in `packages/shared`** (`rideMode.ts`): `RideMode` ist die Union aller Modi. `RIDE_MODES` beschreibt je Modus die Eigenschaften, die Kern und App brauchen: `recordable` (Aufnahmeprotokoll kann ihn nachrechnen), `progress` (Fortschritts-Checkpoints und Belohnungen) und `trainer` (Kommandopfad, bisher nur `simulation`). Worker, Menü und Snapshot fragen diese Eigenschaften ab, nicht einen bestimmten Modus.
 2. **Modus-Zustand als diskriminierte Union.** `RideState.mode` ist `{ kind: "normal" } | { kind: "fun"; heldItem; activeItem; activeRemainingS }`. Der Normalmodus kann kein Item halten. Ein Wechsel ersetzt den ganzen Abschnitt. Der Zufallszustand bleibt fahrtweit, damit ein erneuter Wechsel die Folge fortsetzt.
 3. **Eine Verzweigungsstelle im Tick.** `enterMode` (`internal/modeTick.ts`) wechselt den Modus und liefert seinen Beitrag zum Tick: Tasten-Intents, Physik-Effekt und Schritte nach der Bewegung. Der `switch` ist exhaustiv. Der Normalmodus liefert `NO_EFFECT` und keine Events. Seine Physik bleibt dadurch bit-identisch.
-4. **Snapshot als Union.** `RideSnapshot.mode` spiegelt den Modus-Zustand. HUD und Welt verzweigen exhaustiv darauf. `trainerMode` kommt aus den Moduseigenschaften.
+4. **Snapshot als Union.** `RideSnapshot.mode` spiegelt den Modus-Zustand. HUD (`itemText`) und Welt (`showsItemBoxes`) verzweigen exhaustiv darauf. `trainerMode` kommt aus den Moduseigenschaften.
 5. **Der Modus hat einen Besitzer.** Die Engine besitzt den Modus. Der Worker liest den angeforderten Modus aus der Engine und führt keine eigene Kopie.
-6. **Das Menü rendert die Modi aus `RIDE_MODE_IDS`.** Bezeichnung und Hinweis stehen je Modus in einer Tabelle.
+6. **Das Menü rendert die Modi aus `RIDE_MODE_IDS`.** `RideMode` ist aus dieser Liste abgeleitet, damit Liste und Typ nicht auseinanderlaufen. Bezeichnung und Hinweis stehen je Modus in einer Tabelle.
 
 Ein neuer Modus wie ERG braucht damit: einen Eintrag in `RideMode` und `RIDE_MODES`, einen Zweig in `initialModeState`, `enterMode` und `modeSnapshot`, Menütext und gegebenenfalls einen HUD-Zweig. Der Compiler meldet jede fehlende Stelle. Ein Plugin-Framework ist bewusst nicht vorgesehen.
 

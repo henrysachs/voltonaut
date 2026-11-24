@@ -1,4 +1,4 @@
-import { planItemBoxes } from "@voltonaut/engine";
+import { planItemBoxes, type ModeSnapshot } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import { disposeObject } from "./resources.js";
@@ -14,6 +14,21 @@ function boxPositions(route: Readonly<SceneContext["route"]>): readonly THREE.Ve
 
     return new THREE.Vector3(road.x, road.y + FLOAT_HEIGHT_M, road.z);
   });
+}
+
+/** Item boxes belong to the fun mode only (spec E9-01 AK9). */
+function showsItemBoxes(mode: ModeSnapshot): boolean {
+  switch (mode.kind) {
+    case "normal":
+      return false;
+    case "fun":
+      return true;
+    default: {
+      const exhaustive: never = mode;
+
+      return exhaustive;
+    }
+  }
 }
 
 function boxMesh(count: number): THREE.InstancedMesh {
@@ -67,7 +82,7 @@ export function createItemBoxSystem(): RenderSystem {
     update(frame) {
       if (mesh === undefined) return;
 
-      mesh.visible = frame.ride.mode.kind === "fun";
+      mesh.visible = showsItemBoxes(frame.ride.mode);
 
       if (mesh.visible) place(frame.ride.tS * SPIN_RAD_PER_S);
     },

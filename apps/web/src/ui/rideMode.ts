@@ -14,7 +14,12 @@ export const RIDE_MODE_COPY: Readonly<
   }),
 });
 
-export const UNRECORDABLE_LOCKED_HINT = "Während einer Aufnahme sind Modi ohne Aufnahme gesperrt.";
+/** Names the modes a running recording locks, e.g. „Spaß (Item-Boxen)“. */
+export const UNRECORDABLE_LOCKED_HINT = `Während einer Aufnahme gesperrt: ${RIDE_MODE_IDS.filter(
+  (id) => !RIDE_MODES[id].recordable,
+)
+  .map((id) => RIDE_MODE_COPY[id].label)
+  .join(", ")}.`;
 
 /** The mode picker as the binding sees it; the DOM adapter maps it onto radio buttons. */
 export interface RideModeView {

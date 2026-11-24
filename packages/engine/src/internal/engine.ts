@@ -1,4 +1,5 @@
 import {
+  DEFAULT_RIDE_MODE,
   RIDE_MODES,
   type DeviceEvent,
   type Meters,
@@ -133,7 +134,7 @@ class RideEngine implements Engine {
     shifts: 0,
     trainerDataFresh: false,
     useItem: false,
-    mode: "normal",
+    mode: DEFAULT_RIDE_MODE,
   };
 
   constructor(options: CreateEngineOptions) {
@@ -146,7 +147,7 @@ class RideEngine implements Engine {
       gearRatio: this.ctx.gearRatios[gearIndex] ?? this.ctx.gearRatios[0] ?? 1,
       speedMps: options.initialSpeedMps ?? 0,
       routePosM: options.initialRoutePosM ?? 0,
-      mode: options.mode ?? "normal",
+      mode: options.mode ?? DEFAULT_RIDE_MODE,
       seed: options.seed ?? DEFAULT_MODE_SEED,
     });
     this.buffered = { ...this.buffered, mode: this.state.mode.kind };

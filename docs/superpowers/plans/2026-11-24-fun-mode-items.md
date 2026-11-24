@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript, Vitest + fast-check, Stryker (engine), three.js (Welt), Playwright (E2E Sim-Modus).
 
+> **Überholt durch ADR-028:** Dieser Plan beschreibt den ersten Stand. Verbindlich sind [ADR-028](../../decisions/ADR-028-ride-modes-and-fun-items.md) und [E9-01](../../specs/E9-01-fun-mode-items.md): Spielmodi als Union (`RideSnapshot.mode` statt `snapshot.fun`), allgemeiner `PhysicsEffect` statt `effectWindMps(FunItemId)`, Effekte nur in der Fahrphysik.
+
 **Spec:** GitHub-Issue #45. Task 1 überführt es in `docs/specs/E9-01-fun-mode-items.md` und eine ADR. Ausführende lesen Issue, Spec und ADR.
 
 ## Phasen
