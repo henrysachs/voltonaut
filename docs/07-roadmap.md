@@ -91,7 +91,9 @@ Teilschritt [E4-03](specs/E4-03-lake-forest-world.md) ergänzt begrenztes Relief
 
 Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.md) und [E4-05](specs/E4-05-ingame-menu.md) trennen native Renderwartezeiten vom Fahrbetrieb und halten Welt und HUD neben einem Ingame-Menü sichtbar. Geräte, Profil, Aufnahmen und Konto bleiben bedienbar, ohne die Fahrt zu pausieren. Die gemeinsame Kombination mit FTMS-Steuerung ist softwaregeprüft; reale Hardware-FPS und die gemeinsame Probefahrt bleiben offen. Das vollständige Spiel-HUD ist damit nicht abgenommen.
 
-[E4-06](specs/E4-06-integrated-ride-cockpit.md) überarbeitet diese Darstellung auf Henrys Wunsch zur bildschirmfüllenden Spielansicht mit überlagerten Instrumenten. Der begrenzte Umbau ist regulär und unabhängig am gebauten Artefakt softwaregeprüft; die Bereitstellung steht noch aus. Fortlaufende Belohnungsbuchungen sind davon getrennt und dürfen nicht durch erfundene HUD-Kontostände ersetzt werden.
+[E4-06](specs/E4-06-integrated-ride-cockpit.md) überarbeitet diese Darstellung auf Henrys Wunsch zur bildschirmfüllenden Spielansicht mit überlagerten Instrumenten. Der begrenzte Umbau ist als `c0e300f` bereitgestellt und öffentlich softwaregeprüft; der spätere Betriebsnachtrag in PR #38 präzisiert den gemergten Spec-Stand. Fortlaufende Belohnungsbuchungen sind davon getrennt und dürfen nicht durch erfundene HUD-Kontostände ersetzt werden.
+
+[E4-07](specs/E4-07-accessible-ride-menus.md) macht Fahrtmenü und Gerätefenster per Außenklick oder Außentap schließbar und vereinfacht die Gerätebedienung. Der begrenzte Umbau ist regulär und unabhängig am gebauten Artefakt softwaregeprüft; die Bereitstellung steht noch aus.
 
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten

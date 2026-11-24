@@ -7,7 +7,23 @@ const HARDWARE_LABEL: Readonly<Record<TrainerControlView["hardware"], string>> =
   stopAcknowledged: "Stop bestätigt, kein Stillstandsnachweis",
 };
 
-function readout(label: string) {
+interface Readout {
+  readonly row: HTMLParagraphElement;
+  readonly output: HTMLOutputElement;
+}
+
+interface ControlElements {
+  readonly section: HTMLElement;
+  readonly enable: HTMLButtonElement;
+  readonly disable: HTMLButtonElement;
+  readonly status: Readout;
+  readonly reason: HTMLParagraphElement;
+  readonly rawStatus: Readout;
+  readonly target: Readout;
+  readonly acknowledged: Readout;
+}
+
+function readout(label: string): Readout {
   const row = document.createElement("p");
   const output = document.createElement("output");
   output.setAttribute("aria-label", label);
@@ -34,41 +50,106 @@ function authorityText(authority: TrainerAuthority): string {
   }
 }
 
-export function renderTrainerControl(control: TrainerControl, clockScale: number): HTMLElement {
+function authoritySummary(authority: TrainerAuthority): string {
+  switch (authority.kind) {
+    case "inactive":
+      return "Aus";
+    case "acquiring":
+      return authority.step === "stopping" ? "Wird gestoppt …" : "Wird aktiviert …";
+    case "active":
+      return "Aktiv";
+    case "lost":
+      return "Verbindung verloren";
+    case "failed":
+      return "Aktivierung fehlgeschlagen";
+    default: {
+      const exhaustive: never = authority;
+
+      return exhaustive;
+    }
+  }
+}
+
+function controlElements(): ControlElements {
   const section = document.createElement("div");
-  section.setAttribute("role", "group");
-  section.setAttribute("aria-label", "Rollenschaltung");
+  const heading = document.createElement("h4");
   const enable = document.createElement("button");
   const disable = document.createElement("button");
-  const status = readout("Rollenschaltung Status");
-  const target = readout("Trainer-Ziel");
-  const acknowledged = readout("Trainer-ACK");
+  const status = readout("Rollenschaltung Übersicht");
+  const reason = document.createElement("p");
   const guidance = document.createElement("p");
-  enable.textContent = "Rollenschaltung aktivieren";
-  disable.textContent = "Rollenschaltung deaktivieren";
+
+  section.setAttribute("role", "group");
+  section.setAttribute("aria-label", "Rollenschaltung");
+  heading.textContent = "Widerstand";
+  enable.textContent = "Widerstand aktivieren";
+  disable.textContent = "Widerstand deaktivieren";
   status.output.setAttribute("aria-live", "polite");
+  reason.setAttribute("aria-live", "polite");
   guidance.textContent =
-    "Nur ohne andere steuernde App/Uhr aktivieren. Erst neutral, dann beim Treten Engine-Ziel (−5…10 %). Kettenblatt/Cog im Profil prüfen. Trainermasse 83 kg ist unkalibriert; Gefühl unbestätigt. Trennen/Tab schließen garantiert keinen Nullwiderstand.";
+    "Nur ohne andere steuernde App oder Uhr aktivieren. Schließen oder Trennen garantiert keinen Nullwiderstand.";
+  section.append(heading, status.row, reason, guidance, enable, disable);
 
-  const update = (): void => {
-    const view = control.view();
-    status.output.textContent = authorityText(view.authority);
-    section.dataset["authority"] = view.authority.kind;
-    target.output.textContent = `Ziel: ${view.target === undefined ? "—" : `${view.target.gradePct.toFixed(2)} %`}`;
-    acknowledged.output.textContent = `ACK: ${view.acknowledged === undefined ? "—" : `${view.acknowledged.gradePct.toFixed(2)} %`} · ${HARDWARE_LABEL[view.hardware]}`;
-    enable.disabled = !view.available || view.authority.kind !== "inactive";
-    disable.disabled = view.authority.kind !== "active" && view.authority.kind !== "acquiring";
+  return {
+    section,
+    enable,
+    disable,
+    status,
+    reason,
+    rawStatus: readout("Rollenschaltung Status"),
+    target: readout("Trainer-Ziel"),
+    acknowledged: readout("Trainer-ACK"),
   };
+}
 
-  enable.addEventListener("click", () => {
+function updateControl(
+  control: Readonly<Pick<TrainerControl, "view">>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM nodes are mutable render targets; this view only reads their references.
+  elements: ControlElements,
+): void {
+  const view = control.view();
+  elements.status.output.textContent = authoritySummary(view.authority);
+  elements.reason.textContent =
+    view.authority.kind === "inactive" ||
+    view.authority.kind === "lost" ||
+    view.authority.kind === "failed"
+      ? view.authority.reason
+      : "";
+  elements.reason.hidden = elements.reason.textContent === "";
+  elements.section.dataset["authority"] = view.authority.kind;
+  elements.rawStatus.output.textContent = authorityText(view.authority);
+  elements.target.output.textContent = `Ziel: ${view.target === undefined ? "—" : `${view.target.gradePct.toFixed(2)} %`}`;
+  elements.acknowledged.output.textContent = `ACK: ${view.acknowledged === undefined ? "—" : `${view.acknowledged.gradePct.toFixed(2)} %`} · ${HARDWARE_LABEL[view.hardware]}`;
+  elements.enable.disabled = !view.available || view.authority.kind !== "inactive";
+  elements.disable.hidden = view.authority.kind !== "active" && view.authority.kind !== "acquiring";
+  elements.disable.disabled = elements.disable.hidden;
+}
+
+export function renderTrainerControl(
+  control: TrainerControl,
+  clockScale: number,
+  diagnostics: Readonly<Pick<HTMLElement, "append">>,
+): HTMLElement {
+  const elements = controlElements();
+  const technicalGuidance = document.createElement("p");
+  technicalGuidance.textContent =
+    "Erst neutral, dann beim Treten Engine-Ziel (−5…10 %). Kettenblatt/Cog im Profil prüfen. Trainermasse 83 kg ist unkalibriert; Gefühl unbestätigt.";
+  diagnostics.append(
+    elements.rawStatus.row,
+    elements.target.row,
+    elements.acknowledged.row,
+    technicalGuidance,
+  );
+  elements.enable.addEventListener("click", () => {
     void control.enable(clockScale);
   });
-  disable.addEventListener("click", () => {
+  elements.disable.addEventListener("click", () => {
     void control.disable();
   });
-  control.subscribe(update);
-  update();
-  section.append(status.row, target.row, acknowledged.row, enable, disable, guidance);
+  control.subscribe(() => {
+    updateControl(control, elements);
+  });
+  updateControl(control, elements);
 
-  return section;
+  return elements.section;
 }

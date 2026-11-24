@@ -16,6 +16,7 @@ export class TestElement {
   readonly children: TestElement[] = [];
   readonly attributes = new Map<string, string>();
   readonly listeners = new Map<string, (() => void)[]>();
+  readonly dataset: Record<string, string> = {};
 
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- A DOM fake retains mutable node references so tests can observe later renders.
   append(...children: readonly TestElement[]): void {

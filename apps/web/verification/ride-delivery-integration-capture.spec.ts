@@ -36,11 +36,11 @@ export async function prepare(
   await closeGameMenu(page);
   await page.getByRole("button", { name: "Geräte verbinden", exact: true }).click();
   await choose(page, "Trainer");
-  await choose(page, "Play links (Ziel)");
-  await choose(page, "Play rechts (Ziel)");
+  await choose(page, "Linker Play-Griff");
+  await choose(page, "Rechter Play-Griff");
   await expect(page.getByTestId("hud-power")).toHaveText("244 W", { timeout: 10_000 });
   await expect(page.locator("body")).not.toHaveAttribute("data-control-count");
-  await page.getByRole("button", { name: "Rollenschaltung aktivieren", exact: true }).click();
+  await page.getByRole("button", { name: "Widerstand aktivieren", exact: true }).click();
 
   if (clock === "real") {
     await expect(page.getByRole("group", { name: "Rollenschaltung", exact: true })).toHaveAttribute(

@@ -63,7 +63,7 @@ it("shows unconfirmed side, actionable adapter details and allows cancelling han
   mountConnectDialog(
     [
       {
-        label: "Play links (Ziel)",
+        label: "Linker Play-Griff",
         adapter,
         select: () => adapter.connect(),
         description: () => detail,

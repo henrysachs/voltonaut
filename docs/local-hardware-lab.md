@@ -42,8 +42,8 @@ Die Softwareprüfungen verwenden Sim- und native GATT-Fakes. Widerstandsgefühl,
 2. Schließe Zwift, Wahoo, Rouvy und andere Apps, die das Gerät verbunden halten könnten.
 3. Öffne die App auf 5173 ohne `sim=1` und ohne `clock=fast`.
 4. Prüfe unter **Menü → Profil** Gewicht, reales Kettenblatt und reales Cog. Speichere Änderungen und lade vor dem Verbinden neu. Profiländerungen gelten erst für die nächste Fahrt.
-5. Öffne **Geräte verbinden**. Wähle Trainer, **Play links (Ziel)** und **Play rechts (Ziel)** getrennt über **Gerät wählen**.
-6. Prüfe Bereitschaft sowie plausible Watt- und Kadenzwerte. Aktiviere erst danach **Rollenschaltung aktivieren** und warte auf die bestätigte Freigabe.
+5. Öffne **Geräte verbinden**. Wähle Trainer, **Linker Play-Griff** und **Rechter Play-Griff** getrennt über **Gerät wählen**.
+6. Prüfe Bereitschaft sowie plausible Watt- und Kadenzwerte. Aktiviere erst danach **Widerstand aktivieren** und warte auf die bestätigte Freigabe.
 7. Prüfe beim kontrollierten Treten rechts und links jeweils HUD-Gang, bestätigtes Ziel und tatsächliches Widerstandsgefühl. Halten darf nicht wiederholt schalten.
 8. Öffne das Menü. Fahrt und Play müssen weiterlaufen. Pfeiltasten in einem Profilfeld dürfen den Trainer nicht schalten.
 9. Deaktiviere die Rollenschaltung ausdrücklich. Prüfe nach sicherem Anhalten Disconnect und Reconnect. Eine erneute Widerstandsfreigabe braucht einen neuen Klick.

@@ -92,7 +92,9 @@ Watt (3-s-Mittel), Kadenz, Puls mit Zonenfarbe, Tempo, Gang (1–24 mit Schaltan
 
 Die Fahrt, Geräte und eine laufende Aufnahme bleiben aktiv. Menüschließen speichert oder verwirft keine Aufnahme. Der vorhandene Shortcut **Geräte verbinden** bleibt im Header. **Geräte öffnen** im Menü öffnet denselben Gerätedialog. Erst dessen **Gerät wählen** fordert eine native Geräteauswahl an.
 
-[E4-06](specs/E4-06-integrated-ride-cockpit.md) setzt Henrys Gestaltungsauftrag vom 24.11.2026 um. Die Welt füllt das Fenster. DOM-Instrumente für Leistung und Streckenwerte liegen darüber. Menü, Geräte und Instrumente verwenden dieselbe Gestaltung. Die Aufnahmeaktionen stehen vor aufklappbaren technischen Erklärungen; die Reload-Warnung bleibt sichtbar. Canvas, Worker, Formularbesitzer und Aufnahmeverträge bleiben unverändert. Implementiert, regulär und unabhängig am tatsächlich gebauten Artefakt softwaregeprüft. Noch nicht bereitgestellt.
+[E4-06](specs/E4-06-integrated-ride-cockpit.md) setzt Henrys Gestaltungsauftrag vom 24.11.2026 um. Die Welt füllt das Fenster. DOM-Instrumente für Leistung und Streckenwerte liegen darüber. Menü, Geräte und Instrumente verwenden dieselbe Gestaltung. Die Aufnahmeaktionen stehen vor aufklappbaren technischen Erklärungen; die Reload-Warnung bleibt sichtbar. Canvas, Worker, Formularbesitzer und Aufnahmeverträge bleiben unverändert. Der Oberflächenumbau ist inzwischen als `c0e300f` bereitgestellt und öffentlich softwaregeprüft; der spätere Betriebsnachtrag in PR #38 präzisiert den gemergten Spec-Stand.
+
+[E4-07](specs/E4-07-accessible-ride-menus.md) ergänzt natives Light-Dismiss für Fahrtmenü und Gerätefenster. Ein Klick oder Tap außerhalb schließt nur das Fenster. Fahrt, Aufnahme und Verbindungen laufen weiter. Die Geräteansicht zeigt verständliche Zustände und Aktionen zuerst; Rohstatus, Zielwerte, ACKs und Einrichtungshinweise liegen in technischen Details. Widerstandssteuerung bleibt eine getrennte, ausdrückliche Handlung. Implementiert, regulär und unabhängig am tatsächlich gebauten Artefakt softwaregeprüft. Noch nicht bereitgestellt.
 
 ## 10. Asset-Pipeline
 

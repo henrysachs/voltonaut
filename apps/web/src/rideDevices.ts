@@ -137,7 +137,7 @@ export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices 
             select: () => trainer.connect(),
             trainer: { control: trainer.control, clockScale },
           },
-          { label: "Puls", adapter: heartRate, select: () => heartRate.connect() },
+          { label: "Pulsgurt", adapter: heartRate, select: () => heartRate.connect() },
         ],
         bus,
       );
@@ -158,7 +158,7 @@ function playSlots(
     });
 
     return {
-      label: side === "left" ? "Play links (Ziel)" : "Play rechts (Ziel)",
+      label: side === "left" ? "Linker Play-Griff" : "Rechter Play-Griff",
       adapter,
       select: adapter.select,
       description: adapter.description,
@@ -206,7 +206,7 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
             select: trainer.select,
             trainer: { control: trainer.control, clockScale },
           },
-          { label: "Puls", adapter: heartRate, select: heartRate.select },
+          { label: "Pulsgurt", adapter: heartRate, select: heartRate.select },
           ...playSlots({ bus, clock, ticker }, central),
         ],
         bus,

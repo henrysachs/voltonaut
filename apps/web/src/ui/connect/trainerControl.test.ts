@@ -54,10 +54,10 @@ function rig(clockScale = 1) {
 it("keeps explicit control in the device overlay and shows acquisition before real Sim ACKs", async () => {
   const r = rig();
   expect(r.document.body.children).toHaveLength(2);
-  expect(r.document.find("Rollenschaltung aktivieren").disabled).toBe(true);
+  expect(r.document.find("Widerstand aktivieren").disabled).toBe(true);
   await r.trainer.connect();
-  expect(r.document.find("Rollenschaltung aktivieren").disabled).toBe(false);
-  r.document.find("Rollenschaltung aktivieren").click();
+  expect(r.document.find("Widerstand aktivieren").disabled).toBe(false);
+  r.document.find("Widerstand aktivieren").click();
   expect(r.document.find("Freigabe läuft: control.")).toBeDefined();
   await settle();
   expect(r.document.find("Aktiv · Trainersteuerung freigegeben.")).toBeDefined();
@@ -71,7 +71,7 @@ it("keeps explicit control in the device overlay and shows acquisition before re
 it("separates requested grade from ACK and reports neutral/Stop only after confirmation", async () => {
   const r = rig();
   await r.trainer.connect();
-  r.document.find("Rollenschaltung aktivieren").click();
+  r.document.find("Widerstand aktivieren").click();
   await settle();
   r.clock.advanceS(0.25);
   r.ticker.tick();
@@ -86,24 +86,24 @@ it("separates requested grade from ACK and reports neutral/Stop only after confi
   expect(r.document.find("ACK: 0.00 % · Neutralziel bestätigt")).toBeDefined();
   await settle();
   expect(r.document.find("ACK: 6.00 % · Ziel bestätigt")).toBeDefined();
-  r.document.find("Rollenschaltung deaktivieren").click();
+  r.document.find("Widerstand deaktivieren").click();
   r.clock.advanceS(0.25);
   r.ticker.tick();
   await settle();
   expect(r.document.find("ACK: 0.00 % · Stop bestätigt, kein Stillstandsnachweis")).toBeDefined();
-  expect(r.document.find("Rollenschaltung aktivieren").disabled).toBe(true);
+  expect(r.document.find("Widerstand aktivieren").disabled).toBe(true);
   await r.trainer.disconnect();
 });
 
 it("shows accelerated-clock refusal honestly, with no acknowledged target", async () => {
   const r = rig(20);
   await r.trainer.connect();
-  r.document.find("Rollenschaltung aktivieren").click();
+  r.document.find("Widerstand aktivieren").click();
   await settle();
   expect(
     r.document.find("Rollenschaltung benötigt Echtzeit (clockScale=1). Neu laden ohne clock=fast."),
   ).toBeDefined();
   expect(r.document.find("ACK: — · Widerstand unbekannt")).toBeDefined();
-  expect(r.document.find("Rollenschaltung aktivieren").disabled).toBe(true);
+  expect(r.document.find("Widerstand aktivieren").disabled).toBe(true);
   await r.trainer.disconnect();
 });
