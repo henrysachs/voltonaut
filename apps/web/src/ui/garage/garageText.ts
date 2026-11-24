@@ -41,6 +41,8 @@ export function itemUnlockText(item: ItemDef): string {
       return item.unlock.minLevel === undefined
         ? "Kauf bald"
         : `Kauf bald · ab Level ${item.unlock.minLevel}`;
+    case "season":
+      return `Saison ${item.unlock.seasonId.replace("season-", "")} · Stufe ${item.unlock.tier}`;
     default: {
       const exhaustive: never = item.unlock;
       throw new Error(`Unsupported unlock rule: ${String(exhaustive)}`);

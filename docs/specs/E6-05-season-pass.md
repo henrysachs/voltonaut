@@ -23,7 +23,7 @@ Eine zeitlich begrenzte Saison gibt regelmäßigem Fahren ein eigenes Ziel. Wer 
 Phase A:
 
 - [ ] AK1 – `SeasonDefinitionSchema` in `packages/shared` validiert eine Saison: ID `season-NN`, Dauer 56 bis 84 Tage, mindestens 20 Stufen, Stufen 1..n lückenlos, Schwellen streng steigend und größer 0, Belohnungen `item` oder `volts`, keine Zusatzfelder.
-- [ ] AK2 – `UnlockRuleSchema` kennt `{ kind: "season"; seasonId; tier }`. Die Garage zeigt dafür „Saison <ID> · Stufe <n>".
+- [ ] AK2 – `UnlockRuleSchema` kennt `{ kind: "season"; seasonId; tier }`. Die Garage zeigt dafür „Saison <NN> · Stufe <n>" (z. B. „Saison 01 · Stufe 12").
 - [ ] AK3 – Saisonpunkte = Basis-XP (`calculateBaseXp(...).total`). Je bestätigtem Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, sodass die Rundung der ganzen Fahrt erhalten bleibt.
 - [ ] AK4 – Ein Abschnitt zählt, wenn `Start ≤ Abschnittszeit < Ende`. Maßgeblich ist die Fahrzeit, nicht die Bestätigungszeit.
 - [ ] AK5 – `dueTiers(a, b)` liefert genau die Stufen mit `a < Schwelle ≤ b`. Für `a ≤ b ≤ c` gilt `dueTiers(a, b) ++ dueTiers(b, c) = dueTiers(a, c)` (Property-Test).

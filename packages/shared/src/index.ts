@@ -29,3 +29,5 @@ export * from "./rideTcx.js";
 export * from "./units.js";
 
 export * from "./rewards.js";
+
+export * from "./season.js";
