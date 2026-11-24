@@ -139,6 +139,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
+- [ ] Season Pass ([E6-05](specs/E6-05-season-pass.md)): Phase A (Schemas, reine Rechenlogik, `season-01` als Daten) in Arbeit; Vergabe und Menü warten auf bestätigte Abschnitte und Server-Inventar
 - [ ] Segmente (1 Sprint, 1 KOM) mit Banner-Torbögen, Countdown-Flaggen, Live-Delta, PB-Konfetti; PBs serverseitig
   - [x] [E6-01](specs/E6-01-visible-segments.md): vorläufige Sprint-/KOM-Anzeige mit laufender Zeit, Restdistanz und Rundenergebnis softwaregeprüft. Keine bestätigten PBs oder Belohnungsbuchungen.
 - [ ] Zielbogen/Rundenanzeige; 9 Start-Badges (Prädikate in `packages/rules`)

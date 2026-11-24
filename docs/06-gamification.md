@@ -88,6 +88,10 @@ Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magne
 - Level 1 beginnt bei **0 Gesamt-XP**. Level 0 ist ungültig. Für Level 2 bis 50 gilt `xpForLevel(n) = round(500 · n^1.6)` → Level 2 = 1516 XP, Level 10 = 19 905 XP. `levelForXp` liefert die höchste erreichte Stufe, maximal 50. Gesamt-XP müssen sichere nichtnegative Ganzzahlen sein. ⚠️ Kurve justieren.
 - Jedes Level vergibt mindestens ein Item oder Volts-Bonus (`game/data/levels.json`, Server und Client teilen die Datei).
 
+## Season Pass
+
+Spec: [E6-05](specs/E6-05-season-pass.md). Eine Saison dauert 8 bis 12 Wochen und hat mindestens 20 Stufen. Saisonpunkte entsprechen den Basis-XP derselben bestätigten Fahrtabschnitte. Pro Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, damit die Rundung der ganzen Fahrt gilt. Ein Abschnitt zählt, wenn seine Fahrzeit im Zeitraum liegt (Start inklusive, Ende exklusiv). Jede Stufe vergibt ein Saison-Item (`UnlockRule` `{ kind: "season" }`) oder einen Volts-Bonus, und zwar genau einmal. Verdiente Items bleiben nach Saisonende. `season-01`: 20 Stufen zu je 1 800 Punkten ⚠️ Startwert. Bisher sind nur Schemas, Rechenlogik und Daten umgesetzt, keine Vergabe.
+
 ## Badges / Achievements (Startliste)
 
 | ID                                                                                                                                                                | Bedingung                         |
