@@ -10,7 +10,7 @@ import {
   paintPlaceholderAtlas,
 } from "./billboard-motif.js";
 import { BILLBOARD_VARIANTS, planBillboards } from "./billboard-plan.js";
-import { createBillboards, withVariantUv } from "./billboards.js";
+import { billboardsInView, createBillboards, withVariantUv } from "./billboards.js";
 import { createLandscapeSystem } from "./landscape.js";
 import { createLandscapePlan } from "./landscape-plan.js";
 import { createScheduler } from "./scheduler.js";
@@ -125,4 +125,23 @@ it("is part of the landscape scene", () => {
 
   createScheduler([createLandscapeSystem()], { scene, route: loop });
   expect(scene.getObjectByName("billboards")).toBeInstanceOf(THREE.Group);
+});
+
+it("counts billboards inside the camera frustum per road side", () => {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.1, 1500);
+  const start = loop.worldPos(0);
+  const ahead = loop.worldPos(60);
+
+  scene.add(createBillboards(boards));
+  camera.position.set(start.x, start.y + 2.8, start.z);
+  camera.lookAt(ahead.x, ahead.y + 1, ahead.z);
+  camera.updateMatrixWorld(true);
+
+  const inView = billboardsInView(scene, camera);
+
+  expect(inView.left).toBeGreaterThan(0);
+  expect(inView.right).toBeGreaterThan(0);
+  expect(inView.left + inView.right).toBeLessThan(boards.length);
+  expect(billboardsInView(new THREE.Scene(), camera)).toEqual({ left: 0, right: 0 });
 });

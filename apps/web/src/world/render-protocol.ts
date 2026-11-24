@@ -41,6 +41,8 @@ export interface SceneDiagnostics {
   readonly cameraPosition: Position;
   readonly widthPx: number;
   readonly heightPx: number;
+  /** Billboards whose centre is in the camera frustum, per road side (spec E8-02). */
+  readonly billboardsInView: { readonly left: number; readonly right: number };
 }
 
 export type RenderControl =

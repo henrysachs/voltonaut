@@ -8,6 +8,8 @@ import type { RenderSystem } from "./scheduler.js";
 import { createScenery } from "./scenery.js";
 import { createLake, createTerrain } from "./terrain.js";
 
+export { billboardsInView } from "./billboards.js";
+
 export function createLandscapeSystem(): RenderSystem {
   const root = new THREE.Group();
 
