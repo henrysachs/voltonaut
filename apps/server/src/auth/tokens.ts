@@ -9,3 +9,12 @@ export function createToken(): string {
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
+
+/** Pseudonymous tombstone for an external identity, without retaining issuer/subject. */
+export function hashIdentity(issuer: string, subject: string): string {
+  return hashToken(JSON.stringify([issuer, subject]));
+}
+
+export function deletedAccountEmail(userId: string): string {
+  return `deleted+${userId}@voltonaut.invalid`;
+}

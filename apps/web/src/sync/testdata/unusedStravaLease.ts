@@ -17,3 +17,8 @@ export const unexpectedMembership = {
   adminUsers: () => Promise.reject(new Error("unexpected admin directory")),
   saveMembership: () => Promise.reject(new Error("unexpected membership write")),
 };
+
+export const unexpectedAccountData = {
+  exportAccount: () => Promise.reject(new Error("unexpected account export")),
+  deleteAccount: () => Promise.reject(new Error("unexpected account deletion")),
+};

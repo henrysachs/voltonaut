@@ -36,18 +36,28 @@ export class AuthService {
   public async requestMagicLink(email: string, nowMs: number): Promise<void> {
     this.requireMagicLink();
 
+    if (this.isDeletedEmail(email)) return;
+
     if (this.mail === null) throw new ApiError(503, "internal_error", "mail delivery unavailable");
     const token = createToken();
 
-    this.db
-      .insert(loginTokens)
-      .values({
-        tokenHash: hashToken(token),
-        email,
-        expiresAt: nowMs + LOGIN_TOKEN_TTL_MS,
-        usedAt: null,
-      })
-      .run();
+    this.db.transaction(
+      () => {
+        if (this.isDeletedEmail(email)) return;
+        this.db
+          .insert(loginTokens)
+          .values({
+            tokenHash: hashToken(token),
+            email,
+            expiresAt: nowMs + LOGIN_TOKEN_TTL_MS,
+            usedAt: null,
+          })
+          .run();
+      },
+      { behavior: "immediate" },
+    );
+
+    if (this.isDeletedEmail(email)) return;
 
     try {
       await this.mail.sendMagicLink(email, `${this.config.mail.clientOrigin}/#login=${token}`);
@@ -175,7 +185,21 @@ export class AuthService {
       throw new ApiError(404, "not_found", "login method unavailable");
   }
 
+  private isDeletedEmail(email: string): boolean {
+    return (
+      this.db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.deletedEmailHash, hashToken(email)))
+        .get() !== undefined
+    );
+  }
+
   private ensureUser(email: string, nowMs: number): UsersRow {
+    if (this.isDeletedEmail(email)) {
+      throw new ApiError(401, "invalid_login_token", "login token is unknown, used, or expired");
+    }
+
     const existing = this.db.select().from(users).where(eq(users.email, email)).get();
 
     if (existing !== undefined) {
@@ -191,6 +215,7 @@ export class AuthService {
       email,
       createdAt: nowMs,
       deletedAt: null,
+      deletedEmailHash: null,
     };
 
     this.db.insert(users).values(created).run();

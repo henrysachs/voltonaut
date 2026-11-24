@@ -10,9 +10,9 @@ import {
   getDatabase,
   httpServerOf,
   bodyOf,
-  loginTestUser,
-  bearer,
+  type DatabaseReader,
 } from "../testing/test-app.spec.js";
+import { createToken, hashToken } from "../auth/tokens.js";
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
 
@@ -31,6 +31,7 @@ it("creates owned tables, enforces foreign keys and closes on Nest shutdown", as
       "__drizzle_migrations",
       "account_status",
       "auth_identities",
+      "auth_identity_tombstones",
       "login_tokens",
       "oidc_handoffs",
       "oidc_transactions",
@@ -64,9 +65,11 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(8);
+    expect(migrations).toHaveLength(9);
     db.$client
-      .prepare("INSERT INTO users VALUES ('persisted', 'persist@example.com', 0, NULL)")
+      .prepare(
+        "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('persisted', 'persist@example.com', 0, NULL)",
+      )
       .run();
     await first.app.close();
     const second = await createTestApp({ config });
@@ -136,6 +139,24 @@ function legacyMigrations(directory: string): string {
   return folder;
 }
 
+function seedLegacySession(client: DatabaseReader["$client"], sessionToken: string): void {
+  client
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('legacy-user', 'legacy@example.com', 0, NULL)",
+    )
+    .run();
+  client
+    .prepare(
+      "INSERT INTO login_tokens (token_hash, email, expires_at, used_at) VALUES ('legacy-login', 'legacy@example.com', 9999999999999, NULL)",
+    )
+    .run();
+  client
+    .prepare(
+      "INSERT INTO sessions (token_hash, user_id, created_at, last_seen_at, expires_at, user_agent) VALUES (?, 'legacy-user', 0, 0, 9999999999999, NULL)",
+    )
+    .run(hashToken(sessionToken));
+}
+
 it("upgrades the original migration without replacing legacy users, tokens, or sessions", async () => {
   const directory = mkdtempSync(join(tmpdir(), "voltonaut-oidc-upgrade-"));
   const path = join(directory, "legacy.db");
@@ -145,10 +166,10 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
       config: { database: { path, migrationsDir: legacyMigrations(directory) } },
     });
 
-    const session = await loginTestUser(first.app, first.mail, "legacy@example.com");
-    expect(
-      getDatabase(first.app).$client.prepare("SELECT * FROM __drizzle_migrations").all(),
-    ).toHaveLength(1);
+    const sessionToken = createToken();
+    const legacyClient = getDatabase(first.app).$client;
+    seedLegacySession(legacyClient, sessionToken);
+    expect(legacyClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(1);
     await first.app.close();
 
     const next = await createTestApp({
@@ -166,13 +187,13 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
     });
 
     try {
-      const db = getDatabase(next.app).$client;
-      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(8);
-      expect(db.prepare("SELECT id FROM users").all()).toEqual([{ id: session.user.id }]);
-      expect(db.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
+      const upgradedClient = getDatabase(next.app).$client;
+      expect(upgradedClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(9);
+      expect(upgradedClient.prepare("SELECT id FROM users").all()).toEqual([{ id: "legacy-user" }]);
+      expect(upgradedClient.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
       await request(httpServerOf(next.app))
         .get("/v1/me")
-        .set(bearer(session.sessionToken))
+        .set("Authorization", `Bearer ${sessionToken}`)
         .expect(200);
     } finally {
       await next.app.close();

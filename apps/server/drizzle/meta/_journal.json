@@ -57,6 +57,13 @@
       "when": 1795261787665,
       "tag": "0007_strava_authorization_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1795551432127,
+      "tag": "0008_account_deletion",
+      "breakpoints": true
     }
   ]
 }

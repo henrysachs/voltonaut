@@ -161,6 +161,7 @@ export class StravaDeliveryFixture {
     return {
       authorize: (authorization): AccountLease => ({
         ...unexpectedMembership,
+        ...unexpectedAccountData,
         apiOrigin: "http://localhost:3000",
         userId: authorization.userId,
         generation: authorization.generation,
@@ -205,4 +206,4 @@ export class StravaDeliveryFixture {
   }
 }
 
-import { unexpectedMembership } from "./testdata/unusedStravaLease.js";
+import { unexpectedAccountData, unexpectedMembership } from "./testdata/unusedStravaLease.js";

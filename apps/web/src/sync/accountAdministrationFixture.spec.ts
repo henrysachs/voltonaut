@@ -42,7 +42,13 @@ export class AdministrationFixture {
         list: () => Promise.resolve([]),
         claim: () => Promise.reject(new Error("no admin outbox")),
         update: () => Promise.reject(new Error("no admin outbox")),
+        purgeOwner: () => Promise.reject(new Error("no admin outbox")),
       }),
+    deletions: {
+      load: () => [],
+      remember: () => true,
+      forget: () => true,
+    },
     profile: {
       saved: () => Promise.reject(new Error("unexpected local profile read")),
       apply: () => {

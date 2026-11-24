@@ -4,13 +4,14 @@ import { SERVER_CONFIG, CLOCK } from "../config.module.js";
 import type { ServerConfig, Clock } from "../config.module.js";
 import { DRIZZLE } from "../database/drizzle.provider.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
-import { ApiError } from "../api-error.js";
 import { AuthService } from "./auth.service.js";
-import { users, authIdentities, oidcTransactions, oidcHandoffs } from "./auth.schema.js";
+import { oidcTransactions, oidcHandoffs } from "./auth.schema.js";
 import { createToken, hashToken } from "./tokens.js";
+import { resolveOidcUser } from "./auth-recreation-guards.js";
 import { OidcClient } from "./oidc-client.js";
 import type { IdentityClaims, OidcConfig } from "./oidc-client.js";
 import {
+  ApiError,
   OidcOpaqueSchema,
   invalidOidcLogin,
   oidcBrowserBinding,
@@ -213,30 +214,7 @@ export class OidcService {
   }
 
   private identityUser(identity: IdentityClaims, nowMs: number): string {
-    const existing = this.db
-      .select()
-      .from(authIdentities)
-      .where(and(eq(authIdentities.issuer, identity.iss), eq(authIdentities.subject, identity.sub)))
-      .get();
-
-    if (existing !== undefined) {
-      this.auth.currentUser(existing.userId);
-
-      return existing.userId;
-    }
-
-    if (this.db.select().from(users).where(eq(users.email, identity.email)).get() !== undefined) {
-      throw new ApiError(409, "identity_conflict", "existing account ownership must be proven");
-    }
-
-    const userId = crypto.randomUUID();
-    this.db.insert(users).values({ id: userId, email: identity.email, createdAt: nowMs }).run();
-    this.db
-      .insert(authIdentities)
-      .values({ issuer: identity.iss, subject: identity.sub, userId })
-      .run();
-
-    return userId;
+    return resolveOidcUser(this.db, this.auth, identity, nowMs);
   }
 
   private cleanup(nowMs: number): void {

@@ -69,6 +69,16 @@ Nur der Operatorbefehl `node dist/main.js admin grant <bestehendeUserId>` vergib
 
 Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitzer unter `AccountSync` hält die Operation bis zum autoritativen Nachlesen gesperrt. Gehaltene Refresh-, Next- und Save-Aktionen dürfen diese Bestätigung nicht überholen. Ein verlorener Schreibbeleg bleibt unbestätigt, ohne automatischen Retry. Die gebaute Gesamtprüfung und unabhängige Gegenproben bestehen lokal. Bereitstellung und persönlicher Erstzugang sind noch offen.
 
+## Datenexport und Kontolöschung
+
+[E5-11](specs/E5-11-account-data-export-deletion.md) liefert `GET /v1/me/export` und `DELETE /v1/me`. Beide Pfade haben keinen Kontoparameter; maßgeblich ist ausschließlich `SessionPrincipal.userId`. Der Export enthält Profil, Mitgliedschaft, alle eigenen Aufnahmen mit Rohjournal, Beleg, Bewertung, servereigener Zusammenfassung und vorhandenem TCX sowie Strava-Status und Aufträge. Sessions, Zugangsdaten und Chiffrate werden nicht exportiert. Inventar und verbindliche Progression existieren serverseitig noch nicht; der Export kennzeichnet sie als `not_stored`, statt erfundene Nullwerte auszugeben.
+
+Die Löschung verlangt Bearer-Session, exakten `CLIENT_ORIGIN` und die Eingabe der E-Mail dieser Session. `AccountDataService` koordiniert eine unmittelbare SQLite-Transaktion über die Besitzer-Services. Gelöscht werden Profil, Mitgliedschaft, Fahrten, Strava-Transaktionen/Verbindung/Aufträge, Identitätszuordnungen, Handoffs, Sessions und offene Magic-Link-Token. `users` bleibt als Tombstein; E-Mail wird durch eine unkenntliche Adresse ersetzt und zusammen mit der externen Identität nur noch durch Hashes gesperrt. Trigger verhindern INSERT/UPDATE auf besitzenden Tabellen und jede Wiederbelebung des Tombstones. Die Neuanlage desselben Magic-Link-Kontos oder derselben OIDC-Identität schlägt fehl.
+
+Die Löschung wartet nicht auf Strava. Bereits an Strava übertragene Aktivitäten und der Anbieterzugriff werden nicht gelöscht; die Oberfläche erklärt das getrennt. Eine lokal bereits bestätigte Löschung entfernt im Browser nur Outbox-Einträge des exakten API-Origin/Kontos. Ein transaktionaler Löschmarker verhindert späte Neuanlage auch aus anderen Tabs. Lokale Fahrtarchive und das gemeinsame Gastprofil bleiben erhalten. Schlägt die lokale Bereinigung fehl, wird ein Aufräumauftrag für den nächsten Start vermerkt; ist auch localStorage gesperrt, meldet die Oberfläche ausdrücklich unbestätigte Bereinigung.
+
+Migration `0008_account_deletion.sql` ergänzt E-Mail-Hash, Identitätstombstones und die Trigger additiv. Die Löschung ist eine logische Datenbanklöschung; SQLite-WAL-Dateien können gelöschte Bytes bis zur physikalischen Kompaktierung enthalten. Backup/Restore muss Löschtombstones erhalten bzw. erneut anwenden.
+
 ## Datenmodell (Skizze)
 
 ### Eigene Profile und Fahrtenannahme
@@ -93,7 +103,7 @@ Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. `0003` ergän
 `RidesService.loadOwnStravaSource(userId, rideId)` liest synchron eigene gespeicherte Exportbytes. `RIDE_SOURCE_POLICY` ist standardmäßig `disabled`. Nur die ausdrückliche Einstellung `declared_ble_v1` erlaubt ein nachgerechnetes, kontinuierliches, als BLE deklariertes Fenster. Sim, Skalierung und Qualitätsfehler bleiben gesperrt. Die Antwort bezeichnet die Quelle als `client_declared`, nicht als Hardwareattest. Eine vollständig erfundene konsistente BLE-Selbstauskunft ist damit nicht erkennbar. Reale Aktivierung bleibt gesondert offen. Das Lesen der Quelle führt weder einen weiteren Physiklauf noch einen Anbieteraufruf aus.
 
 ```sql
-users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at)
+users(id TEXT PK, email TEXT /* Contact attribute, not an identity key */, created_at, deleted_at, deleted_email_hash)
 auth_identities(user_id REFERENCES users(id), issuer TEXT, subject TEXT, UNIQUE(issuer,subject))
 sessions(token_hash TEXT PK, user_id, created_at, last_seen_at, expires_at, user_agent)
 -- Server-owned login transactions: state, nonce, PKCE verifier, browser binding, expiry, one-time consumption.
@@ -129,8 +139,8 @@ POST /v1/shop/purchase          { itemId, expectedPriceVolts }    → { voltsBal
 POST /v2/rides                  RideRecording (JSON)              → { rideId, storage:'stored', assessment }
                                 (idempotent: gleiche rideId → gleiche Antwort)
 GET  /v2/rides?cursor=…                                           → { rides: RideSummary[], nextCursor }
-GET  /v1/me/export                                                → JSON aller eigenen Daten
-DELETE /v1/me                                                     → 202 (Account-Löschung)
+GET  /v1/me/export                                                → JSON aller eigenen Daten (no-store)
+DELETE /v1/me                              { confirmation: email }   → 204 (atomare Löschung, exakter Origin)
 WS   /v1/live                   erster Frame { t:'auth', sessionToken } → Räume (s. u.)
 ```
 
@@ -229,7 +239,7 @@ Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 
 ## Offline-first-Sync (Client `sync/`)
 
-[E10-01](specs/E10-01-local-ride-recording-tcx.md) speichert abgeschlossene Aufnahmen separat und erlaubt TCX-Downloads. [E5-09](specs/E5-09-account-bound-sync.md) ergänzt manuelle Kontoaktionen. Das Archiv bleibt unverändert und besitzt keinen Aufnahme-Eigentümer. Erst die bestätigte Zuordnung speichert eine vollständige Kopie in `voltonaut-account-outbox`. API-Origin und kanonische Fahrt-ID bilden den atomaren Schlüssel. Der validierte Account bleibt unveränderlicher Eigentümer dieser lokalen Zuordnung.
+[E10-01](specs/E10-01-local-ride-recording-tcx.md) speichert abgeschlossene Aufnahmen separat und erlaubt TCX-Downloads. [E5-09](specs/E5-09-account-bound-sync.md) ergänzt manuelle Kontoaktionen. Das Archiv bleibt unverändert und besitzt keinen Aufnahme-Eigentümer. Erst die bestätigte Zuordnung speichert eine vollständige Kopie in `voltonaut-account-outbox`. API-Origin und kanonische Fahrt-ID bilden den atomaren Schlüssel. Der validierte Account bleibt unveränderlicher Eigentümer dieser lokalen Zuordnung. Datenbankversion 2 ergänzt `deleted-owners`: `purgeOwner` löscht nur Einträge eines exakten API-Origin/Kontos und setzt den Löschmarker in derselben Transaktion. `claim`, `update` und `list` respektieren diesen Marker.
 
 Das Panel liest das eigene Serverprofil und zusammengefasste Serverfahrten. Ein Profil-Push verwendet nur den zuletzt gespeicherten lokalen Stand. Ein Profil-Pull verändert lokale Einstellungen erst nach Bestätigung und erfolgreichem Speichern. Laufende Fahrtparameter bleiben eingefroren. Ausstehende lokale Profile werden nicht durch GET überschrieben. Logout entfernt den Kontospiegel sofort und widerruft laufende Fähigkeiten. Schon serverseitig angenommene Requests können dennoch abschließen. Ihre ausstehenden Snapshots bleiben bis zur idempotenten Wiederholung durch denselben Account erhalten.
 

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ApiError } from "../api-error.js";
 
+export { ApiError } from "../api-error.js";
+
 export const OidcOpaqueSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
 
 export function invalidOidcLogin(): ApiError {

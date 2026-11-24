@@ -1,50 +1,14 @@
 import { Module } from "@nestjs/common";
 import { ThrottlerModule } from "@nestjs/throttler";
-import type { ThrottlerOptions } from "@nestjs/throttler";
 
 import type { ServerConfig } from "../config.module.js";
 import { SERVER_CONFIG } from "../config.module.js";
 import { MailModule } from "../mail/mail.module.js";
-import { AuthController } from "./auth.controller.js";
+import { AuthController, MeController, OidcController } from "./auth-controllers.js";
 import { AuthService } from "./auth.service.js";
+import { AuthAccountDataService } from "./auth-account-data.service.js";
 import { OidcService } from "./oidc.service.js";
-import { OidcController } from "./oidc.controller.js";
-import { MeController } from "./me.controller.js";
-import {
-  MAGIC_LINK_EMAIL_THROTTLER,
-  MAGIC_LINK_IP_THROTTLER,
-  SESSION_IP_THROTTLER,
-  ipTracker,
-  magicLinkEmailTracker,
-} from "./rate-limits.js";
-
-const HOUR_MS = 60 * 60_000;
-const MINUTE_MS = 60_000;
-
-function authThrottlers(config: ServerConfig): ThrottlerOptions[] {
-  const throttling = config.throttling;
-
-  return [
-    {
-      name: MAGIC_LINK_EMAIL_THROTTLER,
-      limit: throttling.magicLinkEmailPerHour,
-      ttl: HOUR_MS,
-      getTracker: magicLinkEmailTracker,
-    },
-    {
-      name: MAGIC_LINK_IP_THROTTLER,
-      limit: throttling.magicLinkIpPerHour,
-      ttl: HOUR_MS,
-      getTracker: ipTracker,
-    },
-    {
-      name: SESSION_IP_THROTTLER,
-      limit: throttling.sessionIpPerMin,
-      ttl: MINUTE_MS,
-      getTracker: ipTracker,
-    },
-  ];
-}
+import { authThrottlers } from "./auth-throttlers.js";
 
 @Module({
   imports: [
@@ -55,8 +19,8 @@ function authThrottlers(config: ServerConfig): ThrottlerOptions[] {
     }),
   ],
   controllers: [AuthController, OidcController, MeController],
-  providers: [AuthService, OidcService],
-  exports: [AuthService],
+  providers: [AuthService, AuthAccountDataService, OidcService],
+  exports: [AuthService, AuthAccountDataService],
 })
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest modules are empty decorated classes; the framework reads the decorator, not class members.
 export class AuthModule {}

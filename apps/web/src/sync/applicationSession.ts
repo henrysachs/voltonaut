@@ -163,6 +163,17 @@ export class ApplicationSession {
     }
   }
 
+  public endAfterAccountDeletion(): void {
+    this.begin();
+    const cleared = this.#options.persistence.clear();
+    this.publish({
+      kind: "guest",
+      message: cleared
+        ? "Konto gelöscht. Lokale Session entfernt; Aufräumarbeiten laufen."
+        : "Konto gelöscht. Lokale Session konnte nicht entfernt werden; Browserdaten prüfen.",
+    });
+  }
+
   async logout(): Promise<void> {
     const state = this.#state;
 

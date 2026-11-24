@@ -112,7 +112,10 @@ it("reserves capacity while callback HTTP is in flight and disconnect prevents l
 
   await gate.ready;
   const db = getDatabase(context.app);
-  const insertUser = db.$client.prepare("INSERT INTO users VALUES (?, ?, 0, NULL)");
+
+  const insertUser = db.$client.prepare(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, ?, 0, NULL)",
+  );
 
   const insertTransaction = db.$client.prepare(
     "INSERT INTO strava_transactions(state_hash,user_id,binding_hash,expires_at,claimed_at) VALUES (?, ?, 'binding', ?, NULL)",
@@ -140,7 +143,7 @@ it("commits bounded cleanup even when capacity still rejects the new start", asy
   const context = await setupStrava();
   const db = getDatabase(context.app);
   db.$client.exec(
-    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<1100) INSERT INTO users SELECT 'load-'||i, 'load-'||i||'@example.com', 0, NULL FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<1100) INSERT INTO users (id, email, created_at, deleted_at) SELECT 'load-'||i, 'load-'||i||'@example.com', 0, NULL FROM n",
   );
   db.$client
     .prepare(

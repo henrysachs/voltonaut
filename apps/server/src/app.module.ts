@@ -11,6 +11,7 @@ import { accountsTables, ridesTables, stravaTables } from "./schema.js";
 import { StravaModule } from "./strava/strava.module.js";
 
 const ridesModule = RidesModule.register(ridesTables);
+const stravaModule = StravaModule.register(stravaTables, ridesModule);
 
 @Module({
   imports: [
@@ -18,9 +19,9 @@ const ridesModule = RidesModule.register(ridesTables);
     DatabaseModule,
     AuthModule,
     HealthModule,
-    AccountsModule.register(accountsTables),
+    AccountsModule.register(accountsTables, ridesModule, stravaModule),
     ridesModule,
-    StravaModule.register(stravaTables, ridesModule),
+    stravaModule,
   ],
   providers: APP_PROVIDERS,
 })

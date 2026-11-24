@@ -48,7 +48,7 @@ function legacyFolder(directory: string): string {
 
 function oldData(db: DatabaseReader) {
   return [
-    db.$client.prepare("SELECT * FROM users").all(),
+    db.$client.prepare("SELECT id, email, created_at, deleted_at FROM users").all(),
     db.$client.prepare("SELECT * FROM auth_identities").all(),
     db.$client.prepare("SELECT * FROM sessions").all(),
     db.$client.prepare("SELECT * FROM profiles").all(),
@@ -64,9 +64,9 @@ function seed(db: {
   };
 }): void {
   db.$client.exec(`
-    INSERT INTO users VALUES ('existing', 'existing@example.com', 123, NULL);
-    INSERT INTO users VALUES ('first', 'first@example.com', 124, NULL);
-    INSERT INTO users VALUES ('second', 'second@example.com', 125, NULL);
+    INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing', 'existing@example.com', 123, NULL);
+    INSERT INTO users (id, email, created_at, deleted_at) VALUES ('first', 'first@example.com', 124, NULL);
+    INSERT INTO users (id, email, created_at, deleted_at) VALUES ('second', 'second@example.com', 125, NULL);
     INSERT INTO auth_identities VALUES ('https://issuer.example', 'opaque-subject', 'existing');
     INSERT INTO sessions VALUES ('unchanged-session-hash', 'existing', 123, 123, 9999999999999, 'agent');
     INSERT INTO profiles VALUES ('existing', '{"untouched":"profile"}', 123);
@@ -124,7 +124,7 @@ it("adds membership and authorization revisions after six actual migrations with
     next.$client.close();
     const restarted = createDatabase(config);
     expect(oldData(restarted)).toEqual(before);
-    expect(restarted.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(8);
+    expect(restarted.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(9);
     restarted.$client.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -135,7 +135,11 @@ it("enforces FK, NOT NULL and each membership/role CHECK in SQLite itself", () =
   const db = createDatabase(testServerConfig());
 
   try {
-    db.$client.prepare("INSERT INTO users VALUES ('existing','existing@example.com',0,NULL)").run();
+    db.$client
+      .prepare(
+        "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing','existing@example.com',0,NULL)",
+      )
+      .run();
 
     const insert = db.$client.prepare(
       "INSERT INTO account_status (user_id,tier,vip,role) VALUES (?,?,?,?)",

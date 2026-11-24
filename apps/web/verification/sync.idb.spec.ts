@@ -176,7 +176,7 @@ async function corrupt(seed: CompletedLocalRide) {
   const row = newOutboxRow(owner, seed, Date.now());
   await outbox.claim(row);
   await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open("voltonaut-account-outbox", 1);
+    const request = indexedDB.open("voltonaut-account-outbox", 2);
     request.addEventListener("success", () => {
       const database = request.result;
       const transaction = database.transaction("outbox", "readwrite");

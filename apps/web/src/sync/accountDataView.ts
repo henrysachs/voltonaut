@@ -8,6 +8,7 @@ import {
 import type { ProfileBootstrap } from "../profileBootstrap.js";
 import type { ApplicationSession } from "./applicationSession.js";
 import type { AccountOutbox, OutboxRow } from "./accountOutbox.js";
+import type { DeletionIntents } from "./accountDeletion.js";
 
 type Remote<T> =
   | { readonly kind: "loading" }
@@ -26,7 +27,7 @@ type LocalRideItem = {
 };
 
 export type AccountDataView = Immutable<
-  | { readonly kind: "guest" }
+  | { readonly kind: "guest"; readonly message?: string }
   | {
       readonly kind: "account";
       readonly user: User;
@@ -39,8 +40,11 @@ export type AccountDataView = Immutable<
 >;
 
 export interface SyncOptions {
-  readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
+  readonly session: Readonly<
+    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
+  >;
   readonly outbox: () => Promise<AccountOutbox>;
+  readonly deletions: DeletionIntents;
   readonly archive: () => Promise<readonly ArchivedRide[]>;
   readonly profile: Readonly<Pick<ProfileBootstrap, "saved" | "apply">>;
   readonly nowMs: () => number;

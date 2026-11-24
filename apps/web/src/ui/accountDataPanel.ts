@@ -1,7 +1,8 @@
 import type { AccountSync } from "../sync/accountSync.js";
 import type { AccountDataView, OutboxItem } from "../sync/accountDataView.js";
-import type { SyncFailure } from "../sync/privateAuthTransport.js";
 import type { RideAssessment } from "@voltonaut/shared";
+import { accountDataControls } from "./accountDataControls.js";
+import { accountDeliveryFailures } from "./accountDeliveryFailures.js";
 
 function assessmentText(assessment: RideAssessment): string {
   switch (assessment.status) {
@@ -20,16 +21,6 @@ function assessmentText(assessment: RideAssessment): string {
     }
   }
 }
-
-const failures: Readonly<Record<Exclude<SyncFailure, "superseded">, string>> = {
-  reauth: "Anmeldung abgelaufen. Abmelden und mit demselben Konto erneut anmelden.",
-  forbidden: "Keine Berechtigung. Serverzugang prüfen.",
-  missing: "Server lehnt Zugriff ab. Fahrt fehlt oder gehört einem anderen Konto.",
-  conflict: "Serverkonflikt. Dieselbe ID besitzt andere Daten. Keine Änderung gesendet.",
-  contract: "Ungültige Serverantwort oder Nutzlast abgelehnt. Kein Speicherbeleg bestätigt.",
-  retry:
-    "Versuchslimit erreicht. Verbindung prüfen; nach der Rückhaltefrist ausdrücklich erneut versuchen.",
-};
 
 function button(label: string, action: () => void): HTMLButtonElement {
   const element = document.createElement("button");
@@ -59,7 +50,7 @@ function outboxText(item: OutboxItem): string {
     case "queued":
       return `${name}: Dauerhaft vorgemerkt. Versuche ${state.attempts}/5. Frühester neuer Versuch ${new Date(state.retryAtMs).toLocaleTimeString("de-DE")}.`;
     case "blocked":
-      return `${name}: Blockiert. ${failures[state.cause]}`;
+      return `${name}: Blockiert. ${accountDeliveryFailures[state.cause]}`;
     default: {
       const exhausted: never = state;
 
@@ -71,7 +62,15 @@ function outboxText(item: OutboxItem): string {
 type Commands = Readonly<
   Pick<
     AccountSync,
-    "subscribe" | "refresh" | "retry" | "claim" | "queueProfile" | "applyProfile" | "nextHistory"
+    | "subscribe"
+    | "refresh"
+    | "retry"
+    | "claim"
+    | "queueProfile"
+    | "applyProfile"
+    | "nextHistory"
+    | "exportAccount"
+    | "deleteAccount"
   >
 >;
 
@@ -266,7 +265,8 @@ export function mountAccountDataPanel(sync: Commands): void {
     if (view.kind === "guest") {
       host.append(
         paragraph(
-          "Zum Lesen oder ausdrücklichen Zuordnen anmelden. Lokale Aufnahme und TCX benötigen kein Konto.",
+          view.message ??
+            "Zum Lesen oder ausdrücklichen Zuordnen anmelden. Lokale Aufnahme und TCX benötigen kein Konto.",
         ),
       );
 
@@ -286,6 +286,7 @@ export function mountAccountDataPanel(sync: Commands): void {
       profilePanel(view, sync),
       historyPanel(view, sync),
       localPanel(view, sync),
+      accountDataControls(view.user, sync),
     );
   });
 }

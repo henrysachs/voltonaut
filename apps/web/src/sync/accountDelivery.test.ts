@@ -5,7 +5,11 @@ import { deliverAccountRow } from "./accountDelivery.js";
 import { newOutboxRow, type AccountOutbox, type OutboxRow } from "./accountOutbox.js";
 import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
 import { localRide } from "./testdata/localRide.js";
-import { unusedStravaLease, unexpectedMembership } from "./testdata/unusedStravaLease.js";
+import {
+  unusedStravaLease,
+  unexpectedAccountData,
+  unexpectedMembership,
+} from "./testdata/unusedStravaLease.js";
 
 const owner = {
   apiOrigin: "http://localhost:3000",
@@ -19,6 +23,7 @@ class DeliveryFixture {
   row: OutboxRow = newOutboxRow(owner, localRide, 1000);
   readonly lease: AccountLease = {
     ...unexpectedMembership,
+    ...unexpectedAccountData,
     strava: unusedStravaLease,
     signal: new AbortController().signal,
     ...owner,
@@ -49,6 +54,7 @@ class DeliveryFixture {
 
       return Promise.resolve();
     },
+    purgeOwner: () => Promise.resolve(),
   };
   run(mode: "manual" | "resume" = "resume"): ReturnType<typeof deliverAccountRow> {
     return deliverAccountRow(this.lease, this.database, this.row, () => this.nowMs, mode);

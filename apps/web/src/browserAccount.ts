@@ -17,7 +17,9 @@ declare global {
 
 export function setupBrowserAccount(
   profile: () => Promise<ProfileBootstrap>,
-): Readonly<Pick<ApplicationSession, "authorize" | "subscribe">> | undefined {
+):
+  | Readonly<Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">>
+  | undefined {
   const handoff = takeAuthHandoff(window.location.href, (path) => {
     window.history.replaceState(null, "", path);
   });
