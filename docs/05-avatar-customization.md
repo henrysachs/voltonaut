@@ -47,7 +47,7 @@ interface ItemDef {
 
 | Slot      | Anzahl                                   | Default             |
 | --------- | ---------------------------------------- | ------------------- |
-| Haut      | 6 direkte Farben                         | Kupfer              |
+| Haut      | 6 direkte Farben                         | `#c98d68`           |
 | Trikot    | 6 Designs × Farben                       | „Voltonaut Classic" |
 | Helm      | 3                                        | Standard            |
 | Schuhe    | 2                                        | weiß                |

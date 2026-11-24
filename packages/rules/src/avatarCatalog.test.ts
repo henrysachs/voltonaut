@@ -93,6 +93,19 @@ describe("start avatar catalog", () => {
   });
 });
 
+describe("skin asset labels", () => {
+  it("uses neutral labels and asset references for skin colors", () => {
+    expect(avatarItemsForSlot("skin").map((item) => [item.name, item.assetRef])).toEqual([
+      ["Farbe 1", "procedural://skin/01"],
+      ["Farbe 2", "procedural://skin/02"],
+      ["Farbe 3", "procedural://skin/03"],
+      ["Farbe 4", "procedural://skin/04"],
+      ["Farbe 5", "procedural://skin/05"],
+      ["Farbe 6", "procedural://skin/06"],
+    ]);
+  });
+});
+
 describe("avatar preview config", () => {
   it("updates jersey ID and both colors without mutating the input config", () => {
     const item = catalogItem("jersey.aurora");
