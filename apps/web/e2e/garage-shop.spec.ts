@@ -80,6 +80,22 @@ test("garage previews items and colors while purchases stay disabled and the rid
   await expect(page.getByRole("button", { name: "Menü", exact: true })).toBeFocused();
 });
 
+test("skin selection uses direct colors instead of named items", async ({
+  page,
+}: Readonly<PageFixture>) => {
+  await page.goto("/?sim=1");
+  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await openGameMenu(page, "Garage / Shop");
+  await page.getByTestId("garage-slot-skin").click();
+
+  await expect(page.getByTestId("garage-item-name")).toHaveText("Hautfarbe");
+  await expect(page.locator(".garage__browse")).toBeHidden();
+
+  const darkSkin = page.getByRole("radio", { name: "Farbe 1: #654638", exact: true });
+  await darkSkin.check();
+  await expect(darkSkin).toBeChecked();
+});
+
 test("garage preview is not persisted and sends no purchase request", async ({
   page,
 }: Readonly<PageFixture>) => {

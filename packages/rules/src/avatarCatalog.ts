@@ -53,7 +53,7 @@ export function previewAvatarConfig(
 
   switch (item.slot) {
     case "skin":
-      return previewSkin(current, item.id);
+      return previewSkin(current, colors);
     case "jersey":
       return previewJersey(current, item.id, colors);
     case "helmet":
@@ -73,10 +73,10 @@ export function previewAvatarConfig(
   }
 }
 
-function previewSkin(current: Readonly<AvatarConfig>, itemId: string): AvatarConfig {
+function previewSkin(current: Readonly<AvatarConfig>, colors: readonly string[]): AvatarConfig {
   return AvatarConfigSchema.parse({
     ...current,
-    rider: { ...current.rider, skinTone: skinToneForItem(itemId, current.rider.skinTone) },
+    rider: { ...current.rider, skinTone: colors[0] ?? current.rider.skinTone },
   });
 }
 
@@ -147,25 +147,6 @@ function previewWheels(current: Readonly<AvatarConfig>, itemId: string): AvatarC
     ...current,
     bike: { ...current.bike, wheelsId: itemId },
   });
-}
-
-function skinToneForItem(itemId: string, fallback: string): string {
-  switch (itemId) {
-    case "skin.01":
-      return "#f1c7a5";
-    case "skin.02":
-      return "#e7cbb7";
-    case "skin.03":
-      return "#c98d68";
-    case "skin.04":
-      return "#98664f";
-    case "skin.05":
-      return "#b77b4f";
-    case "skin.06":
-      return "#654638";
-    default:
-      return fallback;
-  }
 }
 
 function skinItemForTone(tone: string): string {

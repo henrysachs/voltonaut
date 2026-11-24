@@ -27,6 +27,7 @@ function button(text: string): HTMLButtonElement {
 
 class GaragePanel {
   readonly #slotHost = document.createElement("div");
+  readonly #browseSection = document.createElement("section");
   readonly #itemHost = document.createElement("ul");
   readonly #previewHost = document.createElement("div");
   readonly #previewNote = document.createElement("p");
@@ -35,6 +36,7 @@ class GaragePanel {
   readonly #price = document.createElement("p");
   readonly #colors = document.createElement("fieldset");
   readonly #purchase = button("");
+  readonly #purchaseHint = document.createElement("p");
   readonly #rotateLeft = button("Links drehen");
   readonly #rotateRight = button("Rechts drehen");
   readonly #rotateToggle = button("Drehung pausieren");
@@ -121,7 +123,8 @@ class GaragePanel {
   }
 
   #buildBrowseSection(): HTMLElement {
-    const section = document.createElement("section");
+    const section = this.#browseSection;
+
     section.className = "garage__browse";
     section.setAttribute("aria-labelledby", "garage-items-title");
 
@@ -152,9 +155,8 @@ class GaragePanel {
     this.#purchase.disabled = true;
     this.#purchase.dataset["testid"] = "garage-purchase";
 
-    const purchaseHint = document.createElement("p");
-    purchaseHint.className = "garage__purchase-hint";
-    purchaseHint.textContent =
+    this.#purchaseHint.className = "garage__purchase-hint";
+    this.#purchaseHint.textContent =
       "Server-Inventar und Volts-Buchung fehlen. Es wird nichts abgezogen, verliehen oder gespeichert.";
 
     section.append(
@@ -163,7 +165,7 @@ class GaragePanel {
       this.#price,
       this.#colors,
       this.#purchase,
-      purchaseHint,
+      this.#purchaseHint,
     );
 
     return section;
@@ -232,15 +234,22 @@ class GaragePanel {
 
   #renderDetails(): void {
     const { item, colors } = this.#state.selection;
-    this.#itemName.textContent = item.name;
+    const skin = item.slot === "skin";
+
+    this.#browseSection.hidden = skin;
+    this.#itemName.textContent = skin ? "Hautfarbe" : item.name;
     this.#itemMeta.textContent = `${rarityText(item.rarity)} · ${itemUnlockText(item)}`;
     this.#price.textContent = priceText(item);
     this.#purchase.textContent = purchaseButtonText(item);
+    this.#itemMeta.hidden = skin;
+    this.#price.hidden = skin;
+    this.#purchase.hidden = skin;
+    this.#purchaseHint.hidden = skin;
     this.#colors.hidden = colors.length === 0;
     this.#colors.replaceChildren();
 
     const legend = document.createElement("legend");
-    legend.textContent = "Farben";
+    legend.textContent = skin ? "Hautfarbe" : "Farben";
     this.#colors.append(legend);
 
     for (const [index, selectedColor] of colors.entries()) {
