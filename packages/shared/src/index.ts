@@ -1,5 +1,7 @@
 export * from "./api/index.js";
 
+export * from "./avatarCatalog.js";
+
 export * from "./bus.js";
 
 export * from "./events.js";

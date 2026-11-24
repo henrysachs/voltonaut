@@ -1,37 +1,40 @@
 import * as THREE from "three";
 
+import type { AvatarConfig } from "@voltonaut/shared";
+
 import { disposeObject } from "../world/resources.js";
 import type { FrameInput, RenderSystem } from "../world/scheduler.js";
+import { avatarLook } from "./look.js";
 import { advanceCrankRad, wheelAngleRad } from "./motion.js";
+import {
+  RIDER_BRACKET as BRACKET,
+  placeTube,
+  poseLegs,
+  type Point3,
+  type RiderLeg,
+} from "./pose.js";
 
-type Point3 = readonly [number, number, number];
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Posing updates the owned Three mesh transform.
-function placeTube(mesh: Readonly<THREE.Mesh>, start: Point3, end: Point3, radiusM: number): void {
-  const from = new THREE.Vector3(...start);
-  const direction = new THREE.Vector3(...end).sub(from);
-
-  mesh.position.copy(from).addScaledVector(direction, 0.5);
-  mesh.scale.set(radiusM, direction.length(), radiusM);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-}
-
-interface Leg {
-  readonly side: number;
-  readonly thigh: THREE.Mesh;
-  readonly shin: THREE.Mesh;
-}
-
-const BRACKET: Point3 = [-0.08, 0.43, 0];
 const SEAT: Point3 = [-0.3, 0.96, 0];
 const HEAD_TUBE: Point3 = [0.39, 0.92, 0];
 
-class Bicycle {
+export interface RiderModel {
+  readonly root: THREE.Group;
+  crankRad: number;
+  headingRad: number;
+  update(frame: FrameInput): void;
+  posePreview(): void;
+  setLook(config: AvatarConfig): void;
+}
+
+class Bicycle implements RiderModel {
   readonly root = new THREE.Group();
   readonly model = new THREE.Group();
   private readonly wheels: THREE.Group[] = [];
   private readonly crank = new THREE.Group();
-  private readonly legs: Leg[] = [];
+  private readonly legs: RiderLeg[] = [];
+  private readonly frameTubes: THREE.Mesh[] = [];
+  private readonly shoes: THREE.Mesh[] = [];
+  private readonly glasses = new THREE.Group();
   private readonly tubeGeometry = new THREE.CylinderGeometry(1, 1, 1, 8);
   private readonly frameMaterial = new THREE.MeshStandardMaterial({
     color: 0xf0a83b,
@@ -44,9 +47,20 @@ class Bicycle {
     metalness: 0.8,
     roughness: 0.25,
   });
+  private readonly rim = new THREE.MeshStandardMaterial({
+    color: 0xd3dadb,
+    metalness: 0.8,
+    roughness: 0.25,
+  });
   private readonly jersey = new THREE.MeshStandardMaterial({ color: 0xec6b48, roughness: 0.85 });
+  private readonly jerseyAccent = new THREE.MeshStandardMaterial({
+    color: 0xf5ebca,
+    roughness: 0.85,
+  });
+  private readonly jerseyAccentBand = new THREE.Mesh(this.tubeGeometry, this.jerseyAccent);
   private readonly skin = new THREE.MeshStandardMaterial({ color: 0xc98d68, roughness: 0.9 });
   private readonly helmet = new THREE.MeshStandardMaterial({ color: 0xf5ebca, roughness: 0.65 });
+  private readonly shoe = new THREE.MeshStandardMaterial({ color: 0xf5ebca, roughness: 0.7 });
   crankRad = 0;
   headingRad = 0;
   private lastRideS: number | undefined;
@@ -87,7 +101,7 @@ class Bicycle {
       [HEAD_TUBE, BRACKET],
       [HEAD_TUBE, front],
     ] satisfies [Point3, Point3][]) {
-      this.tube(start, end, 0.025, this.frameMaterial);
+      this.frameTubes.push(this.tube(start, end, 0.025, this.frameMaterial));
     }
 
     this.tube(SEAT, [-0.3, 1.03, 0], 0.022, this.metal);
@@ -111,10 +125,7 @@ class Bicycle {
         this.dark,
       );
 
-      const rim = new THREE.Mesh(
-        new THREE.TorusGeometry(radiusM - 0.045, 0.012, 6, 32),
-        this.metal,
-      );
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(radiusM - 0.045, 0.012, 6, 32), this.rim);
 
       tire.castShadow = true;
       wheel.add(tire, rim);
@@ -139,7 +150,13 @@ class Bicycle {
   }
 
   private buildRider(): void {
-    this.tube([-0.3, 1.1, 0], [0.16, 1.46, 0], 0.15, this.jersey);
+    const torso = this.tube([-0.3, 1.1, 0], [0.16, 1.46, 0], 0.15, this.jersey);
+    torso.name = "jersey-primary";
+    placeTube(this.jerseyAccentBand, [-0.17, 1.25, 0], [-0.02, 1.36, 0], 0.152);
+    this.jerseyAccentBand.name = "jersey-accent";
+    this.jerseyAccentBand.castShadow = true;
+    this.jerseyAccentBand.visible = false;
+    this.model.add(this.jerseyAccentBand);
     this.tube([0.16, 1.46, 0], [0.26, 1.59, 0], 0.06, this.skin);
 
     for (const side of [-1, 1]) {
@@ -161,6 +178,50 @@ class Bicycle {
     head.castShadow = true;
     helmet.castShadow = true;
     this.model.add(head, helmet);
+
+    for (const side of [-1, 1]) {
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.045, 0.095), this.dark);
+      lens.position.set(0.395, 1.655, side * 0.055);
+      this.glasses.add(lens);
+
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.075, 0.085), this.shoe);
+      shoe.name = side === 1 ? "shoe-right" : "shoe-left";
+      shoe.castShadow = true;
+      this.shoes.push(shoe);
+      this.model.add(shoe);
+    }
+
+    this.glasses.visible = false;
+    this.model.add(this.glasses);
+  }
+
+  setLook(config: AvatarConfig): void {
+    const look = avatarLook(config);
+    this.frameMaterial.color.set(config.bike.frameColor);
+    this.jersey.color.set(config.rider.jerseyColors[0]);
+    this.jerseyAccent.color.set(config.rider.jerseyColors[1]);
+    this.jerseyAccent.roughness = look.jerseyAccentRoughness;
+    this.jerseyAccentBand.visible = true;
+    this.jerseyAccentBand.scale.x = look.jerseyAccentRadiusM;
+    this.jerseyAccentBand.scale.z = look.jerseyAccentRadiusM;
+    this.skin.color.set(config.rider.skinTone);
+    this.helmet.color.set(config.rider.helmetColor);
+    this.shoe.color.setHex(look.shoeColor);
+    this.glasses.visible = look.glassesVisible;
+
+    for (const tube of this.frameTubes) {
+      tube.scale.x = look.frameRadiusM;
+      tube.scale.z = look.frameRadiusM;
+    }
+
+    this.rim.color.setHex(look.rimColor);
+    this.rim.roughness = look.rimRoughness;
+  }
+
+  posePreview(): void {
+    this.crankRad = Math.PI / 2;
+    this.crank.rotation.z = -this.crankRad;
+    poseLegs(this.legs, this.shoes, this.crankRad);
   }
 
   update(frame: FrameInput): void {
@@ -179,24 +240,7 @@ class Bicycle {
       wheel.rotation.z = -wheelAngleRad(ride.distanceM, this.wheelCircM);
     }
 
-    for (const leg of this.legs) {
-      const angleRad = this.crankRad + (leg.side === 1 ? 0 : Math.PI);
-
-      const pedal: Point3 = [
-        BRACKET[0] + Math.cos(angleRad) * 0.17,
-        BRACKET[1] - Math.sin(angleRad) * 0.17,
-        leg.side * 0.14,
-      ];
-
-      const knee: Point3 = [
-        0.12 + Math.cos(angleRad) * 0.07,
-        0.82 - Math.sin(angleRad) * 0.09,
-        leg.side * 0.14,
-      ];
-
-      placeTube(leg.thigh, [-0.3, 1.12, leg.side * 0.12], knee, 0.075);
-      placeTube(leg.shin, knee, pedal, 0.045);
-    }
+    poseLegs(this.legs, this.shoes, this.crankRad);
   }
 }
 
@@ -207,8 +251,12 @@ export interface RiderView {
   readonly crankRad: () => number;
 }
 
+export function createRiderModel(wheelCircM: number): RiderModel {
+  return new Bicycle(wheelCircM);
+}
+
 export function createRider(wheelCircM: number): RiderView {
-  const bicycle = new Bicycle(wheelCircM);
+  const bicycle = createRiderModel(wheelCircM);
 
   return {
     position: () => ({
