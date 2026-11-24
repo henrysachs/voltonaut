@@ -1,7 +1,7 @@
 # Spec E7-01: Garage- und Shop-Fundament
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md`, E7, Teil der Checkbox „Garage-Showroom … Shop mit Preisen in ⚡, gesperrte Items mit Bedingung"
-- **Status:** Review
+- **Status:** Implementiert und softwaregeprüft. Unabhängiges Review, vollständiges Gate, Mutation und Build sind grün; Merge und CI stehen noch aus.
 - **Betroffene Module:** `packages/shared`, `packages/rules`, `apps/web/src/avatar`, `apps/web/src/ui/garage`, `apps/web/src/ui/gameMenu.ts`
 
 ## Ziel
@@ -47,13 +47,14 @@ Die provisorische Geometrie zeigt nicht jedes Detail der späteren Slot-Assets. 
 ## Nachweis
 
 - Implementiert: strikter Katalog, Startdaten, UI-Zustand, provisorische 3D-Vorschau und Menüintegration.
-- Am tatsächlichen Artefakt softwaregeprüft: 50 Unit-Tests und 12 Garage- und Menü-E2E-Tests grün. Oxfmt, typbewusster Oxlint, `tsc -b`, die direkte Shared-Test-Typprüfung und dependency-cruiser grün.
+- Am tatsächlichen Artefakt softwaregeprüft: 60 gezielte Unit-Tests und 12 Garage- und Menü-E2E-Tests grün. Das vollständige Gate besteht mit 1.165 Tests und 66 E2Es. Rules-Coverage: Statements 97,50 %, Lines 97,33 %, Branches 97,67 %, Functions 100 %. Mutation erreicht 95,84 % bei Schwelle 80, Build, Oxfmt, typbewusster Oxlint, `tsc -b`, die direkte Shared-Test-Typprüfung und dependency-cruiser sind grün. Das unabhängige Review ist APPROVE.
 - An echter Hardware geprüft: nein, keine Hardwarefunktion betroffen.
-- Bereitgestellt: nein, kein Commit, Merge oder Deploy in diesem Auftrag.
+- Bereitgestellt: nein, kein Merge oder Deploy in diesem Auftrag.
 
 Erfolgreiche Befehle:
 
 ```sh
+mise exec -- pnpm exec vitest run --coverage
 mise run install
 pnpm exec oxfmt --check .
 mise run lint
@@ -72,4 +73,4 @@ Screenshots:
 - [Vorschau ohne WebGL](E7-01/garage-shop-no-webgl.png)
 - [Mobile Trefferflächen](E7-01/garage-shop-small.png)
 
-Das vollständige E2E-Gate und Mutation liefen nicht. Der Auftrag überlässt diese Integrationprüfungen der übergeordneten Session.
+Das vollständige E2E-Gate, Mutation und Build sind in der übergeordneten Session erfolgreich gelaufen. Der nächste Schritt sind Merge, exakte CI und Bereitstellung.

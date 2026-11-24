@@ -139,13 +139,15 @@ function toItemDef(item: Readonly<ItemDefData>): ItemDef {
 
 export const ItemDefSchema = itemDefinition.superRefine(validateItem).transform(toItemDef);
 
+export const AvatarJerseyColorsSchema = z.tuple([AvatarColorSchema, AvatarColorSchema]).readonly();
+
 export const AvatarConfigSchema = z
   .object({
     rider: z
       .object({
         skinTone: AvatarColorSchema,
         jerseyId: itemId,
-        jerseyColors: z.tuple([AvatarColorSchema, AvatarColorSchema]).readonly(),
+        jerseyColors: AvatarJerseyColorsSchema,
         helmetId: itemId,
         helmetColor: AvatarColorSchema,
         shoesId: itemId,

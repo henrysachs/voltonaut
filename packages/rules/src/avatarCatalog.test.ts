@@ -26,6 +26,18 @@ function catalogItem(id: string): ItemDef {
   return item;
 }
 
+function customItem(slot: AvatarSlot, colorable: number): ItemDef {
+  return ItemDefSchema.parse({
+    id: `custom.${slot}.${colorable}`,
+    slot,
+    name: `Custom ${slot}`,
+    assetRef: `procedural://custom/${slot}/${colorable}`,
+    colorable,
+    unlock: { kind: "default" },
+    rarity: "common",
+  });
+}
+
 function preview(item: ItemDef, colors: readonly string[] = []) {
   return GarageSelectionSchema.parse({
     kind: "preview",
@@ -125,6 +137,61 @@ describe("avatar preview config", () => {
 
     config = previewAvatarConfig(config, preview(catalogItem("wheels.carbon-deep")));
     expect(config.bike.wheelsId).toBe("wheels.carbon-deep");
+  });
+});
+
+describe("skin presets", () => {
+  const presets: readonly (readonly [string, string])[] = [
+    ["skin.01", "#f1c7a5"],
+    ["skin.02", "#e7cbb7"],
+    ["skin.03", "#c98d68"],
+    ["skin.04", "#98664f"],
+    ["skin.05", "#b77b4f"],
+    ["skin.06", "#654638"],
+  ];
+
+  it.each(presets)("previews and maps %s", (itemId, skinTone) => {
+    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(catalogItem(itemId)));
+
+    expect(config.rider.skinTone).toBe(skinTone);
+    expect(avatarItemIdForSlot(config, "skin")).toBe(itemId);
+  });
+});
+
+describe("preview color fallbacks", () => {
+  it("keeps both current jersey colors for a zero-color custom item", () => {
+    const item = customItem("jersey", 0);
+    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(item));
+
+    expect(config.rider.jerseyId).toBe(item.id);
+    expect(config.rider.jerseyColors).toEqual(DEFAULT_AVATAR_CONFIG.rider.jerseyColors);
+  });
+
+  it("keeps the secondary jersey color for a one-color custom item", () => {
+    const item = customItem("jersey", 1);
+    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(item, ["#112233"]));
+
+    expect(config.rider.jerseyId).toBe(item.id);
+    expect(config.rider.jerseyColors).toEqual([
+      "#112233",
+      DEFAULT_AVATAR_CONFIG.rider.jerseyColors[1],
+    ]);
+  });
+
+  it("keeps the current helmet color for a zero-color custom item", () => {
+    const item = customItem("helmet", 0);
+    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(item));
+
+    expect(config.rider.helmetId).toBe(item.id);
+    expect(config.rider.helmetColor).toBe(DEFAULT_AVATAR_CONFIG.rider.helmetColor);
+  });
+
+  it("keeps the current frame color for a zero-color custom item", () => {
+    const item = customItem("frame", 0);
+    const config = previewAvatarConfig(DEFAULT_AVATAR_CONFIG, preview(item));
+
+    expect(config.bike.frameId).toBe(item.id);
+    expect(config.bike.frameColor).toBe(DEFAULT_AVATAR_CONFIG.bike.frameColor);
   });
 });
 
