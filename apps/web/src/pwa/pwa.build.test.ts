@@ -1,129 +1,21 @@
-import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import type { IncomingMessage, Server, ServerResponse } from "node:http";
-import { mkdtemp, readFile, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { extname, join, resolve } from "node:path";
+import { readFile, stat, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { chromium } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
-import { build } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-// oxlint-disable typescript/prefer-readonly-parameter-types -- Node http and Playwright handles are mutable by contract.
-const TYPES = new Map([
-  [".html", "text/html"],
-  [".js", "text/javascript"],
-  [".css", "text/css"],
-  [".webmanifest", "application/manifest+json"],
-  [".png", "image/png"],
-  [".svg", "image/svg+xml"],
-]);
+import {
+  buildProduction,
+  cacheContents,
+  fetchApi,
+  listen,
+  serveDist,
+  startApi,
+  stop,
+} from "./pwaTestKit.js";
+import type { Listening } from "./pwaTestKit.js";
 
-interface Listening {
-  readonly server: Server;
-  readonly origin: string;
-}
-
-async function listen(
-  handler: (request: IncomingMessage, response: ServerResponse) => void,
-): Promise<Listening> {
-  const server = createServer(handler);
-
-  await new Promise<void>((done) => {
-    server.listen(0, "127.0.0.1", done);
-  });
-
-  const address = server.address();
-
-  assert.ok(address !== null && address instanceof Object, "missing test port");
-
-  return { server, origin: `http://127.0.0.1:${address.port}` };
-}
-
-async function stop(listening: Listening): Promise<void> {
-  listening.server.closeAllConnections();
-  await new Promise<void>((done) => {
-    listening.server.close(() => {
-      done();
-    });
-  });
-}
-
-async function readFileOrNull(path: string): Promise<Buffer | null> {
-  try {
-    return (await stat(path)).isFile() ? await readFile(path) : null;
-  } catch {
-    return null;
-  }
-}
-
-function serveDist(dist: string) {
-  return (request: IncomingMessage, response: ServerResponse): void => {
-    const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
-    const file = pathname === "/" ? "index.html" : pathname;
-
-    void readFileOrNull(resolve(dist, `.${join("/", file)}`)).then((body) => {
-      response.writeHead(body === null ? 404 : 200, {
-        "Content-Type": TYPES.get(extname(file)) ?? "application/octet-stream",
-        "Cache-Control": "no-cache",
-      });
-      response.end(body);
-
-      return body;
-    });
-  };
-}
-
-async function buildProduction(): Promise<string> {
-  const dist = join(await mkdtemp(join(tmpdir(), "voltonaut-pwa-")), "dist");
-  const nodeEnv = process.env["NODE_ENV"];
-
-  // Vitest runs with NODE_ENV=test, which would build without the production-only
-  // service worker registration.
-  process.env["NODE_ENV"] = "production";
-
-  try {
-    await build({ root: resolve(import.meta.dirname, "../.."), build: { outDir: dist } });
-  } finally {
-    process.env["NODE_ENV"] = nodeEnv ?? "test";
-  }
-
-  return dist;
-}
-
-function fetchApi(page: Page, url: string): Promise<string> {
-  return page.evaluate(
-    (target) =>
-      fetch(target, { headers: { Authorization: "Bearer secret-session-token" } }).then(
-        (response) => response.text(),
-        () => "network error",
-      ),
-    url,
-  );
-}
-
-function cacheContents(page: Page): Promise<{ names: string[]; urls: string[] }> {
-  return page.evaluate(async () => {
-    const names = await caches.keys();
-    const opened = await Promise.all(names.map((name) => caches.open(name)));
-    const requests = await Promise.all(opened.map((cache) => cache.keys()));
-
-    return { names, urls: requests.flat().map((request) => request.url) };
-  });
-}
-
-function startApi(requests: string[]): Promise<Listening> {
-  return listen((request, response) => {
-    requests.push(request.url ?? "");
-    response.writeHead(200, {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "authorization",
-    });
-    response.end(JSON.stringify({ session: "secret-session-token", heartRateBpm: 150 }));
-  });
-}
-
+// oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright handles are mutable by contract.
 interface Fixture {
   readonly dist: string;
   readonly browser: Browser;
@@ -188,6 +80,99 @@ async function verifyOffline({ app, api, page, apiRequests }: Fixture): Promise<
   expect(apiRequests).toHaveLength(before + 1);
 }
 
+const MARKER = '<meta name="release-marker" content="fresh">';
+
+function markerCount(page: Page): Promise<number> {
+  return page.locator('meta[name="release-marker"]').count();
+}
+
+async function openAppTab(page: Page): Promise<void> {
+  await page.locator("#game-menu-open").click();
+  await page.getByRole("tab", { name: "App", exact: true }).click();
+}
+
+function seedBrowserData(page: Page): Promise<void> {
+  return page.evaluate(async () => {
+    window.localStorage.setItem("voltonaut-test-profile", "keep");
+    await caches.open("other-app-cache");
+
+    await new Promise<void>((done, fail) => {
+      const open = indexedDB.open("voltonaut-test-recordings", 1);
+      open.addEventListener("upgradeneeded", () => {
+        open.result.createObjectStore("rides");
+      });
+      open.addEventListener("success", () => {
+        const write = open.result.transaction("rides", "readwrite");
+        write.objectStore("rides").put("recorded ride", "ride-1");
+        write.addEventListener("complete", () => {
+          done();
+        });
+      });
+      open.addEventListener("error", () => {
+        fail(new Error("indexedDB failed"));
+      });
+    });
+  });
+}
+
+function readBrowserData(page: Page) {
+  return page.evaluate(async () => {
+    const ride = await new Promise<string>((done) => {
+      const open = indexedDB.open("voltonaut-test-recordings", 1);
+      open.addEventListener("success", () => {
+        const read = open.result.transaction("rides").objectStore("rides").get("ride-1");
+        read.addEventListener("success", () => {
+          done(String(read.result));
+        });
+      });
+    });
+
+    return {
+      profile: window.localStorage.getItem("voltonaut-test-profile"),
+      ride,
+      caches: await caches.keys(),
+      registrations: (await navigator.serviceWorker.getRegistrations()).length,
+    };
+  });
+}
+
+async function verifyHardReload({ dist, app, page }: Fixture): Promise<void> {
+  await seedBrowserData(page);
+  // The controlled page keeps serving the old cached shell, even after a new release.
+  const index = join(dist, "index.html");
+
+  await writeFile(index, (await readFile(index, "utf8")).replace("</head>", `${MARKER}</head>`));
+  await page.reload();
+  expect(await markerCount(page)).toBe(0);
+
+  const before = await readBrowserData(page);
+
+  await openAppTab(page);
+  await page.getByRole("button", { name: "Hard Reload", exact: true }).click();
+  await page.getByRole("button", { name: "Abbrechen", exact: true }).click();
+
+  expect(await readBrowserData(page)).toEqual(before);
+  expect(await markerCount(page)).toBe(0);
+
+  await page.getByRole("button", { name: "Hard Reload", exact: true }).click();
+  await Promise.all([
+    page.waitForEvent("load"),
+    page.getByRole("button", { name: "Ja, jetzt neu laden", exact: true }).click(),
+  ]);
+
+  expect(await markerCount(page)).toBe(1);
+  await page.evaluate(() => navigator.serviceWorker.ready.then((ready) => ready.scope));
+
+  const after = await readBrowserData(page);
+
+  expect(after.profile).toBe("keep");
+  expect(after.ride).toBe("recorded ride");
+  expect(after.caches).toContain("other-app-cache");
+  expect(after.caches.filter((name) => name.startsWith("voltonaut-shell-"))).toHaveLength(1);
+  expect(after.registrations).toBe(1);
+  expect(page.url()).toBe(`${app.origin}/?sim=1`);
+}
+
 describe("built PWA", () => {
   let fixture: Fixture;
 
@@ -207,6 +192,10 @@ describe("built PWA", () => {
 
   it("registers the worker and caches only own-origin files", async () => {
     await expect(verifyCache(fixture)).resolves.toBeUndefined();
+  });
+
+  it("hard reload bypasses the old cache and keeps stored browser data", async () => {
+    await expect(verifyHardReload(fixture)).resolves.toBeUndefined();
   });
 
   it("reloads the app shell offline and still passes API traffic to the network", async () => {

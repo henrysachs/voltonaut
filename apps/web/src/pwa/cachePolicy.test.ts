@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { classifyRequest, shellCacheName, SKIP_WAITING_MESSAGE } from "./cachePolicy.js";
+import {
+  classifyRequest,
+  SHELL_CACHE_PREFIX,
+  shellCacheName,
+  SKIP_WAITING_MESSAGE,
+} from "./cachePolicy.js";
+import { OWN_CACHE_PREFIX } from "./hardReload.js";
 import { SKIP_WAITING } from "./register.js";
 
 const ORIGIN = "https://app.example";
@@ -46,10 +52,11 @@ describe("classifyRequest", () => {
     expect(shellCacheName("abc")).toBe("voltonaut-shell-abc");
   });
 
-  it("uses the same skip-waiting message in the page and the worker bundle", () => {
+  it("uses the same constants in the page and the worker bundle", () => {
     const worker = readFileSync(new URL("./serviceWorker.ts", import.meta.url), "utf8");
 
     expect(SKIP_WAITING).toBe(SKIP_WAITING_MESSAGE);
+    expect(OWN_CACHE_PREFIX).toBe(SHELL_CACHE_PREFIX);
     expect(worker).toContain(`"${SKIP_WAITING_MESSAGE}"`);
   });
 });

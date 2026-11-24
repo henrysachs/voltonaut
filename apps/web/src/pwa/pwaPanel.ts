@@ -1,4 +1,5 @@
 import { detectPlatform, INSTALL_HINTS } from "./installHints.js";
+import { browserPorts, hardReload } from "./hardReload.js";
 import { registerShell } from "./register.js";
 import type { ApplyUpdate } from "./register.js";
 
@@ -77,6 +78,49 @@ function mountUpdate(host: HTMLElement): (apply: ApplyUpdate) => void {
   };
 }
 
+function mountHardReload(host: HTMLElement): void {
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.textContent = "Hard Reload";
+
+  const confirmation = document.createElement("div");
+  confirmation.hidden = true;
+  confirmation.setAttribute("role", "alert");
+
+  const warning = paragraph(
+    "Hard Reload lädt App und Dateien frisch vom Netz und unterbricht die laufende Fahrt und Aufnahme. Gespeicherte Aufnahmen, Kontodaten und andere Browserdaten bleiben erhalten. Nur der Voltonaut-App-Cache wird zurückgesetzt.",
+  );
+
+  const confirm = document.createElement("button");
+  confirm.type = "button";
+  confirm.textContent = "Ja, jetzt neu laden";
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "Abbrechen";
+  confirmation.append(warning, confirm, cancel);
+
+  trigger.addEventListener("click", () => {
+    confirmation.hidden = false;
+    trigger.hidden = true;
+    cancel.focus();
+  });
+  cancel.addEventListener("click", () => {
+    confirmation.hidden = true;
+    trigger.hidden = false;
+    trigger.focus();
+  });
+  confirm.addEventListener("click", () => {
+    confirm.disabled = true;
+    hardReload(browserPorts()).catch(() => {
+      confirm.disabled = false;
+      warning.textContent =
+        "Hard Reload ist fehlgeschlagen. Gespeicherte Daten wurden nicht verändert.";
+    });
+  });
+  host.append(trigger, confirmation);
+}
+
 function populate(host: HTMLElement): void {
   const status = paragraph(
     isStandalone()
@@ -92,6 +136,7 @@ function populate(host: HTMLElement): void {
   mountInstallButton(host, status);
   const onUpdateReady = mountUpdate(host);
   host.append(offline);
+  mountHardReload(host);
   renderHints(host);
 
   if (import.meta.env.PROD === true && "serviceWorker" in navigator) {

@@ -14,6 +14,7 @@ Voltonaut lässt sich auf unterstützten Geräten installieren und startet im ei
 - **Service Worker** (`src/pwa/serviceWorker.ts`, vom Build als `/sw.js` ausgeliefert): Der Vite-Build-Plugin trägt Release-Version (Hash aus `index.html` und den Namen der Build-Dateien) und die Precache-Liste ein. Cache heißt `voltonaut-shell-<version>`; beim Aktivieren werden ältere Shell-Caches gelöscht.
 - **Allowlist statt Blocklist** (`src/pwa/cachePolicy.ts`): Nur gleiche Herkunft, nur GET. Navigation zu `/` und `/index.html` (auch mit Query wie `?sim=1`) liefert die gecachte Shell. `/assets/*`, `/icons/*` und das Manifest ohne Query kommen aus dem Cache, später geladene Dateien (z. B. `.glb`) werden zur Laufzeit in denselben versionierten Cache gelegt. **Alles andere** geht unverändert ans Netz: API-Herkunft, Authentifizierungs- und Strava-Seiten, Debug-Seiten, POST, Anfragen mit Query.
 - **Kontrolliertes Update:** Kein `skipWaiting` und kein automatisches Neuladen. Eine neue Version wartet; im Menü „App" erscheint „Jetzt aktualisieren". Erst der Klick aktiviert sie und lädt neu. Der Hinweis nennt, dass das eine laufende Aufnahme verwirft.
+- **Hard Reload** (Menü „App", `src/pwa/hardReload.ts`): Auch ohne wartendes Update verfügbar. Ausdrückliche Bestätigung („Ja, jetzt neu laden" / „Abbrechen") vor dem Unterbrechen von Fahrt und Aufnahme; Abbrechen ändert nichts. Danach werden nur die eigene Service-Worker-Registrierung und Caches mit Präfix `voltonaut-shell-` entfernt, das Dokument per `fetch(..., {cache: "reload"})` frisch geholt und neu geladen. localStorage, IndexedDB (Aufnahmen, Kontodaten) und fremde Caches bleiben unberührt. Ergänzende Pflichtanforderung aus dem PR-Kommentar von Henry.
 - **Registrierung** nur in Produktionsbuilds (`import.meta.env.PROD`). Dev-Server und E2E im Sim-Modus bleiben ohne Service Worker.
 - **Menü „App"** (`src/pwa/pwaPanel.ts`): Installationsschaltfläche bei `beforeinstallprompt`, Hinweise für Desktop, Android und iOS, Offline-Verhalten, Web-Bluetooth-Grenzen.
 
@@ -25,6 +26,7 @@ Voltonaut lässt sich auf unterstützten Geräten installieren und startet im ei
 - [x] AK4 – Sessions, Tokens, Fahrten, Puls und Checkpoints liegen nicht im Cache. Ein echter Chromium-Lauf gegen den Build prüft, dass Cache Storage nach einer Anfrage mit `Authorization` an eine andere Herkunft ausschließlich Dateien der eigenen Herkunft enthält.
 - [x] AK5 – Updates warten auf ausdrückliche Bestätigung. Alte Shell-Caches werden beim Aktivieren gelöscht.
 - [x] AK6 – Dokumentation der Web-Bluetooth-Plattformgrenzen (`docs/02-bluetooth.md` §1, Menü „App").
+- [x] AK8 – Hard Reload im App-Menü mit Bestätigung; Abbrechen verändert nichts; lädt neue Version trotz aktivem Service Worker und altem Cache; gespeicherte Daten (localStorage, IndexedDB, fremde Caches) bleiben. Belegt am gebauten Client in `pwa.build.test.ts` (alte Shell, neue Release-Marke, Daten vorher/nachher).
 - [x] AK7 – Format, Lint, Typecheck, depcruise, guard, 1201 Unit-Tests und alle 67 E2E-Tests lokal grün (einzeln ausgeführt, nicht über `mise`). Exakte Head-CI bleibt bindend.
 
 ## Testplan (`docs/10-testing.md`)
@@ -34,6 +36,7 @@ Voltonaut lässt sich auf unterstützten Geräten installieren und startet im ei
 | AK1, AK3 | Build + Chromium    | `apps/web/src/pwa/pwa.build.test.ts` (Build, Registrierung, Offline-Reload)          |
 | AK3, AK4 | Unit mit Fake-Cache | `apps/web/src/pwa/cachePolicy.test.ts`, `shellWorker.test.ts` (ohne `vi.mock`)       |
 | AK4      | Build + Chromium    | `pwa.build.test.ts` (Cache-Inhalt nach Anfrage mit Token an fremde Herkunft)         |
+| AK8      | Build + Chromium    | `pwa.build.test.ts`, `hardReload.test.ts` (Reihenfolge, nur eigene Caches)           |
 | AK6      | Unit                | `installHints.test.ts` (Plattformerkennung, Bluetooth-Hinweise für alle Plattformen) |
 | AK7      | Gesamtgate          | `mise run check`                                                                     |
 
