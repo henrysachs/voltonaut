@@ -53,6 +53,7 @@ Der Server kennt nur noch `OIDC_PROVIDERS` und `OIDC_<ID>_*` (siehe `deploy.env.
    ```
 
    `snapshot` legt `state/config/<laufender-tag>/` mit der bisherigen `compose.yaml` und `deploy.env` an. `migrate` gibt `migrated` oder bei Wiederholung `unchanged` aus. Akzeptiert wird nur genau die vom Provisionierer geschriebene Alt-Datei (gleiche Schlüssel, alte Callback-URI, Eigentümer Deploy-Nutzer, Modus `600`). Alles andere, etwa zusätzliche Backup-Werte, wird unverändert abgelehnt (`provisioning failed`) und ist von Hand umzustellen. Die Werte bleiben gleich, nur die Redirect-URI wechselt. Die alte Datei bleibt zusätzlich als `deploy.env.legacy` (Modus `600`) erhalten; ein vorhandenes Backup wird nie ersetzt.
+
 4. Den Release deployen. Scheitert Validierung oder Start, läuft bzw. startet der bisherige Release mit seiner gesicherten Alt-Konfiguration. Danach einen echten Login über Cloudflare bestätigen.
 5. Erst danach die alte Redirect-URI entfernen und `deploy.env.legacy` löschen. Der Snapshot des alten Releases entfällt automatisch mit dem übernächsten Release.
 
