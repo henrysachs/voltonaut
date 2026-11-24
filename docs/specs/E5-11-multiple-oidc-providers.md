@@ -27,5 +27,5 @@
 
 ## Nicht umgesetzt / Betrieb
 
-- `deploy/provision_env.py` und der Workflow `provision-server.yml` schreiben noch das alte Einzelsatzformat (geschützt). Vor einem Deploy muss `/srv/voltonaut/deploy.env` auf `OIDC_PROVIDERS` und `OIDC_CLOUDFLARE_*` umgestellt werden. Die Cloudflare-Redirect-URI wechselt auf `…/oidc/cloudflare/callback` und muss in der Access-Anwendung neu registriert werden.
+- `deploy/provision_env.py` schreibt jetzt `OIDC_PROVIDERS=cloudflare` und `OIDC_CLOUDFLARE_*` aus den unveränderten Secrets `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`; der Workflow `provision-server.yml` bleibt unverändert. Eine vorhandene `/srv/voltonaut/deploy.env` im Altformat wird nicht überschrieben und muss vor einem Deploy von Hand umgestellt werden. Die Cloudflare-Redirect-URI wechselt auf `…/oidc/cloudflare/callback` und muss in der Access-Anwendung neu registriert werden.
 - Offene Fragen aus dem Issue (zusätzlich oder statt Cloudflare, authentik-URL, Gruppenpolicy) sind entschieden bzw. offen: zusätzlich zu Cloudflare, `requireEmailVerified` pro Provider (Standard an). Authentik-Instanz und Neukonten-Policy liegen bei Henry.

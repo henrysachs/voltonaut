@@ -13,15 +13,20 @@ import unittest
 import provision_env as provision
 
 
-def config(secret: str = "synthetic-only") -> provision.Config:
-    return provision.parse_config({
+def secret_input(secret: str = "synthetic-only") -> dict[str, str]:
+    """The workflow's input format: GitHub secret names plus fixed public values."""
+    return {
         "AUTH_MODE": "oidc",
         "CLIENT_ORIGIN": "https://voltonaut.stammkneipe.dev",
-        "OIDC_REDIRECT_URI": "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback",
+        "OIDC_REDIRECT_URI": "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback",
         "OIDC_ISSUER": "https://login.example.com/oidc",
         "OIDC_CLIENT_ID": "synthetic-client",
         "OIDC_CLIENT_SECRET": secret,
-    })
+    }
+
+
+def config(secret: str = "synthetic-only") -> provision.Config:
+    return provision.parse_config(secret_input(secret))
 
 
 class WriterTests(unittest.TestCase):
@@ -152,7 +157,7 @@ sys.exit(2)
 
 class ValidationTests(unittest.TestCase):
     def test_exact_schema_and_nonempty_strings(self):
-        valid = config().values()
+        valid = secret_input()
         for key in valid:
             for value in (None, 42, False, [], {}, "", " \t", "a\rb", "a\nb", "a\0b"):
                 with self.subTest(key=key, kind=type(value).__name__):
@@ -177,10 +182,48 @@ class ValidationTests(unittest.TestCase):
                        "https://login.example.com\\elsewhere", "https://login example.com",
                        "https://invalid.", "https://127.0.0.2", "https://0.0.0.0"):
             with self.subTest(issuer=issuer), self.assertRaises(provision.ProvisionError):
-                provision.parse_config({**config().values(), "OIDC_ISSUER": issuer})
+                provision.parse_config({**secret_input(), "OIDC_ISSUER": issuer})
         for secret in ("changeme", "replace-me", "placeholder", "your-client-secret"):
             with self.assertRaises(provision.ProvisionError):
                 config(secret)
+
+    def test_writes_the_server_provider_list_format(self):
+        self.assertEqual(config().values(), {
+            "AUTH_MODE": "oidc",
+            "CLIENT_ORIGIN": "https://voltonaut.stammkneipe.dev",
+            "OIDC_PROVIDERS": "cloudflare",
+            "OIDC_CLOUDFLARE_REDIRECT_URI":
+                "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback",
+            "OIDC_CLOUDFLARE_ISSUER": "https://login.example.com/oidc",
+            "OIDC_CLOUDFLARE_CLIENT_ID": "synthetic-client",
+            "OIDC_CLOUDFLARE_CLIENT_SECRET": "synthetic-only",
+        })
+        self.assertEqual(tuple(config().values()), provision.WRITTEN_KEYS)
+
+    def test_written_payload_has_exact_schema(self):
+        valid = config().values()
+        for key in valid:
+            for value in (None, 42, "", " \t", "a\nb"):
+                with self.subTest(key=key, value=value), self.assertRaises(provision.ProvisionError):
+                    provision.parse_payload(json.dumps({**valid, key: value}).encode())
+            missing = valid.copy()
+            del missing[key]
+            with self.subTest(missing=key), self.assertRaises(provision.ProvisionError):
+                provision.parse_payload(json.dumps(missing).encode())
+        for invalid in ({**valid, "OIDC_PROVIDERS": "cloudflare,authentik"},
+                        {**valid, "OIDC_PROVIDERS": "authentik"},
+                        {**valid, "OIDC_CLOUDFLARE_REDIRECT_URI":
+                            "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"},
+                        {**valid, "OIDC_ISSUER": "https://login.example.com/oidc"},
+                        secret_input()):
+            with self.subTest(invalid=sorted(invalid)), self.assertRaises(provision.ProvisionError):
+                provision.parse_payload(json.dumps(invalid).encode())
+
+    def test_legacy_single_set_redirect_uri_is_rejected_as_input(self):
+        legacy = {**secret_input(), "OIDC_REDIRECT_URI":
+                  "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"}
+        with self.assertRaises(provision.ProvisionError):
+            provision.parse_config(legacy)
 
     def test_bounded_json_and_duplicate_fields(self):
         for payload in (b"{", b"\xff", b"[]", b" " * (provision.MAX_PAYLOAD_BYTES + 1),

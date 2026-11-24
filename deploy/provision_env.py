@@ -21,8 +21,13 @@ from urllib.parse import urlsplit
 TARGET = Path("/srv/voltonaut/deploy.env")
 MAX_PAYLOAD_BYTES = 1024 * 1024
 CLIENT_ORIGIN = "https://voltonaut.stammkneipe.dev"
-REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"
+# The server reads a provider list (ADR-025). Provisioning installs exactly the Cloudflare Access
+# provider. SECRET_KEYS stay the names of the GitHub secrets that the workflow passes in.
+PROVIDER_ID = "cloudflare"
+REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback"
 SECRET_KEYS = ("OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET")
+WRITTEN_KEYS = ("AUTH_MODE", "CLIENT_ORIGIN", "OIDC_PROVIDERS", "OIDC_CLOUDFLARE_REDIRECT_URI",
+                "OIDC_CLOUDFLARE_ISSUER", "OIDC_CLOUDFLARE_CLIENT_ID", "OIDC_CLOUDFLARE_CLIENT_SECRET")
 STRAVA_TARGET = Path("/srv/voltonaut/strava.env")
 STRAVA_REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/strava/callback"
 STRAVA_SECRET_KEYS = ("STRAVA_CLIENT_ID", "STRAVA_CLIENT_SECRET")
@@ -51,10 +56,11 @@ class Config:
         return {
             "AUTH_MODE": "oidc",
             "CLIENT_ORIGIN": CLIENT_ORIGIN,
-            "OIDC_REDIRECT_URI": REDIRECT_URI,
-            "OIDC_ISSUER": self.issuer,
-            "OIDC_CLIENT_ID": self.client_id,
-            "OIDC_CLIENT_SECRET": self.client_secret,
+            "OIDC_PROVIDERS": PROVIDER_ID,
+            "OIDC_CLOUDFLARE_REDIRECT_URI": REDIRECT_URI,
+            "OIDC_CLOUDFLARE_ISSUER": self.issuer,
+            "OIDC_CLOUDFLARE_CLIENT_ID": self.client_id,
+            "OIDC_CLOUDFLARE_CLIENT_SECRET": self.client_secret,
         }
 
 
@@ -84,7 +90,25 @@ def parse_strava(raw: object) -> StravaConfig:
     return config
 
 
+def parse_written(raw: object) -> Config:
+    """Validates the exact provider-list format that is written to deploy.env."""
+    if not isinstance(raw, dict) or set(raw) != set(WRITTEN_KEYS):
+        raise ProvisionError("invalid configuration")
+    config = parse_config({
+        "AUTH_MODE": raw["AUTH_MODE"],
+        "CLIENT_ORIGIN": raw["CLIENT_ORIGIN"],
+        "OIDC_REDIRECT_URI": raw["OIDC_CLOUDFLARE_REDIRECT_URI"],
+        "OIDC_ISSUER": raw["OIDC_CLOUDFLARE_ISSUER"],
+        "OIDC_CLIENT_ID": raw["OIDC_CLOUDFLARE_CLIENT_ID"],
+        "OIDC_CLIENT_SECRET": raw["OIDC_CLOUDFLARE_CLIENT_SECRET"],
+    })
+    if raw != config.values():
+        raise ProvisionError("invalid configuration")
+    return config
+
+
 def parse_config(raw: object) -> Config:
+    """Validates the secret input format (GitHub secret names) used by the workflow."""
     keys = {"AUTH_MODE", "CLIENT_ORIGIN", "OIDC_REDIRECT_URI", *SECRET_KEYS}
     if not isinstance(raw, dict) or set(raw) != keys:
         raise ProvisionError("invalid configuration")
@@ -141,7 +165,7 @@ def parse_payload(payload: bytes) -> Config | StravaConfig:
         raw: object = json.loads(payload, object_pairs_hook=json_object)
         if isinstance(raw, dict) and "STRAVA_MODE" in raw:
             return parse_strava(raw)
-        return parse_config(raw)
+        return parse_written(raw)
     except (ValueError, UnicodeError, RecursionError):
         raise ProvisionError("invalid configuration") from None
 
