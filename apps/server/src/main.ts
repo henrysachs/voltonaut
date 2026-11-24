@@ -7,6 +7,7 @@ import { AppModule } from "./app.module.js";
 import { setupHttp } from "./app.setup.js";
 import { parseServerConfig } from "./config.js";
 import { adminMain } from "./admin.js";
+import { checkConfigMain } from "./check-config.js";
 
 export async function bootstrap(): Promise<void> {
   const config = parseServerConfig(process.env, process.env["NODE_ENV"] ?? "development");
@@ -22,5 +23,8 @@ const args = process.argv.slice(2);
 
 if (args.length === 0) await bootstrap();
 else if (args[0] === "admin") adminMain(args.slice(1));
+else if (args[0] === "check-config") checkConfigMain(args.slice(1));
 else
-  throw new Error("usage: node dist/main.js [admin list [cursor] | admin grant|revoke <userId>]");
+  throw new Error(
+    "usage: node dist/main.js [admin list [cursor] | admin grant|revoke <userId> | check-config]",
+  );

@@ -22,12 +22,12 @@ from urllib.parse import urlsplit
 TARGET = Path("/srv/voltonaut/deploy.env")
 MAX_PAYLOAD_BYTES = 1024 * 1024
 CLIENT_ORIGIN = "https://voltonaut.stammkneipe.dev"
-# The server reads a provider list (ADR-025). Provisioning installs exactly the Cloudflare Access
+# The server reads a provider list (ADR-026). Provisioning installs exactly the Cloudflare Access
 # provider. SECRET_KEYS stay the names of the GitHub secrets that the workflow passes in.
 PROVIDER_ID = "cloudflare"
 REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback"
 SECRET_KEYS = ("OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET")
-# Format written before ADR-025; only `migrate` still reads it.
+# Format written before ADR-026; only `migrate` still reads it.
 LEGACY_REDIRECT_URI = "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback"
 LEGACY_KEYS = ("AUTH_MODE", "CLIENT_ORIGIN", "OIDC_REDIRECT_URI", *SECRET_KEYS)
 WRITTEN_KEYS = ("AUTH_MODE", "CLIENT_ORIGIN", "OIDC_PROVIDERS", "OIDC_CLOUDFLARE_REDIRECT_URI",
@@ -334,7 +334,7 @@ def write_config(path: Path, config: EnvironmentValues) -> Result:
 def migrate_legacy(path: Path) -> Result:
     """Rewrites a provisioned single-set deploy.env into the provider-list format.
 
-    Only the exact file this provisioner wrote before ADR-025 is accepted. The values stay the
+    Only the exact file this provisioner wrote before ADR-026 is accepted. The values stay the
     same; only the redirect URI moves to the provider route. The previous file is kept as
     `<name>.legacy` (same owner and mode) and an existing backup is never replaced.
     """

@@ -1,4 +1,4 @@
-# ADR-025 – Konfigurierbare OIDC-Provider, Cloudflare Access ist einer davon
+# ADR-026 – Konfigurierbare OIDC-Provider, Cloudflare Access ist einer davon
 
 **Status:** Vorgeschlagen. Freigabe durch Henry ausstehend (ADR-013 wird erweitert). Spec: [E5-11](../specs/E5-11-multiple-oidc-providers.md). Issue: #46.
 
@@ -17,6 +17,6 @@
 
 ## Folgen
 
-- Deployment: `deploy/compose.yaml` reicht die Sätze `OIDC_CLOUDFLARE_*` und `OIDC_AUTHENTIK_*` durch. Weitere Provider brauchen dort einen Eintrag. Eine bestehende `/srv/voltonaut/deploy.env` mit dem alten Einzelsatz muss einmalig umgestellt werden (`provision_env.py migrate`, siehe `deploy/README.md`); bis dahin sperrt `deploy.sh` jeden Release, statt einen Server ohne gültige Auth-Konfiguration zu starten. `deploy/provision_env.py` liest weiter die bisherigen Secret-Namen und schreibt das neue Format mit genau dem Provider `cloudflare`; der geschützte Workflow bleibt unverändert.
+- Deployment: `deploy/compose.yaml` reicht die Sätze `OIDC_CLOUDFLARE_*` und `OIDC_AUTHENTIK_*` durch. Weitere Provider brauchen dort einen Eintrag. Eine bestehende `/srv/voltonaut/deploy.env` mit dem alten Einzelsatz muss einmalig umgestellt werden (`provision_env.py migrate`, siehe `deploy/README.md`); bis dahin sperrt `deploy.sh` jeden Release. Weil der neue Server die alten Variablen und der alte Server die neuen nicht lesen kann, validiert `deploy.sh` die Konfiguration mit dem neuen Image (`node dist/main.js check-config`) vor dem Containerwechsel und startet bei Rückrollung oder Wiederherstellung den Ziel-Release mit seiner gespeicherten `compose.yaml`/`deploy.env` (`deploy.sh snapshot` sichert die laufende Alt-Konfiguration vor der Umstellung). `deploy/provision_env.py` liest weiter die bisherigen Secret-Namen und schreibt das neue Format mit genau dem Provider `cloudflare`; der geschützte Workflow bleibt unverändert.
 - Abwägung: `requireEmailVerified` ist pro Provider abschaltbar, Standard ist an. Abschalten ist nur für Provider vertretbar, deren Betreiber E-Mails selbst prüft.
 - Offen (eigene Aufträge): Identitäten verknüpfen (Besitznachweis, ADR-013), Gruppen/Rollen aus Claims, RP-Initiated Logout.

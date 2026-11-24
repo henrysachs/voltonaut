@@ -246,7 +246,7 @@ class ValidationTests(unittest.TestCase):
 
 
 def legacy_values(secret: str = "synthetic-only") -> dict[str, str]:
-    """The exact deploy.env this provisioner wrote before ADR-025."""
+    """The exact deploy.env this provisioner wrote before ADR-026."""
     return {**secret_input(secret), "OIDC_REDIRECT_URI": provision.LEGACY_REDIRECT_URI}
 
 

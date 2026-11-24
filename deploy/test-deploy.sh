@@ -30,7 +30,10 @@ if [ "$1 $2" = 'image inspect' ]; then
 fi
 [ "$1" = compose ]; shift
 options=()
-while [ "$1" != config ] && [ "$1" != up ] && [ "$1" != stop ] && [ "$1" != pull ] && [ "$1" != ps ]; do
+env_file=''
+while [ "$1" != config ] && [ "$1" != up ] && [ "$1" != stop ] && [ "$1" != pull ] && [ "$1" != ps ] \
+  && [ "$1" != run ]; do
+  if [ "$1" = --env-file ]; then env_file="$2"; fi
   options+=("$1"); shift
 done
 if [ "$1" = config ]; then
@@ -41,7 +44,12 @@ fi
 case "$1" in
   up)
     printf '%s' "$VOLTONAUT_TAG" >"$TEST_ROOT/active"
+    cp "$env_file" "$TEST_ROOT/active-env"
     [ "${FAIL_UP_TAG:-}" != "$VOLTONAUT_TAG" ]
+    ;;
+  run)
+    [ "$*" = 'run --rm --no-deps -T --label traefik.enable=false server node dist/main.js check-config' ]
+    [ "${INVALID_CONFIG_TAG:-}" != "$VOLTONAUT_TAG" ]
     ;;
   stop) rm -f "$TEST_ROOT/active" ;;
   pull) [ "${OFFLINE_REGISTRY:-false}" != true ] ;;
@@ -52,16 +60,26 @@ cat >"$temporary/bin/curl" <<'COMMAND'
 set -eu
 [ -f "$TEST_ROOT/active" ]
 [ "$(cat "$TEST_ROOT/active")" != "${UNHEALTHY_TAG:-}" ]
+# Optional model of ADR-026: the pre-ADR release only starts with the single OIDC_* set,
+# every later release only with OIDC_PROVIDERS.
+if [ -n "${LEGACY_RELEASE:-}" ]; then
+  if [ "$(cat "$TEST_ROOT/active")" = "$LEGACY_RELEASE" ]; then
+    grep -q '^OIDC_ISSUER=' "$TEST_ROOT/active-env"
+  else
+    grep -q '^OIDC_PROVIDERS=' "$TEST_ROOT/active-env"
+  fi
+fi
 COMMAND
 printf '#!/usr/bin/env bash\nexit 0\n' >"$temporary/bin/sleep"
 chmod +x "$temporary/bin/"*
 
 reset_state() {
   rm -rf "$VOLTONAUT_STATE_DIR"
-  rm -f "$temporary/active"
+  rm -f "$temporary/active" "$temporary/active-env"
   : >"$temporary/commands"
   cp "$temporary/base.env" "$VOLTONAUT_ENV_FILE"
   unset MISSING_IMAGE UNHEALTHY_TAG FAIL_UP_TAG LOCAL_IMAGE OFFLINE_REGISTRY VOLTONAUT_IMAGE VOLTONAUT_BACKUP_FILE
+  unset INVALID_CONFIG_TAG LEGACY_RELEASE
 }
 
 base_without_backup() {
@@ -131,6 +149,78 @@ legacy_oidc_config_blocks_release() {
   bash "$DEPLOY_SCRIPT" deploy provider-list >"$temporary/output"
   expect_tag current provider-list
   echo 'Legacy single-set OIDC configuration is refused before any release step.'
+}
+
+legacy_release_env() {
+  oidc_env OIDC_ISSUER=https://login.example.invalid/oidc OIDC_CLIENT_ID=synthetic-client \
+    OIDC_CLIENT_SECRET=synthetic-secret \
+    OIDC_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/callback
+}
+
+provider_release_env() {
+  oidc_env 'OIDC_PROVIDERS="cloudflare"' OIDC_CLOUDFLARE_ISSUER=https://login.example.invalid/oidc \
+    OIDC_CLOUDFLARE_CLIENT_ID=synthetic-client OIDC_CLOUDFLARE_CLIENT_SECRET=synthetic-secret \
+    OIDC_CLOUDFLARE_REDIRECT_URI=https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback
+}
+
+expect_active() {
+  test "$(cat "$temporary/active")" = "$1"
+  grep -q "^$2=" "$temporary/active-env"
+}
+
+adr025_transition_keeps_a_working_rollback() {
+  local snapshots="$VOLTONAUT_STATE_DIR/config"
+  reset_state
+  export LEGACY_RELEASE=legacy
+  # A release started by the previous deploy.sh, still running with the single OIDC_* set.
+  legacy_release_env
+  mkdir -p "$VOLTONAUT_STATE_DIR"
+  printf legacy >"$VOLTONAUT_STATE_DIR/current-tag"
+  printf legacy >"$temporary/active"
+  cp "$VOLTONAUT_ENV_FILE" "$temporary/active-env"
+  bash "$DEPLOY_SCRIPT" snapshot >"$temporary/output"
+  test "$(stat -c %a "$snapshots/legacy")" = 700
+  test "$(stat -c %a "$snapshots/legacy/deploy.env")" = 600
+  test "$(stat -c %a "$snapshots/legacy/compose.yaml")" = 600
+  provider_release_env
+
+  export INVALID_CONFIG_TAG=new
+  expect_failure deploy new
+  grep -q 'rejected its configuration before the switch' "$temporary/output"
+  if grep -Eq '^new\|.* up ' "$temporary/commands"; then
+    echo 'a rejected configuration must not replace the running release' >&2
+    return 1
+  fi
+  expect_active legacy OIDC_ISSUER
+  expect_tag current legacy
+  unset INVALID_CONFIG_TAG
+
+  export UNHEALTHY_TAG=new
+  expect_failure deploy new
+  if grep -q 'recovery failed' "$temporary/output"; then
+    echo 'the previous release must recover with its own saved configuration' >&2
+    return 1
+  fi
+  expect_active legacy OIDC_ISSUER
+  expect_tag current legacy
+  unset UNHEALTHY_TAG
+
+  bash "$DEPLOY_SCRIPT" deploy new >"$temporary/output"
+  expect_active new OIDC_PROVIDERS
+  expect_tag current new
+  expect_tag previous legacy
+  bash "$DEPLOY_SCRIPT" rollback >"$temporary/output"
+  expect_active legacy OIDC_ISSUER
+  expect_tag current legacy
+  grep -q '^OIDC_PROVIDERS=' "$VOLTONAUT_ENV_FILE"
+  bash "$DEPLOY_SCRIPT" rollback >"$temporary/output"
+  expect_active new OIDC_PROVIDERS
+  expect_tag current new
+
+  bash "$DEPLOY_SCRIPT" deploy third >"$temporary/output"
+  test "$(ls "$snapshots" | tr '\n' ' ')" = 'new third '
+  reset_state
+  echo 'ADR-026 transition validates before the switch and recovers the previous release with its configuration.'
 }
 
 expect_failure() {
@@ -250,4 +340,5 @@ if grep -Eq 'remove-orphans| down|prune|volume rm' "$temporary/commands"; then
 fi
 selects_local_image
 legacy_oidc_config_blocks_release
+adr025_transition_keeps_a_working_rollback
 echo 'Release command tests passed. Pull tag, health commit, recovery, rollback, preserved data.'
