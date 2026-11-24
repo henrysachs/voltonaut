@@ -95,6 +95,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 
 [E4-07](specs/E4-07-accessible-ride-menus.md) macht Fahrtmenü und Gerätefenster per Außenklick oder Außentap schließbar und vereinfacht die Gerätebedienung. Der begrenzte Umbau ist regulär und unabhängig am gebauten Artefakt softwaregeprüft; die Bereitstellung steht noch aus.
 
+[E4-08](specs/E4-08-starter-blender-assets.md) liefert einen eigenen Blender-Roadbike, eine Kiefer und ein Felscluster samt Vorschauen, Manifest und Lizenznachweis. Export, Blender-Reimport, Asset-Validator, vollständiges Gate, Build und unabhängiges Review sind softwaregeprüft. Laufzeitintegration, Fahreranimation, Meshopt/KTX2 und Performance-Nachweis bleiben offen; die vollständigen E4-Checkboxen unten bleiben deshalb unverändert.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen
