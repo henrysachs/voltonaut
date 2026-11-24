@@ -1,4 +1,5 @@
-import type { RideSnapshot } from "@voltonaut/engine";
+import type { FunSnapshot, RideSnapshot } from "@voltonaut/engine";
+import type { FunItemId } from "@voltonaut/shared";
 import { gearLabel } from "@voltonaut/rules";
 import type { SegmentHudRow, SegmentHudView, SegmentProgress } from "../game/segments.js";
 
@@ -15,6 +16,8 @@ export interface RideHudModel {
   readonly paused: boolean;
   readonly dataAgeS: number;
   readonly connected: boolean;
+  /** Fun mode item slot (spec E9-01); undefined in normal mode. */
+  readonly fun: FunSnapshot | undefined;
 }
 
 /** Builds the HUD model from a snapshot plus the device connection state. */
@@ -31,6 +34,7 @@ export function rideHudModelFrom(snapshot: RideSnapshot, connected: boolean): Ri
     paused: snapshot.paused,
     dataAgeS: snapshot.dataAgeS,
     connected,
+    fun: snapshot.fun,
   };
 }
 
@@ -45,6 +49,7 @@ export interface HudText {
   readonly elevationGain: string;
   readonly energy: string;
   readonly warning: string;
+  readonly item: string;
 }
 
 /** Sink for one HUD value. DOM adapters write the text into the real element. */
@@ -65,6 +70,7 @@ export interface HudTargets {
   readonly elevationGain: TextTarget;
   readonly energy: TextTarget;
   readonly warning: TextTarget;
+  readonly item: TextTarget;
 }
 
 const INVALID_SEGMENT_LABELS: Readonly<
@@ -113,6 +119,25 @@ export function renderSegmentHud(
   }
 }
 
+const FUN_ITEM_NAMES: Readonly<Record<FunItemId, string>> = {
+  aeroBoost: "Aero-Boost",
+  featherweight: "Leichtgewicht",
+  tailwind: "Rückenwind",
+};
+
+/** Item slot text; empty (and hidden by CSS) in normal mode. */
+function itemText(fun: FunSnapshot | undefined): string {
+  if (fun === undefined) return "";
+
+  if (fun.activeItem !== undefined)
+    return `${FUN_ITEM_NAMES[fun.activeItem]} aktiv · ${Math.ceil(fun.activeRemainingS)} s`;
+
+  if (fun.heldItem !== undefined)
+    return `${FUN_ITEM_NAMES[fun.heldItem]} bereit · P oder Power-up-Taste`;
+
+  return "Spaß-Modus · nächste Item-Box sammeln";
+}
+
 /** Data-loss warning threshold from docs/03 section 1 (> 3 s without data). */
 export const DATA_AGE_WARNING_S = 3;
 
@@ -134,6 +159,7 @@ export function hudText(model: RideHudModel, connectedLabel = "Sim connected"): 
     elevationGain: `${Math.round(model.elevationGainM)} m`,
     energy: `${Math.round(model.energyKj)} kJ`,
     warning: model.dataAgeS > DATA_AGE_WARNING_S ? "No trainer data" : "",
+    item: itemText(model.fun),
   };
 }
 
@@ -153,4 +179,5 @@ export function renderHud(
   targets.elevationGain.write(text.elevationGain);
   targets.energy.write(text.energy);
   targets.warning.write(text.warning);
+  targets.item.write(text.item);
 }
