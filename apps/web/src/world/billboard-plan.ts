@@ -21,6 +21,9 @@ export const BILLBOARD_VARIANTS = 3;
 export const BILLBOARD_WIDTH_M = 4;
 export const BILLBOARD_HEIGHT_M = 2;
 
+/** Height of the board centre above the ground point; the top edge sits at 4.1 m with frame. */
+export const BILLBOARD_CENTER_Y_M = 3;
+
 /** How far the board turns from facing straight down the road towards the rider's lane. */
 const TOE_IN_RAD = Math.PI / 6;
 
@@ -33,6 +36,14 @@ const MAX_SHIFT_M = 40;
 const SHIFT_STEP_M = 5;
 const WAYMARK_CLEARANCE_M = 40;
 const LAKE_CLEARANCE = 1.3;
+
+/**
+ * Boards follow the terrain only within this band around the road height, so a
+ * board on a bank never rises into the overview camera's line of sight; posts
+ * reach 1 m into the ground for dips and sink deeper into higher banks.
+ */
+const MAX_LIFT_M = 0.5;
+const MAX_DROP_M = 1;
 
 export type BillboardSide = -1 | 1;
 
@@ -171,6 +182,13 @@ function shiftedSlot(plan: Plan, slot: Slot): Slot | SkippedSlot {
   return { ...slot, reason };
 }
 
+function groundPosition(plan: Plan, slot: Slot): WorldPos {
+  const ground = terrainPosition(plan, slot.distanceM, slot.side * BILLBOARD_LATERAL_M);
+  const roadY = plan.route.worldPos(slot.distanceM).y;
+
+  return { ...ground, y: roadY + Math.min(MAX_LIFT_M, Math.max(-MAX_DROP_M, ground.y - roadY)) };
+}
+
 function yawFor(route: EngineRoute, slot: Slot): number {
   const headingRad = route.headingRad(slot.distanceM);
   const forward = { x: Math.cos(headingRad), z: Math.sin(headingRad) };
@@ -203,7 +221,7 @@ export function planBillboards(plan: Plan): BillboardPlan {
       routeDistanceM: slot.distanceM,
       side: slot.side,
       variant: index % BILLBOARD_VARIANTS,
-      position: terrainPosition(plan, slot.distanceM, slot.side * BILLBOARD_LATERAL_M),
+      position: groundPosition(plan, slot),
       yawRad: yawFor(plan.route, slot),
     }));
 

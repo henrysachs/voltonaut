@@ -2,14 +2,13 @@ import * as THREE from "three";
 
 import { createBillboardMotifTexture } from "./billboard-motif.js";
 import {
+  BILLBOARD_CENTER_Y_M as BOARD_CENTER_Y_M,
   BILLBOARD_HEIGHT_M,
   BILLBOARD_VARIANTS,
   BILLBOARD_WIDTH_M,
   type Billboard,
 } from "./billboard-plan.js";
 
-/** Height of the board centre above the ground point. */
-const BOARD_CENTER_Y_M = 3;
 const FRAME_DEPTH_M = 0.12;
 const FRAME_MARGIN_M = 0.1;
 const POST_OFFSET_M = 1.5;
