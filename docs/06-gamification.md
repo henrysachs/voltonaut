@@ -2,6 +2,16 @@
 
 Ab Tag eins Teil der Architektur. Clientseitig hört `game/` auf `RideEvent`s und zeigt **vorläufige** Werte live an; **verbindlich** (autoritativ) sind XP, Level, Volts-Kontostand und Inventar auf dem Server (ADR-005). `game/` schreibt nie in `RideState`.
 
+## Fortlaufender Fortschritt
+
+Henry präzisiert am 24.11.2026 den Zielzustand: Gewöhnliches Fahren verdient Fortschritt während der Fahrt. Das gilt unabhängig von manuell gestarteten oder beendeten Aufnahmefenstern. Eine animierte Vorschau mit ausschließlicher Vergabe beim Fahrtende erfüllt diesen Auftrag nicht.
+
+Der Client zeigt die laufende Entwicklung. Der Server prüft und bestätigt aufeinanderfolgende Fahrtabschnitte. Bereits bestätigter Fortschritt bleibt bei Reload oder Abbruch erhalten. Offlinewerte bleiben bis zur Prüfung als unbestätigt erkennbar. Wiederholungen und überlappende Abschnitte dürfen keine Doppelvergütung auslösen. Kontowechsel dürfen keine Abschnitte einem anderen Konto zuordnen.
+
+Die abschnittsweise Prüfung muss Bruchteile, die bestehenden Rundungsregeln und das gemeinsame Tageslimit erhalten. Sim-Fahrten erhalten keine Kontobelohnungen. Eine BLE-Selbstauskunft ist kein Hardwareattest. Numerische Fahrtfakten ersetzen keine Quellen- und Plausibilitätsprüfung.
+
+Dies ist der beauftragte Zielzustand, noch keine implementierte oder bereitgestellte Vergabe. E6-02 liefert weiterhin ausschließlich reine Zahlenangebote. Bestehende Aufnahmen und Strava-Zuordnungen werden nicht stillschweigend neu bewertet.
+
 ## Volts – die Ingame-Währung
 
 Volts sind Voltonauts Währung, vergleichbar mit Zwifts Ingame-Währung: man verdient sie durch Leistung auf dem Rad und gibt sie im Garage-Shop für Räder, Laufräder und Kleidung aus.

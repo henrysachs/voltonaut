@@ -91,6 +91,8 @@ Teilschritt [E4-03](specs/E4-03-lake-forest-world.md) ergänzt begrenztes Relief
 
 Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.md) und [E4-05](specs/E4-05-ingame-menu.md) trennen native Renderwartezeiten vom Fahrbetrieb und halten Welt und HUD neben einem Ingame-Menü sichtbar. Geräte, Profil, Aufnahmen und Konto bleiben bedienbar, ohne die Fahrt zu pausieren. Die gemeinsame Kombination mit FTMS-Steuerung ist softwaregeprüft; reale Hardware-FPS und die gemeinsame Probefahrt bleiben offen. Das vollständige Spiel-HUD ist damit nicht abgenommen.
 
+[E4-06](specs/E4-06-integrated-ride-cockpit.md) überarbeitet diese Darstellung auf Henrys Wunsch zur bildschirmfüllenden Spielansicht mit überlagerten Instrumenten. Der begrenzte Umbau ist regulär und unabhängig am gebauten Artefakt softwaregeprüft; die Bereitstellung steht noch aus. Fortlaufende Belohnungsbuchungen sind davon getrennt und dürfen nicht durch erfundene HUD-Kontostände ersetzt werden.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen
@@ -122,6 +124,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 ## E6 – Gamification & Volts-Ökonomie (→ MVP)
 
 **Ziel:** Jede Fahrt bringt verbindlichen Fortschritt – mit Spielgefühl.
+
+Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnlicher Fahrt, unabhängig vom Aufnahme-Knopf. Der Server bestätigt Fahrtabschnitte; bestätigte Gewinne bleiben bei Abbruch erhalten. Eine laufende Vorschau allein erfüllt diesen Auftrag nicht. Die verbindliche Vergabe bleibt noch zu implementieren.
 
 - [ ] `progression/`: XP/Level serverseitig aus akzeptierten Fahrten; Level-Up-Effekt im Client
   - [x] [E6-02](specs/E6-02-base-reward-quotes.md): reine Basisangebote für XP, Level und Volts mit explizitem Tagesrestbudget softwaregeprüft. Keine Vergabe oder Kontobuchung.

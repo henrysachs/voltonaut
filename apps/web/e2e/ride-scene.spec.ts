@@ -48,7 +48,8 @@ test("draws the ride, follows worker movement, switches camera and resizes", asy
   await page.keyboard.press("c");
   await expect(debug).toHaveAttribute("data-camera", "chase");
   await page.setViewportSize({ width: 800, height: 900 });
-  await expect.poll(() => canvas.getAttribute("width")).toBe("760");
+  await expect.poll(() => canvas.getAttribute("width")).toBe("800");
+  await expect.poll(() => canvas.getAttribute("height")).toBe("900");
   await expect.poll(() => diagnostic(debug, "calls")).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
