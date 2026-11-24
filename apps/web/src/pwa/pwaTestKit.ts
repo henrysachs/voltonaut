@@ -72,7 +72,7 @@ export function serveDist(dist: string) {
   };
 }
 
-export async function buildProduction(): Promise<string> {
+export async function buildProduction(publicDir?: string): Promise<string> {
   const dist = join(await mkdtemp(join(tmpdir(), "voltonaut-pwa-")), "dist");
   const nodeEnv = process.env["NODE_ENV"];
 
@@ -81,7 +81,11 @@ export async function buildProduction(): Promise<string> {
   process.env["NODE_ENV"] = "production";
 
   try {
-    await build({ root: resolve(import.meta.dirname, "../.."), build: { outDir: dist } });
+    await build({
+      root: resolve(import.meta.dirname, "../.."),
+      publicDir: publicDir ?? resolve(import.meta.dirname, "../../public"),
+      build: { outDir: dist },
+    });
   } finally {
     process.env["NODE_ENV"] = nodeEnv ?? "test";
   }
