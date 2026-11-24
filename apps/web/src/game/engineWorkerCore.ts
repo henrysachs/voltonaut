@@ -1,31 +1,26 @@
-import {
-  RiderProfileSchema,
-  type DeviceEvent,
-  type NativeTickFacts,
-  type RideEvent,
-  type RideProgressCheckpoint,
-  type RiderProfile,
-  type TrainerCommand,
+import type {
+  DeviceEvent,
+  NativeTickFacts,
+  RideEvent,
+  RideMode,
+  RideProgressCheckpoint,
+  TrainerCommand,
 } from "@voltonaut/shared";
-import { createEngine, createRoute, TEST_ROUTES, type Engine } from "@voltonaut/engine";
+import type { Engine } from "@voltonaut/engine";
 import {
-  createEngineWorkerProgress,
-  projectEngineWorkerProgress,
-  type EngineWorkerProgress,
-} from "./engineWorkerProgress.js";
-import { createRideRecorder, type RideRecorder } from "./rideRecorder.js";
+  FUN_MODE_RECORDING_REFUSAL,
+  initializeActor,
+  setActorMode,
+  type Actor,
+  type ActorInit,
+} from "./engineWorkerActor.js";
+import { projectEngineWorkerProgress } from "./engineWorkerProgress.js";
 import type { CaptureCommand, CaptureResult, CaptureView } from "./rideCaptureProtocol.js";
 import { isNewCaptureRequest } from "./rideCaptureProtocol.js";
 
 export type EngineWorkerRequest =
-  | {
-      readonly type: "engine.init";
-      readonly actorId: string;
-      readonly source: "sim" | "ble";
-      readonly routeId: string;
-      readonly profile: RiderProfile;
-      readonly clockScale: number;
-    }
+  | ({ readonly type: "engine.init" } & ActorInit)
+  | { readonly type: "engine.setMode"; readonly actorId: string; readonly mode: RideMode }
   | { readonly type: "engine.ingest"; readonly actorId: string; readonly event: DeviceEvent }
   | {
       readonly type: "recording.command";
@@ -67,60 +62,6 @@ export type CancelInterval = (intervalId: number) => void;
 
 export const WAKE_INTERVAL_MS = 50;
 
-interface Actor {
-  readonly actorId: string;
-  readonly engine: Engine;
-  readonly recorder: RideRecorder;
-  readonly progress: EngineWorkerProgress;
-  readonly clockScale: number;
-  lastWakeMs: number | undefined;
-  lastRequestId: number;
-  intervalId: number | undefined;
-}
-
-function initializeActor(
-  message: Extract<EngineWorkerRequest, { readonly type: "engine.init" }>,
-  initializedWorkerMs: number,
-  timeOriginMs: number,
-  newId: () => string,
-): Actor {
-  const routeData = TEST_ROUTES[message.routeId];
-
-  if (routeData === undefined) throw new Error(`unknown route ${message.routeId}`);
-
-  if (!Number.isFinite(message.clockScale) || message.clockScale < 1 || message.clockScale > 20)
-    throw new Error("Invalid engine clock scale");
-  const profile = RiderProfileSchema.parse(message.profile);
-  const engine = createEngine({ route: createRoute(routeData), profile });
-
-  const progress = createEngineWorkerProgress({ ...message, profile, newId });
-
-  const recorder = createRideRecorder({
-    initializedAt: new Date(timeOriginMs + initializedWorkerMs).toISOString(),
-    initialization: {
-      physicsRevision: "engine-v1",
-      routeId: message.routeId,
-      routeRevision: "1",
-      profile,
-      source: message.source,
-      clockScale: message.clockScale,
-      workerTimeOriginMs: timeOriginMs,
-      initializedWorkerMs,
-    },
-  });
-
-  return {
-    actorId: message.actorId,
-    engine,
-    recorder,
-    progress,
-    clockScale: message.clockScale,
-    lastWakeMs: undefined,
-    lastRequestId: 0,
-    intervalId: undefined,
-  };
-}
-
 class WorkerDriver {
   private actor: Actor | undefined;
 
@@ -143,14 +84,18 @@ class WorkerDriver {
     const events = actor.engine.drainEvents();
     const commands = actor.engine.drainCommands();
 
-    const progress = projectEngineWorkerProgress(actor.progress, {
-      startedAtMs,
-      endedAtMs: atMs,
-      facts,
-      paused: snapshot.paused,
-      dataAgeS: snapshot.dataAgeS,
-      clockSkipped: events.some((event) => event.type === "ride.clockSkipped"),
-    });
+    // Fun mode yields no progress checkpoints (spec E9-01 AK8).
+    const progress =
+      actor.mode === "fun"
+        ? undefined
+        : projectEngineWorkerProgress(actor.progress, {
+            startedAtMs,
+            endedAtMs: atMs,
+            facts,
+            paused: snapshot.paused,
+            dataAgeS: snapshot.dataAgeS,
+            clockSkipped: events.some((event) => event.type === "ride.clockSkipped"),
+          });
 
     actor.recorder.outputs(events, commands);
     actor.recorder.sample(atMs, snapshot);
@@ -242,18 +187,16 @@ class WorkerDriver {
       return;
     }
 
+    if (message.type === "engine.setMode") {
+      setActorMode(actor, message.mode, this.nowMs());
+
+      return;
+    }
+
     if (message.type === "recording.command") {
       const atMs = this.nowMs();
 
-      const result: CaptureResult =
-        isNewCaptureRequest(message.requestId, actor.lastRequestId) &&
-        (actor.intervalId !== undefined || message.command.kind !== "start")
-          ? actor.recorder.command(message.command, atMs, actor.engine.snapshot())
-          : {
-              kind: "failed",
-              message: "Veralteter oder doppelter Aufnahmebefehl.",
-              view: actor.recorder.view(atMs),
-            };
+      const result: CaptureResult = this.captureResult(actor, message, atMs);
 
       if (Number.isSafeInteger(message.requestId))
         actor.lastRequestId = Math.max(actor.lastRequestId, message.requestId);
@@ -271,6 +214,29 @@ class WorkerDriver {
     }
 
     this.dispose();
+  }
+
+  private captureResult(
+    actor: Readonly<Actor>,
+    message: Extract<EngineWorkerRequest, { readonly type: "recording.command" }>,
+    atMs: number,
+  ): CaptureResult {
+    const refusal = (text: string): CaptureResult => ({
+      kind: "failed",
+      message: text,
+      view: actor.recorder.view(atMs),
+    });
+
+    if (!isNewCaptureRequest(message.requestId, actor.lastRequestId))
+      return refusal("Veralteter oder doppelter Aufnahmebefehl.");
+
+    if (message.command.kind === "start" && actor.intervalId === undefined)
+      return refusal("Veralteter oder doppelter Aufnahmebefehl.");
+
+    if (message.command.kind === "start" && actor.mode === "fun")
+      return refusal(FUN_MODE_RECORDING_REFUSAL);
+
+    return actor.recorder.command(message.command, atMs, actor.engine.snapshot());
   }
 
   private dispose(): void {
