@@ -16,9 +16,12 @@ export function nextRandom(state: number): RandomStep {
   return { value: ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296, state: nextState };
 }
 
-/** Uniform pick over FUN_ITEM_IDS for a value in [0, 1). */
+/** Uniform pick over FUN_ITEM_IDS for a value in [0, 1); values outside clamp to the ends. */
 export function pickItem(value: number): FunItemId {
-  const index = Math.min(FUN_ITEM_IDS.length - 1, Math.floor(value * FUN_ITEM_IDS.length));
+  const index = Math.max(
+    0,
+    Math.min(FUN_ITEM_IDS.length - 1, Math.floor(value * FUN_ITEM_IDS.length)),
+  );
 
   return FUN_ITEM_IDS[index] ?? "aeroBoost";
 }

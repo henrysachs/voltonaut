@@ -1,9 +1,11 @@
 import type {
   DeviceEvent,
+  FunItemId,
   Meters,
   Mps,
   NativeTickFacts,
   RideEvent,
+  RideMode,
   RiderProfile,
   Seconds,
   TickInputs,
@@ -12,6 +14,7 @@ import type {
 
 import type { EngineRoute } from "../elevation/route.js";
 import { GEAR_PRESETS, physicalRatioFor, START_GEAR_INDEX } from "../gears/presets.js";
+import { planItemBoxes } from "../fun/itemBoxes.js";
 import { DEFAULT_TRAINER_MASS_KG } from "../trainer/gradeMap.js";
 import { riderParamsFromProfile } from "../physics/params.js";
 import { planCatchup, TICK_S } from "./catchup.js";
@@ -20,6 +23,16 @@ import { tick } from "./tick.js";
 import { createRideState, type RideState } from "./state.js";
 
 export type { NativeTickFacts } from "@voltonaut/shared";
+
+/** Default item seed (spec E9-01 AK3). */
+export const DEFAULT_FUN_SEED = 42;
+
+/** Fun mode view (spec E9-01); undefined in normal mode. */
+export interface FunSnapshot {
+  readonly heldItem: FunItemId | undefined;
+  readonly activeItem: FunItemId | undefined;
+  readonly activeRemainingS: Seconds;
+}
 
 /** Public read-only view of the ride; frozen at every snapshot() call. */
 export interface RideSnapshot {
@@ -40,6 +53,7 @@ export interface RideSnapshot {
   readonly trainerMode: "simulation";
   readonly worldPos: { readonly x: number; readonly y: number; readonly z: number };
   readonly headingRad: number;
+  readonly fun: FunSnapshot | undefined;
 }
 
 export interface CreateEngineOptions {
@@ -51,6 +65,10 @@ export interface CreateEngineOptions {
   readonly initialRoutePosM?: number;
   /** Trainer-internal mass assumption (mT); default 83 kg, calibrated in E2. */
   readonly trainerMassKg?: number;
+  /** Initial ride mode; default "normal". */
+  readonly mode?: RideMode;
+  /** Seed for item box contents; default 42. */
+  readonly seed?: number;
 }
 
 export interface Engine {
@@ -66,6 +84,8 @@ export interface Engine {
   readonly snapshot: () => RideSnapshot;
   readonly drainEvents: () => readonly RideEvent[];
   readonly drainCommands: () => readonly TrainerCommand[];
+  /** Mode intent; takes effect on the next tick. */
+  readonly setMode: (mode: RideMode) => void;
 }
 
 interface BufferedInputs {
@@ -74,6 +94,8 @@ interface BufferedInputs {
   hrBpm: number | undefined;
   shifts: number;
   trainerDataFresh: boolean;
+  useItem: boolean;
+  mode: RideMode;
 }
 
 function frozenWorldPos(route: EngineRoute, routePosM: Meters): RideSnapshot["worldPos"] {
@@ -94,6 +116,7 @@ function contextFrom(options: CreateEngineOptions): EngineContext {
       options.profile.bike.cogTeeth,
     ),
     trainerMassKg: options.trainerMassKg ?? DEFAULT_TRAINER_MASS_KG,
+    itemBoxesM: planItemBoxes(options.route),
   };
 }
 
@@ -110,6 +133,8 @@ class RideEngine implements Engine {
     hrBpm: undefined,
     shifts: 0,
     trainerDataFresh: false,
+    useItem: false,
+    mode: "normal",
   };
 
   constructor(options: CreateEngineOptions) {
@@ -122,7 +147,10 @@ class RideEngine implements Engine {
       gearRatio: this.ctx.gearRatios[gearIndex] ?? this.ctx.gearRatios[0] ?? 1,
       speedMps: options.initialSpeedMps ?? 0,
       routePosM: options.initialRoutePosM ?? 0,
+      mode: options.mode ?? "normal",
+      seed: options.seed ?? DEFAULT_FUN_SEED,
     });
+    this.buffered = { ...this.buffered, mode: this.state.mode };
   }
 
   readonly ingest = (event: DeviceEvent): void => {
@@ -148,6 +176,8 @@ class RideEngine implements Engine {
         this.buffered = { ...this.buffered, shifts: this.buffered.shifts + 1 };
       } else if (event.button === "shiftDown") {
         this.buffered = { ...this.buffered, shifts: this.buffered.shifts - 1 };
+      } else if (event.button === "powerUp") {
+        this.buffered = { ...this.buffered, useItem: true };
       }
     }
   };
@@ -160,11 +190,11 @@ class RideEngine implements Engine {
       hrBpm: this.buffered.hrBpm,
       shifts: this.buffered.shifts,
       trainerDataFresh: this.buffered.trainerDataFresh,
-      useItem: false,
-      mode: "normal",
+      useItem: this.buffered.useItem,
+      mode: this.buffered.mode,
     };
 
-    this.buffered = { ...this.buffered, shifts: 0, trainerDataFresh: false };
+    this.buffered = { ...this.buffered, shifts: 0, trainerDataFresh: false, useItem: false };
 
     return inputs;
   }
@@ -227,6 +257,14 @@ class RideEngine implements Engine {
       trainerMode: "simulation",
       worldPos: frozenWorldPos(this.ctx.route, state.routePosM),
       headingRad: this.ctx.route.headingRad(state.routePosM),
+      fun:
+        state.mode === "fun"
+          ? Object.freeze({
+              heldItem: state.heldItem,
+              activeItem: state.activeItem,
+              activeRemainingS: state.activeRemainingS,
+            })
+          : undefined,
     });
   };
 
@@ -236,6 +274,10 @@ class RideEngine implements Engine {
     this.events = [];
 
     return drained;
+  };
+
+  readonly setMode = (mode: RideMode): void => {
+    this.buffered = { ...this.buffered, mode };
   };
 
   readonly drainCommands = (): readonly TrainerCommand[] => {

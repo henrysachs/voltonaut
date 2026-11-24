@@ -37,6 +37,21 @@ it("stays in [0, 1) and spreads evenly over 10 000 draws", () => {
   expect(mean).toBeLessThan(0.52);
 });
 
+it("100 seeded picks repeat exactly and use every item", () => {
+  const picks = draws(42, 100).map((value) => pickItem(value));
+
+  expect(draws(42, 100).map((value) => pickItem(value))).toEqual(picks);
+  expect(new Set(picks)).toEqual(new Set(["aeroBoost", "featherweight", "tailwind"]));
+});
+
+it("pickItem clamps values outside [0, 1) to the first and last item", () => {
+  expect([-0.5, 1, 1.5].map((value) => pickItem(value))).toEqual([
+    "aeroBoost",
+    "tailwind",
+    "tailwind",
+  ]);
+});
+
 it("pickItem splits [0, 1) into equal thirds in FUN_ITEM_IDS order", () => {
   expect([0, 0.3333, 0.3334, 0.6666, 0.6667, 0.9999].map((value) => pickItem(value))).toEqual([
     "aeroBoost",

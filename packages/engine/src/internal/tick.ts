@@ -8,11 +8,12 @@ import type {
 } from "@voltonaut/shared";
 
 import type { EngineRoute } from "../elevation/route.js";
-import { advanceSpeedMps } from "../physics/integrate.js";
 import type { RiderParams } from "../physics/params.js";
 import { nextCommand as computeNextCommand } from "../trainer/commands.js";
 import type { RideState } from "./state.js";
 import { isStationary, rawValuesZeroed, shouldAutoPause, shouldResume } from "./autopause.js";
+import { afterAdvance, applyFunIntents, nextSpeedMps } from "./funTick.js";
+import { applySegments } from "./segments.js";
 import { elevationGainDeltaM, energyDeltaKj, routePositionM } from "./sums.js";
 
 /** Immutable per-ride context: route, frozen rider params, gear data, trainer mass. */
@@ -22,6 +23,8 @@ export interface EngineContext {
   readonly gearRatios: readonly number[];
   readonly physicalRatio: number;
   readonly trainerMassKg: number;
+  /** Item box positions; only used in fun mode (spec E9-01). */
+  readonly itemBoxesM: readonly Meters[];
 }
 
 interface TickContributions {
@@ -66,55 +69,6 @@ function emaAlpha(dtS: Seconds): number {
 
 function clampGearIndex(index: number, gearCount: number): number {
   return Math.min(gearCount - 1, Math.max(0, index));
-}
-
-function crossedBoundaryM(
-  previousM: Meters,
-  nextM: Meters,
-  boundaryM: Meters,
-  loop: boolean,
-): boolean {
-  if (!loop || nextM >= previousM) {
-    return boundaryM > previousM && boundaryM <= nextM;
-  }
-
-  // Wrapped tick: the rider passed (previousM, L] and [0, nextM].
-  return boundaryM > previousM || boundaryM <= nextM;
-}
-
-function applySegments(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RideState is the engine-owned mutable state; only packages/engine/src/internal mutates it (depcruise engine-internal-private).
-  state: RideState,
-  route: EngineRoute,
-  previousRoutePosM: Meters,
-  nextRoutePosM: Meters,
-  tS: Seconds,
-): readonly RideEvent[] {
-  const events: RideEvent[] = [];
-
-  for (const segment of route.segments) {
-    const crossedStart = crossedBoundaryM(
-      previousRoutePosM,
-      nextRoutePosM,
-      segment.startM,
-      route.loop,
-    );
-
-    const crossedEnd = crossedBoundaryM(previousRoutePosM, nextRoutePosM, segment.endM, route.loop);
-    const active = state.activeSegments.includes(segment.id);
-
-    if (crossedStart && !active) {
-      state.activeSegments.push(segment.id);
-      events.push({ type: "segment.entered", segmentId: segment.id, tS });
-    }
-
-    if (crossedEnd && state.activeSegments.includes(segment.id)) {
-      state.activeSegments = state.activeSegments.filter((id) => id !== segment.id);
-      events.push({ type: "segment.exited", segmentId: segment.id, tS });
-    }
-  }
-
-  return events;
 }
 
 /** Step 1: shift intents, gear clamped into [1, gearCount] (zero-based). */
@@ -180,14 +134,7 @@ function advanceRide(
 ): TickContributions {
   state.gradePct = ctx.route.profile.gradeAt(state.routePosM);
 
-  state.speedMps = advanceSpeedMps(
-    state.speedMps,
-    state.gradePct,
-    rawPowerW,
-    ctx.riderParams,
-    0,
-    dtS,
-  );
+  state.speedMps = nextSpeedMps(state, ctx.riderParams, rawPowerW, dtS);
 
   const previousRoutePosM = state.routePosM;
   const distanceM = state.speedMps * dtS;
@@ -245,6 +192,33 @@ function applyPause(
   return "running";
 }
 
+/** Stationary seconds feed the auto-pause rule. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- This internal writer owns the stationary accumulator on engine-owned state.
+function accumulateStationary(state: RideState, rawCadenceRpm: number, dtS: Seconds): void {
+  state.stationaryS = isStationary(state.speedMps, rawCadenceRpm) ? state.stationaryS + dtS : 0;
+}
+
+/** Rate-limited trainer command from the profile params; items never reach it (ADR-025). */
+function trainerCommandFor(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The command gate inside RideState is engine-owned mutable state; nextCommand advances it.
+  state: RideState,
+  ctx: EngineContext,
+  cadenceRpm: number,
+  immediate: boolean,
+): TrainerCommand | undefined {
+  return computeNextCommand({
+    gate: state.commandGate,
+    tickIndex: state.tickIndex,
+    immediate,
+    cadenceRpm,
+    routeGradePct: state.gradePct,
+    gearRatio: state.gearRatio,
+    physicalRatio: ctx.physicalRatio,
+    riderParams: ctx.riderParams,
+    trainerMassKg: ctx.trainerMassKg,
+  });
+}
+
 /**
  * One deterministic engine tick (docs/03 section 1). Order: shifts -> raw
  * readings + data age + display EMA -> auto-pause state machine -> grade ->
@@ -264,32 +238,35 @@ export function tick(
 
   const raw = applyMeasurements(state, inputs, dtS);
 
+  applyFunIntents(state, inputs, events);
+
   const pause = applyPause(state, raw);
 
   if (pause === "paused") {
     return { state, events, trainerCommand: undefined, facts: pausedFacts(raw) };
   }
 
+  const previousRoutePosM = state.routePosM;
   const contributions = advanceRide(state, ctx, raw.powerW, dtS, events);
+
+  afterAdvance(
+    state,
+    { positionsM: ctx.itemBoxesM, loop: ctx.route.loop },
+    previousRoutePosM,
+    dtS,
+    events,
+  );
+
   const facts = nativeFacts(raw, contributions);
 
-  if (isStationary(state.speedMps, raw.cadenceRpm)) {
-    state.stationaryS += dtS;
-  } else {
-    state.stationaryS = 0;
-  }
+  accumulateStationary(state, raw.cadenceRpm, dtS);
 
-  const trainerCommand = computeNextCommand({
-    gate: state.commandGate,
-    tickIndex: state.tickIndex,
-    immediate: gearChanged || pause === "resumed",
-    cadenceRpm: raw.cadenceRpm,
-    routeGradePct: state.gradePct,
-    gearRatio: state.gearRatio,
-    physicalRatio: ctx.physicalRatio,
-    riderParams: ctx.riderParams,
-    trainerMassKg: ctx.trainerMassKg,
-  });
+  const trainerCommand = trainerCommandFor(
+    state,
+    ctx,
+    raw.cadenceRpm,
+    gearChanged || pause === "resumed",
+  );
 
   state.tickIndex += 1;
 

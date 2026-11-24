@@ -23,7 +23,7 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Auf der Strecke l
 
 - [ ] AK1 – Ohne Spaß-Modus bleiben alle Golden-Läufe (`fixtures/rides/*.golden.json`) unverändert. Golden-Dateien werden nicht angepasst.
 - [ ] AK2 – Item-Boxen liegen deterministisch: die erste bei 300 m, dann alle 800 m. Eine Box innerhalb eines Sprint- oder KOM-Segments wandert an dessen Ende. Pro Runde stehen sie erneut bereit.
-- [ ] AK3 – Der Inhalt kommt aus einem Seed (Standard 42). Gleicher Seed, gleiche Itemfolge über 100 Boxen.
+- [ ] AK3 – Der Inhalt kommt aus einem Seed (Standard 42). Gleicher Seed, gleiche Itemfolge: in der Engine über zwei Runden (mindestens 20 Boxen), im Zufallsgenerator über 100 Ziehungen.
 - [ ] AK4 – Es gibt höchstens ein gehaltenes Item. Eine Box bei vollem Slot bleibt wirkungslos. Ein Doppeldruck vor dem nächsten Tick aktiviert einmal. Aktivieren während eines Effekts wird ignoriert.
 - [ ] AK5 – Items (⚠️ Startwerte): Aero-Boost (CdA × 0,85, 15 s), Leichtgewicht (Fahrer- und Radmasse × 0,90 bei Steigung ≥ 0, 20 s), Rückenwind (−3 m/s Wind nur in der Physik, 10 s). Die Effektzeit läuft nur in fahrenden Ticks.
 - [ ] AK6 – Trainer: Items wirken nur in der Fahrphysik. Das Trainerkommando eines Ticks ist mit und ohne aktives Item bei gleichem Zustand und gleichen Eingaben identisch. Es gibt keinen neuen Kommandopfad (ADR-025).
@@ -34,14 +34,14 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Auf der Strecke l
 
 ## Testplan
 
-| AK           | Ebene    | Datei                                                                               |
-| ------------ | -------- | ----------------------------------------------------------------------------------- |
-| AK1          | Golden   | `apps/web/src/golden/golden.test.ts`                                                |
-| AK2–AK5, AK7 | Unit     | `packages/engine/src/fun/*.test.ts`, `packages/engine/src/internal/funMode.test.ts` |
-| AK6          | Unit     | `packages/engine/src/internal/funMode.test.ts`                                      |
-| AK8          | Unit     | `apps/web/src/game/engineWorkerCore.test.ts`                                        |
-| AK9          | Unit     | `apps/web/src/ui/hud.test.ts`, `apps/web/src/world/itemBoxes.test.ts`               |
-| AK10         | E2E      | `apps/web/e2e/fun-mode.spec.ts`                                                     |
+| AK           | Ebene  | Datei                                                                               |
+| ------------ | ------ | ----------------------------------------------------------------------------------- |
+| AK1          | Golden | `apps/web/src/golden/golden.test.ts`                                                |
+| AK2–AK5, AK7 | Unit   | `packages/engine/src/fun/*.test.ts`, `packages/engine/src/internal/funMode.test.ts` |
+| AK6          | Unit   | `packages/engine/src/internal/funMode.test.ts`                                      |
+| AK8          | Unit   | `apps/web/src/game/engineWorkerCore.test.ts`                                        |
+| AK9          | Unit   | `apps/web/src/ui/hud.test.ts`, `apps/web/src/world/itemBoxes.test.ts`               |
+| AK10         | E2E    | `apps/web/e2e/fun-mode.spec.ts`                                                     |
 
 ## Nicht-Ziele
 

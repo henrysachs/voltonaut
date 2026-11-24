@@ -1,4 +1,4 @@
-import type { Bpm, Mps, Pct, Seconds, Meters } from "@voltonaut/shared";
+import type { Bpm, FunItemId, Mps, Pct, RideMode, Seconds, Meters } from "@voltonaut/shared";
 
 import type { CommandGateState } from "../trainer/commands.js";
 import { createCommandGateState } from "../trainer/commands.js";
@@ -33,6 +33,13 @@ export interface RideState {
   commandGate: CommandGateState;
   /** Segment ids the rider is currently inside of. */
   activeSegments: string[];
+  /** Fun mode (spec E9-01); "normal" never touches the item fields. */
+  mode: RideMode;
+  heldItem: FunItemId | undefined;
+  activeItem: FunItemId | undefined;
+  activeRemainingS: Seconds;
+  /** mulberry32 state; item contents are drawn from the ride seed only. */
+  rngState: number;
 }
 
 export interface RideStateInit {
@@ -40,6 +47,9 @@ export interface RideStateInit {
   readonly gearRatio: number;
   readonly speedMps: Mps;
   readonly routePosM: Meters;
+  readonly mode: RideMode;
+  /** Seed for item box contents (mulberry32 state). */
+  readonly seed: number;
 }
 
 export function createRideState(init: RideStateInit): RideState {
@@ -63,5 +73,10 @@ export function createRideState(init: RideStateInit): RideState {
     tickIndex: 0,
     commandGate: createCommandGateState(),
     activeSegments: [],
+    mode: init.mode,
+    heldItem: undefined,
+    activeItem: undefined,
+    activeRemainingS: 0,
+    rngState: init.seed >>> 0,
   };
 }

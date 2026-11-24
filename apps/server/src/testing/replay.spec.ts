@@ -26,6 +26,7 @@ function claim(snapshot: RideSnapshot): ReplayObservationV2["snapshot"] {
     worldPos: _worldPos,
     headingRad: _heading,
     trainerMode: _mode,
+    fun: _fun,
     gear,
     hrBpm,
     ...rest
