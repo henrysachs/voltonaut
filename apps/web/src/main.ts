@@ -10,7 +10,6 @@ import { createConnectionMonitor, type ConnectionMonitor } from "./game/connecti
 import { setupProfile } from "./profileBootstrap.js";
 import { setupBrowserAccount } from "./browserAccount.js";
 import { setupRidePresentation } from "./ridePresentation.js";
-import { mountGarage } from "./ui/garage/garage.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
 import { parseEnvironmentSettings } from "./world/environment.js";
 
@@ -103,12 +102,7 @@ async function start(): Promise<void> {
   setupKeyboard(bus);
 
   devices?.mount();
-
-  const garage = document.querySelector("#garage-shop");
-
-  if (garage instanceof HTMLElement) mountGarage(garage, profile.bike.wheelCircM);
-
-  mountGameMenu();
+  mountGameMenu(profile.bike.wheelCircM);
 }
 
 await start();
