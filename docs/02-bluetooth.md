@@ -9,6 +9,7 @@ Legende: ✅ = Standard/Spezifikation, in mehreren Quellen bestätigt · ⚠️ 
 - Wiederverbinden ohne Dialog: `navigator.bluetooth.getDevices()` + `device.watchAdvertisements()`. In Chrome ggf. hinter `chrome://flags/#enable-web-bluetooth-new-permissions-backend` – ❓ Stand für Henrys Chrome-Version prüfen.
 - Linux-Chrome braucht teils `chrome://flags/#enable-experimental-web-platform-features`. ❓ Henrys Laptop-OS.
 - Jedes Gerät hat eine eigene GATT-Verbindung; Chrome serialisiert GATT-Operationen pro Gerät nicht für uns → eigene Write-Queue pro Adapter.
+- **Installierte PWA (E10-09):** Installation ändert diese Grenzen nicht. Chrome/Edge auf Desktop und Chrome auf Android bieten Web Bluetooth, auch im Standalone-Fenster ⚠️ (an echter Hardware nicht verifiziert). Safari und jeder Browser unter iOS/iPadOS (WebKit) haben **kein** Web Bluetooth; Firefox ebenfalls nicht. Dort ist nur der Sim-Modus nutzbar. Der Service Worker berührt keine GATT-Verbindung und speichert keine Messwerte.
 - Nur **ein** Central darf den Trainer sinnvoll steuern: Zwift-App, Wahoo-App, Garmin etc. vorher schließen/trennen.
 
 ## 2. Trainer: Wahoo KICKR CORE über FTMS ✅

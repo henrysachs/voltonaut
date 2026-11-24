@@ -11,7 +11,7 @@ import { setupBrowserStrava } from "./browserStrava.js";
 
 declare global {
   interface ImportMeta {
-    readonly env: { readonly VITE_API_ORIGIN?: string };
+    readonly env: { readonly VITE_API_ORIGIN?: string; readonly PROD?: boolean };
   }
 }
 
