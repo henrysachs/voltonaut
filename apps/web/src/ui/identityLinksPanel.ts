@@ -21,7 +21,7 @@ function connectButtons(
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = `Mit ${provider.displayName} verbinden`;
-    button.disabled = view.busy;
+    button.disabled = view.busy || !view.linkable;
     button.addEventListener("click", () => {
       void links.connect(provider.id);
     });
