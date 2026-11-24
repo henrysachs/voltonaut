@@ -112,3 +112,12 @@ it("reverts a fun choice that races a running recording", () => {
   expect(ride.sent).toEqual([]);
   expect(ride.shown).toEqual({ selected: "normal", funEnabled: false, hint: FUN_MODE_LOCKED_HINT });
 });
+
+it("falls back to normal when a recording wins the race against a fun choice", () => {
+  const ride = harness();
+
+  ride.choose("fun");
+  ride.capture(recording);
+  expect(ride.sent).toEqual(["fun", "normal"]);
+  expect(ride.shown).toEqual({ selected: "normal", funEnabled: false, hint: FUN_MODE_LOCKED_HINT });
+});

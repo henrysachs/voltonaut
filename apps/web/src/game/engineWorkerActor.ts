@@ -72,11 +72,15 @@ export function initializeActor(
 
 /**
  * Applies a mode request. A switch to fun mode while a recording is running is
- * ignored: recordings must never contain item effects (spec E9-01 AK8).
+ * ignored, and entering fun mode makes every later capture of this session
+ * local-only: recordings must never contain item effects (spec E9-01 AK8).
  */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The actor is the worker-owned mutable session record.
 export function setActorMode(actor: Actor, mode: RideMode, atMs: number): void {
   if (mode === "fun" && actor.recorder.view(atMs).kind !== "idle") return;
+
+  // The session journal replays from init in normal mode; fun physics would break that replay.
+  if (mode === "fun") actor.recorder.invalidate("fun_mode");
 
   actor.mode = mode;
   actor.engine.setMode(mode);

@@ -47,7 +47,7 @@ test("the mode picker explains fun mode and keeps the ride running", async ({
   await page.getByRole("button", { name: "Menü", exact: true }).click();
   await page.getByRole("radio", { name: "Spaß (Item-Boxen)" }).check();
   await expect(page.getByRole("group", { name: "Spielmodus" })).toContainText(
-    "Keine Aufnahme, keine Belohnungen.",
+    "Spätere Aufnahmen dieser Sitzung bleiben nur lokal.",
   );
   await expect(page.getByTestId("hud-item")).toHaveText(EMPTY_SLOT);
 });

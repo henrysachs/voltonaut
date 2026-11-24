@@ -14,6 +14,8 @@ Im Spaß-Modus verändern Items die Fahrphysik: weniger Luftwiderstand, weniger 
 3. **Malus mit Lasterhöhung (Phase 2) ist nicht freigegeben.** Vorschlag zur späteren Freigabe: höchstens +2 % effektive Steigung, höchstens 10 s, Opt-out „nur visuell“, gleiche Klemmung. Bis zur Freigabe wirkt ein Malus nur auf Bots.
 4. **Getrennt von #84.** Spaß-Modus-Items haben eigene Kennungen und vergeben keine Belohnungen. Die Funktion für effektive Fahrparameter ist allgemein gehalten, damit #84 sie wiederverwenden kann, statt eine zweite Effekttabelle zu bauen.
 
+5. **Aufnahmen.** Das Aufnahmeprotokoll beginnt mit der Sitzung, und der Server rechnet es im normalen Modus nach. Wer den Spaß-Modus betritt, macht deshalb alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `fun_mode`), statt eine nicht nachrechenbare Fahrt als prüfbar auszugeben.
+
 ## Alternativen
 
 - Items auch im Trainerkommando: verworfen. Die Strategie „Effective Grade“ (`docs/03-engine-physics.md` §4) zieht den Luftwiderstand des Trainers ab. Deshalb kann ein kleinerer CdA in niedrigen virtuellen Gängen die Trainerlast erhöhen, und weniger Masse erhöht sie bergab. „Items senken nur die Last“ ließe sich so nicht garantieren.

@@ -11,6 +11,26 @@ import {
 
 const RIDE_ID = "550e8400-e29b-41d4-a716-446655440000";
 
+type FakeScope = ReturnType<typeof createFakeScope>;
+
+/** Recording start/finish with increasing request ids; returns the latest reply. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The fake worker scope records posted messages in mutable arrays.
+function recordingCommands(fake: FakeScope) {
+  let requestId = 0;
+
+  return (kind: "start" | "finish") => {
+    requestId += 1;
+    fake.send({
+      type: "recording.command",
+      actorId: "actor",
+      requestId,
+      command: { kind, rideId: RIDE_ID },
+    });
+
+    return fake.posted.findLast((message) => message.type === "recording.reply");
+  };
+}
+
 function startedWorker() {
   const fake = createFakeScope();
   const clock = createManualClock();
@@ -34,22 +54,30 @@ function startedWorker() {
     return fake.posted.findLast((message) => message.type === "engine.update");
   };
 
+  const rideFor = (seconds: number) => {
+    for (let elapsedMs = 0; elapsedMs < seconds * 1000; elapsedMs += 50) {
+      fake.send({
+        type: "engine.ingest",
+        actorId: "actor",
+        event: { type: "trainer.data", tS: elapsedMs / 1000, powerW: 250, cadenceRpm: 90 },
+      });
+      wake();
+    }
+  };
+
   const setMode = (mode: RideMode) => {
     fake.send({ type: "engine.setMode", actorId: "actor", mode });
   };
 
-  const startRecording = () => {
-    fake.send({
-      type: "recording.command",
-      actorId: "actor",
-      requestId: 1,
-      command: { kind: "start", rideId: RIDE_ID },
-    });
+  const recording = recordingCommands(fake);
 
-    return fake.posted.findLast((message) => message.type === "recording.reply");
+  return {
+    wake,
+    rideFor,
+    setMode,
+    startRecording: () => recording("start"),
+    finishRecording: () => recording("finish"),
   };
-
-  return { wake, setMode, startRecording };
 }
 
 it("setMode reaches the engine and fun mode posts no progress checkpoints", () => {
@@ -98,4 +126,31 @@ it("ignores a switch to fun mode while a recording is running", () => {
 
   expect(update?.snapshot.fun).toBeUndefined();
   expect(update?.progress).toBeDefined();
+});
+
+it("marks later recordings of the session local-only with reason fun_mode", () => {
+  const worker = startedWorker();
+
+  worker.setMode("fun");
+  worker.wake();
+  worker.setMode("normal");
+  worker.wake();
+  worker.startRecording();
+  worker.rideFor(1.5);
+  expect(worker.finishRecording()?.result).toMatchObject({
+    kind: "finished",
+    capture: { kind: "local_only", reason: "fun_mode" },
+  });
+});
+
+it("keeps verifiable journal recordings when fun mode was never used", () => {
+  const worker = startedWorker();
+
+  worker.wake();
+  worker.startRecording();
+  worker.rideFor(1.5);
+  expect(worker.finishRecording()?.result).toMatchObject({
+    kind: "finished",
+    capture: { kind: "journal" },
+  });
 });

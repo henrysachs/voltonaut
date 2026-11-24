@@ -4,7 +4,7 @@ import type { EngineLink } from "../game/engine-link.js";
 import type { CaptureView, RecordingControls } from "../game/rideCaptureProtocol.js";
 
 export const FUN_MODE_HINT =
-  "Item-Boxen einsammeln und mit P oder der Power-up-Taste auslösen. Keine Aufnahme, keine Belohnungen.";
+  "Item-Boxen einsammeln und mit P oder der Power-up-Taste auslösen. Keine Aufnahme, keine Belohnungen. Spätere Aufnahmen dieser Sitzung bleiben nur lokal.";
 
 export const FUN_MODE_LOCKED_HINT = "Während einer Aufnahme ist der Spaß-Modus gesperrt.";
 
@@ -35,6 +35,13 @@ export function bindRideMode(view: RideModeView, link: RideModeLink): () => void
 
   const refresh = (capture: CaptureView): void => {
     const locked = funLocked(capture);
+
+    // A recording that reached the worker first made it ignore the fun request: follow the worker.
+    if (locked && mode === "fun") {
+      mode = "normal";
+      view.select(mode);
+      link.setMode(mode);
+    }
 
     view.setFunEnabled(!locked);
 

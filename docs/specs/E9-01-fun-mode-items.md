@@ -28,7 +28,7 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Auf der Strecke l
 - [x] AK5 – Items (⚠️ Startwerte): Aero-Boost (CdA × 0,85, 15 s), Leichtgewicht (Fahrer- und Radmasse × 0,90 bei Steigung ≥ 0, 20 s), Rückenwind (−3 m/s Wind nur in der Physik, 10 s). Die Effektzeit läuft nur in fahrenden Ticks.
 - [x] AK6 – Trainer: Items wirken nur in der Fahrphysik. Das Trainerkommando eines Ticks ist mit und ohne aktives Item bei gleichem Zustand und gleichen Eingaben identisch. Es gibt keinen neuen Kommandopfad (ADR-025).
 - [x] AK7 – Der Moduswechsel per Menü läuft während der Fahrt. Der Wechsel auf „Normal“ verwirft gehaltene und aktive Items, im nächsten Tick gelten wieder die Profilwerte.
-- [x] AK8 – Im Spaß-Modus gibt es keine Fortschritts-Checkpoints und keine Aufnahme. Ein Aufnahmestart wird mit „Im Spaß-Modus gibt es keine Aufnahme.“ abgelehnt. Während einer laufenden oder noch nicht freigegebenen Aufnahme lässt sich der Spaß-Modus nicht einschalten (Worker und Menü).
+- [x] AK8 – Im Spaß-Modus gibt es keine Fortschritts-Checkpoints und keine Aufnahme. Ein Aufnahmestart wird mit „Im Spaß-Modus gibt es keine Aufnahme.“ abgelehnt. Während einer laufenden oder noch nicht freigegebenen Aufnahme lässt sich der Spaß-Modus nicht einschalten (Worker und Menü). Das Aufnahmeprotokoll läuft ab Sitzungsbeginn und kennt keinen Spaß-Modus. Wer ihn betritt, macht deshalb alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `fun_mode`). Das Menü sagt das vor dem Umschalten.
 - [x] AK9 – Das HUD zeigt das gehaltene Item und während eines Effekts die Restsekunden. Die Welt zeigt Item-Boxen nur im Spaß-Modus, mit einem Draw Call.
 - [x] AK10 – E2E im Sim-Modus: Spaß-Modus wählen, Box einsammeln, mit `p` auslösen, Countdown sehen, Ablauf erleben.
 
@@ -48,6 +48,8 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Auf der Strecke l
 Keine Belohnungen, PBs oder Volts aus dem Spaß-Modus. Kein Malus und keine Bots in Phase 1. Keine Übertragung an andere Fahrer.
 
 ## Offene Fragen / Risiken
+
+- Nach dem Spaß-Modus sind Aufnahmen bis zum Neuladen nur lokal. Eine serverseitig nachrechenbare Lösung bräuchte Modus- und Item-Einträge im Aufnahmeprotokoll (RecordingV2) und deren Nachrechnung auf dem Server. Das ist ein eigener Schritt, spätestens vor Phase 2.
 
 - Items wirken nur in der Fahrphysik (ADR-025). Am Trainer ändert sich der Widerstand nicht. Ob ein spürbarer Effekt gewünscht ist, entscheidet Henry. Das bräuchte eine Hardwareprobe.
 - Die Item-Boxen schweben als gelbe Würfel über der Fahrbahn. Eine eigene Modellierung folgt mit der Asset-Pipeline.
