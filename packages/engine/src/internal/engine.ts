@@ -2,6 +2,7 @@ import type {
   DeviceEvent,
   Meters,
   Mps,
+  NativeTickFacts,
   RideEvent,
   RiderProfile,
   Seconds,
@@ -14,11 +15,11 @@ import { GEAR_PRESETS, physicalRatioFor, START_GEAR_INDEX } from "../gears/prese
 import { DEFAULT_TRAINER_MASS_KG } from "../trainer/gradeMap.js";
 import { riderParamsFromProfile } from "../physics/params.js";
 import { planCatchup, TICK_S } from "./catchup.js";
-import type { EngineContext, NativeTickFacts } from "./tick.js";
+import type { EngineContext } from "./tick.js";
 import { tick } from "./tick.js";
 import { createRideState, type RideState } from "./state.js";
 
-export type { NativeTickFacts } from "./tick.js";
+export type { NativeTickFacts } from "@voltonaut/shared";
 
 /** Public read-only view of the ride; frozen at every snapshot() call. */
 export interface RideSnapshot {

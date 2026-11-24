@@ -12,6 +12,8 @@ Die abschnittsweise Prüfung muss Bruchteile, die bestehenden Rundungsregeln und
 
 Dies ist der beauftragte Zielzustand, noch keine implementierte oder bereitgestellte Vergabe. E6-02 liefert reine Zahlenangebote. [E6-03](specs/E6-03-native-ride-facts.md) liefert die unveränderlichen nativen Tickfakten als numerische Grundlage. Upload, persönliche Freigabe, Quellenprüfung und Buchung bleiben eigene Schritte. Bestehende Aufnahmen und Strava-Zuordnungen werden nicht stillschweigend neu bewertet.
 
+[E6-04](specs/E6-04-ride-progress-journal.md) ergänzt die HR-freie Checkpoint-Projektion genau dieser Fakten im Engine-Worker. Sie ist unabhängig vom Aufnahmefenster und behält native Tickgrenzen bei. Der Projector besitzt keine Persistenz, kein Konto und keine Vergabepolitik; automatische Kontobelohnung, Transport, Offline-Wiederholung und Bestätigung bleiben späteren Schritten vorbehalten.
+
 ## Volts – die Ingame-Währung
 
 Volts sind Voltonauts Währung, vergleichbar mit Zwifts Ingame-Währung: man verdient sie durch Leistung auf dem Rad und gibt sie im Garage-Shop für Räder, Laufräder und Kleidung aus.

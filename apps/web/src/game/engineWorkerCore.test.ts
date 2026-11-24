@@ -116,7 +116,14 @@ it("runs one 0.05 s virtual tick per 50 ms real wake and posts updates", () => {
   const clock = createManualClock();
   const timers = createFakeTimers();
 
-  bindEngineWorker(fake.scope, clock.nowMs, timers.schedule, timers.cancel);
+  bindEngineWorker(
+    fake.scope,
+    clock.nowMs,
+    timers.schedule,
+    timers.cancel,
+    0,
+    () => "550e8400-e29b-41d4-a716-446655440000",
+  );
 
   fake.send({
     type: "engine.init",
@@ -142,6 +149,9 @@ it("runs one 0.05 s virtual tick per 50 ms real wake and posts updates", () => {
   expect(updates.length).toBeGreaterThanOrEqual(2);
 
   expect(last?.snapshot.tS).toBeCloseTo(0.05, 10);
+  expect(last?.progress).toMatchObject({ sequence: 0, startTick: 0, endTick: 1 });
+  expect(last?.progress?.facts).toHaveLength(1);
+  expect(initSnapshot?.progress).toBeUndefined();
 
   clock.advanceMs(50);
   timers.tick();
@@ -149,6 +159,7 @@ it("runs one 0.05 s virtual tick per 50 ms real wake and posts updates", () => {
   const finalUpdate = fake.posted.findLast((message) => message.type === "engine.update");
 
   expect(finalUpdate?.snapshot.tS).toBeCloseTo(0.1, 10);
+  expect(finalUpdate?.progress).toMatchObject({ sequence: 1, startTick: 1, endTick: 2 });
 });
 
 it("scales virtual time with the fast test clock", () => {
@@ -174,6 +185,8 @@ it("scales virtual time with the fast test clock", () => {
   const update = fake.posted.findLast((message) => message.type === "engine.update");
 
   expect(update?.snapshot.tS).toBeCloseTo(1, 9);
+  expect(update?.progress).toMatchObject({ clockScale: 20, startTick: 0, endTick: 20 });
+  expect(update?.progress?.facts).toHaveLength(20);
 });
 
 it("forwards device events into the engine", () => {
