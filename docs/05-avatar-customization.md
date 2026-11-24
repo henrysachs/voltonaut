@@ -25,27 +25,29 @@ Vorteil prozedural: exakte Kadenz-Synchronisierung, keine Mixamo-Abhängigkeit, 
 
 ```ts
 interface ItemDef {
-  id: string; // 'jersey.voltonaut-classic'
-  slot: "jersey" | "helmet" | "shoes" | "glasses" | "frame" | "wheels" | "skin";
+  id: string;
+  slot: "skin" | "jersey" | "helmet" | "shoes" | "glasses" | "frame" | "wheels";
   name: string;
-  asset: string; // GLB-Pfad oder Masken-Textur
-  colorable: number; // Anzahl frei wählbarer Farben (0–3)
-  unlock: UnlockRule; // siehe 06-gamification.md
+  assetRef: string;
+  colorable: number;
+  unlock: UnlockRule;
   rarity: "common" | "rare" | "epic" | "legendary";
-  stats?: { massKg?: number; cdaDelta?: number }; // optional, Gameplay-Effekt (Entscheidung offen)
+  priceVolts?: number;
 }
 ```
 
-- Item-Katalog als JSON (`avatar/catalog/*.json`), validiert per Schema in Tests.
-- `AvatarConfig` (01-architecture) referenziert nur IDs + Farben; ungültige/nicht besessene IDs → Fallback auf Default. Besitz prüft der Server (`inventory/`), der Client nur gegen den Cache.
-- Körpergröße aus dem Rider-Profil (`heightCm`) skaliert das Skelett; Sattelhöhe/Reach folgen daraus.
-- Garage-Screen (ui/garage): Drehbarer 3D-Showroom (OrbitControls), Slot-Tabs, gesperrte Items ausgegraut mit Freischaltbedingung. Änderung → Intent `avatar.setConfig` → avatar übernimmt, `sync/` speichert per `PUT /v1/me/avatar`. Shop-Tab: Preise in Volts ⚡, Kauf → `POST /v1/shop/purchase`.
-- Hautton: 6–8 Presets + freier Farbwähler.
+- Die kanonischen Typen und strikten Zod-Schemas liegen in `packages/shared/src/avatarCatalog.ts`. `ItemDef` enthält keine Konto- oder Besitzdaten.
+- Der Start-Katalog liegt in `packages/rules/src/avatarCatalogData.ts`. Die provisorischen `assetRef`-Werte verweisen auf die vorhandene prozedurale Vorschau. Finale GLBs ersetzen sie später.
+- `AvatarConfig` referenziert nur IDs und Farben. Besitz prüft später der Server (`inventory/`), der Client nur gegen den Cache.
+- Körpergröße aus dem Rider-Profil (`heightCm`) skaliert das Skelett. Sattelhöhe und Reach folgen daraus.
+- [E7-01](specs/E7-01-garage-shop-foundation.md) integriert den Tab „Garage / Shop" in das bestehende Fahrtmenü. Slot- und Item-Auswahl ändert die provisorische 3D-Vorschau. Preise und Freischaltbedingungen sind sichtbar. Käufe bleiben deaktiviert, weil Server-Inventar und Volts-Buchung fehlen. Die Vorschau wird weder gespeichert noch als Besitz dargestellt.
+- Hautton: sechs Presets in der Vorschau. Ein freier Farbwähler folgt mit dem finalen Customizing.
 
 ## Start-Katalog (E7)
 
 | Slot      | Anzahl                                   | Default             |
 | --------- | ---------------------------------------- | ------------------- |
+| Haut      | 6 Presets                                | Kupfer              |
 | Trikot    | 6 Designs × Farben                       | „Voltonaut Classic" |
 | Helm      | 3                                        | Standard            |
 | Schuhe    | 2                                        | weiß                |
