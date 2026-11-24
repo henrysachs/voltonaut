@@ -97,7 +97,7 @@ export function collectItemBoxes(
 
 /**
  * One Euler speed step with the active item applied. Items change physics only;
- * the trainer command keeps the profile params (ADR-025).
+ * the trainer command keeps the profile params (ADR-027).
  */
 export function nextSpeedMps(
   state: Readonly<Pick<RideState, "activeItem" | "gradePct" | "speedMps">>,

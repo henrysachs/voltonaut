@@ -4,7 +4,7 @@ import type { RiderParams } from "../physics/params.js";
 
 /**
  * Rider params for the speed integration while an item is active. Physics only:
- * the trainer command keeps the profile params (ADR-025). Featherweight acts on
+ * the trainer command keeps the profile params (ADR-027). Featherweight acts on
  * flat and uphill road only.
  */
 export function effectiveRiderParams(

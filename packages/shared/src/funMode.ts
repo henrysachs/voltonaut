@@ -11,7 +11,7 @@ export interface FunItemEffect {
   readonly cdaFactor: number;
   /** Multiplier on rider and bike mass; 1 = unchanged. */
   readonly massFactor: number;
-  /** Physics-only wind; negative = tailwind. Never sent to the trainer (ADR-025). */
+  /** Physics-only wind; negative = tailwind. Never sent to the trainer (ADR-027). */
   readonly windMps: Mps;
 }
 
