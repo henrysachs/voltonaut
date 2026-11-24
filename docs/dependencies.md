@@ -6,6 +6,8 @@ E3 ergänzt `@voltonaut/shared` als direkte Workspace-Abhängigkeit der Engine (
 
 E6-02 ergänzt `@voltonaut/shared` als direkte Workspace-Abhängigkeit von Rules für schemaabgeleitete Fahrtfakten und reine Basisangebote (ADR-024). Keine neue externe Bibliothek.
 
+E6-05 ergänzt `@voltonaut/rules` als direkte Workspace-Abhängigkeit des Servers für die gemeinsame Volts-Rechnung und Delta-Invariante (ADR-027). Keine neue externe Bibliothek.
+
 E1-02 nutzt das bereits freigegebene `zod` zusätzlich direkt in `packages/ble`, exakt Version `3.25.76`, für das Fixture-Schema und die Browser-API-Grenze (ADR-004).
 
 ## Installiert (E0, ergänzt in E3)
@@ -28,7 +30,7 @@ E1-02 nutzt das bereits freigegebene `zod` zusätzlich direkt in `packages/ble`,
 | zod                                                        | packages/shared, packages/ble, apps/server                                         | API-, Konfigurations- und BLE-Fixture-Validierung                     | 004           |
 | @voltonaut/shared                                          | packages/engine, packages/rules, packages/ble, apps/server, apps/web (workspace:*) | geteilte Typen/Schemas/Event-Bus, Angebotsfakten                      | 006, 024      |
 | @voltonaut/engine                                          | packages/rules, apps/web, apps/server (workspace:*)                                | Gangmodell, Physik, reine Server-Nachrechnung                         | 006, 016      |
-| @voltonaut/rules                                           | apps/web (workspace:*)                                                             | HUD-Labels (Katalog)                                                  | 006           |
+| @voltonaut/rules                                           | apps/web, apps/server (workspace:*)                                                | HUD-Labels (Katalog), gemeinsame Volts-Rechnung                       | 006, 027      |
 | @voltonaut/ble                                             | apps/web (workspace:*)                                                             | Sim-Geräte + Keyboard-Adapter                                         | 006           |
 | @nestjs/common, @nestjs/core, @nestjs/platform-express     | apps/server                                                                        | Server-Framework                                                      | 004           |
 | reflect-metadata                                           | apps/server                                                                        | Nest-Decorator-Metadaten zur Laufzeit                                 | 004           |

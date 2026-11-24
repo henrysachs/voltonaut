@@ -86,7 +86,9 @@ Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitz
 - `GET /v2/rides/:rideId` liefert eigene Aufnahme und gespeicherte Bewertung. `GET /v2/rides` enthält keine Samples, ist auf 20 Einträge voreingestellt und auf 50 begrenzt. Cursor und Sortierung verwenden aufsteigende UUIDs, nicht die Aufnahmezeit.
 - Jeder Zugriff ist an `SessionPrincipal.userId` gebunden. `GET /v1/me` bleibt Auth-Verantwortung. Es gibt keine automatische Löschung. Uploads sind pro Account auf 30 Anfragen pro Minute begrenzt, auch bei Wiederholungen.
 
-Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)` und `createRidesTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und beide Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an `AccountsModule.register` und `RidesModule.register`. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
+Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)`, `createRidesTables(userIdColumn: SQLiteColumn)` und `createEconomyTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und diese Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an die jeweiligen `register`-Fabriken. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
+
+[E6-05](specs/E6-05-volts-ledger.md) lässt `economy/` die additive Tabelle `volts_ledger` besitzen. Der Kontostand ist die Summe ihrer Deltas; eine mutable Wallet-Spalte existiert nicht. Idempotenzschlüssel und Auftragshash verhindern doppelte oder abweichende Wiederholungen. Fahrtbereiche speichern kumulative Volts-Komponenten und buchen nur die Differenz zum vorherigen Bereich; Lücken, Überlappungen und fremde Journals werden abgewiesen. Belohnungen und Abbuchungen laufen in unmittelbaren SQLite-Transaktionen; das schmale `EconomyService.transaction`-Port erlaubt später eine atomare Kombination mit Inventar. `GET /v1/me/volts` liefert den eigenen Kontostand mit `no-store`. Belohnungs- und Kauf-POSTs folgen erst mit Checkpoint-Freigabe beziehungsweise Issue #64.
 
 Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. `0003` ergänzt Strava-Verbindungen. Die additive `0004_replayed_ride_exports.sql` ergänzt Zusammenfassung und Exportspalten, ohne bestehende Nutzlasten, Hashes oder Belege umzuschreiben. Die Migrationen `0000` bis `0003` bleiben unverändert. Der Browser verwendet die Fahrtendpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
 
@@ -100,7 +102,12 @@ sessions(token_hash TEXT PK, user_id, created_at, last_seen_at, expires_at, user
 -- login_tokens from PR #6 remain only for explicitly selected legacy operation until cutover.
 profiles(user_id PK, display_name, mass_kg, height_cm, ftp_w, max_hr, bike_json, avatar_json, updated_at)
 inventory(user_id, item_id, source TEXT /* default|level|badge|shop|distance */, acquired_at, PK(user_id,item_id))
-volts_ledger(id PK, user_id, delta INT, reason TEXT /* ride|purchase|bonus|admin */, ref_id, created_at)
+volts_ledger(id PK, user_id, delta_volts INT, reason TEXT /* ride_reward|purchase */, ref_id,
+             idempotency_key, payload_hash, reward_day, start_tick, end_tick, candidate_volts,
+             cumulative_work_volts, cumulative_climb_volts, cumulative_facts_json, created_at,
+             UNIQUE(user_id,idempotency_key),
+             UNIQUE(ref_id,start_tick) WHERE reason='ride_reward',
+             UNIQUE(ref_id,end_tick) WHERE reason='ride_reward')
 progression(user_id PK, xp INT, level INT, total_distance_m, total_elev_m, total_ride_s, updated_at)
 badges(user_id, badge_id, earned_at, ride_id, PK(user_id,badge_id))
 personal_bests(user_id, segment_id, time_s REAL, avg_power_w, ride_id, at, PK(user_id,segment_id))
@@ -125,6 +132,7 @@ GET  /v1/auth/identities           (Bearer)                         → { identi
 # No bearer, access, or refresh tokens in redirect URLs.
 POST /v1/auth/logout                                              → 204
 GET  /v1/me                                                       → { user, profile, progression, voltsBalance, inventory[], badges[], pbs{} }
+GET  /v1/me/volts                                                 → { voltsBalance } (E6-05, autoritativ aus dem Ledger)
 PUT  /v1/me/profile             RiderProfile                      → profile          (Validierung: Bereiche wie 03 §2a)
 PUT  /v1/me/avatar              AvatarConfig                      → avatar           (nur Items aus dem Inventar)
 GET  /v1/catalog                                                  → { items[], levels[], version }   (öffentlich, cachebar)

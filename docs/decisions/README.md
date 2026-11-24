@@ -26,3 +26,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [020](ADR-020-explicit-production-provisioning.md) | Einmalige Produktionsprovisionierung und optionales Backup | Angenommen; ausdrückliche Freigabe vom 21.11.2026 |
 | [025](ADR-025-handwritten-service-worker.md) | Handgeschriebener Service Worker für die installierbare PWA | Angenommen für E10-09 |
 | [026](ADR-026-configurable-oidc-providers.md) | Konfigurierbare OIDC-Provider, Cloudflare Access ist einer davon | Vorgeschlagen, Henrys Freigabe ausstehend |
+| [027](ADR-027-server-volts-ledger.md) | Serverseitiges Volts-Journal und gemeinsame Rules-Rechnung | Angenommen für E6-05 |

@@ -54,6 +54,8 @@ Die Shared-Schemas begrenzen effektive Rohwerte wie die bestehenden Fahrtverträ
 
 Die spätere Ermittlung tatsächlicher aktiver Fakten und die serverseitige Vergabe bleiben getrennte Aufgaben. Der letzte Snapshot und eine Batchdauer reichen dafür nicht. Weder synthetische Fakten noch Replay-Konsistenz oder BLE-Selbstauskunft autorisieren eine Buchung. Hardwareabnahme und Bereitstellung gehören nicht zu E6-02.
 
+[E6-05](specs/E6-05-volts-ledger.md) ergänzt das serverseitige SQLite-Journal. Belohnung und Abbuchung sind idempotent und atomar; Kontostand und Tagesbudget werden aus dem Journal summiert. Zusammenhängende Bereiche erhalten kumulative Fakten; das Ledger bucht die Differenz zur vorherigen kumulierten Rundung. Dadurch ergibt die Summe aller Bereiche exakt die Ganzfahrt-Rundung. Checkpoint-Freigabe, Quellenpolitik, Mitternachtsfahrten, Shop-Käufe und bestehende Fahrten bleiben ausdrücklich unverändert.
+
 ### Shop & Freischalt-Ökonomie
 
 | Seltenheit | Preis (Volts) | ≈ Fahrstunden | Zusätzliche Bedingung |
