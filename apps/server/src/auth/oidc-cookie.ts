@@ -40,3 +40,8 @@ export function oidcFinishError(code: ErrorCode): OidcFinishError | undefined {
 
   return parsed.success ? parsed.data : undefined;
 }
+
+/** The binding cookie is `Secure`/`__Host-` only when every provider callback uses HTTPS. */
+export function oidcCookieSecure(redirectUris: readonly string[]): boolean {
+  return redirectUris.every((uri) => uri.startsWith("https:"));
+}

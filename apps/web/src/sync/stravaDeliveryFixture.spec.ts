@@ -161,7 +161,7 @@ export class StravaDeliveryFixture {
   private transport(): PrivateAuthTransport {
     return {
       authorize: (authorization): AccountLease => ({
-        ...unexpectedMembership,
+        ...unexpectedAccountParts,
         apiOrigin: "http://localhost:3000",
         userId: authorization.userId,
         generation: authorization.generation,
@@ -206,4 +206,4 @@ export class StravaDeliveryFixture {
   }
 }
 
-import { unexpectedMembership } from "./testdata/unusedStravaLease.js";
+import { unexpectedAccountParts } from "./testdata/unusedStravaLease.js";

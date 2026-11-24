@@ -3,7 +3,7 @@ import { apiOrigin, CANONICAL_AUTH_ORIGIN, isPreviewOrigin } from "./sync/authOr
 import { handoffErrorText, takeAuthHandoff } from "./sync/authHandoff.js";
 import { authTransport } from "./sync/authTransport.js";
 import { sessionPersistence } from "./sync/sessionPersistence.js";
-import { mountAccountPanel } from "./ui/accountPanel.js";
+import { mountAccountPanels, resumeIdentityLink } from "./browserAccountPanels.js";
 import { privateAuthTransport } from "./sync/privateAuthTransport.js";
 import type { ProfileBootstrap } from "./profileBootstrap.js";
 import { setupBrowserAccountData } from "./browserAccountData.js";
@@ -36,8 +36,10 @@ export function setupBrowserAccount(
   try {
     const origin = apiOrigin(window.location.origin, import.meta.env["VITE_API_ORIGIN"]);
 
+    const transport = authTransport(origin);
+
     const session = new ApplicationSession({
-      transport: authTransport(origin),
+      transport,
       privateTransport: privateAuthTransport(origin),
       persistence: sessionPersistence(origin, () => window.localStorage),
       navigate: (providerId) => {
@@ -45,11 +47,12 @@ export function setupBrowserAccount(
       },
     });
 
-    mountAccountPanel(session);
+    const links = mountAccountPanels(session, transport);
     const accounts = setupBrowserAccountData(session, profile);
     void setupBrowserStrava(session, accounts);
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
+    else if (handoff.kind === "link") void resumeIdentityLink(session, links, handoff.code);
     else if (handoff.kind === "none") void session.restore();
     else if (handoff.kind === "error") host?.append(handoffErrorText(handoff.error));
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");

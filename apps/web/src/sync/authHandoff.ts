@@ -5,6 +5,8 @@ export type AuthHandoff =
   | { readonly kind: "none" }
   | { readonly kind: "invalid" }
   | { readonly kind: "code"; readonly code: string }
+  /** One-time code of an explicit account link; the signed-in session must complete it. */
+  | { readonly kind: "link"; readonly code: string }
   | { readonly kind: "error"; readonly error: OidcFinishError };
 
 const HANDOFF_ERROR_TEXT = {
@@ -28,6 +30,16 @@ export function takeAuthHandoff(href: string, replace: (path: string) => void): 
 
   if (failure.success && !url.searchParams.has("code"))
     return { kind: "error", error: failure.data };
+  const links = url.searchParams.getAll("link");
+
+  if (links.length > 0 && !url.searchParams.has("code")) {
+    const link = OidcExchangeRequestSchema.safeParse({
+      code: links.length === 1 ? links[0] : undefined,
+    });
+
+    return link.success ? { kind: "link", code: link.data.code } : { kind: "invalid" };
+  }
+
   const codes = url.searchParams.getAll("code");
 
   const parsed = OidcExchangeRequestSchema.safeParse({

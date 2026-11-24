@@ -14,15 +14,18 @@ export type OidcTransactionRow = Readonly<typeof oidcTransactions.$inferSelect>;
 
 /**
  * Finds or creates the Voltonaut user for a verified provider identity. The identity key is
- * `(issuer, subject)`; an email match alone never links accounts.
+ * `(issuer, subject)`; an email match alone never links accounts. A provider's email
+ * verification only gates creating a new account; a known identity signs in regardless.
  */
 export function resolveIdentityUser(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
   auth: Pick<AuthService, "currentUser">,
-  identity: Readonly<IdentityClaims>,
+  login: Readonly<{ identity: IdentityClaims; requireEmailVerified: boolean }>,
   nowMs: number,
 ): string {
+  const { identity } = login;
+
   const existing = db
     .select()
     .from(authIdentities)
@@ -34,6 +37,13 @@ export function resolveIdentityUser(
 
     return existing.userId;
   }
+
+  if (login.requireEmailVerified && identity.email_verified !== true)
+    throw new ApiError(
+      403,
+      "email_not_verified",
+      "the login provider did not verify the email address",
+    );
 
   if (db.select().from(users).where(eq(users.email, identity.email)).get() !== undefined) {
     throw new ApiError(409, "identity_conflict", "existing account ownership must be proven");
@@ -81,6 +91,8 @@ export interface NewTransaction {
   readonly provider: string;
   readonly nonce: string;
   readonly verifier: string;
+  /** Set only for an explicit account link started by this signed-in session. */
+  readonly link: Readonly<{ userId: string; sessionHash: string }> | undefined;
 }
 
 /** Stores a login transaction unless the shared capacity limit of 1000 rows is reached. */
@@ -104,6 +116,8 @@ export function insertTransaction(
           bindingHash: hashToken(transaction.binding),
           nonce: transaction.nonce,
           verifier: transaction.verifier,
+          linkUserId: transaction.link?.userId ?? null,
+          linkSessionHash: transaction.link?.sessionHash ?? null,
           expiresAt: nowMs + OIDC_TRANSACTION_TTL_MS,
         })
         .run();
@@ -140,30 +154,44 @@ export function claimTransaction(
     .get();
 }
 
+/** Removes the claimed reservation inside the caller's transaction; fails once it expired. */
+export function consumeReservation(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
+  db: ServerDatabase,
+  transaction: OidcTransactionRow,
+  nowMs: number,
+): void {
+  const reservation = db
+    .delete(oidcTransactions)
+    .where(
+      and(
+        eq(oidcTransactions.stateHash, transaction.stateHash),
+        gt(oidcTransactions.expiresAt, nowMs),
+      ),
+    )
+    .returning()
+    .get();
+
+  if (reservation === undefined) throw invalidOidcLogin();
+}
+
 /** Replaces the claimed transaction by a one-time handoff for the resolved user. */
 export function replaceTransactionByHandoff(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
   auth: Pick<AuthService, "currentUser">,
-  grant: Readonly<{ identity: IdentityClaims; transaction: OidcTransactionRow; code: string }>,
+  grant: Readonly<{
+    identity: IdentityClaims;
+    requireEmailVerified: boolean;
+    transaction: OidcTransactionRow;
+    code: string;
+  }>,
   nowMs: number,
 ): void {
   db.transaction(
     () => {
-      const reservation = db
-        .delete(oidcTransactions)
-        .where(
-          and(
-            eq(oidcTransactions.stateHash, grant.transaction.stateHash),
-            gt(oidcTransactions.expiresAt, nowMs),
-          ),
-        )
-        .returning()
-        .get();
-
-      if (reservation === undefined) throw invalidOidcLogin();
-
-      const userId = resolveIdentityUser(db, auth, grant.identity, nowMs);
+      consumeReservation(db, grant.transaction, nowMs);
+      const userId = resolveIdentityUser(db, auth, grant, nowMs);
       cleanupOidcRows(db, nowMs);
       db.insert(oidcHandoffs)
         .values({
@@ -178,7 +206,44 @@ export function replaceTransactionByHandoff(
   );
 }
 
-/** Deletes the matching handoff and returns its user, or undefined when used/expired/foreign. */
+/**
+ * Replaces a claimed account-link transaction by a one-time link handoff. It carries the verified
+ * identity, the target account and the requesting session; nothing is linked until that same
+ * session completes it.
+ */
+export function replaceTransactionByLinkHandoff(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
+  db: ServerDatabase,
+  grant: Readonly<{ identity: IdentityClaims; transaction: OidcTransactionRow; code: string }>,
+  nowMs: number,
+): void {
+  const { linkUserId, linkSessionHash } = grant.transaction;
+
+  if (linkUserId === null || linkSessionHash === null) throw invalidOidcLogin();
+  db.transaction(
+    () => {
+      consumeReservation(db, grant.transaction, nowMs);
+      cleanupOidcRows(db, nowMs);
+      db.insert(oidcHandoffs)
+        .values({
+          codeHash: hashToken(grant.code),
+          bindingHash: grant.transaction.bindingHash,
+          userId: linkUserId,
+          expiresAt: nowMs + OIDC_HANDOFF_TTL_MS,
+          linkIssuer: grant.identity.iss,
+          linkSubject: grant.identity.sub,
+          linkSessionHash,
+        })
+        .run();
+    },
+    { behavior: "immediate" },
+  );
+}
+
+/**
+ * Deletes the matching login handoff and returns its user, or undefined when used, expired,
+ * foreign or an account link handoff (those only complete through the link endpoint).
+ */
 export function takeHandoff(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
@@ -192,6 +257,7 @@ export function takeHandoff(
         eq(oidcHandoffs.codeHash, hashToken(take.code)),
         eq(oidcHandoffs.bindingHash, hashToken(take.binding)),
         gt(oidcHandoffs.expiresAt, nowMs),
+        isNull(oidcHandoffs.linkIssuer),
       ),
     )
     .returning()

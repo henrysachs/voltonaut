@@ -14,7 +14,7 @@ import type { SessionView } from "./applicationSession.js";
 import { localRide } from "./testdata/localRide.js";
 import { deferred } from "./testdata/deferred.js";
 import { journalRide } from "./testdata/journal.js";
-import { unusedStravaLease, unexpectedMembership } from "./testdata/unusedStravaLease.js";
+import { unusedStravaLease, unexpectedAccountParts } from "./testdata/unusedStravaLease.js";
 
 class SyncFixture {
   readonly rows = new Map<string, OutboxRow>();
@@ -70,7 +70,7 @@ class SyncFixture {
 
   login(userId: string): AccountLease {
     const lease: AccountLease = {
-      ...unexpectedMembership,
+      ...unexpectedAccountParts,
       strava: unusedStravaLease,
       signal: new AbortController().signal,
       userId,

@@ -63,6 +63,28 @@ export type OidcFinishError = z.infer<typeof OidcFinishErrorSchema>;
 
 export type OidcExchangeRequest = z.infer<typeof OidcExchangeRequestSchema>;
 
+/** `POST /v1/auth/oidc/:provider/link` response: where the browser continues the fresh login. */
+export const OidcLinkStartResponseSchema = z.object({ location: z.string().url() }).strict();
+
+export type OidcLinkStartResponse = z.infer<typeof OidcLinkStartResponseSchema>;
+
+/** A login identity connected to the signed-in account; the provider subject stays private. */
+export const LinkedIdentitySchema = z
+  .object({
+    providerId: OidcProviderChoiceSchema.shape.id.nullable(),
+    displayName: z.string().min(1).max(255),
+  })
+  .strict();
+
+export type LinkedIdentity = z.infer<typeof LinkedIdentitySchema>;
+
+/** `GET /v1/auth/identities` and `POST /v1/auth/identities` response. */
+export const LinkedIdentitiesResponseSchema = z
+  .object({ identities: z.array(LinkedIdentitySchema) })
+  .strict();
+
+export type LinkedIdentitiesResponse = z.infer<typeof LinkedIdentitiesResponseSchema>;
+
 export const MeResponseSchema = z.object({ user: UserSchema });
 
 export type MeResponse = z.infer<typeof MeResponseSchema>;

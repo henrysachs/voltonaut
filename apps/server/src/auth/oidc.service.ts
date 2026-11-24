@@ -7,13 +7,14 @@ import type { ServerDatabase } from "../database/drizzle.provider.js";
 import { ApiError } from "../api-error.js";
 import { AuthService } from "./auth.service.js";
 import { createToken, hashToken } from "./tokens.js";
-import { OidcClient } from "./oidc-client.js";
+import { OidcClient, type IdentityClaims } from "./oidc-client.js";
 import {
   OidcOpaqueSchema,
   invalidOidcLogin,
   oidcBrowserBinding,
   oidcBindingCookie,
   oidcFinishError,
+  oidcCookieSecure,
 } from "./oidc-cookie.js";
 import {
   claimTransaction,
@@ -21,6 +22,8 @@ import {
   deleteTransaction,
   insertTransaction,
   replaceTransactionByHandoff,
+  replaceTransactionByLinkHandoff,
+  type OidcTransactionRow,
   takeHandoff,
 } from "./oidc-store.js";
 
@@ -48,8 +51,13 @@ export class OidcService {
     return oidcBindingCookie(value, this.secure(), clear);
   }
 
+  /**
+   * Starts a provider login. With `link`, the transaction is bound to the signed-in account and
+   * session that explicitly asked to connect this provider.
+   */
   public async start(
     providerId: string,
+    link?: Readonly<{ userId: string; sessionHash: string }>,
   ): Promise<{ readonly location: string; readonly cookie: string }> {
     const client = this.requireClient(providerId);
     const state = createToken();
@@ -58,7 +66,11 @@ export class OidcService {
     const verifier = createToken();
     const nowMs = this.clock.nowMs();
     cleanupOidcRows(this.db, nowMs);
-    insertTransaction(this.db, { state, binding, provider: providerId, nonce, verifier }, nowMs);
+    insertTransaction(
+      this.db,
+      { state, binding, provider: providerId, nonce, verifier, link },
+      nowMs,
+    );
 
     try {
       return {
@@ -92,20 +104,7 @@ export class OidcService {
           throw invalidOidcLogin();
         });
 
-      if (provider.requireEmailVerified && identity.email_verified !== true)
-        throw new ApiError(
-          403,
-          "email_not_verified",
-          "the login provider did not verify the email address",
-        );
-
-      const nowMs = this.clock.nowMs();
-
-      if (transaction.expiresAt <= nowMs) throw invalidOidcLogin();
-      const code = createToken();
-      replaceTransactionByHandoff(this.db, this.auth, { identity, transaction, code }, nowMs);
-
-      return this.finishUrl("code", code);
+      return this.completeCallback(provider, identity, transaction);
     } catch (error) {
       const finishError = error instanceof ApiError ? oidcFinishError(error.code) : undefined;
 
@@ -115,6 +114,32 @@ export class OidcService {
     } finally {
       deleteTransaction(this.db, transaction.stateHash);
     }
+  }
+
+  /** Turns a verified identity into a login or account-link handoff and its finish URL. */
+  private completeCallback(
+    provider: Readonly<OidcProviderConfig>,
+    identity: Readonly<IdentityClaims>,
+    transaction: OidcTransactionRow,
+  ): string {
+    const nowMs = this.clock.nowMs();
+
+    if (transaction.expiresAt <= nowMs) throw invalidOidcLogin();
+    const code = createToken();
+
+    // An account link never creates or selects an account by email, so the provider's email
+    // verification (which only gates new accounts) does not apply; the same session completes it.
+    if (transaction.linkUserId !== null) {
+      replaceTransactionByLinkHandoff(this.db, { identity, transaction, code }, nowMs);
+
+      return this.finishUrl("link", code);
+    }
+
+    const { requireEmailVerified } = provider;
+    const grant = { identity, requireEmailVerified, transaction, code };
+    replaceTransactionByHandoff(this.db, this.auth, grant, nowMs);
+
+    return this.finishUrl("code", code);
   }
 
   public exchange(
@@ -165,7 +190,7 @@ export class OidcService {
     return { callbackUrl: callback.href, state: state.data, transaction };
   }
 
-  private finishUrl(key: "code" | "error", value: string): string {
+  private finishUrl(key: "code" | "error" | "link", value: string): string {
     const finish = new URL("/auth/finish", this.config.clientOrigin);
     finish.searchParams.set(key, value);
 
@@ -188,7 +213,7 @@ export class OidcService {
   }
 
   private secure(): boolean {
-    return this.oidcProviders().every((provider) => provider.redirectUri.startsWith("https:"));
+    return oidcCookieSecure(this.oidcProviders().map((provider) => provider.redirectUri));
   }
 
   private requireClient(providerId: string): OidcClient {

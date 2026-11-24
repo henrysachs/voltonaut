@@ -41,3 +41,17 @@ it("prefers a code over an accompanying error parameter", () => {
     code: CODE,
   });
 });
+
+it("recognises a single account link code and scrubs the URL", () => {
+  const { handoff, replaced } = take(`https://app.example/auth/finish?link=${CODE}`);
+
+  expect(handoff).toEqual({ kind: "link", code: CODE });
+  expect(replaced).toEqual(["/"]);
+});
+
+it.each(["?link=short", `?link=${CODE}&link=${CODE}`])(
+  "treats the malformed link query %j as invalid",
+  (query) => {
+    expect(take(`https://app.example/auth/finish${query}`).handoff).toEqual({ kind: "invalid" });
+  },
+);

@@ -8,6 +8,7 @@ export const ErrorCodeSchema = z.enum([
   "invalid_oidc_login",
   "identity_conflict",
   "email_not_verified",
+  "identity_in_use",
   "invalid_strava_connection",
   "strava_connection_conflict",
   "strava_registration_required",

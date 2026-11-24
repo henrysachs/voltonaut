@@ -1,1 +1,0 @@
-ALTER TABLE `oidc_transactions` ADD `provider` text DEFAULT '' NOT NULL;

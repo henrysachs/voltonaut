@@ -113,7 +113,10 @@ it("commits bounded expired cleanup despite rejected starts and recovers legacy 
     "INSERT INTO oidc_transactions (state_hash, binding_hash, nonce, verifier, expires_at) VALUES (?, 'binding', 'nonce', 'verifier', 0)",
   );
 
-  const handoff = client.prepare("INSERT INTO oidc_handoffs VALUES (?, 'binding', ?, 0)");
+  const handoff = client.prepare(
+    "INSERT INTO oidc_handoffs (code_hash, binding_hash, user_id, expires_at) VALUES (?, 'binding', ?, 0)",
+  );
+
   client.transaction(() => {
     for (let index = 0; index < 1000; index += 1) transaction.run(`expired-${index}`);
 

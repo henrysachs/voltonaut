@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "899f6d39-8a10-47ad-94ca-bd245b42784c",
+  "id": "a52155dd-efcd-40bf-8a9f-dbf4b629b68d",
   "prevId": "a4d26158-2be2-45f6-84a1-2390d419fdbf",
   "tables": {
     "account_status": {
@@ -881,6 +881,27 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "link_issuer": {
+          "name": "link_issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_subject": {
+          "name": "link_subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_session_hash": {
+          "name": "link_session_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -928,6 +949,20 @@
           "notNull": true,
           "autoincrement": false,
           "default": "''"
+        },
+        "link_user_id": {
+          "name": "link_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_session_hash": {
+          "name": "link_session_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "binding_hash": {
           "name": "binding_hash",
