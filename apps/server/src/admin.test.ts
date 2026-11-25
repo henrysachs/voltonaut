@@ -130,6 +130,7 @@ it("credits Volts to an existing account once per reference through the compiled
     "account not found",
   );
   await expect(cli(path, "admin", "credit", "existing", "-5", "neg")).rejects.toThrow("ZodError");
+  await expect(cli(path, "admin", "credit", "existing", "1e3", "sci")).rejects.toThrow("ZodError");
   await expect(cli(path, "admin", "credit", "existing", "5", "bad ref")).rejects.toThrow(
     "ZodError",
   );

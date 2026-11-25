@@ -175,3 +175,30 @@ it("reports an unreachable shop without inventing a balance", async () => {
     expect(shop.view()).toMatchObject({ kind: "failed" });
   });
 });
+
+it("treats an unknown item as a final rejection and rereads the server", async () => {
+  const { server, shop } = await readyShop();
+
+  server.failure = new PrivateRequestError("missing");
+  await shop.purchase("helmet-red", 120);
+  server.failure = undefined;
+  await shop.purchase("helmet-red", 120);
+
+  expect(server.orders.map(({ requestId }) => requestId)).toEqual(["r1", "r2"]);
+});
+
+it("rereads balance and ownership when an earlier purchase stayed unconfirmed", async () => {
+  const { server, shop } = await readyShop();
+
+  server.failure = new PrivateRequestError("retry");
+  await shop.purchase("helmet-red", 120);
+  server.failure = undefined;
+  server.owned.push("helmet-red");
+  server.balance = 380;
+  await shop.purchase("gloves-blue", 80);
+
+  expect(shop.view()).toMatchObject({
+    voltsBalance: 300,
+    ownedItemIds: ["jersey-basic", "helmet-red", "gloves-blue"],
+  });
+});

@@ -1,4 +1,8 @@
-import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
+import {
+  PrivateRequestError,
+  type AccountLease,
+  type SyncFailure,
+} from "./privateAuthTransport.js";
 
 export type GarageShopView =
   | { readonly kind: "guest" }
@@ -19,6 +23,16 @@ const UNREACHABLE = "Shop nicht erreichbar. Besitz und Volts nicht bestätigt.";
 
 const REJECTED =
   "Kauf abgelehnt: Preis, Besitz oder Guthaben passt nicht mehr. Serverstand neu gelesen.";
+
+const BOUGHT = "Gekauft. Das Item gehört jetzt zu deinem Konto.";
+
+/** Final server answers: the same request can never succeed, so a retry needs a new id. */
+const REJECTIONS: ReadonlySet<SyncFailure> = new Set([
+  "conflict",
+  "missing",
+  "forbidden",
+  "contract",
+]);
 
 const UNCONFIRMED =
   "Kauf nicht bestätigt. Ein neuer Versuch nutzt dieselbe Anfrage, ohne doppelte Abbuchung.";
@@ -82,15 +96,23 @@ export class GarageShop {
 
       if (!this.current(lease, revision)) return;
       this.#retryIds.delete(itemId);
+
+      // An earlier unconfirmed purchase may have committed; reread instead of mixing states.
+      if (this.#retryIds.size > 0) {
+        await this.refresh(lease, BOUGHT);
+
+        return;
+      }
+
       this.publish({
         kind: "ready",
         voltsBalance: receipt.voltsBalance,
         ownedItemIds: [...new Set([...view.ownedItemIds, receipt.item.itemId])],
         pendingItemId: null,
-        message: "Gekauft. Das Item gehört jetzt zu deinem Konto.",
+        message: BOUGHT,
       });
     } catch (error) {
-      const rejected = error instanceof PrivateRequestError && error.cause === "conflict";
+      const rejected = error instanceof PrivateRequestError && REJECTIONS.has(error.cause);
 
       if (this.current(lease, revision)) await this.failPurchase(lease, view, itemId, rejected);
     }
@@ -132,10 +154,14 @@ export class GarageShop {
       ]);
 
       if (!this.current(lease, revision)) return;
+
+      const ownedItemIds = inventory.items.map(({ itemId }) => itemId);
+
+      for (const itemId of ownedItemIds) this.#retryIds.delete(itemId);
       this.publish({
         kind: "ready",
         voltsBalance: balance.voltsBalance,
-        ownedItemIds: inventory.items.map(({ itemId }) => itemId),
+        ownedItemIds,
         pendingItemId: null,
         message,
       });

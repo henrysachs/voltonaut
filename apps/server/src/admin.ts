@@ -24,7 +24,11 @@ const CommandSchema = z.union([
   z.tuple([
     z.literal("credit"),
     AccountUserIdSchema,
-    z.coerce.number().pipe(VoltsDebitAmountSchema),
+    z
+      .string()
+      .regex(/^[1-9]\d*$/u)
+      .transform(Number)
+      .pipe(VoltsDebitAmountSchema),
     CreditReferenceSchema,
   ]),
 ]);
