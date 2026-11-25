@@ -7,7 +7,7 @@ import {
 } from "@voltonaut/shared";
 
 import type { EngineWorkerResponse } from "./engineWorkerCore.js";
-import type { EngineLink } from "./engine-link.js";
+import type { EngineLink, EngineLinkInit, EngineUpdate } from "./engine-link.js";
 import { createEngineLink } from "./engine-link.js";
 import { localRide } from "../sync/testdata/localRide.js";
 import type { CaptureView } from "./rideCaptureProtocol.js";
@@ -16,6 +16,7 @@ import { createFakePort } from "./testdata/enginePort.js";
 const profile = DEFAULT_RIDER_PROFILE;
 const snapshot = createEngine({ route: createRoute(FLAT_LOOP), profile }).snapshot();
 const idle = { kind: "idle", availability: { kind: "journal" } } satisfies CaptureView;
+const init = { routeId: "test-loop", profile, source: "sim" } satisfies EngineLinkInit;
 
 const progress = {
   schemaVersion: 1,
@@ -65,13 +66,12 @@ function setup() {
   const fake = createFakePort();
   let ids = 0;
 
-  const link = createEngineLink(fake.port, {}, () => {
+  const link = createEngineLink(fake.port, init, {}, () => {
     ids += 1;
 
     return `id-${ids}`;
   });
 
-  link.init({ routeId: "test-loop", profile, source: "sim" });
   fake.deliver({
     type: "engine.update",
     actorId: "id-1",
@@ -105,82 +105,32 @@ it("sends frozen initialization and ignores stale actor snapshots", () => {
     recording: idle,
   });
   expect(link.latestSnapshot()?.tS).toBe(0);
-  expect(() => {
-    link.init({ routeId: "test-loop", profile, source: "sim" });
-  }).toThrow("already initialized");
 });
 
-it("delivers snapshot before commands on every update, including empty command arrays", async () => {
+it("sends initialization before any message, even before the first worker reply", () => {
   const fake = createFakePort();
-  const calls: string[] = [];
-  const observed: (number | undefined)[] = [];
+  const link = createEngineLink(fake.port, init, {}, () => "actor");
+
+  link.ingest({ type: "trainer.data", tS: 1, powerW: 200 });
+  link.setMode("fun");
+  expect(fake.sent.map((message) => message.type)).toEqual([
+    "engine.init",
+    "engine.ingest",
+    "engine.setMode",
+  ]);
+  expect(new Set(fake.sent.map((message) => message.actorId))).toEqual(new Set(["actor"]));
+});
+
+it("hands each update whole to onUpdate after the snapshot is readable, not on recording replies", async () => {
+  const fake = createFakePort();
+  const seen: { readonly tS: number | undefined; readonly update: EngineUpdate }[] = [];
 
   const link: EngineLink = createEngineLink(
     fake.port,
+    init,
     {
-      onSnapshot: () => {
-        calls.push("snapshot");
-      },
-      onEvents: () => {
-        observed.push(link.latestSnapshot()?.tS);
-        calls.push("events");
-      },
-      onCommands: (commands) => {
-        calls.push(`commands:${commands.length}`);
-      },
-    },
-    () => "actor",
-  );
-
-  link.init({ source: "sim", routeId: "test-loop", profile });
-  fake.deliver({
-    type: "engine.update",
-    actorId: "actor",
-    snapshot,
-    events: [],
-    commands: [],
-    recording: idle,
-  });
-  fake.deliver({
-    type: "engine.update",
-    actorId: "actor",
-    snapshot: { ...snapshot, tS: 2 },
-    events: [],
-    commands: [],
-    recording: idle,
-  });
-  const start = link.recording.start();
-  fake.deliver({
-    type: "recording.reply",
-    actorId: "actor",
-    requestId: 1,
-    result: { kind: "state", view: recording },
-  });
-  await start;
-  expect(calls).toEqual(["snapshot", "events", "commands:0", "snapshot", "events", "commands:0"]);
-  expect(observed).toEqual([0, 2]);
-});
-
-it("delivers undefined and real progress after the existing callbacks", () => {
-  const fake = createFakePort();
-  const calls: string[] = [];
-  const seen: (RideProgressCheckpoint | undefined)[] = [];
-
-  const link = createEngineLink(
-    fake.port,
-    {
-      onSnapshot: () => {
-        calls.push("snapshot");
-      },
-      onEvents: () => {
-        calls.push("events");
-      },
-      onCommands: () => {
-        calls.push("commands");
-      },
-      onProgress: (checkpoint) => {
-        calls.push("progress");
-        seen.push(checkpoint);
+      onUpdate: (update) => {
+        seen.push({ tS: link.latestSnapshot()?.tS, update });
       },
     },
     () => "actor",
@@ -195,15 +145,52 @@ it("delivers undefined and real progress after the existing callbacks", () => {
     recording: idle,
   } satisfies EngineWorkerResponse;
 
-  link.init({ source: "sim", routeId: "test-loop", profile });
   fake.deliver(update);
-  fake.deliver({ ...update, progress: undefined });
+  fake.deliver({ ...update, snapshot: { ...snapshot, tS: 2 }, progress: undefined });
   fake.deliver({ ...update, progress });
+  const start = link.recording.start();
+  fake.deliver({
+    type: "recording.reply",
+    actorId: "actor",
+    requestId: 1,
+    result: { kind: "state", view: recording },
+  });
+  await start;
+  expect(seen.map((entry) => entry.tS)).toEqual([0, 2, 0]);
+  expect(seen.map((entry) => entry.update.progress)).toEqual([undefined, undefined, progress]);
+  expect(seen[0]?.update).toMatchObject({ events: [], commands: [] });
+});
 
-  expect(seen).toEqual([undefined, undefined, progress]);
-  expect(calls).toEqual(
-    Array.from({ length: 3 }, () => ["snapshot", "events", "commands", "progress"]).flat(),
+it("reports a worker failure once and drops later updates", () => {
+  const fake = createFakePort();
+  const failures: string[] = [];
+  let updates = 0;
+
+  createEngineLink(
+    fake.port,
+    init,
+    {
+      onUpdate: () => {
+        updates += 1;
+      },
+      onFailure: (message) => {
+        failures.push(message);
+      },
+    },
+    () => "actor",
   );
+
+  fake.fail("crashed");
+  fake.deliver({
+    type: "engine.update",
+    actorId: "actor",
+    snapshot,
+    events: [],
+    commands: [],
+    recording: idle,
+  });
+  expect(failures).toEqual(["crashed"]);
+  expect(updates).toBe(0);
 });
 
 it("correlates recording acknowledgements and ignores duplicate and late replies", async () => {

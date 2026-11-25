@@ -1,11 +1,4 @@
-import type {
-  DeviceEvent,
-  RideEvent,
-  RideMode,
-  RideProgressCheckpoint,
-  RiderProfile,
-  TrainerCommand,
-} from "@voltonaut/shared";
+import type { DeviceEvent, RideMode, RiderProfile } from "@voltonaut/shared";
 import type { RideSnapshot } from "@voltonaut/engine";
 
 import type { EngineWorkerRequest, EngineWorkerResponse } from "./engineWorkerCore.js";
@@ -22,12 +15,16 @@ export interface EngineWorkerPort {
   readonly subscribeFailure: (listener: (message: string) => void) => () => void;
 }
 
+/** One worker update; `latestSnapshot()` already returns its snapshot when `onUpdate` runs. */
+export type EngineUpdate = Pick<
+  Extract<EngineWorkerResponse, { readonly type: "engine.update" }>,
+  "snapshot" | "events" | "commands" | "progress"
+>;
+
 export interface EngineLinkCallbacks {
-  readonly onSnapshot?: (snapshot: RideSnapshot) => void;
-  readonly onEvents?: (events: readonly RideEvent[]) => void;
-  readonly onCommands?: (commands: readonly TrainerCommand[]) => void;
-  readonly onProgress?: (checkpoint: RideProgressCheckpoint | undefined) => void;
-  readonly onInitFailed?: (message: string) => void;
+  readonly onUpdate?: (update: EngineUpdate) => void;
+  /** Initialization failure or worker crash; the link sends nothing afterwards. */
+  readonly onFailure?: (message: string) => void;
 }
 
 export interface EngineLinkInit {
@@ -37,8 +34,8 @@ export interface EngineLinkInit {
   readonly clockScale?: number;
 }
 
+/** Exists only for an initialized actor: creating the link sends `engine.init` before any other message. */
 export interface EngineLink {
-  readonly init: (options: EngineLinkInit) => void;
   readonly ingest: (event: DeviceEvent) => void;
   /** Ride mode intent (spec E9-01); the worker refuses fun mode during a recording. */
   readonly setMode: (mode: RideMode) => void;
@@ -54,7 +51,7 @@ interface PendingRequest {
 
 class WorkerLink implements EngineLink {
   private latest: RideSnapshot | undefined;
-  private actorId: string | undefined;
+  private readonly actorId: string;
   private disposed = false;
   private failed = false;
   private requestId = 0;
@@ -66,6 +63,7 @@ class WorkerLink implements EngineLink {
 
   constructor(
     private readonly port: EngineWorkerPort,
+    init: EngineLinkInit,
     private readonly callbacks: EngineLinkCallbacks,
     private readonly newId: () => string,
   ) {
@@ -74,6 +72,15 @@ class WorkerLink implements EngineLink {
     });
     this.unsubscribeFailure = port.subscribeFailure((message) => {
       this.fail(message);
+    });
+    this.actorId = newId();
+    this.send({
+      type: "engine.init",
+      actorId: this.actorId,
+      source: init.source,
+      routeId: init.routeId,
+      profile: init.profile,
+      clockScale: init.clockScale ?? 1,
     });
   }
 
@@ -89,7 +96,7 @@ class WorkerLink implements EngineLink {
     for (const pending of this.pending.values()) pending.reject(new Error(message));
     this.pending.clear();
     this.publish({ kind: "unavailable", message });
-    this.callbacks.onInitFailed?.(message);
+    this.callbacks.onFailure?.(message);
   }
 
   private receive(message: EngineWorkerResponse): void {
@@ -116,33 +123,16 @@ class WorkerLink implements EngineLink {
 
     this.latest = message.snapshot;
     this.publish(message.recording);
-    this.callbacks.onSnapshot?.(message.snapshot);
-    this.callbacks.onEvents?.(message.events);
-    this.callbacks.onCommands?.(message.commands);
-    this.callbacks.onProgress?.(message.progress);
-  }
-
-  init(options: EngineLinkInit): void {
-    if (this.actorId !== undefined || this.disposed)
-      throw new Error("Engine session already initialized or disposed.");
-    this.actorId = this.newId();
-    this.send({
-      type: "engine.init",
-      actorId: this.actorId,
-      source: options.source,
-      routeId: options.routeId,
-      profile: options.profile,
-      clockScale: options.clockScale ?? 1,
-    });
+    this.callbacks.onUpdate?.(message);
   }
 
   ingest(event: DeviceEvent): void {
-    if (this.actorId !== undefined && !this.disposed && !this.failed)
+    if (!this.disposed && !this.failed)
       this.send({ type: "engine.ingest", actorId: this.actorId, event });
   }
 
   setMode(mode: RideMode): void {
-    if (this.actorId !== undefined && !this.disposed && !this.failed)
+    if (!this.disposed && !this.failed)
       this.send({ type: "engine.setMode", actorId: this.actorId, mode });
   }
 
@@ -153,8 +143,7 @@ class WorkerLink implements EngineLink {
   private request(command: CaptureCommand): Promise<CaptureResult> {
     const actorId = this.actorId;
 
-    if (actorId === undefined || this.disposed || this.failed)
-      return Promise.reject(new Error("Engine nicht verfügbar."));
+    if (this.disposed || this.failed) return Promise.reject(new Error("Engine nicht verfügbar."));
     this.requestId += 1;
     const requestId = this.requestId;
 
@@ -207,7 +196,7 @@ class WorkerLink implements EngineLink {
     if (this.disposed) return;
     this.disposed = true;
 
-    if (this.actorId !== undefined) this.send({ type: "engine.dispose", actorId: this.actorId });
+    this.send({ type: "engine.dispose", actorId: this.actorId });
     this.unsubscribe();
     this.unsubscribeFailure();
 
@@ -222,10 +211,12 @@ class WorkerLink implements EngineLink {
   }
 }
 
+/** Subscribes to the port, then sends `engine.init`; every later message targets that actor. */
 export function createEngineLink(
   port: EngineWorkerPort,
+  init: EngineLinkInit,
   callbacks: EngineLinkCallbacks = {},
   newId: () => string = () => crypto.randomUUID(),
 ): EngineLink {
-  return new WorkerLink(port, callbacks, newId);
+  return new WorkerLink(port, init, callbacks, newId);
 }

@@ -51,10 +51,6 @@ export function isNewCaptureRequest(requestId: number, lastRequestId: number): b
   return Number.isSafeInteger(requestId) && requestId > lastRequestId;
 }
 
-export function validCaptureReading(value: number | undefined, max: number): number | null {
-  return value !== undefined && Number.isFinite(value) && value >= 0 && value <= max ? value : null;
-}
-
 export interface RideRecorder {
   readonly view: (atMs: number) => CaptureView;
   readonly ingest: (event: DeviceEvent, atMs: number) => void;

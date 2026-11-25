@@ -4,18 +4,11 @@ import type { AvatarConfig } from "@voltonaut/shared";
 
 import { disposeObject } from "../world/resources.js";
 import type { FrameInput, RenderSystem } from "../world/scheduler.js";
-import type { BikeGeometry } from "./bikeGeometry.js";
 import { BikeModel } from "./bikeModel.js";
 import { avatarLook } from "./look.js";
 import { advanceCrankRad, wheelAngleRad } from "./motion.js";
-import { placeTube, poseLegs, solveTwoBone, type Point3, type RiderLeg } from "./pose.js";
-
-const TORSO_M = 0.58;
-const TORSO_RAD = (38 * Math.PI) / 180;
-
-// Long enough to keep a slight elbow bend on the longest-reach frame (aero).
-export const UPPER_ARM_M = 0.31;
-export const FOREARM_M = 0.31;
+import { riderJoints, type RiderJoints } from "./pose.js";
+import { RiderBody } from "./riderBody.js";
 
 export interface RiderModel {
   readonly root: THREE.Group;
@@ -23,206 +16,104 @@ export interface RiderModel {
   headingRad: number;
   update(frame: FrameInput): void;
   posePreview(): void;
+  dispose(): void;
   setLook(config: AvatarConfig): void;
 }
 
-interface RiderArm {
-  readonly side: 1 | -1;
-  readonly upper: THREE.Mesh;
-  readonly lower: THREE.Mesh;
-  readonly hand: THREE.Mesh;
-}
+/** Crank angle of the bind pose the skinned geometry is built in (right pedal forward). */
+const BIND_CRANK_RAD = 0;
 
-function offset(point: Point3, dx: number, dy: number, z = point[2]): Point3 {
-  return [point[0] + dx, point[1] + dy, z];
-}
-
-/** Upper-body anchor points derived from the bike fit (saddle and hoods). */
-export interface TorsoPoints {
-  readonly pelvis: Point3;
-  readonly neck: Point3;
-}
-
-export function torsoPoints(geometry: Readonly<BikeGeometry>): TorsoPoints {
-  const pelvis: Point3 = [geometry.hip[0] - 0.02, geometry.hip[1] + 0.03, 0];
-
-  return {
-    pelvis,
-    neck: offset(pelvis, Math.cos(TORSO_RAD) * TORSO_M, Math.sin(TORSO_RAD) * TORSO_M),
-  };
-}
-
-/** Arm chain from the shoulder to the hand resting on the hood grip of one side. */
-export interface ArmPose {
-  readonly shoulder: Point3;
-  readonly elbow: Point3;
-  readonly wrist: Point3;
-  readonly grip: Point3;
-}
-
-export function armPose(geometry: Readonly<BikeGeometry>, side: 1 | -1): ArmPose {
-  const { neck } = torsoPoints(geometry);
-  const shoulder = offset(neck, -0.04, -0.035, side * 0.165);
-
-  const grip: Point3 = [
-    geometry.hoodGrip[0],
-    geometry.hoodGrip[1] + 0.012,
-    side * geometry.hoodGrip[2],
-  ];
-
-  const wrist = offset(grip, -0.035, 0.018);
-  const elbow = solveTwoBone(shoulder, wrist, UPPER_ARM_M, FOREARM_M, [-0.35, -1, side * 0.6]);
-
-  return { shoulder, elbow, wrist, grip };
-}
-
-class Bicycle implements RiderModel {
+/**
+ * Procedural rider on the procedural bike: one skinned mesh per material on a 22-bone skeleton,
+ * posed every frame by IK from the bike fit and crank angle.
+ */
+export class RiderOnBike implements RiderModel {
   readonly root = new THREE.Group();
   readonly model = new THREE.Group();
-  private readonly bike: BikeModel;
-  private readonly legs: RiderLeg[] = [];
-  private readonly arms: RiderArm[] = [];
-  private readonly shoes: THREE.Mesh[] = [];
-  private readonly glasses = new THREE.Group();
-  private readonly tubeGeometry = new THREE.CylinderGeometry(1, 1, 1, 12);
-  private readonly jersey = new THREE.MeshStandardMaterial({ color: 0xec6b48, roughness: 0.85 });
-  private readonly jerseyAccent = new THREE.MeshStandardMaterial({
-    color: 0xf5ebca,
-    roughness: 0.85,
-  });
-  private readonly jerseyAccentBand = new THREE.Mesh(this.tubeGeometry, this.jerseyAccent);
-  private readonly bibs = new THREE.MeshStandardMaterial({ color: 0x15191c, roughness: 0.7 });
-  private readonly skin = new THREE.MeshStandardMaterial({ color: 0xc98d68, roughness: 0.9 });
-  private readonly helmet = new THREE.MeshStandardMaterial({ color: 0xf5ebca, roughness: 0.65 });
-  private readonly shoe = new THREE.MeshStandardMaterial({ color: 0xf5ebca, roughness: 0.7 });
-  private readonly lens = new THREE.MeshStandardMaterial({
-    color: 0x18272e,
-    roughness: 0.15,
-    metalness: 0.6,
-  });
-  private readonly torso: THREE.Mesh;
-  private readonly neck: THREE.Mesh;
-  private readonly head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 12), this.skin);
-  private readonly helmetShell = new THREE.Mesh(
-    new THREE.SphereGeometry(0.135, 18, 10),
-    this.helmet,
-  );
-  private accentRadiusM = 0.152;
+  readonly bike: BikeModel;
   crankRad = 0;
   headingRad = 0;
+  private wheelRad = 0;
   private lastRideS: number | undefined;
+  private bodyValue: RiderBody | undefined;
 
-  constructor(private readonly wheelCircM: number) {
+  /**
+   * `deferBody` leaves the rider body out of the first frame: the ride scene shows world and bike
+   * first and builds the skinned rider (geometry, textures, shaders) on the next update.
+   */
+  constructor(
+    private readonly wheelCircM: number,
+    private deferBody = false,
+  ) {
+    this.root.name = "rider-root";
     this.bike = new BikeModel(wheelCircM);
     this.model.add(this.bike.root);
-    this.torso = this.tube(this.jersey);
-    this.torso.name = "jersey-primary";
-    this.neck = this.tube(this.skin);
-    this.buildRider();
-    this.poseBody();
     this.root.add(this.model);
+
+    if (!deferBody) this.ensureBody();
+
+    this.pose();
   }
 
-  private tube(
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library objects shared by the owned model.
-    material: THREE.MeshStandardMaterial,
-  ): THREE.Mesh {
-    const mesh = new THREE.Mesh(this.tubeGeometry, material);
-
-    mesh.castShadow = true;
-    this.model.add(mesh);
-
-    return mesh;
+  /** The skinned rider body, built on first use. */
+  get body(): RiderBody {
+    return this.ensureBody();
   }
 
-  private buildRider(): void {
-    this.jerseyAccentBand.name = "jersey-accent";
-    this.jerseyAccentBand.castShadow = true;
-    this.jerseyAccentBand.visible = false;
-    this.model.add(this.jerseyAccentBand);
-
-    for (const side of [1, -1] as const) {
-      this.arms.push({
-        side,
-        upper: this.tube(this.jersey),
-        lower: this.tube(this.skin),
-        hand: this.tube(this.bibs),
-      });
-      this.legs.push({ side, thigh: this.tube(this.bibs), shin: this.tube(this.skin) });
-
-      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.04, 0.085), this.lens);
-      lens.position.set(0.105, 0.015, side * 0.05);
-      lens.rotation.y = side * 0.25;
-      this.glasses.add(lens);
-
-      const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(0.038, 0.17, 4, 10), this.shoe);
-      shoe.name = side === 1 ? "shoe-right" : "shoe-left";
-      shoe.geometry.rotateZ(Math.PI / 2);
-      shoe.geometry.scale(1, 0.72, 0.95);
-      shoe.castShadow = true;
-      this.shoes.push(shoe);
-      this.model.add(shoe);
+  private ensureBody(): RiderBody {
+    if (this.bodyValue === undefined) {
+      this.bodyValue = new RiderBody(riderJoints(this.bike.geometry, BIND_CRANK_RAD));
+      this.model.add(this.bodyValue.root);
     }
 
-    this.head.castShadow = true;
-    this.helmetShell.castShadow = true;
-    this.helmetShell.scale.set(1.22, 0.7, 1);
-    this.head.add(this.glasses);
-    this.glasses.visible = false;
-    this.model.add(this.head, this.helmetShell);
+    return this.bodyValue;
   }
 
-  /** Places torso, head and arms for the current bike fit. */
-  private poseBody(): void {
-    const geometry = this.bike.geometry;
-    const { pelvis, neck } = torsoPoints(geometry);
-    const head = offset(neck, 0.13, 0.17);
+  get rig(): RiderBody["rig"] {
+    return this.body.rig;
+  }
 
-    placeTube(this.torso, pelvis, neck, 0.15);
-    placeTube(
-      this.jerseyAccentBand,
-      offset(pelvis, (neck[0] - pelvis[0]) * 0.3, (neck[1] - pelvis[1]) * 0.3),
-      offset(pelvis, (neck[0] - pelvis[0]) * 0.56, (neck[1] - pelvis[1]) * 0.56),
-      this.accentRadiusM,
-    );
-    placeTube(this.neck, offset(neck, -0.02, -0.02), offset(neck, 0.1, 0.13), 0.058);
-    this.head.position.set(...head);
-    this.helmetShell.position.set(head[0] - 0.02, head[1] + 0.075, 0);
-    this.helmetShell.rotation.z = -0.25;
+  /** Skinned rider meshes of the current kit, one per material. */
+  meshes(): ReturnType<RiderBody["meshes"]> {
+    return this.body.meshes();
+  }
 
-    for (const arm of this.arms) {
-      const { shoulder, elbow, wrist, grip } = armPose(geometry, arm.side);
+  setKit(kit: Parameters<RiderBody["setKit"]>[0]): boolean {
+    return this.body.setKit(kit);
+  }
 
-      placeTube(arm.upper, shoulder, elbow, 0.047);
-      placeTube(arm.lower, elbow, wrist, 0.035);
-      placeTube(arm.hand, wrist, offset(grip, 0.03, -0.006), 0.026);
-    }
+  /** Joints for the current bike fit and crank angle. */
+  joints(): RiderJoints {
+    return riderJoints(this.bike.geometry, this.crankRad);
+  }
+
+  /** Poses rider and bike for a crank angle (keeps the current wheel angle). */
+  poseAt(crankRad: number): void {
+    this.crankRad = crankRad;
+    this.pose();
+  }
+
+  private pose(): void {
+    const joints = this.joints();
+    const [right, left] = joints.legs;
+
+    this.bodyValue?.pose(joints);
+    this.bike.setMotion(this.crankRad, this.wheelRad, [right.footPitchRad, left.footPitchRad]);
   }
 
   setLook(config: AvatarConfig): void {
     const look = avatarLook(config);
 
-    if (this.bike.setVariant(look.frame, look.wheels)) this.poseBody();
-
+    this.body.setKit(look.kit);
+    this.body.setColors(config.rider);
+    this.bike.setVariant(look.frame, look.wheels);
     this.bike.setColors(config.bike.frameColor);
-    this.jersey.color.set(config.rider.jerseyColors[0]);
-    this.jerseyAccent.color.set(config.rider.jerseyColors[1]);
-    this.jerseyAccent.roughness = look.jerseyAccentRoughness;
-    this.jerseyAccentBand.visible = true;
-    this.accentRadiusM = look.jerseyAccentRadiusM;
-    this.jerseyAccentBand.scale.x = look.jerseyAccentRadiusM;
-    this.jerseyAccentBand.scale.z = look.jerseyAccentRadiusM;
-    this.skin.color.set(config.rider.skinTone);
-    this.helmet.color.set(config.rider.helmetColor);
-    this.shoe.color.setHex(look.shoeColor);
-    this.glasses.visible = look.glassesVisible;
-    poseLegs(this.legs, this.shoes, this.bike.geometry, this.crankRad);
+    this.pose();
   }
 
   posePreview(): void {
-    this.crankRad = Math.PI / 2;
-    this.bike.setMotion(this.crankRad, 0.6);
-    poseLegs(this.legs, this.shoes, this.bike.geometry, this.crankRad);
+    this.wheelRad = 0.6;
+    this.poseAt(Math.PI / 2);
   }
 
   update(frame: FrameInput): void {
@@ -231,12 +122,25 @@ class Bicycle implements RiderModel {
 
     this.lastRideS = ride.tS;
     this.crankRad = advanceCrankRad(this.crankRad, ride.cadenceRpm, elapsedS);
+    this.wheelRad = wheelAngleRad(ride.distanceM, this.wheelCircM);
     this.headingRad = ride.headingRad;
     this.root.position.set(ride.worldPos.x, ride.worldPos.y + 0.04, ride.worldPos.z);
     this.root.rotation.y = -ride.headingRad;
     this.model.rotation.z = Math.atan(ride.gradePct / 100);
-    this.bike.setMotion(this.crankRad, wheelAngleRad(ride.distanceM, this.wheelCircM));
-    poseLegs(this.legs, this.shoes, this.bike.geometry, this.crankRad);
+
+    if (this.deferBody) {
+      // The first frame shows world and bike; the rider body joins on the next update.
+      this.deferBody = false;
+    } else {
+      this.ensureBody();
+    }
+
+    this.pose();
+  }
+
+  dispose(): void {
+    this.bodyValue?.dispose();
+    disposeObject(this.root);
   }
 }
 
@@ -247,34 +151,34 @@ export interface RiderView {
   readonly crankRad: () => number;
 }
 
-export function createRiderModel(wheelCircM: number): RiderModel {
-  return new Bicycle(wheelCircM);
+export function createRiderModel(wheelCircM: number): RiderOnBike {
+  return new RiderOnBike(wheelCircM);
 }
 
 export function createRider(wheelCircM: number): RiderView {
-  const bicycle = createRiderModel(wheelCircM);
+  const rider = new RiderOnBike(wheelCircM, true);
 
   return {
     position: () => ({
-      x: bicycle.root.position.x,
-      y: bicycle.root.position.y,
-      z: bicycle.root.position.z,
+      x: rider.root.position.x,
+      y: rider.root.position.y,
+      z: rider.root.position.z,
     }),
-    headingRad: () => bicycle.headingRad,
-    crankRad: () => bicycle.crankRad,
+    headingRad: () => rider.headingRad,
+    crankRad: () => rider.crankRad,
     system: {
       id: "riders",
       order: 40,
       // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The rider system installs its model in the owned Three scene.
       init(context) {
-        context.scene.add(bicycle.root);
+        context.scene.add(rider.root);
       },
       update(frame) {
-        bicycle.update(frame);
+        rider.update(frame);
       },
       setQuality() {},
       dispose() {
-        disposeObject(bicycle.root);
+        rider.dispose();
       },
     },
   };

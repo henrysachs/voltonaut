@@ -10,7 +10,9 @@ it("gives only the current preparing owner permanent dispatch rights across SQLi
   const replacement = required(b.jobs.prepare(20000));
   const work = required(b.credentials.claimWork("owner", "submit", 20000));
   expect(a.jobs.dispatch(old, work, consent, 20000)).toBeUndefined();
-  expect(b.jobs.dispatch(replacement, work, consent, 20000)?.progress.kind).toBe("submitting");
+  expect(b.jobs.dispatch(replacement, work, consent, 20000)?.delivery.progress.kind).toBe(
+    "submitting",
+  );
   b.credentials.releaseWork(work);
   a.jobs.recover(40000);
   expect(a.jobs.own("owner", consent.rideId)?.progress.kind).toBe("submission_unknown");
@@ -75,7 +77,9 @@ it("rejects obsolete token work while refresh preserves the consent target", () 
   expect(latest.generation).toBe(consent.connectionGeneration);
   expect(latest.tokenRevision).toBe(1);
   expect(a.jobs.dispatch(preparing, old, consent, 1200)).toBeUndefined();
-  expect(b.jobs.dispatch(preparing, latest, consent, 1200)?.progress.kind).toBe("submitting");
+  expect(b.jobs.dispatch(preparing, latest, consent, 1200)?.delivery.progress.kind).toBe(
+    "submitting",
+  );
 });
 
 it("keeps disconnect authoritative when a late refresh supplies the newest revoke credential", () => {

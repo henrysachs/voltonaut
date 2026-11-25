@@ -1,5 +1,9 @@
 import type { AccountStatus, AdminUser, AdminUsers, Membership } from "@voltonaut/shared";
-import type { AccountLease } from "./privateAuthTransport.js";
+import type { MembershipPort } from "./accountPorts.js";
+import type { LeaseBinding } from "./apiRoute.js";
+
+/** Membership reads and admin writes; writes are never retried (ADR-021). */
+export type MembershipLease = LeaseBinding & { readonly membership: MembershipPort };
 
 type Immutable<T> = { readonly [K in keyof T]: Immutable<T[K]> };
 
@@ -21,12 +25,12 @@ export type AdministrationView = Immutable<
 export class AccountAdministration {
   readonly #listeners = new Set<(view: AdministrationView) => void>();
   #view: AdministrationView = { kind: "guest" };
-  #lease: AccountLease | undefined;
-  #writing: AccountLease | undefined;
+  #lease: MembershipLease | undefined;
+  #writing: MembershipLease | undefined;
   #revision = 0;
   #cursor: string | null = null;
 
-  bind(lease?: AccountLease): void {
+  bind(lease?: MembershipLease): void {
     this.#lease = lease;
     this.#writing = undefined;
     this.#revision += 1;
@@ -63,7 +67,7 @@ export class AccountAdministration {
     });
   }
 
-  private current(lease: AccountLease): boolean {
+  private current(lease: MembershipLease): boolean {
     return this.#lease === lease && lease.current();
   }
 
@@ -73,18 +77,18 @@ export class AccountAdministration {
     for (const listener of this.#listeners) listener(view);
   }
 
-  private async refresh(lease: AccountLease, cursor: string | null = null): Promise<void> {
+  private async refresh(lease: MembershipLease, cursor: string | null = null): Promise<void> {
     if (!this.current(lease)) return;
     const revision = ++this.#revision;
     this.publish({ kind: "loading" });
 
     try {
-      const status = await lease.accountStatus();
+      const status = await lease.membership.status();
 
       if (!this.current(lease) || revision !== this.#revision) return;
 
       const directory =
-        status.authorization.role === "admin" ? await lease.adminUsers(cursor) : null;
+        status.authorization.role === "admin" ? await lease.membership.users(cursor) : null;
 
       if (!this.current(lease) || revision !== this.#revision) return;
       this.#cursor = cursor;
@@ -99,7 +103,7 @@ export class AccountAdministration {
   }
 
   private async save(
-    lease: AccountLease,
+    lease: MembershipLease,
     userId: string,
     membership: Readonly<Membership>,
   ): Promise<void> {
@@ -117,7 +121,7 @@ export class AccountAdministration {
     this.publish({ ...view, busy: true, message: "Änderung wird bestätigt …" });
 
     try {
-      await lease.saveMembership(userId, membership);
+      await lease.membership.save(userId, membership);
 
       if (!this.current(lease) || revision !== this.#revision) return;
       await this.refresh(lease, this.#cursor);

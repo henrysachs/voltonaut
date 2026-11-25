@@ -1,7 +1,6 @@
 import type { StravaConsent, StravaRideView, StravaStatus } from "@voltonaut/shared";
 import type { ApplicationSession } from "./applicationSession.js";
-import type { AccountLease } from "./privateAuthTransport.js";
-import { connectStrava } from "./stravaBridge.js";
+import { connectStrava, type StravaLease } from "./stravaBridge.js";
 import type { StravaPopup } from "./stravaBridge.js";
 
 type Remote<T> =
@@ -30,14 +29,16 @@ export type StravaView =
 export class StravaSync {
   readonly #listeners = new Set<(view: StravaView) => void>();
   #view: StravaView = { kind: "guest" };
-  #lease: AccountLease | undefined;
+  #lease: StravaLease | undefined;
   #cancelFlow: (() => void) | undefined;
   #timer: ReturnType<typeof setTimeout> | undefined;
   #selection = 0;
   readonly #unsubscribe: () => void;
 
   constructor(
-    session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>,
+    session: Readonly<
+      Pick<ApplicationSession, "subscribe"> & { readonly authorize: () => StravaLease | undefined }
+    >,
     private readonly popup: StravaPopup,
   ) {
     this.#unsubscribe = session.subscribe((view) => {
@@ -83,7 +84,7 @@ export class StravaSync {
     for (const listener of this.#listeners) listener(view);
   }
   private patch(
-    lease: AccountLease,
+    lease: StravaLease,
     patch: Partial<Extract<StravaView, { readonly kind: "account" }>>,
   ): void {
     if (lease.current() && this.#lease === lease && this.#view.kind === "account")

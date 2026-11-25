@@ -6,7 +6,13 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { createEngine, createRoute, TEST_LOOP } from "@voltonaut/engine";
+import {
+  createEngine,
+  createRoute,
+  PHYSICS_REVISION,
+  projectReplaySnapshot,
+  TEST_LOOP,
+} from "@voltonaut/engine";
 import {
   DEFAULT_RIDER_PROFILE,
   RecordingV2Schema,
@@ -33,7 +39,7 @@ export function journalFixture() {
     rideId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     initializedAt: "2026-11-20T12:00:00.000Z",
     initialization: {
-      physicsRevision: "engine-v1",
+      physicsRevision: PHYSICS_REVISION,
       routeId: "test-loop",
       routeRevision: "1",
       profile: DEFAULT_RIDER_PROFILE,
@@ -63,24 +69,9 @@ function journalBoundary(
   engine: Readonly<ReturnType<typeof createEngine>>,
   boundarySeq: number,
 ): ReplayObservationV2 {
-  const {
-    worldPos: _position,
-    headingRad: _heading,
-    trainerMode: _mode,
-    mode: _rideMode,
-    gear,
-    hrBpm,
-    ...snapshot
-  } = engine.snapshot();
-
   return {
     boundarySeq,
-    snapshot: ReplaySnapshotV2Schema.parse({
-      ...snapshot,
-      gearIndex: gear.index,
-      gearRatio: gear.ratio,
-      hrBpm: hrBpm ?? null,
-    }),
+    snapshot: ReplaySnapshotV2Schema.parse(projectReplaySnapshot(engine.snapshot())),
     events: engine.drainEvents().map((event) => ReplayEventV2Schema.parse(event)),
     commands: engine.drainCommands(),
     gap: false,

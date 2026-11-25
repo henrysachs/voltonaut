@@ -1,9 +1,8 @@
-import {
-  PrivateRequestError,
-  type AccountLease,
-  type SyncFailure,
-} from "./privateAuthTransport.js";
-import { ShopReceiptMismatch } from "./shopLease.js";
+import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
+import { ShopReceiptMismatch, type ShopPort } from "./shopPort.js";
+
+/** The garage reads and buys through the shop port only. */
+export type ShopLease = LeaseBinding & { readonly shop: ShopPort };
 
 export type GarageShopView =
   | { readonly kind: "guest" }
@@ -50,7 +49,7 @@ export class GarageShop {
   readonly #retryIds = new Map<string, string>();
   readonly #newRequestId: () => string;
   #view: GarageShopView = { kind: "guest" };
-  #lease: AccountLease | undefined;
+  #lease: ShopLease | undefined;
   #retryUserId: string | undefined;
   #revision = 0;
 
@@ -58,7 +57,7 @@ export class GarageShop {
     this.#newRequestId = newRequestId;
   }
 
-  bind(lease?: AccountLease): void {
+  bind(lease?: ShopLease): void {
     this.#lease = lease;
 
     // A re-authenticated session of the same account keeps open request ids (ADR-031 §3). The
@@ -147,7 +146,7 @@ export class GarageShop {
   }
 
   private async failPurchase(
-    lease: AccountLease,
+    lease: ShopLease,
     view: ReadyView,
     itemId: string,
     rejected: boolean,
@@ -162,7 +161,7 @@ export class GarageShop {
     this.publish({ ...view, pendingItemId: null, message: UNCONFIRMED, messageItemId: itemId });
   }
 
-  private current(lease: AccountLease, revision: number): boolean {
+  private current(lease: ShopLease, revision: number): boolean {
     return this.#lease === lease && lease.current() && revision === this.#revision;
   }
 
@@ -173,7 +172,7 @@ export class GarageShop {
   }
 
   private async refresh(
-    lease: AccountLease,
+    lease: ShopLease,
     message: string,
     messageItemId: string | null,
   ): Promise<void> {

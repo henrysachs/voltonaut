@@ -14,6 +14,10 @@ _Vermeiden_: öffentlicher Startsnapshot als Ersatz für die Historie.
 Der vom Nutzer gewählte Abschnitt einer Spielsession, dessen Zeit und Strecke zu einer abgeschlossenen Aufnahme zählen. Die davor gefahrene Historie bleibt Vorlauf.
 _Vermeiden_: Journalanfang als Synonym für Aufnahmestart.
 
+**Fahrtjournal-Codec**:
+Die einzige Übersetzung zwischen Geräteereignissen, Fahrtjournal-Einträgen, Engine und Replay-Snapshot. Worker und Server verwenden denselben Codec; er entscheidet für jede Eingabe, ob sie ins Fahrtjournal gehört.
+_Vermeiden_: Recorder-Mapping und Replay-Mapping als getrennte Kopien.
+
 **Replay-Konsistenz**:
 Die Übereinstimmung einer Aufnahme mit der Nachrechnung ihrer vollständigen Vorgangshistorie. Sie beweist weder echte Sensoren noch eine reale Trainingsleistung.
 _Vermeiden_: hardwareverifiziert, echte Fahrt bewiesen.
@@ -29,6 +33,10 @@ _Vermeiden_: TCX-Download oder Kontozuordnung als Uploadzustimmung.
 **Unklare Strava-Auslieferung**:
 Ein Versand, dessen Annahme durch Strava nicht sicher bekannt ist. Er ist weder bestätigter Erfolg noch sicher gescheitert.
 _Vermeiden_: fehlgeschlagen als Grund für automatischen Neuversand.
+
+**Festgeschriebener Strava-Versuch**:
+Der dauerhaft vor dem Anbieteraufruf gespeicherte einzige Uploadversuch einer Fahrt. Nur er berechtigt zum Upload-POST.
+_Vermeiden_: Wiederholung oder neuer Versuch nach einem unklaren Ergebnis.
 
 **Mitgliedsstufe**:
 Die manuell vergebbare Einstufung eines Kontos als Normal, Premium oder Pro. Eine Stufe allein verspricht noch keinen Preis oder unterschiedliche Spielrechte.

@@ -14,10 +14,14 @@ import {
   type RideEvent,
   type TrainerCommand,
 } from "@voltonaut/shared";
-import type { RideSnapshot } from "@voltonaut/engine";
+import {
+  encodeJournalInput,
+  projectReplaySnapshot,
+  type RejectedReading,
+  type RideSnapshot,
+} from "@voltonaut/engine";
 
 import { RecordingJournal, type JournalInitialization } from "./recordingJournal.js";
-import { replaySnapshot } from "./recordingObservation.js";
 import type {
   CaptureAvailability,
   CaptureCommand,
@@ -25,7 +29,6 @@ import type {
   CaptureView,
   RideRecorder,
 } from "./rideCaptureProtocol.js";
-import { validCaptureReading } from "./rideCaptureProtocol.js";
 
 type RecorderState =
   | { readonly kind: "idle" }
@@ -98,38 +101,20 @@ class Recorder implements RideRecorder {
   }
 
   ingest(event: DeviceEvent, atMs: number): void {
-    if (event.type === "trainer.data") {
-      const power = validCaptureReading(event.powerW, 2000);
-      const cadence = validCaptureReading(event.cadenceRpm, 200);
-      const speed = validCaptureReading(event.speedMps, 100);
+    const decision = encodeJournalInput(event, atMs);
 
-      if (
-        (event.powerW !== undefined && power === null) ||
-        (event.cadenceRpm !== undefined && cadence === null) ||
-        (event.speedMps !== undefined && speed === null)
-      ) {
-        this.journal.invalidate("invalid_input");
-      }
+    if (decision.kind === "ignored") return;
+    this.reject(decision.rejected);
 
-      if (event.powerW !== undefined && power === null) this.projection.invalidate("powerW");
+    if (decision.kind === "entry") this.append(decision.entry);
+  }
 
-      if (event.cadenceRpm !== undefined && cadence === null)
-        this.projection.invalidate("cadenceRpm");
+  private reject(readings: readonly RejectedReading[]): void {
+    if (readings.length > 0) this.journal.invalidate("invalid_input");
 
-      this.append([0, atMs, "trainer", power, cadence, speed]);
-    } else if (event.type === "hr.data") {
-      if (!Number.isFinite(event.bpm) || event.bpm < 1 || event.bpm > 250) {
-        this.journal.invalidate("invalid_input");
-        this.projection.invalidate("hrBpm");
-      } else this.append([0, atMs, "hr", event.bpm]);
-    } else if (event.type === "device.status") {
-      this.append([0, atMs, "status", event.kind, event.status]);
-    } else if (
-      event.type === "controller.button" &&
-      event.pressed &&
-      (event.button === "shiftUp" || event.button === "shiftDown")
-    ) {
-      this.append([0, atMs, "shift", event.button]);
+    for (const reading of readings) {
+      // Speed is not a track channel; its rejection only invalidates the journal.
+      if (reading !== "speedMps") this.projection.invalidate(reading);
     }
   }
 
@@ -166,7 +151,7 @@ class Recorder implements RideRecorder {
   ): void {
     const observation: ReplayObservationV2 = {
       boundarySeq: 0,
-      snapshot: replaySnapshot(snapshot),
+      snapshot: projectReplaySnapshot(snapshot),
       events: [],
       commands: [],
       gap: this.gap,

@@ -45,7 +45,7 @@ it("binds tokenless leases to validated identity/generation/origin and aborts on
   await session.logout();
   expect(signals[0]?.aborted).toBe(true);
   expect(a?.current()).toBe(false);
-  await expect(a?.profile()).rejects.toMatchObject({ cause: "superseded" });
+  await expect(a?.profile.load()).rejects.toMatchObject({ cause: "superseded" });
   user = { ...user, id: "00000000-0000-4000-8000-000000000002", email: "b@example.com" };
   await session.exchange("b");
   const b = session.authorize();

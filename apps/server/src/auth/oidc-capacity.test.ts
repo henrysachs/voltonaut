@@ -5,6 +5,7 @@ import { getDatabase, httpServerOf } from "../testing/test-app.spec.js";
 import type { SupertestResponsePort } from "../testing/test-app.spec.js";
 import { z } from "zod";
 import { createOidcTokenGate } from "../testing/oidc-token-gate.spec.js";
+import { seedOwners } from "../testing/migration-harness.spec.js";
 
 function seedTransactions(
   app: Parameters<typeof getDatabase>[0],
@@ -107,11 +108,7 @@ it("commits bounded expired cleanup despite rejected starts and recovers legacy 
   const context = await setup();
   const client = getDatabase(context.app).$client;
   const userId = crypto.randomUUID();
-  client
-    .prepare(
-      "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, 'legacy@example.com', 0, NULL)",
-    )
-    .run(userId);
+  seedOwners({ $client: client }, [{ id: userId, email: "legacy@example.com" }]);
 
   const transaction = client.prepare(
     "INSERT INTO oidc_transactions (state_hash, binding_hash, nonce, verifier, expires_at) VALUES (?, 'binding', 'nonce', 'verifier', 0)",
