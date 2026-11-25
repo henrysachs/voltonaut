@@ -58,7 +58,35 @@ function mountInstallButton(host: HTMLElement, status: HTMLElement): void {
   });
 }
 
-function mountUpdate(host: HTMLElement): (apply: ApplyUpdate) => void {
+/** Opens the menu on the App tab, where the update and its recording warning live. */
+export type RevealUpdate = (focus: HTMLElement) => void;
+
+/** Cockpit shortcut next to „Menü“; hidden until a new version is waiting. */
+function updateShortcut(reveal: RevealUpdate, target: HTMLElement): HTMLButtonElement | undefined {
+  const actions = document.querySelector("#game-header-actions");
+
+  return actions instanceof HTMLElement ? appendShortcut(actions, reveal, target) : undefined;
+}
+
+function appendShortcut(
+  actions: HTMLElement,
+  reveal: RevealUpdate,
+  target: HTMLElement,
+): HTMLButtonElement {
+  const shortcut = document.createElement("button");
+  shortcut.type = "button";
+  shortcut.id = "pwa-update-shortcut";
+  shortcut.hidden = true;
+  shortcut.textContent = "Neue Version";
+  shortcut.addEventListener("click", () => {
+    reveal(target);
+  });
+  actions.append(shortcut);
+
+  return shortcut;
+}
+
+function mountUpdate(host: HTMLElement, reveal: RevealUpdate): (apply: ApplyUpdate) => void {
   const notice = document.createElement("div");
   notice.hidden = true;
 
@@ -72,8 +100,13 @@ function mountUpdate(host: HTMLElement): (apply: ApplyUpdate) => void {
   notice.append(text, button);
   host.append(notice);
 
+  const shortcut = updateShortcut(reveal, button);
+
   return (apply) => {
     notice.hidden = false;
+
+    if (shortcut !== undefined) shortcut.hidden = false;
+
     button.addEventListener("click", apply, { once: true });
   };
 }
@@ -121,7 +154,7 @@ function mountHardReload(host: HTMLElement): void {
   host.append(trigger, confirmation);
 }
 
-function populate(host: HTMLElement): void {
+function populate(host: HTMLElement, reveal: RevealUpdate): void {
   const status = paragraph(
     isStandalone()
       ? "Voltonaut läuft als installierte App."
@@ -134,7 +167,7 @@ function populate(host: HTMLElement): void {
 
   host.append(status);
   mountInstallButton(host, status);
-  const onUpdateReady = mountUpdate(host);
+  const onUpdateReady = mountUpdate(host, reveal);
   host.append(offline);
   mountHardReload(host);
   renderHints(host);
@@ -146,8 +179,8 @@ function populate(host: HTMLElement): void {
   }
 }
 
-export function mountPwaPanel(): void {
+export function mountPwaPanel(reveal: RevealUpdate): void {
   const host = document.querySelector("#pwa-panel");
 
-  if (host instanceof HTMLElement) populate(host);
+  if (host instanceof HTMLElement) populate(host, reveal);
 }
