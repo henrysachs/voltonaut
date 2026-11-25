@@ -18,6 +18,10 @@ _Vermeiden_: Journalanfang als Synonym für Aufnahmestart.
 Die einzige Übersetzung zwischen Geräteereignissen, Fahrtjournal-Einträgen, Engine und Replay-Snapshot. Worker und Server verwenden denselben Codec; er entscheidet für jede Eingabe, ob sie ins Fahrtjournal gehört.
 _Vermeiden_: Recorder-Mapping und Replay-Mapping als getrennte Kopien.
 
+**Aufgezeichnete Fahrt**:
+Eine Engine-Session im Worker zusammen mit ihrem Fahrtjournal und ihrer Fortschrittsprojektion. Sie legt die Reihenfolge fest, in der Eingaben, Aufwachungen und Aufnahmebefehle Journal und Engine erreichen.
+_Vermeiden_: Recorder und Engine getrennt vom Aufrufer koordinieren.
+
 **Replay-Konsistenz**:
 Die Übereinstimmung einer Aufnahme mit der Nachrechnung ihrer vollständigen Vorgangshistorie. Sie beweist weder echte Sensoren noch eine reale Trainingsleistung.
 _Vermeiden_: hardwareverifiziert, echte Fahrt bewiesen.
