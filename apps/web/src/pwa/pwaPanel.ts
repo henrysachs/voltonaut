@@ -58,7 +58,7 @@ function mountInstallButton(host: HTMLElement, status: HTMLElement): void {
   });
 }
 
-/** Opens the menu on the App tab, where the update and its recording warning live. */
+/** Opens the menu on the App tab and focuses the update notice, so its recording warning is read first. */
 export type RevealUpdate = (focus: HTMLElement) => void;
 
 /** Cockpit shortcut next to „Menü“; hidden until a new version is waiting. */
@@ -77,6 +77,8 @@ function appendShortcut(
   shortcut.type = "button";
   shortcut.id = "pwa-update-shortcut";
   shortcut.hidden = true;
+  shortcut.setAttribute("aria-haspopup", "dialog");
+  shortcut.setAttribute("aria-controls", "game-menu");
   shortcut.textContent = "Neue Version";
   shortcut.addEventListener("click", () => {
     reveal(target);
@@ -89,18 +91,26 @@ function appendShortcut(
 function mountUpdate(host: HTMLElement, reveal: RevealUpdate): (apply: ApplyUpdate) => void {
   const notice = document.createElement("div");
   notice.hidden = true;
+  notice.id = "pwa-update-notice";
+  notice.tabIndex = -1;
+  notice.setAttribute("role", "group");
+  notice.setAttribute("aria-labelledby", "pwa-update-warning");
 
   const text = paragraph(
     "Eine neue Version ist bereit. Aktualisieren lädt die Seite neu und verwirft eine laufende Aufnahme.",
   );
 
+  text.id = "pwa-update-warning";
+
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = "Jetzt aktualisieren";
+  button.setAttribute("aria-describedby", "pwa-update-warning");
   notice.append(text, button);
   host.append(notice);
 
-  const shortcut = updateShortcut(reveal, button);
+  // Focus the notice, not the reload button: a held Enter must not discard a running recording.
+  const shortcut = updateShortcut(reveal, notice);
 
   return (apply) => {
     notice.hidden = false;
