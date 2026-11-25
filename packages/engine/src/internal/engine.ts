@@ -1,25 +1,36 @@
-import type {
-  DeviceEvent,
-  Meters,
-  Mps,
-  NativeTickFacts,
-  RideEvent,
-  RiderProfile,
-  Seconds,
-  TickInputs,
-  TrainerCommand,
+import {
+  DEFAULT_RIDE_MODE,
+  RIDE_MODES,
+  type DeviceEvent,
+  type Meters,
+  type Mps,
+  type NativeTickFacts,
+  type RideEvent,
+  type RideMode,
+  type RideModeTraits,
+  type RiderProfile,
+  type Seconds,
+  type TickInputs,
+  type TrainerCommand,
 } from "@voltonaut/shared";
 
 import type { EngineRoute } from "../elevation/route.js";
 import { GEAR_PRESETS, physicalRatioFor, START_GEAR_INDEX } from "../gears/presets.js";
+import { planItemBoxes } from "../fun/itemBoxes.js";
 import { DEFAULT_TRAINER_MASS_KG } from "../trainer/gradeMap.js";
 import { riderParamsFromProfile } from "../physics/params.js";
 import { planCatchup, TICK_S } from "./catchup.js";
 import type { EngineContext } from "./tick.js";
 import { tick } from "./tick.js";
+import { modeSnapshot, type ModeSnapshot } from "./modeSnapshot.js";
 import { createRideState, type RideState } from "./state.js";
 
 export type { NativeTickFacts } from "@voltonaut/shared";
+
+export type { ModeSnapshot } from "./modeSnapshot.js";
+
+/** Default seed for mode content such as item boxes (spec E9-01 AK3). */
+export const DEFAULT_MODE_SEED = 42;
 
 /** Public read-only view of the ride; frozen at every snapshot() call. */
 export interface RideSnapshot {
@@ -37,9 +48,10 @@ export interface RideSnapshot {
   readonly energyKj: number;
   readonly paused: boolean;
   readonly dataAgeS: Seconds;
-  readonly trainerMode: "simulation";
+  readonly trainerMode: RideModeTraits["trainer"];
   readonly worldPos: { readonly x: number; readonly y: number; readonly z: number };
   readonly headingRad: number;
+  readonly mode: ModeSnapshot;
 }
 
 export interface CreateEngineOptions {
@@ -51,6 +63,10 @@ export interface CreateEngineOptions {
   readonly initialRoutePosM?: number;
   /** Trainer-internal mass assumption (mT); default 83 kg, calibrated in E2. */
   readonly trainerMassKg?: number;
+  /** Initial ride mode; default "normal". */
+  readonly mode?: RideMode;
+  /** Seed for mode content such as item boxes; default 42. */
+  readonly seed?: number;
 }
 
 export interface Engine {
@@ -66,6 +82,10 @@ export interface Engine {
   readonly snapshot: () => RideSnapshot;
   readonly drainEvents: () => readonly RideEvent[];
   readonly drainCommands: () => readonly TrainerCommand[];
+  /** Mode intent; takes effect on the next tick. */
+  readonly setMode: (mode: RideMode) => void;
+  /** Latest mode intent; the snapshot shows the mode the last tick ran in. */
+  readonly requestedMode: () => RideMode;
 }
 
 interface BufferedInputs {
@@ -74,6 +94,8 @@ interface BufferedInputs {
   hrBpm: number | undefined;
   shifts: number;
   trainerDataFresh: boolean;
+  useItem: boolean;
+  mode: RideMode;
 }
 
 function frozenWorldPos(route: EngineRoute, routePosM: Meters): RideSnapshot["worldPos"] {
@@ -94,6 +116,7 @@ function contextFrom(options: CreateEngineOptions): EngineContext {
       options.profile.bike.cogTeeth,
     ),
     trainerMassKg: options.trainerMassKg ?? DEFAULT_TRAINER_MASS_KG,
+    itemBoxesM: planItemBoxes(options.route),
   };
 }
 
@@ -110,6 +133,8 @@ class RideEngine implements Engine {
     hrBpm: undefined,
     shifts: 0,
     trainerDataFresh: false,
+    useItem: false,
+    mode: DEFAULT_RIDE_MODE,
   };
 
   constructor(options: CreateEngineOptions) {
@@ -122,7 +147,10 @@ class RideEngine implements Engine {
       gearRatio: this.ctx.gearRatios[gearIndex] ?? this.ctx.gearRatios[0] ?? 1,
       speedMps: options.initialSpeedMps ?? 0,
       routePosM: options.initialRoutePosM ?? 0,
+      mode: options.mode ?? DEFAULT_RIDE_MODE,
+      seed: options.seed ?? DEFAULT_MODE_SEED,
     });
+    this.buffered = { ...this.buffered, mode: this.state.mode.kind };
   }
 
   readonly ingest = (event: DeviceEvent): void => {
@@ -148,9 +176,28 @@ class RideEngine implements Engine {
         this.buffered = { ...this.buffered, shifts: this.buffered.shifts + 1 };
       } else if (event.button === "shiftDown") {
         this.buffered = { ...this.buffered, shifts: this.buffered.shifts - 1 };
+      } else if (event.button === "powerUp") {
+        this.buffered = { ...this.buffered, useItem: true };
       }
     }
   };
+
+  /** Inputs for the next tick; one-shot intents are consumed by exactly one tick. */
+  private takeInputs(): TickInputs {
+    const inputs: TickInputs = {
+      powerW: this.buffered.powerW,
+      cadenceRpm: this.buffered.cadenceRpm,
+      hrBpm: this.buffered.hrBpm,
+      shifts: this.buffered.shifts,
+      trainerDataFresh: this.buffered.trainerDataFresh,
+      useItem: this.buffered.useItem,
+      mode: this.buffered.mode,
+    };
+
+    this.buffered = { ...this.buffered, shifts: 0, trainerDataFresh: false, useItem: false };
+
+    return inputs;
+  }
 
   readonly advance = (elapsedS: Seconds): readonly NativeTickFacts[] => {
     const facts: NativeTickFacts[] = [];
@@ -174,21 +221,7 @@ class RideEngine implements Engine {
     }
 
     for (let tickNumber = 0; tickNumber < plan.ticksToRun; tickNumber += 1) {
-      const inputs: TickInputs = {
-        powerW: this.buffered.powerW,
-        cadenceRpm: this.buffered.cadenceRpm,
-        hrBpm: this.buffered.hrBpm,
-        shifts: this.buffered.shifts,
-        trainerDataFresh: this.buffered.trainerDataFresh,
-      };
-
-      this.buffered = {
-        ...this.buffered,
-        shifts: 0,
-        trainerDataFresh: false,
-      };
-
-      const result = tick(this.state, inputs, this.ctx, TICK_S);
+      const result = tick(this.state, this.takeInputs(), this.ctx, TICK_S);
 
       this.state = result.state;
       facts.push(result.facts);
@@ -221,9 +254,10 @@ class RideEngine implements Engine {
       energyKj: state.energyKj,
       paused: state.paused,
       dataAgeS: state.dataAgeS,
-      trainerMode: "simulation",
+      trainerMode: RIDE_MODES[state.mode.kind].trainer,
       worldPos: frozenWorldPos(this.ctx.route, state.routePosM),
       headingRad: this.ctx.route.headingRad(state.routePosM),
+      mode: modeSnapshot(state.mode),
     });
   };
 
@@ -234,6 +268,12 @@ class RideEngine implements Engine {
 
     return drained;
   };
+
+  readonly setMode = (mode: RideMode): void => {
+    this.buffered = { ...this.buffered, mode };
+  };
+
+  readonly requestedMode = (): RideMode => this.buffered.mode;
 
   readonly drainCommands = (): readonly TrainerCommand[] => {
     const drained = this.commands;

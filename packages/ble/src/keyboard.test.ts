@@ -80,3 +80,24 @@ describe("createKeyboardAdapter", () => {
     expect(keyboard.status()).toBe("disconnected");
   });
 });
+
+it("maps p and P to the power-up button", async () => {
+  const bus = createEventBus();
+  const keyboardSource = createFakeKeyboardSource();
+  const buttons: string[] = [];
+  bus.subscribe("controller.button", (event) => {
+    buttons.push(`${event.button}:${String(event.pressed)}`);
+  });
+
+  await createKeyboardAdapter({
+    bus,
+    clock: createManualClock(),
+    source: keyboardSource.source,
+  }).connect();
+  keyboardSource.emit("keydown", "p");
+  keyboardSource.emit("keyup", "p");
+  keyboardSource.emit("keydown", "P");
+  keyboardSource.emit("keyup", "P");
+
+  expect(buttons).toEqual(["powerUp:true", "powerUp:false", "powerUp:true", "powerUp:false"]);
+});

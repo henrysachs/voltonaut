@@ -39,12 +39,14 @@ export const TotalXpSchema = z
 
 export const LevelSchema = z.number().finite().int().min(1).max(50).brand<"Level">();
 
+export const DAILY_VOLTS_LIMIT = 3000;
+
 export const DailyVoltsBudgetSchema = z
   .number()
   .finite()
   .int()
   .min(0)
-  .max(3000)
+  .max(DAILY_VOLTS_LIMIT)
   .brand<"DailyVoltsBudget">();
 
 const voltsComponent = z.number().finite().int().min(0).max(Number.MAX_SAFE_INTEGER);

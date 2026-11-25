@@ -22,6 +22,7 @@ const HUD_ELEMENT_IDS = [
   "warning",
   "sprint",
   "kom",
+  "item",
 ] as const;
 
 export interface AppDocument {
@@ -48,68 +49,15 @@ export interface App {
   readonly stop: () => void;
 }
 
-interface OptionalHudTargets {
-  readonly powerW: TextTarget | undefined;
-  readonly cadenceRpm: TextTarget | undefined;
-  readonly heartRateBpm: TextTarget | undefined;
-  readonly gear: TextTarget | undefined;
-  readonly status: TextTarget | undefined;
-  readonly speed: TextTarget | undefined;
-  readonly distance: TextTarget | undefined;
-  readonly elevationGain: TextTarget | undefined;
-  readonly energy: TextTarget | undefined;
-  readonly warning: TextTarget | undefined;
-  readonly sprint: TextTarget | undefined;
-  readonly kom: TextTarget | undefined;
+type OptionalHudTargets = { readonly [K in keyof HudTargets]: TextTarget | undefined };
+
+/** True when every HUD element exists; HUD_ELEMENT_IDS lists every HudTargets key. */
+function allHudTargets(targets: OptionalHudTargets): targets is HudTargets {
+  return HUD_ELEMENT_IDS.every((id) => targets[id] !== undefined);
 }
 
 function hudTargetsFrom(targets: OptionalHudTargets): HudTargets | undefined {
-  const {
-    powerW,
-    cadenceRpm,
-    heartRateBpm,
-    gear,
-    status,
-    speed,
-    distance,
-    elevationGain,
-    energy,
-    warning,
-    sprint,
-    kom,
-  } = targets;
-
-  if (
-    powerW === undefined ||
-    cadenceRpm === undefined ||
-    heartRateBpm === undefined ||
-    gear === undefined ||
-    status === undefined ||
-    speed === undefined ||
-    distance === undefined ||
-    elevationGain === undefined ||
-    energy === undefined ||
-    warning === undefined ||
-    sprint === undefined ||
-    kom === undefined
-  ) {
-    return undefined;
-  }
-
-  return {
-    powerW,
-    cadenceRpm,
-    heartRateBpm,
-    gear,
-    status,
-    speed,
-    distance,
-    elevationGain,
-    energy,
-    warning,
-    sprint,
-    kom,
-  };
+  return allHudTargets(targets) ? targets : undefined;
 }
 
 function readHudTargets(document: AppDocument): HudTargets | undefined {
@@ -129,6 +77,7 @@ function readHudTargets(document: AppDocument): HudTargets | undefined {
     warning: target("warning"),
     sprint: target("sprint"),
     kom: target("kom"),
+    item: target("item"),
   });
 }
 

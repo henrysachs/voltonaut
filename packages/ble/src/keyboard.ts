@@ -38,6 +38,10 @@ function keyToButton(key: string): ControllerButton | undefined {
     return "shiftDown";
   }
 
+  if (key === "p" || key === "P") {
+    return "powerUp";
+  }
+
   return undefined;
 }
 

@@ -173,6 +173,41 @@ async function verifyHardReload({ dist, app, page }: Fixture): Promise<void> {
   expect(page.url()).toBe(`${app.origin}/?sim=1`);
 }
 
+const UPDATE_MARKER = '<meta name="update-marker" content="next">';
+
+/** A new release: changed shell bytes and a changed worker script, as a real deploy produces. */
+async function publishRelease(dist: string): Promise<void> {
+  const index = join(dist, "index.html");
+  const worker = join(dist, "sw.js");
+
+  await writeFile(
+    index,
+    (await readFile(index, "utf8")).replace("</head>", `${UPDATE_MARKER}</head>`),
+  );
+  await writeFile(worker, `${await readFile(worker, "utf8")}\n// next release\n`);
+}
+
+async function verifyUpdateShortcut({ dist, page }: Fixture): Promise<void> {
+  const shortcut = page.getByRole("button", { name: "Neue Version", exact: true });
+
+  expect(await shortcut.isVisible()).toBe(false);
+
+  await publishRelease(dist);
+  await page.reload();
+  await shortcut.waitFor({ state: "visible" });
+  expect(await page.locator('meta[name="update-marker"]').count()).toBe(0);
+
+  await shortcut.click();
+
+  const apply = page.getByRole("button", { name: "Jetzt aktualisieren", exact: true });
+
+  expect(await page.getByRole("dialog", { name: "Fahrtmenü" }).isVisible()).toBe(true);
+  expect(await apply.evaluate((element) => element === document.activeElement)).toBe(true);
+
+  await Promise.all([page.waitForEvent("load"), apply.click()]);
+  expect(await page.locator('meta[name="update-marker"]').count()).toBe(1);
+}
+
 describe("built PWA", () => {
   let fixture: Fixture;
 
@@ -196,6 +231,10 @@ describe("built PWA", () => {
 
   it("hard reload bypasses the old cache and keeps stored browser data", async () => {
     await expect(verifyHardReload(fixture)).resolves.toBeUndefined();
+  });
+
+  it("announces a waiting release next to the menu and applies it on request", async () => {
+    await expect(verifyUpdateShortcut(fixture)).resolves.toBeUndefined();
   });
 
   it("reloads the app shell offline and still passes API traffic to the network", async () => {

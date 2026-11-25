@@ -17,10 +17,12 @@ interface TickInputs {
   cadenceRpm: number;
   hrBpm?: number;
   shifts: number /* +n hoch, -n runter */;
+  useItem: boolean /* Power-up-Taste seit dem letzten Tick */;
+  mode: RideMode /* angeforderter Spielmodus, ADR-028 */;
 }
 ```
 
-Reihenfolge: Schalten anwenden → Messwerte glätten (EMA, τ ≈ 1 s für Anzeige; Physik nutzt Rohwatt) → Steigung holen → Tempo integrieren → Position/Höhe/Summen → Segment-/Lap-Grenzen prüfen → ggf. Trainer-Kommando.
+Reihenfolge: Schalten anwenden → Messwerte glätten (EMA, τ ≈ 1 s für Anzeige; Physik nutzt Rohwatt) → Spielmodus wechseln und seine Tasten-Intents anwenden (auch pausiert, ADR-028) → Auto-Pause → Steigung holen → Tempo integrieren (mit dem Physik-Effekt des Modus) → Position/Höhe/Summen → Segment-/Lap-Grenzen prüfen → Modus-Schritte nach der Bewegung (z. B. Item-Boxen) → ggf. Trainer-Kommando. Modus-Effekte wirken nie auf das Trainer-Kommando.
 
 Datenausfall: kein `trainer.data` seit > 3 s → `powerW = 0` (Ausrollen), HUD-Warnung. Pause automatisch, wenn `speedMps < 0.5` und `cadence = 0` für 5 s.
 

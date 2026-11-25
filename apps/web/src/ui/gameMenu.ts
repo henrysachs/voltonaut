@@ -17,7 +17,8 @@ function menuTabs(): readonly MenuTab[] {
   });
 }
 
-function mountTabs(): void {
+/** Wires the menu tabs; returns a selector by tab button id. */
+function mountTabs(): (tabId: string) => void {
   const tabs = menuTabs();
 
   const select = (selected: Readonly<MenuTab>): void => {
@@ -54,6 +55,12 @@ function mountTabs(): void {
       next.button.focus();
     });
   }
+
+  return (tabId) => {
+    const tab = tabs.find((candidate) => candidate.button.id === tabId);
+
+    if (tab !== undefined) select(tab);
+  };
 }
 
 function mountFocusLoop(dialog: HTMLDialogElement): void {
@@ -112,8 +119,6 @@ function mountEscapeShortcut(show: () => void): void {
 }
 
 export function mountGameMenu(wheelCircM?: number): void {
-  mountPwaPanel();
-
   if (wheelCircM !== undefined) {
     const garage = document.querySelector("#garage-shop");
 
@@ -131,7 +136,8 @@ export function mountGameMenu(wheelCircM?: number): void {
     close instanceof HTMLButtonElement &&
     devices instanceof HTMLButtonElement
   ) {
-    mountTabs();
+    const selectTab = mountTabs();
+
     mountFocusLoop(dialog);
     mountDeviceAccess(dialog, devices);
 
@@ -153,5 +159,10 @@ export function mountGameMenu(wheelCircM?: number): void {
       event.stopPropagation();
     });
     mountEscapeShortcut(show);
+    mountPwaPanel((focus) => {
+      show();
+      selectTab("game-tab-app");
+      focus.focus();
+    });
   }
 }

@@ -99,6 +99,11 @@ button:disabled {
 .ride-title__actions button {
   white-space: nowrap;
 }
+#pwa-update-shortcut {
+  border-color: var(--cockpit-accent);
+  color: var(--cockpit-accent);
+  font-weight: 700;
+}
 #game-menu-open {
   border-color: transparent;
   background: var(--cockpit-accent);
@@ -254,6 +259,23 @@ button:disabled {
   color: #ffb86b;
 }
 .hud__warning:empty {
+  display: none;
+}
+.hud__item {
+  position: absolute;
+  top: 122px;
+  right: 24px;
+  max-width: min(320px, calc(100% - 48px));
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 3px solid #ffd23f;
+  border-radius: 0.5rem;
+  background: var(--cockpit-surface);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+.hud__item:empty {
   display: none;
 }
 .hud__hint {
@@ -912,4 +934,32 @@ body > dialog.connect-dialog[open] {
   .game-menu__eyebrow {
     display: none;
   }
+}
+
+.game-menu__mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.5rem;
+}
+.game-menu__mode legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.game-menu__mode label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.game-menu__mode-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+}
+.game-menu__mode-hint:empty {
+  display: none;
 }
