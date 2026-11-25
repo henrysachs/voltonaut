@@ -32,7 +32,7 @@ interface ShownPicker {
 
 interface Listeners {
   change: (mode: RideMode) => void;
-  capture: (view: CaptureView) => void;
+  update: () => void;
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The fake view records what the binding shows into these mutable test probes.
@@ -56,36 +56,38 @@ function fakeView(shown: ShownPicker, listeners: Listeners): RideModeView {
   };
 }
 
+/** A session fake: `engine` is the mode the last tick ran in, `capture` the recording view. */
 function harness(initial: CaptureView = idle) {
   let captureView = initial;
-  const listeners: Listeners = { change: ignore, capture: ignore };
+  let engineMode: RideMode | undefined;
+  const listeners: Listeners = { change: ignore, update: ignore };
   const sent: RideMode[] = [];
   const shown: ShownPicker = { selected: "normal", funEnabled: true, hint: "" };
 
   bindRideMode(fakeView(shown, listeners), {
-    setMode: (mode) => {
+    mode: () => engineMode,
+    requestMode: (mode) => {
       sent.push(mode);
     },
-    recording: {
-      state: () => captureView,
-      subscribe: (listener) => {
-        listeners.capture = listener;
+    subscribe: (listener) => {
+      listeners.update = listener;
 
-        return ignore;
-      },
+      return ignore;
     },
+    recording: { state: () => captureView },
   });
 
   const choose = (mode: RideMode) => {
     listeners.change(mode);
   };
 
-  const capture = (next: CaptureView) => {
-    captureView = next;
-    listeners.capture(next);
+  const update = (next: { readonly engine?: RideMode; readonly capture?: CaptureView }) => {
+    engineMode = next.engine ?? engineMode;
+    captureView = next.capture ?? captureView;
+    listeners.update();
   };
 
-  return { sent, shown, choose, capture };
+  return { sent, shown, choose, update };
 }
 
 it("starts in normal mode and switches to fun with a hint", () => {
@@ -94,18 +96,40 @@ it("starts in normal mode and switches to fun with a hint", () => {
   expect(ride.shown).toEqual({ selected: "normal", funEnabled: true, hint: "" });
   ride.choose("fun");
   expect(ride.sent).toEqual(["fun"]);
-  expect(ride.shown.hint).toBe(FUN_MODE_HINT);
+  expect(ride.shown).toMatchObject({ selected: "fun", hint: FUN_MODE_HINT });
+  ride.update({ engine: "fun" });
   ride.choose("normal");
   expect(ride.sent).toEqual(["fun", "normal"]);
   expect(ride.shown.hint).toBe("");
 });
 
+it("shows the engine's mode when no request is pending", () => {
+  const ride = harness();
+
+  ride.update({ engine: "fun" });
+  expect(ride.shown).toMatchObject({ selected: "fun", hint: FUN_MODE_HINT });
+  ride.update({ engine: "normal" });
+  expect(ride.shown).toMatchObject({ selected: "normal", hint: "" });
+});
+
+it("keeps an unanswered request visible until the engine ticks in that mode", () => {
+  const ride = harness();
+
+  ride.update({ engine: "normal" });
+  ride.choose("fun");
+  ride.update({ engine: "normal" });
+  expect(ride.shown.selected).toBe("fun");
+  ride.update({ engine: "fun" });
+  ride.update({ engine: "normal" });
+  expect(ride.shown.selected).toBe("normal");
+});
+
 it("locks fun mode while a recording runs and unlocks afterwards", () => {
   const ride = harness();
 
-  ride.capture(recording);
+  ride.update({ capture: recording });
   expect(ride.shown).toEqual({ selected: "normal", funEnabled: false, hint: FUN_MODE_LOCKED_HINT });
-  ride.capture(idle);
+  ride.update({ capture: idle });
   expect(ride.shown).toEqual({ selected: "normal", funEnabled: true, hint: "" });
 });
 
@@ -117,11 +141,12 @@ it("reverts a fun choice that races a running recording", () => {
   expect(ride.shown).toEqual({ selected: "normal", funEnabled: false, hint: FUN_MODE_LOCKED_HINT });
 });
 
-it("falls back to normal when a recording wins the race against a fun choice", () => {
+it("follows the engine when a recording wins the race against a fun choice", () => {
   const ride = harness();
 
+  ride.update({ engine: "normal" });
   ride.choose("fun");
-  ride.capture(recording);
-  expect(ride.sent).toEqual(["fun", "normal"]);
+  ride.update({ engine: "normal", capture: recording });
+  expect(ride.sent).toEqual(["fun"]);
   expect(ride.shown).toEqual({ selected: "normal", funEnabled: false, hint: FUN_MODE_LOCKED_HINT });
 });
