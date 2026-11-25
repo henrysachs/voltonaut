@@ -633,6 +633,15 @@ button:disabled {
 .garage__purchase {
   width: 100%;
 }
+.garage__purchase-confirm {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.garage__purchase-question {
+  margin: 0;
+  line-height: 1.45;
+}
 
 body > dialog:not(.game-menu) {
   max-width: min(600px, calc(100vw - 40px));

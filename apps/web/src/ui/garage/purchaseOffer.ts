@@ -69,3 +69,30 @@ export function purchaseOffer(item: Readonly<ItemDef>, view: GarageShopView): Pu
     hint: `Guthaben: ${volts(view.voltsBalance)}.${message}`,
   };
 }
+
+export interface PurchaseConfirmation {
+  readonly priceVolts: number;
+  readonly question: string;
+  readonly confirmText: string;
+}
+
+/**
+ * Second step of a purchase (issue #115): only an item the offer enables can be confirmed,
+ * and the confirmation fixes the price it shows, so a changed price stays `price_changed`.
+ */
+export function purchaseConfirmation(
+  item: Readonly<ItemDef>,
+  view: GarageShopView,
+): PurchaseConfirmation | null {
+  if (view.kind !== "ready" || item.priceVolts === undefined) return null;
+
+  if (!purchaseOffer(item, view).enabled) return null;
+
+  const price = item.priceVolts;
+
+  return {
+    priceVolts: price,
+    question: `„${item.name}“ für ${volts(price)} kaufen? Kontostand danach: ${volts(view.voltsBalance - price)}. Käufe sind endgültig und lassen sich nicht rückgängig machen.`,
+    confirmText: `Ja, für ${volts(price)} kaufen`,
+  };
+}
