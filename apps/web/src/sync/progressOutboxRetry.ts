@@ -5,10 +5,11 @@ import {
 } from "./progressOutboxIndexedTypes.js";
 import { ProgressOutboxRowSchema, type ProgressAccountOwner } from "./progressOutboxSchema.js";
 
-function queuedRetryRange(owner: Readonly<ProgressAccountOwner>): IDBKeyRange {
+function queuedRetryRange(owner: Readonly<ProgressAccountOwner>, afterMs: number): IDBKeyRange {
   return IDBKeyRange.bound(
-    [owner.apiOrigin, owner.userId, "queued", 0],
+    [owner.apiOrigin, owner.userId, "queued", afterMs],
     [owner.apiOrigin, owner.userId, "queued", Number.MAX_SAFE_INTEGER],
+    true,
   );
 }
 
@@ -35,12 +36,13 @@ class ProgressRetryRequest
 export function readNextProgressRetry(
   store: IDBObjectStore,
   owner: Readonly<ProgressAccountOwner>,
+  afterMs: number,
 ): ProgressIndexedRequest<number | undefined> {
   const request = new ProgressRetryRequest();
 
   const cursorRequest = store
     .index(PROGRESS_OUTBOX_INDEX_RETRY)
-    .openCursor(queuedRetryRange(owner), "next");
+    .openCursor(queuedRetryRange(owner, afterMs), "next");
 
   cursorRequest.addEventListener("success", () => {
     try {

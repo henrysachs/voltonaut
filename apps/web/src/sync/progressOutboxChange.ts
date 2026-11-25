@@ -218,6 +218,7 @@ export function runProgressJournalPending(
 export function runProgressNextRetryAt(
   database: Readonly<ProgressIndexedDatabase>,
   owner: Readonly<ProgressAccountOwner>,
+  afterMs: number,
 ): Promise<number | undefined> {
   let retryAtMs: number | undefined;
 
@@ -226,7 +227,7 @@ export function runProgressNextRetryAt(
     "readonly",
     undefined,
     (store, ready, fail) => {
-      const request = store.nextRetryAt(owner);
+      const request = store.nextRetryAt(owner, afterMs);
       request.addEventListener("success", () => {
         retryAtMs = request.result;
         ready();

@@ -53,16 +53,17 @@ it("returns the earliest queued retry through the account index", async () => {
       retryAtMs: 0,
       receipt: receipt(storedBase),
     }),
+    seededRow(owner, 4, { kind: "queued", attempts: 0, retryAtMs: 0 }),
     seededRow({ ...owner, userId: userB }, 0, { kind: "queued", attempts: 1, retryAtMs: 1 }),
   ];
 
   for (const row of rows) memory.seed(row);
 
   memory.resetMetrics();
-  expect(await outbox.nextRetryAt(owner)).toBe(5000);
-  expect(await outbox.nextRetryAt({ ...owner, userId: userB })).toBe(1);
+  expect(await outbox.nextRetryAt(owner, 0)).toBe(5000);
+  expect(await outbox.nextRetryAt({ ...owner, userId: userB }, 0)).toBe(1);
   expect(
-    await outbox.nextRetryAt({ ...owner, apiOrigin: "http://localhost:4000" }),
+    await outbox.nextRetryAt({ ...owner, apiOrigin: "http://localhost:4000" }, 0),
   ).toBeUndefined();
   expect(memory.metrics()).toMatchObject({ getAll: 0, nextRetryAt: 3 });
 });
@@ -78,7 +79,7 @@ it("tracks queued retry changes without store scans", async () => {
 
   const sending = await outbox.markSending({ row, fence: fence(), nowMs: 0, manual: false });
 
-  expect(await outbox.nextRetryAt(owner)).toBe(3000);
+  expect(await outbox.nextRetryAt(owner, 0)).toBe(3000);
   expect(memory.metrics()).toMatchObject({ getAll: 0, nextRetryAt: 1 });
 
   const blocked = await outbox.markBlocked({
@@ -91,7 +92,7 @@ it("tracks queued retry changes without store scans", async () => {
 
   memory.resetMetrics();
 
-  expect(await outbox.nextRetryAt(owner)).toBe(2000);
+  expect(await outbox.nextRetryAt(owner, 0)).toBe(2000);
   expect(memory.metrics()).toMatchObject({ getAll: 0, nextRetryAt: 1 });
 
   const retried = await outbox.markSending({
@@ -105,6 +106,6 @@ it("tracks queued retry changes without store scans", async () => {
 
   memory.resetMetrics();
 
-  expect(await outbox.nextRetryAt(owner)).toBe(3000);
+  expect(await outbox.nextRetryAt(owner, 0)).toBe(3000);
   expect(memory.metrics()).toMatchObject({ getAll: 0, nextRetryAt: 1 });
 });

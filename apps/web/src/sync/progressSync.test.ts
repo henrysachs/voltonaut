@@ -51,9 +51,10 @@ import {
   type ProgressPendingPageCursor,
   type ProgressWriteFence,
 } from "./progressOutbox.js";
+import { createProgressOutboxDatabase } from "./progressOutboxDatabase.js";
 import { ProgressSync, type ProgressSyncOptions } from "./progressSync.js";
 import { deferred } from "./testdata/deferred.js";
-import { batch, checkpoint, owner, userA } from "./progressOutboxTestdata.js";
+import { MemoryOutboxDatabase, batch, checkpoint, owner, userA } from "./progressOutboxTestdata.js";
 
 const ORIGIN = "http://localhost:3000";
 const OTHER_JOURNAL = "550e8400-e29b-41d4-a716-446655440001";
@@ -340,13 +341,13 @@ class MemoryOutbox implements ProgressOutbox {
       );
   }
 
-  async nextRetryAt(account: ProgressAccountOwner): Promise<number | undefined> {
+  async nextRetryAt(account: ProgressAccountOwner, afterMs: number): Promise<number | undefined> {
     this.nextRetryAtCalls += 1;
     const rows = await this.listPending(account);
     let next: number | undefined;
 
     for (const row of rows) {
-      if (row.state.kind !== "queued" || row.state.retryAtMs <= 0) continue;
+      if (row.state.kind !== "queued" || row.state.retryAtMs <= afterMs) continue;
 
       if (next === undefined || row.state.retryAtMs < next) next = row.state.retryAtMs;
     }
@@ -462,7 +463,7 @@ class MemoryOutbox implements ProgressOutbox {
 }
 
 function seedRow(
-  memory: MemoryOutbox,
+  memory: Readonly<{ seed: (row: ProgressOutboxRow) => void }>,
   checkpoints: readonly RideProgressCheckpoint[],
   state: ProgressOutboxState = DEFAULT_STATE,
   sessionGeneration = 1,
@@ -523,7 +524,10 @@ class Harness {
   readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
   readonly sync: ProgressSync;
 
-  constructor(memory = new MemoryOutbox(), options: Pick<ProgressSyncOptions, "schedule"> = {}) {
+  constructor(
+    memory = new MemoryOutbox(),
+    options: Pick<ProgressSyncOptions, "outbox" | "schedule"> = {},
+  ) {
     this.memory = memory;
     this.outbox = memory;
     this.session = {
@@ -1068,6 +1072,29 @@ it("defers fresh rows behind an eligible prefix with a backoff tail", async () =
     Array.from({ length: 12 }, (_, index) => index),
   );
   expect(memory.raw()).toEqual([]);
+});
+
+it("schedules an indexed backoff head behind fresh tail rows", async () => {
+  const database = new MemoryOutboxDatabase();
+  const outbox = createProgressOutboxDatabase(database);
+  const f = new Harness(new MemoryOutbox(), { outbox: () => Promise.resolve(outbox) });
+  const backoff: ProgressOutboxState = { kind: "queued", attempts: 1, retryAtMs: 5000 };
+  f.consent = { version: 1, enabled: true, rewardsAvailable: true, sessionGeneration: 1 };
+  f.login();
+  await settle();
+  f.scheduled.length = 0;
+  seedRow(database, [checkpoint({ paused: true })], backoff);
+
+  for (let index = 1; index < 4; index += 1)
+    seedRow(database, [checkpoint({ sequence: index, startTick: index, paused: true })]);
+  await f.sync.retry("resume");
+  expect(f.submitted).toEqual([]);
+  expect(f.scheduled).toEqual([4000]);
+  f.nowMs = 5000;
+  await f.sync.retry("resume");
+  expect(f.submitted.flatMap((value) => value.checkpoints.map((entry) => entry.sequence))).toEqual([
+    0, 1, 2, 3,
+  ]);
 });
 
 it("schedules a later journal retry after a full blocked page", async () => {

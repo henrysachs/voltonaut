@@ -165,10 +165,17 @@ class IndexedProgressOutbox implements ProgressOutbox {
     });
   }
 
-  nextRetryAt(ownerInput: Readonly<ProgressAccountOwner>): Promise<number | undefined> {
+  nextRetryAt(
+    ownerInput: Readonly<ProgressAccountOwner>,
+    afterMs: number,
+  ): Promise<number | undefined> {
     const owner = normalizeProgressOwner(ownerInput);
 
-    return runProgressNextRetryAt(this.#database, owner);
+    if (!Number.isSafeInteger(afterMs) || afterMs < 0) {
+      throw progressError("contract", "Progress-Retry-Zeit muss eine nichtnegative Ganzzahl sein.");
+    }
+
+    return runProgressNextRetryAt(this.#database, owner, afterMs);
   }
 
   async markSending(input: Readonly<ProgressMarkSending>): Promise<ProgressOutboxRow> {

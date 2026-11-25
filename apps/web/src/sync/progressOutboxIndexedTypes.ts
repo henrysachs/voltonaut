@@ -29,7 +29,10 @@ export interface ProgressIndexedStore {
   get(key: ProgressIndexedKey): ProgressIndexedRequest<ProgressOutboxRow | undefined>;
   getAll(): ProgressIndexedRequest<ProgressOutboxRow[]>;
   accountCount(owner: Readonly<ProgressAccountOwner>): ProgressIndexedRequest<number>;
-  nextRetryAt(owner: Readonly<ProgressAccountOwner>): ProgressIndexedRequest<number | undefined>;
+  nextRetryAt(
+    owner: Readonly<ProgressAccountOwner>,
+    afterMs: number,
+  ): ProgressIndexedRequest<number | undefined>;
   openCount(owner: Readonly<ProgressAccountOwner>): ProgressIndexedRequest<number>;
   stateCount(
     owner: Readonly<ProgressAccountOwner>,

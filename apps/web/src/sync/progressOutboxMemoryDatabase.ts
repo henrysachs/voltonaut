@@ -49,13 +49,12 @@ function createMemoryCounts(state: Readonly<MemoryTransactionState>) {
 
       return read(indexes.accounts.get(accountKey(owner)) ?? 0);
     },
-    nextRetryAt: (owner: Readonly<ProgressAccountOwner>) => {
+    nextRetryAt: (owner: Readonly<ProgressAccountOwner>, afterMs: number) => {
       metrics.nextRetryAt += 1;
 
       const retries = indexes.retries.get(accountKey(owner));
-
-      const next =
-        retries === undefined || retries.size === 0 ? undefined : Math.min(...retries.keys());
+      const future = [...(retries?.keys() ?? [])].filter((retryAtMs) => retryAtMs > afterMs);
+      const next = future.length === 0 ? undefined : Math.min(...future);
 
       return read(next);
     },

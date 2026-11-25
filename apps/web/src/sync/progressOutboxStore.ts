@@ -41,8 +41,11 @@ class IndexedProgressStore implements ProgressIndexedStore {
       .count(IDBKeyRange.only([owner.apiOrigin, owner.userId]));
   }
 
-  nextRetryAt(owner: Readonly<ProgressAccountOwner>): ProgressIndexedRequest<number | undefined> {
-    return readNextProgressRetry(this.#store, owner);
+  nextRetryAt(
+    owner: Readonly<ProgressAccountOwner>,
+    afterMs: number,
+  ): ProgressIndexedRequest<number | undefined> {
+    return readNextProgressRetry(this.#store, owner, afterMs);
   }
 
   openCount(owner: Readonly<ProgressAccountOwner>): IDBRequest<number> {

@@ -166,18 +166,39 @@ async function readProgressRows(first: Readonly<ProgressOutboxRow>) {
 
 async function readPendingAfterReload(first: Readonly<ProgressOutboxRow>) {
   const { openProgressOutboxDatabase } = await import("../src/sync/progressOutboxDatabase.js");
-  const { owner } = await import("../src/sync/progressOutboxTestdata.js");
+  const { fence, owner } = await import("../src/sync/progressOutboxTestdata.js");
   const outbox = await openProgressOutboxDatabase();
+  const page = await outbox.listPendingPage(owner, 10);
 
-  return {
-    page: await outbox.listPendingPage(owner, 10),
+  const pending = {
+    page,
     after: await outbox.listPendingPage(owner, 10, {
       journalId: first.journalId,
       startTick: first.startTick,
     }),
     journal: await outbox.listJournalPending(owner, first.journalId),
-    nextRetryAt: await outbox.nextRetryAt(owner),
+    nextRetryAt: await outbox.nextRetryAt(owner, 0),
     view: await outbox.state(owner),
+  };
+
+  const head = page[0];
+
+  if (head === undefined) throw new Error("Missing pending progress row");
+
+  const sending = await outbox.markSending({ row: head, fence: fence(), nowMs: 0, manual: false });
+
+  await outbox.markBlocked({
+    row: sending,
+    fence: fence(),
+    cause: "retry",
+    attempts: 1,
+    nowMs: 1000,
+  });
+
+  return {
+    ...pending,
+    backoffRetryAt: await outbox.nextRetryAt(owner, 1000),
+    afterBackoffRetryAt: await outbox.nextRetryAt(owner, 2000),
   };
 }
 
@@ -197,8 +218,10 @@ async function expectReloadedProgress(
   expect(pending.page.map((row) => row.revision)).toEqual([sealedRevision]);
   expect(pending.after).toEqual([]);
   expect(pending.journal.map((row) => row.revision)).toEqual([sealedRevision]);
-  expect(pending.nextRetryAt).toBe(0);
+  expect(pending.nextRetryAt).toBeUndefined();
   expect(pending.view).toEqual(view);
+  expect(pending.backoffRetryAt).toBe(2000);
+  expect(pending.afterBackoffRetryAt).toBeUndefined();
 }
 
 test("real IndexedDB uses the v1 composite sequence schema and persists rows across reload", async ({

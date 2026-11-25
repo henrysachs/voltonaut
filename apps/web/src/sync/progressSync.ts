@@ -1001,8 +1001,8 @@ export class ProgressSync {
     if (!this.current(lease)) return;
 
     try {
-      const next = await (await this.database()).nextRetryAt(lease);
       const nowMs = this.nowMs();
+      const next = await (await this.database()).nextRetryAt(lease, nowMs);
 
       if (next === undefined || next <= nowMs) this.cancelTimer();
       else this.scheduleAt(next);

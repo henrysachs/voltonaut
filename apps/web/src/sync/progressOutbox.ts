@@ -106,7 +106,10 @@ export interface ProgressOutbox {
     owner: Readonly<ProgressAccountOwner>,
     journalId: ProgressJournalOwner["journalId"],
   ) => Promise<readonly ProgressOutboxRow[]>;
-  readonly nextRetryAt: (owner: Readonly<ProgressAccountOwner>) => Promise<number | undefined>;
+  readonly nextRetryAt: (
+    owner: Readonly<ProgressAccountOwner>,
+    afterMs: number,
+  ) => Promise<number | undefined>;
   readonly markSending: (input: Readonly<ProgressMarkSending>) => Promise<ProgressOutboxRow>;
   readonly markStored: (input: Readonly<ProgressMarkStored>) => Promise<ProgressOutboxRow>;
   readonly markBlocked: (input: Readonly<ProgressMarkBlocked>) => Promise<ProgressOutboxRow>;
