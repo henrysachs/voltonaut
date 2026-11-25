@@ -13,6 +13,10 @@ export async function disconnectSimTrainer(page: Readonly<Pick<Page, "getByRole"
 
   await page.getByRole("button", { name: "Geräte verbinden", exact: true }).click();
   await trainer.getByRole("button", { name: "Trennen", exact: true }).click();
-  await trainer.getByLabel("Trainer Status").filter({ hasText: "disconnected" }).waitFor();
+  // The raw status sits in collapsed technical details: wait for its text, not its visibility.
+  await trainer
+    .getByLabel("Trainer Status")
+    .filter({ hasText: "disconnected" })
+    .waitFor({ state: "attached" });
   await devices.getByRole("button", { name: "Schließen", exact: true }).click();
 }
