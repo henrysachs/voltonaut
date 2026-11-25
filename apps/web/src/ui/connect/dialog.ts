@@ -1,5 +1,5 @@
 import type { ConnectionStatus, DeviceAdapter, EventBus } from "@voltonaut/shared";
-import type { TrainerControl } from "@voltonaut/ble";
+import type { TrainerControlPanel } from "@voltonaut/ble";
 import { renderTrainerControl } from "./trainerControl.js";
 
 export interface ConnectSlot {
@@ -7,7 +7,7 @@ export interface ConnectSlot {
   readonly adapter: DeviceAdapter;
   readonly select: () => Promise<void>;
   readonly description?: () => string;
-  readonly trainer?: { readonly control: TrainerControl; readonly clockScale: number };
+  readonly trainer?: TrainerControlPanel;
 }
 
 const STATUS_TEXT: Readonly<Record<ConnectionStatus, string>> = {
@@ -116,9 +116,7 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
   bus.subscribe("device.status", update);
 
   if (slot.trainer !== undefined)
-    elements.row.append(
-      renderTrainerControl(slot.trainer.control, slot.trainer.clockScale, elements.diagnosticBody),
-    );
+    elements.row.append(renderTrainerControl(slot.trainer, elements.diagnosticBody));
 
   renderSlotState(slot, elements, slot.adapter.status());
 

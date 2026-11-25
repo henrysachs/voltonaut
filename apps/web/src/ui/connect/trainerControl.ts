@@ -1,4 +1,4 @@
-import type { TrainerControl, TrainerAuthority, TrainerControlView } from "@voltonaut/ble";
+import type { TrainerControlPanel, TrainerAuthority, TrainerControlView } from "@voltonaut/ble";
 
 const HARDWARE_LABEL: Readonly<Record<TrainerControlView["hardware"], string>> = {
   unknown: "Widerstand unbekannt",
@@ -103,7 +103,7 @@ function controlElements(): ControlElements {
 }
 
 function updateControl(
-  control: Readonly<Pick<TrainerControl, "view">>,
+  control: Readonly<Pick<TrainerControlPanel, "view">>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM nodes are mutable render targets; this view only reads their references.
   elements: ControlElements,
 ): void {
@@ -126,8 +126,7 @@ function updateControl(
 }
 
 export function renderTrainerControl(
-  control: TrainerControl,
-  clockScale: number,
+  control: TrainerControlPanel,
   diagnostics: Readonly<Pick<HTMLElement, "append">>,
 ): HTMLElement {
   const elements = controlElements();
@@ -141,7 +140,7 @@ export function renderTrainerControl(
     technicalGuidance,
   );
   elements.enable.addEventListener("click", () => {
-    void control.enable(clockScale);
+    void control.enable();
   });
   elements.disable.addEventListener("click", () => {
     void control.disable();

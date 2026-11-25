@@ -15,9 +15,7 @@ import {
   type PlayAdapterOptions,
   type WebBluetoothCentral,
   type TrainerControl,
-  type SimulationCommand,
 } from "@voltonaut/ble";
-import type { RideSnapshot } from "@voltonaut/engine";
 import { mountConnectDialog } from "./ui/connect/dialog.js";
 
 const SIM_SAMPLES = createSimScript([
@@ -98,36 +96,25 @@ export function setupKeyboard(bus: EventBus): void {
 
 export interface RideDevices {
   readonly mount: () => void;
+  /** Every engine update's batch goes to the trainer, which owns all control timing. */
   readonly onCommands: (commands: readonly TrainerCommand[]) => void;
-  readonly onSnapshot: (snapshot: RideSnapshot) => void;
 }
 
-/** An unchanged engine target is current only while worker snapshots and fresh cadence continue. */
-function commandSink(control: TrainerControl): Pick<RideDevices, "onCommands" | "onSnapshot"> {
-  let latest: SimulationCommand | undefined;
-  let riding = false;
-
-  return {
-    onSnapshot(snapshot) {
-      riding = !snapshot.paused && snapshot.cadenceRpm > 0;
-    },
-    onCommands(commands) {
-      for (const command of commands) if (command.type === "simulation") latest = command;
-
-      if (riding && latest !== undefined) control.submit(latest);
-    },
+function forwardTo(control: Readonly<Pick<TrainerControl, "forward">>): RideDevices["onCommands"] {
+  return (commands) => {
+    control.forward(commands);
   };
 }
 
 export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices {
   const ticker = createIntervalTicker(250 / clockScale);
   const clock = { nowS: (): number => performance.now() / 1000 };
-  const trainer = createFakeTrainer({ bus, clock, ticker, samples: SIM_SAMPLES });
+  const trainer = createFakeTrainer({ bus, clock, ticker, clockScale, samples: SIM_SAMPLES });
   const heartRate = createFakeHeartRate({ bus, clock, ticker, samples: SIM_SAMPLES });
   const play = createFakePlay({ bus, clock });
 
   return {
-    ...commandSink(trainer.control),
+    onCommands: forwardTo(trainer.control),
     mount() {
       mountConnectDialog(
         [
@@ -135,7 +122,7 @@ export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices 
             label: "Trainer",
             adapter: trainer,
             select: () => trainer.connect(),
-            trainer: { control: trainer.control, clockScale },
+            trainer: trainer.control,
           },
           { label: "Pulsgurt", adapter: heartRate, select: () => heartRate.connect() },
         ],
@@ -185,6 +172,7 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
     bus,
     clock,
     ticker,
+    clockScale,
     transport: createWebBluetoothTransport({ central }),
   });
 
@@ -196,7 +184,7 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
   });
 
   return {
-    ...commandSink(trainer.control),
+    onCommands: forwardTo(trainer.control),
     mount() {
       mountConnectDialog(
         [
@@ -204,7 +192,7 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
             label: "Trainer",
             adapter: trainer,
             select: trainer.select,
-            trainer: { control: trainer.control, clockScale },
+            trainer: trainer.control,
           },
           { label: "Pulsgurt", adapter: heartRate, select: heartRate.select },
           ...playSlots({ bus, clock, ticker }, central),

@@ -18,8 +18,8 @@ function rig() {
 
 it("is read-only before enable; subscribes before synchronous ACKs; writes with response", async () => {
   const r = rig();
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
+  r.cadence(90);
+  r.control.forward([COMMAND]);
   await r.advance(1);
   expect(r.writes).toEqual([]);
   expect(r.retained).toEqual([]);
@@ -34,27 +34,27 @@ it("is read-only before enable; subscribes before synchronous ACKs; writes with 
 it("requires fresh cadence, coalesces latest target, limits real wall rate without an extra delay", async () => {
   const r = rig();
   await r.control.enable();
-  r.control.submit(COMMAND);
+  r.control.forward([COMMAND]);
   await r.advance(0.25);
   expect(r.writes).toHaveLength(3);
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
+  r.cadence(90);
+  r.control.forward([COMMAND]);
   await settle();
   expect(r.writes).toHaveLength(4);
-  r.control.submit({ ...COMMAND, gradePct: 6 });
-  r.control.submit({ ...COMMAND, gradePct: 7 });
+  r.control.forward([{ ...COMMAND, gradePct: 6 }]);
+  r.control.forward([{ ...COMMAND, gradePct: 7 }]);
   await r.advance(0.24);
   expect(r.writes).toHaveLength(4);
   await r.advance(0.01);
   expect(r.control.view().acknowledged?.gradePct).toBe(7);
-  r.control.observeCadence(0);
-  r.control.submit({ ...COMMAND, gradePct: 8 });
+  r.cadence(0);
+  r.control.forward([{ ...COMMAND, gradePct: 8 }]);
   await r.advance(1);
   expect(r.writes).toHaveLength(5);
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
+  r.cadence(90);
+  r.control.forward([COMMAND]);
   await settle();
-  r.control.submit({ ...COMMAND, gradePct: 9 });
+  r.control.forward([{ ...COMMAND, gradePct: 9 }]);
   await r.advance(2);
   expect(r.writes).toHaveLength(6);
   r.control.dispose();
@@ -65,9 +65,9 @@ it("keeps exactly one procedure outstanding and distinguishes target from ACK", 
   await r.control.enable();
   await r.advance(0.25);
   r.ack(false);
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
-  r.control.submit({ ...COMMAND, gradePct: 6 });
+  r.cadence(90);
+  r.control.forward([COMMAND]);
+  r.control.forward([{ ...COMMAND, gradePct: 6 }]);
   await r.advance(0.5);
   expect(r.writes).toHaveLength(4);
   expect(r.control.view().target?.gradePct).toBe(6);
@@ -115,8 +115,8 @@ it("permission lost drops targets without retry or stop against another owner", 
   const r = rig();
   await r.control.enable();
   r.lost();
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
+  r.cadence(90);
+  r.control.forward([COMMAND]);
   await r.control.disable();
   await r.advance(5);
   expect(r.control.view().authority.kind).toBe("lost");
@@ -168,8 +168,8 @@ it("disable neutralizes and stops only owned control, then rejects automatic wri
   expect(r.writes.at(-1)?.bytes.at(1)).toBe(1);
   expect(r.control.view().authority.kind).toBe("inactive");
   expect(r.control.view().hardware).toBe("stopAcknowledged");
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
+  r.cadence(90);
+  r.control.forward([COMMAND]);
   await r.advance(1);
   expect(r.writes).toHaveLength(5);
   r.control.dispose();
@@ -180,11 +180,15 @@ it("rejects unsupported devices and accelerated native clocks without writes", a
   r.control.attach({ services: [] });
   await r.control.enable();
   expect(r.control.view().authority.kind).toBe("inactive");
-  r.attach();
-  await r.control.enable(20);
-  expect(r.writes).toEqual([]);
-  expect(r.control.view().authority.kind).toBe("failed");
   r.control.dispose();
+  const fast = new ControlTestRig(20);
+  fast.cadence(90);
+  fast.control.forward([COMMAND]);
+  await fast.control.enable();
+  await fast.advance(1);
+  expect(fast.writes).toEqual([]);
+  expect(fast.control.view().authority.kind).toBe("failed");
+  fast.control.dispose();
 });
 
 it("does not start the next procedure until native write completion, even with synchronous ACK", async () => {
@@ -262,10 +266,10 @@ it("disable during an uncertain simulation drops all queued targets without stop
   await r.control.enable();
   await r.advance(0.25);
   r.ack(false);
-  r.control.observeCadence(90);
-  r.control.submit(COMMAND);
+  r.cadence(90);
+  r.control.forward([COMMAND]);
   await settle();
-  r.control.submit({ ...COMMAND, gradePct: 8 });
+  r.control.forward([{ ...COMMAND, gradePct: 8 }]);
   await r.control.disable();
   r.notify([0x80, 0x11, 1]);
   await r.control.enable();

@@ -14,6 +14,7 @@ it("Sim uses the production control/ACK state machine, never implicit success on
     bus: createEventBus(),
     clock,
     ticker,
+    clockScale: 1,
     samples: createSimScript([{ powerW: 200, cadenceRpm: 90, heartRateBpm: 120, gearIndex: 11 }]),
   });
 
@@ -25,13 +26,15 @@ it("Sim uses the production control/ACK state machine, never implicit success on
   expect(trainer.control.view().acknowledged?.gradePct).toBe(0);
   clock.advanceS(0.25);
   ticker.tick();
-  trainer.control.submit({
-    type: "simulation",
-    gradePct: 4,
-    windMps: 0,
-    crr: 0.004,
-    cwKgPerM: 0.51,
-  });
+  trainer.control.forward([
+    {
+      type: "simulation",
+      gradePct: 4,
+      windMps: 0,
+      crr: 0.004,
+      cwKgPerM: 0.51,
+    },
+  ]);
   await settle();
   expect(trainer.control.view().acknowledged?.gradePct).toBe(4);
   await trainer.disconnect();

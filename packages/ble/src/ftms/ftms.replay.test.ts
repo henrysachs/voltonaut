@@ -47,7 +47,7 @@ describe("trainer adapter replay (AK4c)", () => {
     const clock = createManualClock();
     const ticker = createManualTicker();
     const transport = createTransportFromFixture(fixture, clock, ticker);
-    const adapter = createTrainerAdapter({ bus, clock, ticker, transport });
+    const adapter = createTrainerAdapter({ bus, clock, ticker, clockScale: 1, transport });
     const events: DeviceEvent[] = [];
 
     bus.subscribe("trainer.data", (event) => {
@@ -73,7 +73,7 @@ it("uses the same trainer adapter for a CPS-only trainer without writing", async
   const clock = createManualClock();
   const ticker = createManualTicker();
   const transport = createTransportFromFixture(fixture, clock, ticker);
-  const adapter = createTrainerAdapter({ bus, clock, ticker, transport });
+  const adapter = createTrainerAdapter({ bus, clock, ticker, clockScale: 1, transport });
   const events: DeviceEvent[] = [];
 
   bus.subscribe("trainer.data", (event) => {
@@ -105,7 +105,7 @@ describe("trainer without data services", () => {
     const clock = createManualClock();
     const ticker = createManualTicker();
     const transport = createTransportFromFixture(strippedFixture, clock, ticker);
-    const adapter = createTrainerAdapter({ bus, clock, ticker, transport });
+    const adapter = createTrainerAdapter({ bus, clock, ticker, clockScale: 1, transport });
 
     await adapter.connect();
     expect(adapter.status()).toBe("error");
