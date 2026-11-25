@@ -59,16 +59,18 @@ Entfernt, kein Play-Peripheriegerät im Sim. Der Adapter war in der App tot (nic
 - [x] AK1 – Sim-Trainer und Sim-Pulsgurt laufen über `createTrainerAdapter`/`createHeartRateAdapter` und `BleTransport`: Status `connecting → handshaking → ready`, Protokoll `ftms`, Feature-Bit 13 gelesen, `trainer.data`/`hr.data` aus den Parsern.
 - [x] AK2 – Ein Geräte-Setup-Test läuft parametrisiert über {Sim-Transport, Test-Central über `createWebBluetoothTransport`} mit denselben Peripheriegeräten und Erwartungen.
 - [x] AK3 – Trainersicherheit im Sim unverändert: ohne `enable()` kein Write trotz Engine-Ziel; nach `enable()` `00 → 07 → 11 neutral`, danach Ziel mit ACK; Reconnect setzt Autorität zurück und sendet das gecachte Ziel nicht; `clockScale ≠ 1` scheitert ohne Write.
-- [x] AK4 – Unerwarteter Linkverlust des Sim-Transports löst den Reconnect-Plan der Shell aus.
+- [x] AK4 – Unerwarteter Linkverlust des Sim-Transports löst den Reconnect-Plan der Shell aus. Beim Sim-Trainer ist die Autorität danach `inactive`; das alte Ziel wird trotz weiterer Engine-Batches nicht gesendet, erst nach erneutem `enable()` folgen `00, 07, 11 neutral, 11 Ziel` (§3.9).
 - [x] AK5 – `main.ts` wählt nur die Transportquelle; `setupSimDevices`/`setupBluetoothDevices` sind zu `setupRideDevices` zusammengefasst; `ConnectSlot` ist `{ label, adapter }`.
 - [x] AK6 – Encoder sind Umkehrungen der Produktionsparser (Property-Tests).
 - [x] AK7 – Sim-Modus bedienbar: Sim-E2E inklusive Pfeiltasten-Schaltung, Geräte-Overlay und aktivierter Sim-Rollenschaltung grün.
+- [x] AK8 – Sim-Peripherie durchläuft das Skript zyklisch und sendet nach `disconnect` keine Notifications mehr.
 
 ## Testplan (`docs/10-testing.md`)
 
 | AK   | Ebene                        | Datei                                                                                                  |
 | ---- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
 | 1–4  | Integration, parametrisiert  | `packages/ble/src/devices.test.ts` (`testdata/peripheralCentral.ts`)                                   |
+| 4, 8 | Sim-Peripherie               | `packages/ble/src/sim/peripherals.test.ts`, Trainer-`drop()` in `packages/ble/src/devices.test.ts`     |
 | 3    | UI über Sim-Transport        | `apps/web/src/ui/connect/trainerControl.test.ts`                                                       |
 | 5    | UI                           | `apps/web/src/ui/connect/dialog.test.ts`                                                               |
 | 6    | Property                     | `packages/ble/src/encode.test.ts`                                                                      |
