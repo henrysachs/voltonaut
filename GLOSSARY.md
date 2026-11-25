@@ -53,3 +53,7 @@ _Vermeiden_: VIP als Ersatz für Premium, Pro oder Administrator.
 **Adminberechtigung**:
 Die ausdrücklich vergebene Erlaubnis, Mitgliedsstufen und VIP-Kennzeichen bestehender Konten zu verwalten. Sie entsteht weder durch einen Kauf noch durch VIP oder den ersten Login.
 _Vermeiden_: zahlender Nutzer als gleichbedeutend mit Administrator.
+
+**Kontobereich**:
+Die Bindung aller Kontofunktionen eines Tabs an genau eine bestätigte Anmeldung. Logout, Kontowechsel oder Kontolöschung beenden sie. Ergebnisse einer beendeten Bindung werden verworfen.
+_Vermeiden_: Generation oder Revision als Bezeichnung für diese Bindung, Kontositzung als Synonym für die Login-Session.

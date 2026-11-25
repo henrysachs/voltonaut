@@ -9,8 +9,7 @@ import {
   type StravaRideView,
   type StravaStatus,
 } from "@voltonaut/shared";
-import { ApplicationSession } from "./applicationSession.js";
-import type { LeaseIssuer } from "./privateAuthTransport.js";
+import { ScopeDriver, testBinding } from "./testdata/scopeDriver.js";
 import { StravaSync } from "./stravaSync.js";
 import type { StravaChannel, StravaLease, StravaPopup } from "./stravaBridge.js";
 
@@ -19,7 +18,7 @@ export const rideB = "00000000-0000-4000-8000-000000000002";
 export const deliveryChannel = "00000000-0000-4000-8000-000000000003";
 
 export interface DeliveryControls {
-  readonly session: Readonly<ApplicationSession<StravaLease>>;
+  readonly session: Readonly<Pick<ScopeDriver<StravaLease>, "exchange" | "logout">>;
   readonly sync: Readonly<StravaSync>;
   readonly message: StravaDeliveryFixture["message"];
 }
@@ -78,8 +77,6 @@ export function deliveryFor(progress: StravaDelivery["progress"], stopped = fals
   });
 }
 
-const unexpected = (): Promise<never> => Promise.reject(new Error("unexpected account operation"));
-
 export class StravaDeliveryFixture {
   readonly requests: {
     readonly userId: string;
@@ -103,25 +100,10 @@ export class StravaDeliveryFixture {
       authorizationUrl: `https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=${encodeURIComponent("http://localhost:3000/v1/strava/callback")}&response_type=code&approval_prompt=force&scope=activity%3Awrite&state=${"s".repeat(43)}`,
     });
   confirm: () => Promise<StravaStatus> = () => Promise.resolve({ status: "disconnected" });
-  readonly session = new ApplicationSession({
-    privateTransport: this.transport(),
-    persistence: { load: () => {}, save: () => false, clear: () => true },
-    navigate: () => {
-      throw new Error("no automatic login");
-    },
-    transport: {
-      mode: () =>
-        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
-      exchange: (code) =>
-        Promise.resolve({
-          sessionToken: `token-${code}`,
-          user: { id: code, email: `${code}@example.test`, createdAt: "2026-11-20T00:00:00.000Z" },
-        }),
-      me: unexpected,
-      logout: () => Promise.resolve(),
-    },
-  });
-  readonly sync = new StravaSync(this.session, this.popup());
+  readonly session = new ScopeDriver<StravaLease>((userId, generation) =>
+    this.lease(userId, generation),
+  );
+  readonly sync = new StravaSync(this.session.scope, this.popup());
 
   constructor() {
     afterEach(() => {
@@ -158,44 +140,38 @@ export class StravaDeliveryFixture {
     };
   }
 
-  private transport(): LeaseIssuer<StravaLease> {
+  private lease(userId: string, generation: number): StravaLease {
     return {
-      authorize: (authorization) => ({
-        apiOrigin: "http://localhost:3000",
-        userId: authorization.userId,
-        generation: authorization.generation,
-        signal: authorization.signal,
-        current: authorization.current,
-        strava: {
-          status: () => {
-            this.requests.push({ userId: authorization.userId, method: "status" });
+      ...testBinding(userId, generation),
+      strava: {
+        status: () => {
+          this.requests.push({ userId: userId, method: "status" });
 
-            return this.status();
-          },
-          ride: (rideId) => {
-            this.requests.push({ userId: authorization.userId, method: "GET", rideId });
-
-            return this.ride(rideId);
-          },
-          upload: (consent) => {
-            this.requests.push({
-              userId: authorization.userId,
-              method: "POST",
-              rideId: consent.rideId,
-            });
-            this.consents.push(consent);
-
-            return this.upload(consent);
-          },
-          disconnect: () => {
-            this.requests.push({ userId: authorization.userId, method: "disconnect" });
-
-            return this.disconnect();
-          },
-          start: () => this.start(),
-          confirm: () => this.confirm(),
+          return this.status();
         },
-      }),
+        ride: (rideId) => {
+          this.requests.push({ userId: userId, method: "GET", rideId });
+
+          return this.ride(rideId);
+        },
+        upload: (consent) => {
+          this.requests.push({
+            userId: userId,
+            method: "POST",
+            rideId: consent.rideId,
+          });
+          this.consents.push(consent);
+
+          return this.upload(consent);
+        },
+        disconnect: () => {
+          this.requests.push({ userId: userId, method: "disconnect" });
+
+          return this.disconnect();
+        },
+        start: () => this.start(),
+        confirm: () => this.confirm(),
+      },
     };
   }
 }

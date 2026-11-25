@@ -1,9 +1,8 @@
 import { afterEach } from "vitest";
 import type { StravaStatus } from "@voltonaut/shared";
-import { ApplicationSession } from "./applicationSession.js";
 import { StravaSync } from "./stravaSync.js";
 import type { StravaChannel, StravaLease, StravaPopup } from "./stravaBridge.js";
-import type { LeaseIssuer } from "./privateAuthTransport.js";
+import { ScopeDriver, testBinding } from "./testdata/scopeDriver.js";
 import { deferred } from "./testdata/deferred.js";
 
 export const channelId = "00000000-0000-4000-8000-000000000001";
@@ -19,25 +18,10 @@ export class StravaFixture {
   #hold = false;
   #absent = false;
   #listener: Parameters<StravaChannel["listen"]>[0] | undefined;
-  readonly session = new ApplicationSession({
-    privateTransport: this.transport(),
-    persistence: { load: () => {}, save: () => false, clear: () => true },
-    navigate: () => {
-      throw new Error("no automatic login");
-    },
-    transport: {
-      mode: () =>
-        Promise.resolve({ mode: "oidc", providers: [{ id: "test", displayName: "Test" }] }),
-      exchange: (code) =>
-        Promise.resolve({
-          sessionToken: `token-${code}`,
-          user: { id: code, email: `${code}@example.test`, createdAt: "2026-11-20T00:00:00.000Z" },
-        }),
-      me: unexpected,
-      logout: () => Promise.resolve(),
-    },
-  });
-  readonly sync = new StravaSync(this.session, this.popup());
+  readonly session = new ScopeDriver<StravaLease>((userId, generation) =>
+    this.lease(userId, generation),
+  );
+  readonly sync = new StravaSync(this.session.scope, this.popup());
 
   constructor() {
     afterEach(() => {
@@ -81,43 +65,37 @@ export class StravaFixture {
       },
     };
   }
-  private transport(): LeaseIssuer<StravaLease> {
+  private lease(userId: string, generation: number): StravaLease {
     return {
-      authorize: (authorization) => ({
-        apiOrigin: "http://localhost:3000",
-        userId: authorization.userId,
-        generation: authorization.generation,
-        signal: authorization.signal,
-        current: authorization.current,
-        strava: {
-          disconnect: unexpected,
-          ride: unexpected,
-          status: () =>
-            this.#hold && authorization.userId === "a"
-              ? this.pending.promise
-              : Promise.resolve({ status: "disconnected" }),
-          start: () => {
-            this.starts.push(authorization.userId);
+      ...testBinding(userId, generation),
+      strava: {
+        disconnect: unexpected,
+        ride: unexpected,
+        status: () =>
+          this.#hold && userId === "a"
+            ? this.pending.promise
+            : Promise.resolve({ status: "disconnected" }),
+        start: () => {
+          this.starts.push(userId);
 
-            return Promise.resolve({ authorizationUrl });
-          },
-          confirm: () => {
-            this.confirmations.push(authorization.userId);
-
-            return Promise.resolve({
-              status: "connected",
-              athleteId: "42",
-              scope: "activity:write",
-              accessExpiresAt: "2027-01-01T00:00:00.000Z",
-            });
-          },
-          upload: () => {
-            this.uploads.push(authorization.userId);
-
-            return unexpected();
-          },
+          return Promise.resolve({ authorizationUrl });
         },
-      }),
+        confirm: () => {
+          this.confirmations.push(userId);
+
+          return Promise.resolve({
+            status: "connected",
+            athleteId: "42",
+            scope: "activity:write",
+            accessExpiresAt: "2027-01-01T00:00:00.000Z",
+          });
+        },
+        upload: () => {
+          this.uploads.push(userId);
+
+          return unexpected();
+        },
+      },
     };
   }
 }

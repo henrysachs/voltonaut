@@ -12,7 +12,7 @@ import {
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 
-import type { ApplicationSession, SessionView } from "./applicationSession.js";
+import type { AccountBinding, AccountScope } from "./accountScope.js";
 import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
 import type { ProgressPort } from "./progressPort.js";
 import {
@@ -71,9 +71,7 @@ type JournalState =
     };
 
 export interface ProgressSyncOptions {
-  readonly session: Readonly<
-    Pick<ApplicationSession, "subscribe"> & { readonly authorize: () => ProgressLease | undefined }
-  >;
+  readonly scope: AccountScope<ProgressLease>;
   readonly outbox?: () => Promise<ProgressOutbox>;
   readonly nowMs?: () => number;
   readonly schedule?: (callback: () => void, delayMs: number) => () => void;
@@ -163,7 +161,15 @@ function deliveryPageCursor(
 export class ProgressSync {
   readonly #options: ProgressSyncOptions;
   readonly #listeners = new Set<(view: ProgressPanelView) => void>();
-  #sessionView: SessionView = { kind: "guest", message: "Gast" };
+  readonly #flush = (): void => {
+    const view = this.view();
+
+    for (const listener of this.#listeners) listener(view);
+  };
+  #binding: AccountBinding<ProgressLease> = {
+    kind: "signedOut",
+    session: { kind: "guest", message: "Gast" },
+  };
   #lease: ProgressLease | undefined;
   #consent: ProgressConsentState | undefined;
   #consentFailure: string | undefined;
@@ -185,19 +191,22 @@ export class ProgressSync {
 
   constructor(options: ProgressSyncOptions) {
     this.#options = options;
-    options.session.subscribe((view) => {
-      const previous = this.#sessionView;
-      const restoring = previous.kind === "busy" && previous.operation === "restoring";
+    options.scope.subscribe((binding) => {
+      const previous = this.#binding;
 
+      const restoring =
+        previous.kind === "signedOut" &&
+        previous.session.kind === "busy" &&
+        previous.session.operation === "restoring";
+
+      // Early checkpoints survive only the restore of a stored session, never a login switch.
       const preserveBuffer =
-        (view.kind === "authenticated" && restoring) ||
-        (view.kind === "busy" && view.operation === "restoring" && restoring);
+        restoring &&
+        (binding.kind === "signedIn" ||
+          (binding.session.kind === "busy" && binding.session.operation === "restoring"));
 
-      this.#sessionView = view;
-      this.bind(
-        view.kind === "authenticated" ? options.session.authorize() : undefined,
-        preserveBuffer,
-      );
+      this.#binding = binding;
+      this.bind(binding.kind === "signedIn" ? binding.lease : undefined, preserveBuffer);
     });
   }
 
@@ -432,7 +441,7 @@ export class ProgressSync {
     const first = checkpoint.startTick === 0 && checkpoint.sequence === 0;
 
     const loading =
-      this.#sessionView.kind === "busy" ||
+      (this.#binding.kind === "signedOut" && this.#binding.session.kind === "busy") ||
       (lease !== undefined &&
         this.current(lease) &&
         consent === undefined &&
@@ -1050,8 +1059,6 @@ export class ProgressSync {
   }
 
   private publish(): void {
-    const view = this.view();
-
-    for (const listener of this.#listeners) listener(view);
+    this.#options.scope.deliver(this.#flush);
   }
 }

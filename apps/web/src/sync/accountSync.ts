@@ -12,8 +12,8 @@ import { type AccountOutbox, type OutboxRead, type OutboxRow } from "./accountOu
 import { deliverAccountRow } from "./accountDelivery.js";
 import type { LeaseBinding } from "./apiRoute.js";
 import { applyAccountProfile } from "./accountProfile.js";
-import { AccountAdministration } from "./accountAdministration.js";
-import { GarageShop } from "./garageShop.js";
+import { AccountOutboxRun, type DeliveryMode } from "./accountOutboxRun.js";
+import { AccountState } from "./accountState.js";
 import {
   deleteAccountData,
   exportAccountData,
@@ -29,58 +29,40 @@ import {
 } from "./accountSyncLoading.js";
 
 export class AccountSync {
-  readonly administration = new AccountAdministration();
-  readonly shop = new GarageShop();
   readonly #options: SyncOptions;
-  readonly #listeners = new Set<(view: AccountDataView) => void>();
-  readonly #sending = new Set<number>();
-  readonly #pending = new Map<number, "manual" | "resume">();
-  #view: AccountDataView = { kind: "guest" };
-  #lease: AccountSyncLease | undefined;
+  readonly #state: AccountState<AccountDataView, AccountSyncLease>;
+  /** Outbox delivery is its own rule: one run per binding, coalesced follow-ups (ADR-005/018). */
+  #run = new AccountOutboxRun();
   #archive: readonly ArchivedRide[] = [];
-  #reauth = false;
 
   constructor(options: SyncOptions) {
     this.#options = options;
+    this.#state = new AccountState<AccountDataView, AccountSyncLease>(
+      { kind: "guest" },
+      {
+        enter: (binding) => {
+          this.#run = new AccountOutboxRun();
+          this.#archive = [];
+
+          return binding.kind === "signedIn" ? initialAccountData(binding.user) : { kind: "guest" };
+        },
+        start: ({ lease }) => {
+          void this.refresh().then(() => (lease.current() ? this.retry("resume") : undefined));
+        },
+      },
+    );
     void recoverAccountDeletions(this.#options, (view) => {
-      if (this.#view.kind === "guest") this.publish(view);
+      if (this.#state.view().kind === "guest") this.#state.publish(view);
     });
-    options.session.subscribe((view) => {
-      const lease = view.kind === "authenticated" ? options.session.authorize() : undefined;
-      this.#lease = lease;
-      this.administration.bind(lease);
-      this.shop.bind(lease);
-      this.#archive = [];
-      this.#reauth = false;
-
-      if (view.kind !== "authenticated" || lease === undefined) {
-        this.publish({ kind: "guest" });
-
-        return;
-      }
-
-      this.publish(initialAccountData(view.user));
-      void this.refresh().then(() => (lease.current() ? this.retry("resume") : undefined));
-    });
+    this.#state.follow(options.scope);
   }
 
   view(): AccountDataView {
-    return this.#view;
+    return this.#state.view();
   }
 
   subscribe(listener: (view: AccountDataView) => void): () => void {
-    this.#listeners.add(listener);
-    listener(this.#view);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  }
-
-  private publish(view: AccountDataView): void {
-    this.#view = view;
-
-    for (const listener of this.#listeners) listener(view);
+    return this.#state.subscribe(listener);
   }
 
   /** Bound so loaders can take it as their patch callback. */
@@ -88,45 +70,37 @@ export class AccountSync {
     lease: LeaseBinding,
     patch: Partial<Extract<AccountDataView, { readonly kind: "account" }>>,
   ): void => {
-    this.patch(lease, patch);
+    this.#state.update(lease, (view) => (view.kind === "account" ? { ...view, ...patch } : view));
   };
 
-  private patch(
-    lease: LeaseBinding,
-    patch: Partial<Extract<AccountDataView, { readonly kind: "account" }>>,
-  ): void {
-    if (lease.current() && this.#lease === lease && this.#view.kind === "account")
-      this.publish({ ...this.#view, ...patch });
-  }
-
   exportAccount(): Promise<AccountExport | undefined> {
-    return exportAccountData(this.#lease, (lease, message) => {
-      this.patch(lease, { message });
+    return exportAccountData(this.#state.lease(), (lease, message) => {
+      this.patchAccount(lease, { message });
     });
   }
 
   deleteAccount(confirmation: string): Promise<boolean> {
     return deleteAccountData(
-      this.#lease,
+      this.#state.lease(),
       confirmation,
       this.#options,
       (view) => {
-        this.publish(view);
+        this.#state.publish(view);
       },
       (lease, message) => {
-        this.patch(lease, { message });
+        this.patchAccount(lease, { message });
       },
     );
   }
 
   async recoverDeletions(): Promise<void> {
     await recoverAccountDeletions(this.#options, (view) => {
-      if (this.#view.kind === "guest") this.publish(view);
+      if (this.#state.view().kind === "guest") this.#state.publish(view);
     });
   }
 
   async refresh(): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
     if (lease === undefined) return;
     await Promise.all([
@@ -140,15 +114,15 @@ export class AccountSync {
 
   private async loadProfile(lease: AccountSyncLease): Promise<void> {
     try {
-      this.patch(lease, { profile: { kind: "ready", value: await lease.profile.load() } });
+      this.patchAccount(lease, { profile: { kind: "ready", value: await lease.profile.load() } });
     } catch {
-      this.patch(lease, { profile: { kind: "failed" } });
+      this.patchAccount(lease, { profile: { kind: "failed" } });
     }
   }
 
   async nextHistory(): Promise<void> {
-    const lease = this.#lease;
-    const cursor = historyCursor(this.#view);
+    const lease = this.#state.lease();
+    const cursor = historyCursor(this.#state.view());
 
     if (lease !== undefined && cursor !== null) await loadHistory(lease, cursor, this.patchAccount);
   }
@@ -164,7 +138,7 @@ export class AccountSync {
   }
 
   async claim(rideId: string): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
     if (lease === undefined) return;
     await claimArchivedRide(lease, this.#archive, rideId, this.#options.nowMs, (current, row) => {
@@ -173,7 +147,7 @@ export class AccountSync {
   }
 
   async queueProfile(): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
     if (lease === undefined) return;
     await queueLocalProfile(
@@ -191,22 +165,22 @@ export class AccountSync {
 
       if (!lease.current()) return;
       await database.claim(row);
-      this.patch(lease, {
+      this.patchAccount(lease, {
         message: "Snapshot dauerhaft diesem Konto zugeordnet. Synchronisierung wird versucht.",
       });
       await this.loadRows(lease);
 
       if (lease.current()) await this.retry();
     } catch (error) {
-      this.patch(lease, {
+      this.patchAccount(lease, {
         message: `Nicht dauerhaft vorgemerkt. ${error instanceof Error ? error.message : "Speicherfehler."}`,
       });
     }
   }
 
   async applyProfile(): Promise<void> {
-    const lease = this.#lease;
-    const view = this.#view;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
     if (
       lease === undefined ||
@@ -226,69 +200,66 @@ export class AccountSync {
         apply: this.#options.profile.apply,
       });
 
-      this.patch(lease, {
+      this.patchAccount(lease, {
         message: profileApplicationMessage(outcome),
       });
     } catch {
-      this.patch(lease, {
+      this.patchAccount(lease, {
         message: "Serverprofil nicht lokal gespeichert. Bisheriges Profil bleibt maßgeblich.",
       });
     }
   }
 
-  async retry(mode: "manual" | "resume" = "manual"): Promise<void> {
-    const lease = this.#lease;
+  async retry(mode: DeliveryMode = "manual"): Promise<void> {
+    const lease = this.#state.lease();
+    const run = this.#run;
 
-    if (lease === undefined || this.#reauth) return;
-
-    if (this.#sending.has(lease.generation)) {
-      if (mode === "manual" || !this.#pending.has(lease.generation))
-        this.#pending.set(lease.generation, mode);
-
-      return;
-    }
-
-    this.#sending.add(lease.generation);
+    if (lease === undefined || run.reauth || !run.claim(mode)) return;
 
     try {
       const database = await this.#options.outbox();
       const rows = await database.list(lease);
-      await this.deliverNext(lease, database, rows, 0, mode);
+      await this.deliverNext({ lease, run, database, mode }, rows, 0);
 
       if (lease.current())
         await Promise.all([this.loadProfile(lease), loadHistory(lease, null, this.patchAccount)]);
     } catch {
-      this.patch(lease, {
+      this.patchAccount(lease, {
         message: "Speicheränderung nicht bestätigt. Bitte später aktualisieren.",
       });
     } finally {
-      this.#sending.delete(lease.generation);
+      const queued = run.release();
 
-      const pending = this.#pending.get(lease.generation);
-      this.#pending.delete(lease.generation);
-
-      if (pending !== undefined && lease.current()) void this.retry(pending);
+      if (queued !== undefined && lease.current()) void this.retry(queued);
     }
   }
 
   private async deliverNext(
-    lease: AccountSyncLease,
-    database: AccountOutbox,
+    delivery: Readonly<{
+      lease: AccountSyncLease;
+      run: Readonly<AccountOutboxRun>;
+      database: AccountOutbox;
+      mode: DeliveryMode;
+    }>,
     rows: readonly OutboxRow[],
     index: number,
-    mode: "manual" | "resume",
   ): Promise<void> {
+    const { lease, run, database, mode } = delivery;
     const row = rows[index];
 
-    if (row === undefined || !lease.current() || this.#reauth) return;
+    if (row === undefined || !lease.current() || run.reauth) return;
     const outcome = await deliverAccountRow(lease, database, row, this.#options.nowMs, mode);
 
     if (!lease.current()) return;
-    this.#reauth = outcome === "reauth";
 
-    if (this.#reauth)
-      this.patch(lease, { message: "Abmelden, neu anmelden. Speicherstatus ggf. unbestätigt." });
+    if (outcome === "reauth") {
+      run.rejectSession();
+      this.patchAccount(lease, {
+        message: "Abmelden, neu anmelden. Speicherstatus ggf. unbestätigt.",
+      });
+    }
+
     await this.loadRows(lease);
-    await this.deliverNext(lease, database, rows, index + 1, mode);
+    await this.deliverNext(delivery, rows, index + 1);
   }
 }

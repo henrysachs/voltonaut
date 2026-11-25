@@ -1,22 +1,24 @@
 import type { ApplicationSession } from "./sync/applicationSession.js";
 import type { AuthTransport } from "./sync/authTransport.js";
-import { IdentityLinks } from "./sync/identityLinks.js";
+import { IdentityLinks, type IdentityLinksLease } from "./sync/identityLinks.js";
+import type { AccountScope } from "./sync/accountScope.js";
 import { mountAccountPanel } from "./ui/accountPanel.js";
 import { mountIdentityLinksPanel } from "./ui/identityLinksPanel.js";
 
 type AccountSession = Readonly<
-  Pick<ApplicationSession, "authorize" | "subscribe" | "login" | "logout" | "restore">
+  Pick<ApplicationSession, "subscribe" | "login" | "logout" | "restore">
 >;
 
 /** Mounts sign-in and the connected-login section of the account menu. */
 export function mountAccountPanels(
   session: AccountSession,
+  scope: AccountScope<IdentityLinksLease>,
   transport: Readonly<Pick<AuthTransport, "mode">>,
 ): IdentityLinks {
   mountAccountPanel(session);
 
   const links = new IdentityLinks({
-    session,
+    scope,
     providers: async () => {
       const config = await transport.mode(AbortSignal.timeout(8000));
 

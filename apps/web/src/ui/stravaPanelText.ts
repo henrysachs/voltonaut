@@ -1,22 +1,4 @@
 import type { StravaDelivery } from "@voltonaut/shared";
-import type { StravaSync } from "../sync/stravaSync.js";
-
-export function accountAction(
-  sync: Readonly<StravaSync>,
-  account: { readonly userId: string; readonly generation: number },
-  action: () => void,
-): () => void {
-  return () => {
-    const current = sync.view();
-
-    if (
-      current.kind === "account" &&
-      current.userId === account.userId &&
-      current.generation === account.generation
-    )
-      action();
-  };
-}
 
 export function text(value: string): HTMLParagraphElement {
   const node = document.createElement("p");
