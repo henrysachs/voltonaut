@@ -35,7 +35,7 @@ Während des Starts bleibt ein zugänglicher Ladestatus sichtbar. Renderdiagnost
 
 ## 2. Rendering & Licht
 
-- `WebGLRenderer` (WebGPU-Renderer später prüfen ❓), `SRGBColorSpace`, ACES/AgX-Tonemapping, physikalisch korrekte Lichtintensitäten.
+- `WebGLRenderer`, `SRGBColorSpace`, ACES/AgX-Tonemapping, physikalisch korrekte Lichtintensitäten. [E10-10](specs/E10-10-webgpu-evaluation.md) hat WebGPU auf echter Hardware geprüft. Der Fahr-Renderpfad bleibt ohne zweites Backend ([ADR-029](decisions/ADR-029-webgpu-renderer.md)).
 - **PBR** (`MeshStandardMaterial`/`MeshPhysicalMaterial` für Lack/Carbon), Environment-Map aus HDRI (Poly Haven) per PMREM, tageszeitabhängig überblendet.
 - **Schatten:** Sonnen-`DirectionalLight` mit **Cascaded Shadow Maps** (three `CSM`-Addon) – Nahkaskade scharf für Fahrer/Rad, Fernkaskaden grob; Soft Shadows (PCF) ab High. Kontaktschatten unter Rädern (Blob-Decal) auch auf Low.
 - **Post-Processing** (three `EffectComposer`-Addons, keine Zusatzlib): SMAA/FXAA, Bloom (Volts-Blitze, Nachtlichter, Sonne), SSAO/GTAO (High), Tiefenunschärfe in Cinematic-Kamera, Vignette, Farbkorrektur-LUT pro Biom, leichte Motion Blur nur bei Sprint (High), Regentropfen-Overlay.

@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2026-11-25T07:21:39.213Z",
+  "measurementBaseCommit": "065b63303994bf70a00dcb5754aa9d638c3eb1f3",
+  "codeBaseCommit": "82238d3",
+  "currentBaseCommit": "065b63303994bf70a00dcb5754aa9d638c3eb1f3",
+  "relevantSceneSourcesChanged": false,
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.0.0 Safari/537.36",
+  "adapters": [
+    {
+      "backend": "webgl",
+      "api": "WebGL2",
+      "vendor": "Google Inc. (Apple)",
+      "architecture": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)",
+      "device": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)",
+      "description": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)",
+      "maxTextureDimension2D": 16384,
+      "coreFeatures": null
+    },
+    {
+      "backend": "webgpu",
+      "api": "WebGPU",
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": "",
+      "maxTextureDimension2D": 16384,
+      "coreFeatures": true
+    }
+  ],
+  "hardware": "      Model Name: MacBook Pro\n      Model Identifier: Mac17,8\n      Chip: Apple M5 Pro\n      Total Number of Cores: 18 (6 Super and 12 Performance)\n      Memory: 48 GB\n      Chipset Model: Apple M5 Pro\n      Type: GPU\n      Total Number of Cores: 20\n      Metal Support: Metal 4\n          Resolution: 3456 x 2234 Retina",
+  "loadAverage": "8:21  up 14 days, 16:23, 3 users, load averages: 4,58 3,66 2,59",
+  "browserPerRun": true,
+  "variantOrder": [
+    "webgl-high",
+    "webgpu-high",
+    "webgl-ultra",
+    "webgpu-ultra",
+    "webgpu-high",
+    "webgl-high",
+    "webgpu-ultra",
+    "webgl-ultra",
+    "webgl-high",
+    "webgpu-high",
+    "webgl-ultra",
+    "webgpu-ultra",
+    "webgpu-high",
+    "webgl-high",
+    "webgpu-ultra",
+    "webgl-ultra",
+    "webgl-high",
+    "webgpu-high",
+    "webgl-ultra",
+    "webgpu-ultra"
+  ],
+  "labSources": {
+    "run.mjs": "3f9a250a033db6c72991d4bbbe299407ebd98d81e51c00b13720f7f1096dc2f9",
+    "main.ts": "d57b95c8f2d9ecae8bf0522460af0e75ac5a437e8d2e9a5b343cd1f601b3e27f",
+    "vite.config.ts": "a724d8c169f72d07585e6f297ea0d669f1e8174db3958534a39c8545750d1852",
+    "index.html": "cd0301f29f2feb5dc6656e9cd3ac67c0e6e82d427a9ad89146cd2a65c7c3e74e"
+  }
+}
