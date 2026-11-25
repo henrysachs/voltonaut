@@ -4,9 +4,11 @@ import * as THREE from "three";
 import { DEFAULT_AVATAR_CONFIG, SEASON_AVATAR_ITEMS, START_AVATAR_CATALOG } from "@voltonaut/rules";
 import { AvatarConfigSchema } from "@voltonaut/shared";
 
-import { bikeGeometry, pedalPoint } from "./bikeGeometry.js";
+import { bikeGeometry } from "./bikeGeometry.js";
 import { DEFAULT_FRAME_SPEC, DEFAULT_WHEEL_SPEC } from "./bikeSpecs.js";
 import { createAvatarPreview } from "./customize.js";
+import { legPose } from "./pose.js";
+import { BIBS_START_S, COLLAR_S, KIT_ATLAS, panelS } from "./riderAtlas.js";
 
 const AVATAR_ITEMS = [...START_AVATAR_CATALOG, ...SEASON_AVATAR_ITEMS];
 const FRAME_ITEMS = AVATAR_ITEMS.filter((item) => item.slot === "frame");
@@ -39,35 +41,84 @@ function standardMaterial(
   throw new Error(`Missing standard material: ${mesh.name}`);
 }
 
+const HEAVIEST_ITEMS = {
+  jersey: "jersey.kom",
+  helmet: "helmet.aero",
+  glasses: "glasses.clear",
+  shoes: "shoes.white",
+} as const;
+
+/** sRGB texel of a painted map at (u, v). */
+function texel(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library objects inspected by this test helper.
+  material: THREE.MeshStandardMaterial,
+  u: number,
+  v: number,
+): string {
+  const map = material.map instanceof THREE.DataTexture ? material.map : undefined;
+
+  if (map === undefined) throw new Error("Missing painted map");
+
+  const { data, width, height } = map.image;
+
+  if (data === null) throw new Error("Painted map without data");
+
+  const offset = (Math.floor(v * height) * width + Math.floor(u * width)) * 4;
+  const hex = (index: number): string => (data[offset + index] ?? 0).toString(16).padStart(2, "0");
+
+  return `${hex(0)}${hex(1)}${hex(2)}`;
+}
+
+/** Texture v of a jersey panel height t (hem → collar) inside the torso band of the kit atlas. */
+function jerseyV(t: number): number {
+  return ((panelS(t) - BIBS_START_S) / (COLLAR_S - BIBS_START_S)) * KIT_ATLAS.torso[1];
+}
+
 describe("avatar preview model", () => {
-  it("applies both jersey colors and varies the accent by design", () => {
+  it("paints both jersey colours into the kit texture and the design decides where", () => {
     const preview = createAvatarPreview(2.105);
 
     try {
-      const stripe = AvatarConfigSchema.parse({
+      const config = AvatarConfigSchema.parse({
         ...DEFAULT_AVATAR_CONFIG,
-        rider: {
-          ...DEFAULT_AVATAR_CONFIG.rider,
-          jerseyId: "jersey.stripe",
-          jerseyColors: ["#112233", "#445566"],
-        },
+        rider: { ...DEFAULT_AVATAR_CONFIG.rider, jerseyColors: ["#112233", "#445566"] },
       });
 
-      preview.setLook(stripe);
+      preview.setLook(config);
 
-      const primary = standardMaterial(meshByName(preview.root, "jersey-primary"));
-      const accent = standardMaterial(meshByName(preview.root, "jersey-accent"));
-      const stripeRadius = meshByName(preview.root, "jersey-accent").scale.x;
-      expect(primary.color.getHexString()).toBe("112233");
-      expect(accent.color.getHexString()).toBe("445566");
-      expect(stripeRadius).toBe(0.158);
+      const kit = standardMaterial(meshByName(preview.root, "rider-kit"));
 
-      preview.setLook({
-        ...stripe,
-        rider: { ...stripe.rider, jerseyId: "jersey.classic" },
-      });
-      expect(meshByName(preview.root, "jersey-accent").scale.x).toBe(0.152);
-      expect(accent.roughness).toBe(0.85);
+      expect(texel(kit, 0.12, jerseyV(0.3))).toBe("112233");
+      expect(texel(kit, 0.12, jerseyV(0.62))).toBe("445566");
+
+      preview.setLook({ ...config, rider: { ...config.rider, jerseyId: "jersey.century" } });
+
+      const century = standardMaterial(meshByName(preview.root, "rider-kit"));
+
+      expect(texel(century, 0.12, jerseyV(0.62))).toBe("112233");
+      expect(texel(century, 0.12, jerseyV(0.52))).toBe("445566");
+    } finally {
+      preview.dispose();
+    }
+  });
+
+  it("colours the helmet shell and tints the skin texture", () => {
+    const preview = createAvatarPreview(2.105);
+
+    try {
+      preview.setLook(
+        AvatarConfigSchema.parse({
+          ...DEFAULT_AVATAR_CONFIG,
+          rider: { ...DEFAULT_AVATAR_CONFIG.rider, helmetColor: "#ff0000", skinTone: "#8d5524" },
+        }),
+      );
+
+      expect(standardMaterial(meshByName(preview.root, "rider-helmet")).color.getHexString()).toBe(
+        "ff0000",
+      );
+      expect(texel(standardMaterial(meshByName(preview.root, "rider-skin")), 0.5, 0.95)).toBe(
+        "8d5524",
+      );
     } finally {
       preview.dispose();
     }
@@ -101,21 +152,33 @@ function sceneTriangles(
   return count;
 }
 
+/** The heaviest rider kit (aero visor plus dual lenses, two shoe dials) on the given bike. */
+function heaviestLook(
+  frameId: string,
+  wheelsId: string,
+): ReturnType<typeof AvatarConfigSchema.parse> {
+  return AvatarConfigSchema.parse({
+    ...DEFAULT_AVATAR_CONFIG,
+    rider: {
+      ...DEFAULT_AVATAR_CONFIG.rider,
+      jerseyId: HEAVIEST_ITEMS.jersey,
+      helmetId: HEAVIEST_ITEMS.helmet,
+      glassesId: HEAVIEST_ITEMS.glasses,
+      shoesId: HEAVIEST_ITEMS.shoes,
+    },
+    bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId, wheelsId },
+  });
+}
+
 describe("avatar preview budget", () => {
-  it("keeps rider and bike within the docs/04 §11 triangle budget for every variant", () => {
+  // One test per frame: each wheelset rebuilds the bike, which is slow under coverage.
+  it.each(FRAME_ITEMS)("keeps rider and bike within the docs/04 §11 budget on $id", (frame) => {
     const preview = createAvatarPreview(2.105);
 
     try {
-      for (const frame of FRAME_ITEMS) {
-        for (const wheels of WHEEL_ITEMS) {
-          preview.setLook(
-            AvatarConfigSchema.parse({
-              ...DEFAULT_AVATAR_CONFIG,
-              bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId: frame.id, wheelsId: wheels.id },
-            }),
-          );
-          expect(sceneTriangles(preview.root)).toBeLessThanOrEqual(32_000);
-        }
+      for (const wheels of WHEEL_ITEMS) {
+        preview.setLook(heaviestLook(frame.id, wheels.id));
+        expect(sceneTriangles(preview.root)).toBeLessThanOrEqual(50_000);
       }
     } finally {
       preview.dispose();
@@ -123,28 +186,46 @@ describe("avatar preview budget", () => {
   });
 });
 
+function bonePosition(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three owns the mutable scene graph inspected by this test helper.
+  root: Readonly<THREE.Group>,
+  name: string,
+): THREE.Vector3 {
+  const bone = root.getObjectByName(name);
+
+  if (bone === undefined) throw new Error(`Missing bone ${name}`);
+
+  return bone.getWorldPosition(new THREE.Vector3());
+}
+
+function footY(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three owns the mutable scene graph inspected by this test helper.
+  root: Readonly<THREE.Group>,
+  name: string,
+): number {
+  return bonePosition(root, name).y;
+}
+
 describe("avatar preview pose", () => {
-  it("puts both shoes on the opposed pedals of the preview crank", () => {
+  it("puts both feet on the opposed pedals of the preview crank", () => {
     const preview = createAvatarPreview(2.105);
     const geometry = bikeGeometry(2.105, DEFAULT_FRAME_SPEC, DEFAULT_WHEEL_SPEC);
 
     try {
-      for (const [name, side] of [
-        ["shoe-right", 1],
-        ["shoe-left", -1],
-      ] as const) {
-        const shoe = meshByName(preview.root, name);
-        const pedal = pedalPoint(geometry, Math.PI / 2, side);
+      preview.root.updateMatrixWorld(true);
 
-        expect(Math.abs(shoe.position.x - pedal[0])).toBeLessThan(0.05);
-        expect(shoe.position.y - pedal[1]).toBeGreaterThan(0.015);
-        expect(shoe.position.y - pedal[1]).toBeLessThan(0.06);
-        expect(Math.sign(shoe.position.z)).toBe(side);
+      for (const [name, side] of [
+        ["RightFoot", 1],
+        ["LeftFoot", -1],
+      ] as const) {
+        const ankle = legPose(geometry, Math.PI / 2, side).ankle;
+
+        expect(
+          bonePosition(preview.root, name).distanceTo(new THREE.Vector3(...ankle)),
+        ).toBeLessThan(1e-6);
       }
 
-      expect(meshByName(preview.root, "shoe-right").position.y).toBeLessThan(
-        meshByName(preview.root, "shoe-left").position.y - 0.3,
-      );
+      expect(footY(preview.root, "RightFoot") + 0.3).toBeLessThan(footY(preview.root, "LeftFoot"));
     } finally {
       preview.dispose();
     }

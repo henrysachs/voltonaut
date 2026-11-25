@@ -2,8 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { bikeGeometry, type Point3 } from "./bikeGeometry.js";
 import { DEFAULT_WHEEL_SPEC, FRAME_SPECS } from "./bikeSpecs.js";
-import { legPose, SHIN_M, solveTwoBone, THIGH_M } from "./pose.js";
-import { armPose, FOREARM_M, torsoPoints, UPPER_ARM_M } from "./rider.js";
+import {
+  armPose,
+  FOREARM_M,
+  legPose,
+  SHIN_M,
+  solveTwoBone,
+  THIGH_M,
+  torsoPoints,
+  UPPER_ARM_M,
+} from "./pose.js";
 
 function distance(a: Point3, b: Point3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
