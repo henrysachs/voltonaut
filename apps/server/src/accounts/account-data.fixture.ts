@@ -1,4 +1,5 @@
 import { afterEach, expect } from "vitest";
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import {
   DEFAULT_RIDER_PROFILE,
   VoltsDebitCommandSchema,
@@ -133,6 +134,13 @@ function seedInventoryAndGrant(
 
   insert.run(ownerId, "30000000-0000-4000-8000-000000000001", NOW_MS);
   insert.run(otherId, "30000000-0000-4000-8000-000000000002", NOW_MS);
+
+  const equip = db.$client.prepare(
+    "INSERT INTO avatar_loadouts (user_id, loadout_json, updated_at) VALUES (?, ?, ?)",
+  );
+
+  equip.run(ownerId, JSON.stringify(DEFAULT_AVATAR_CONFIG), NOW_MS);
+  equip.run(otherId, JSON.stringify(DEFAULT_AVATAR_CONFIG), NOW_MS);
   db.$client
     .prepare(
       "INSERT INTO volts_ledger (id, user_id, delta_volts, reason, ref_id, idempotency_key, payload_hash, created_at) VALUES ('30000000-0000-4000-8000-000000000003', ?, 5, 'operator_grant', 'acceptance', 'operator:acceptance', ?, ?)",
@@ -193,6 +201,11 @@ export function assertOwnerPurged(f: Readonly<AccountDataFixture>): void {
   ).toHaveLength(1);
   expect(
     f.db.$client.prepare("SELECT user_id FROM inventory WHERE user_id = ?").all(f.other.user.id),
+  ).toHaveLength(1);
+  expect(
+    f.db.$client
+      .prepare("SELECT user_id FROM avatar_loadouts WHERE user_id = ?")
+      .all(f.other.user.id),
   ).toHaveLength(1);
 }
 

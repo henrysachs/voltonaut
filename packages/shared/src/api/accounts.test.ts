@@ -17,7 +17,7 @@ it("normalizes only the deletion confirmation and rejects extra ownership fields
 });
 
 const exportInput = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   exportedAt: "2026-11-24T12:00:00.000Z",
   account: {
     user: {
@@ -31,7 +31,24 @@ const exportInput = {
   },
   profile: { status: "missing" },
   rides: [],
-  inventory: { items: [] },
+  inventory: {
+    items: [],
+    loadout: {
+      loadout: {
+        rider: {
+          skinTone: "#c98d68",
+          jerseyId: "jersey.classic",
+          jerseyColors: ["#ec6b48", "#f5ebca"],
+          helmetId: "helmet.standard",
+          helmetColor: "#f5ebca",
+          shoesId: "shoes.white",
+          glassesId: "glasses.none",
+        },
+        bike: { frameId: "frame.race", frameColor: "#f0a83b", wheelsId: "wheels.alloy" },
+      },
+      updatedAt: null,
+    },
+  },
   progression: {
     volts: {
       balance: 12,
@@ -77,7 +94,8 @@ const exportInput = {
 it("exports the honest current server state without sessions or credentials", () => {
   const value = AccountExportSchema.parse(exportInput);
 
-  expect(value.inventory).toEqual({ items: [] });
+  expect(value.inventory.items).toEqual([]);
+  expect(value.inventory.loadout.updatedAt).toBeNull();
   expect(value.progression.volts.balance).toBe(12);
   expect(value.progression.volts.journal).toHaveLength(2);
   expect(value.account.identities).toEqual([
