@@ -2,7 +2,7 @@
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E7, Checkbox „`inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items“
 - **Issue:** #65 · Abhängigkeiten: [E7-02](E7-02-server-inventory-shop.md) (Inventar), #133 (Private-API-Routen, gemergt). Showroom, Orbit und Fotomodus sind #122.
-- **Status:** In Arbeit
+- **Status:** Implementiert und softwaregeprüft (Unit, Property, Mutation `rules`, Nest-Integration, Migration, E2E angemeldet mit gemocktem Server). Merge, Bereitstellung und Henrys Abnahme offen.
 - **Betroffene Module:** `packages/shared`, `packages/rules`, `apps/server/src/inventory`, `apps/web/src/{sync,ui/garage,world,avatar}`. Keine neue Abhängigkeit.
 
 ## Ziel
@@ -18,15 +18,15 @@ Ein angemeldeter Fahrer rüstet in der Garage besessene Items und Farben aus. De
 
 ## Abnahmekriterien
 
-- [ ] AK1 – Shared-Verträge sind strikt: `LoadoutResponseSchema` `{ loadout, updatedAt: string | null }`, `LoadoutUpdateSchema` `{ loadout }`. Unbekannte Felder und ungültige Farbformate werden abgewiesen. Neuer Fehlercode `not_owned`.
-- [ ] AK2 – `decideLoadout(config, ownedItemIds)` in `packages/rules` lehnt jedes nicht besessene Item in jedem der sieben Slots ab (`not_owned` mit Item-IDs) und jede Farbe außerhalb der Slot-Palette (`invalid_colors`). Property-Test: Eine Konfiguration aus Katalogfarben ist genau dann gültig, wenn sie nur besessene Items enthält. Mutation in `packages/rules` bleibt grün.
-- [ ] AK3 – `PUT /v1/me/loadout` mit nicht besessenem Item ergibt `409 not_owned` ohne Schreibzugriff, mit fremder Farbe `422`. Fehlende Session und falscher Origin werden abgewiesen. Ein gekauftes Item lässt sich direkt danach ausrüsten.
-- [ ] AK4 – Ohne gespeicherte Ausrüstung liefert `GET /v1/me/loadout` `DEFAULT_AVATAR_CONFIG` mit `updatedAt: null`. Die Migration lässt bestehende Konten, Inventar und Volts unverändert (Migrationstest).
-- [ ] AK5 – Der Kontoexport enthält die Ausrüstung (`schemaVersion` 4). Die Kontolöschung entfernt sie. Späte Schreibversuche nach der Löschung scheitern an den Triggern.
-- [ ] AK6 – Die Garage zeigt pro Item _ausgerüstet_, _besessen_ („Ausrüsten“), _käuflich_ (Kauf mit Bestätigung, sobald #126 gemergt ist; sonst wie bisher) oder _gesperrt_ (Grund aus `itemUnlockText`). Farbwechsel an einem besessenen Item sind Vorschau bis „Ausrüsten“; „Vorschau verwerfen“ kehrt zur Ausrüstung zurück. Gäste senden keinen Loadout-Request.
-- [ ] AK7 – E2E angemeldet (Server gemockt): kaufen, ausrüsten, Reload, Ausrüstung bleibt. Ein zweiter Browser-Kontext mit derselben Session zeigt dieselbe Ausrüstung. Ein abgelehnter Speicherversuch zeigt den Serverstand.
-- [ ] AK8 – E2E in der Fahrt: Nach dem Ausrüsten trägt der Fahrer die neue Ausrüstung. Nachweis über den Diagnosewert `data-look` (Item-IDs und Farben) im Debug-Overlay. Die Distanz läuft dabei weiter.
-- [ ] AK9 – Ohne WebGL bleibt die Garage bedienbar, und das Ausrüsten funktioniert ohne Vorschau.
+- [x] AK1 – Shared-Verträge sind strikt: `LoadoutResponseSchema` `{ loadout, updatedAt: string | null }`, `LoadoutUpdateSchema` `{ loadout }`. Unbekannte Felder und ungültige Farbformate werden abgewiesen. Neuer Fehlercode `not_owned`.
+- [x] AK2 – `decideLoadout(config, ownedItemIds)` in `packages/rules` lehnt jedes nicht besessene Item in jedem der sieben Slots ab (`not_owned` mit Item-IDs) und jede Farbe außerhalb der Slot-Palette (`invalid_colors`). Property-Test: Eine Konfiguration aus Katalogfarben ist genau dann gültig, wenn sie nur besessene Items enthält. Mutation in `packages/rules` bleibt grün.
+- [x] AK3 – `PUT /v1/me/loadout` mit nicht besessenem Item ergibt `409 not_owned` ohne Schreibzugriff, mit fremder Farbe `422`. Fehlende Session und falscher Origin werden abgewiesen. Ein gekauftes Item lässt sich direkt danach ausrüsten.
+- [x] AK4 – Ohne gespeicherte Ausrüstung liefert `GET /v1/me/loadout` `DEFAULT_AVATAR_CONFIG` mit `updatedAt: null`. Die Migration lässt bestehende Konten, Inventar und Volts unverändert (Migrationstest).
+- [x] AK5 – Der Kontoexport enthält die Ausrüstung (`schemaVersion` 4). Die Kontolöschung entfernt sie. Späte Schreibversuche nach der Löschung scheitern an den Triggern.
+- [x] AK6 – Die Garage zeigt pro Item _ausgerüstet_, _besessen_ („Ausrüsten“), _käuflich_ (Kauf mit Bestätigung, sobald #126 gemergt ist; sonst wie bisher) oder _gesperrt_ (Grund aus `itemUnlockText`). Farbwechsel an einem besessenen Item sind Vorschau bis „Ausrüsten“; „Vorschau verwerfen“ kehrt zur Ausrüstung zurück. Gäste senden keinen Loadout-Request.
+- [x] AK7 – E2E angemeldet (Server gemockt): kaufen, ausrüsten, Reload, Ausrüstung bleibt. Ein zweiter Browser-Kontext mit derselben Session zeigt dieselbe Ausrüstung. Ein abgelehnter Speicherversuch zeigt den Serverstand.
+- [x] AK8 – E2E in der Fahrt: Nach dem Ausrüsten trägt der Fahrer die neue Ausrüstung. Nachweis über den Diagnosewert `data-look` (Item-IDs und Farben) im Debug-Overlay. Die Distanz läuft dabei weiter.
+- [x] AK9 – Ohne WebGL bleibt die Garage bedienbar, und das Ausrüsten funktioniert ohne Vorschau.
 
 ## Testplan (`docs/10-testing.md`)
 
@@ -48,3 +48,9 @@ Kein Showroom, keine Orbit-Kamera, kein Fotomodus (#122). Keine Blender-Slot-Ass
 - `render.look` vor `render.ready` darf nicht verloren gehen; der Link puffert den letzten Look.
 - Konflikte mit #134 und #124 beim Merge.
 - Geschützte Dateien unter `fixtures/api/` nur ergänzen, nicht ändern.
+
+## Nachweise und Befunde
+
+- Mutation `packages/rules`: `loadout.ts` und `avatarPalettes.ts` je 100 % (Lauf mit `--force`; der inkrementelle Cache meldete zuvor veraltete Überlebende).
+- E2E `garage-loadout.spec.ts`: Der zweite Browser-Kontext lief beim ersten Versuch ins Standard-Timeout für `data-look`, solange der erste Tab parallel per Software-GPU renderte. Der Test schließt den ersten Tab jetzt vor dem zweiten Browser, wie im echten Gebrauch; Timeouts sind unverändert. Danach zweimal grün.
+- Nicht geprüft: echte GPU-Bildrate mit wechselnder Ausrüstung, Abnahme durch Henry mit echten Volts.

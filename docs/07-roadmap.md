@@ -162,9 +162,11 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-02](specs/E7-02-server-inventory-shop.md) ergänzt das Server-Inventar mit atomaren, idempotenten Käufen, die Operator-Gutschrift `admin credit` und den aktiven Kaufknopf der Garage für angemeldete Fahrer. Das Mindestlevel bleibt bis zur Progression ungeprüft (ADR-031). Stand: implementiert und softwaregeprüft (Unit, Integration, E2E im Gastmodus); Merge, Bereitstellung und Henrys Abnahme offen. Ausrüsten nur besessener Items folgt mit #65.
 
+[E7-05](specs/E7-05-garage-loadout.md) speichert die Ausrüstung pro Konto (`GET`/`PUT /v1/me/loadout`, nur besessene Items und Katalogfarben), zeigt in der Garage je Item „ausgerüstet“, „besessen“, „käuflich“ oder „gesperrt“ und überträgt die Ausrüstung per `render.look` an den Fahrer in der laufenden Fahrt. Stand: implementiert und softwaregeprüft; Merge, Bereitstellung und Henrys Abnahme offen.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
-- [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items
+- [x] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items (E7-02, E7-05; softwaregeprüft, Abnahme offen)
 - [ ] Garage-Showroom (Studio-Licht, Drehteller, Fotomodus), Shop mit Preisen in ⚡, gesperrte Items mit Bedingung
 - [ ] Wiegetritt/Ducken-Posen, Kurvenneigung
       **Abnahme:** Henry kauft ein Laufrad mit Volts und rüstet es aus; nach Reload/anderem Browser identisch; Kauf ohne genug Volts abgelehnt; visuelle Tests der Garage grün.
