@@ -21,14 +21,10 @@ import {
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 
-import type { ApplicationSession, SessionView } from "./applicationSession.js";
-import {
-  PrivateRequestError,
-  privateAuthTransport,
-  type AccountLease,
-  type ProgressLease,
-  type SyncFailure,
-} from "./privateAuthTransport.js";
+import type { SessionView } from "./applicationSession.js";
+import { PrivateRequestError, type SyncFailure } from "./apiRoute.js";
+import type { ProgressPort } from "./progressPort.js";
+import { privateAuthTransport } from "./privateAuthTransport.js";
 import {
   appendProgressBatch,
   groupProgressBatches,
@@ -52,7 +48,7 @@ import {
   type ProgressWriteFence,
 } from "./progressOutbox.js";
 import { createProgressOutboxDatabase } from "./progressOutboxDatabase.js";
-import { ProgressSync, type ProgressSyncOptions } from "./progressSync.js";
+import { ProgressSync, type ProgressLease, type ProgressSyncOptions } from "./progressSync.js";
 import { deferred } from "./testdata/deferred.js";
 import { MemoryOutboxDatabase, batch, checkpoint, owner, userA } from "./progressOutboxTestdata.js";
 
@@ -513,7 +509,7 @@ class Harness {
   readonly submitted: ProgressCheckpointBatch[] = [];
   readonly updates: boolean[] = [];
   readonly scheduled: number[] = [];
-  active: AccountLease | undefined;
+  active: ProgressLease | undefined;
   controller: AbortController | undefined;
   generation = 0;
   nowMs = 1000;
@@ -528,7 +524,7 @@ class Harness {
   submitFailure?: PrivateRequestError;
   submitOverride?: (value: ProgressCheckpointBatch) => Promise<VoltsRideRangeReceipt>;
   readonly token = "same-private-token";
-  readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
+  readonly session: ProgressSyncOptions["session"];
   readonly sync: ProgressSync;
 
   constructor(
@@ -565,13 +561,13 @@ class Harness {
     for (const listener of this.listeners) listener({ kind: "busy", operation: "restoring" });
   }
 
-  login(): AccountLease {
+  login(): ProgressLease {
     this.controller?.abort();
     this.controller = new AbortController();
     this.generation += 1;
     const controller = this.controller;
     const generation = this.generation;
-    let lease: AccountLease;
+    let lease: ProgressLease;
 
     const base = privateAuthTransport(ORIGIN).authorize({
       token: this.token,
@@ -594,7 +590,7 @@ class Harness {
     return lease;
   }
 
-  private progressLease(current: () => boolean, generation: number): ProgressLease {
+  private progressLease(current: () => boolean, generation: number): ProgressPort {
     return {
       status: () => {
         const pending = this.statusPending;

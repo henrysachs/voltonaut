@@ -13,11 +13,8 @@ import {
 } from "@voltonaut/shared";
 
 import type { ApplicationSession, SessionView } from "./applicationSession.js";
-import {
-  PrivateRequestError,
-  type AccountLease,
-  type SyncFailure,
-} from "./privateAuthTransport.js";
+import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
+import type { ProgressPort } from "./progressPort.js";
 import {
   SERVER_PROGRESS_MAX_FACTS,
   SERVER_PROGRESS_MAX_TIME_S,
@@ -35,6 +32,9 @@ import {
   type ProgressWriteFence,
 } from "./progressOutbox.js";
 import type { ProgressPanelView } from "../ui/progressPanel.js";
+
+/** Progress consent and checkpoint delivery; nothing else of the account. */
+export type ProgressLease = LeaseBinding & { readonly progress: ProgressPort };
 
 const DELIVERY_TARGET_MS = 60_000;
 const DELIVERY_PAGE_SIZE = 10;
@@ -61,7 +61,7 @@ type JournalState =
   | {
       readonly kind: "writing";
       readonly journalId: JournalId;
-      readonly lease: AccountLease;
+      readonly lease: ProgressLease;
       readonly consentVersion: number;
       readonly sessionGeneration: number;
       readonly controller: AbortController;
@@ -71,7 +71,9 @@ type JournalState =
     };
 
 export interface ProgressSyncOptions {
-  readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
+  readonly session: Readonly<
+    Pick<ApplicationSession, "subscribe"> & { readonly authorize: () => ProgressLease | undefined }
+  >;
   readonly outbox?: () => Promise<ProgressOutbox>;
   readonly nowMs?: () => number;
   readonly schedule?: (callback: () => void, delayMs: number) => () => void;
@@ -162,7 +164,7 @@ export class ProgressSync {
   readonly #options: ProgressSyncOptions;
   readonly #listeners = new Set<(view: ProgressPanelView) => void>();
   #sessionView: SessionView = { kind: "guest", message: "Gast" };
-  #lease: AccountLease | undefined;
+  #lease: ProgressLease | undefined;
   #consent: ProgressConsentState | undefined;
   #consentFailure: string | undefined;
   #consentBusy = false;
@@ -339,7 +341,7 @@ export class ProgressSync {
     }
   }
 
-  private stopLocally(lease: AccountLease): void {
+  private stopLocally(lease: ProgressLease): void {
     if (this.#consent !== undefined) this.#consent = { ...this.#consent, enabled: false };
     this.clearPendingBuffer();
 
@@ -371,7 +373,7 @@ export class ProgressSync {
     await this.startDelivery(lease, mode);
   }
 
-  private bind(lease: AccountLease | undefined, preserveBuffer = false): void {
+  private bind(lease: ProgressLease | undefined, preserveBuffer = false): void {
     this.#epoch += 1;
     this.#lease = lease;
     this.#consent = undefined;
@@ -395,7 +397,7 @@ export class ProgressSync {
     if (lease !== undefined) void this.loadConsent(lease, this.#epoch);
   }
 
-  private async loadConsent(lease: AccountLease, epoch: number): Promise<void> {
+  private async loadConsent(lease: ProgressLease, epoch: number): Promise<void> {
     try {
       const consent = await lease.progress.status();
 
@@ -568,7 +570,7 @@ export class ProgressSync {
 
   private async rejectContract(
     database: ProgressOutbox,
-    lease: AccountLease,
+    lease: ProgressLease,
     journalId: string,
   ): Promise<void> {
     this.stopJournal(journalId);
@@ -602,7 +604,7 @@ export class ProgressSync {
     };
   }
 
-  private rowFence(lease: AccountLease, row: ProgressOutboxRow): ProgressWriteFence {
+  private rowFence(lease: ProgressLease, row: ProgressOutboxRow): ProgressWriteFence {
     return {
       apiOrigin: lease.apiOrigin,
       userId: lease.userId,
@@ -614,11 +616,11 @@ export class ProgressSync {
     };
   }
 
-  private current(lease: AccountLease): boolean {
+  private current(lease: ProgressLease): boolean {
     return this.#lease === lease && lease.current();
   }
 
-  private canUpload(lease: AccountLease): boolean {
+  private canUpload(lease: ProgressLease): boolean {
     return (
       this.current(lease) &&
       this.#consent !== undefined &&
@@ -638,7 +640,7 @@ export class ProgressSync {
     return this.#resource;
   }
 
-  private async refreshOutbox(lease: AccountLease): Promise<void> {
+  private async refreshOutbox(lease: ProgressLease): Promise<void> {
     if (!this.current(lease)) return;
 
     try {
@@ -656,7 +658,7 @@ export class ProgressSync {
     this.publish();
   }
 
-  private async startDelivery(lease: AccountLease, mode: "manual" | "resume"): Promise<void> {
+  private async startDelivery(lease: ProgressLease, mode: "manual" | "resume"): Promise<void> {
     if (!this.canUpload(lease)) return;
 
     if (this.#delivering) {
@@ -690,7 +692,7 @@ export class ProgressSync {
     }
   }
 
-  private async deliver(lease: AccountLease, mode: "manual" | "resume"): Promise<void> {
+  private async deliver(lease: ProgressLease, mode: "manual" | "resume"): Promise<void> {
     if (!this.canUpload(lease)) return;
     const database = await this.database();
     const journal = this.#journal;
@@ -739,7 +741,7 @@ export class ProgressSync {
 
   private async deliverJournal(
     database: ProgressOutbox,
-    lease: AccountLease,
+    lease: ProgressLease,
     rows: readonly ProgressOutboxRow[],
     mode: "manual" | "resume",
   ): Promise<DeliveryOutcome> {
@@ -790,7 +792,7 @@ export class ProgressSync {
 
   private async eligibleRows(
     database: ProgressOutbox,
-    lease: AccountLease,
+    lease: ProgressLease,
     rows: readonly ProgressOutboxRow[],
     mode: "manual" | "resume",
   ): Promise<readonly ProgressOutboxRow[]> {
@@ -828,7 +830,7 @@ export class ProgressSync {
 
   private async submitGroup(
     database: ProgressOutbox,
-    lease: AccountLease,
+    lease: ProgressLease,
     batch: ProgressCheckpointBatch,
     rows: readonly ProgressOutboxRow[],
     mode: "manual" | "resume",
@@ -873,7 +875,7 @@ export class ProgressSync {
 
   private async applyReceipt(
     database: ProgressOutbox,
-    lease: AccountLease,
+    lease: ProgressLease,
     batch: ProgressCheckpointBatch,
     sending: readonly ProgressOutboxRow[],
     receipt: Readonly<VoltsRideRangeReceipt>,
@@ -922,7 +924,7 @@ export class ProgressSync {
 
   private async failGroup(
     database: ProgressOutbox,
-    lease: AccountLease,
+    lease: ProgressLease,
     rows: readonly ProgressOutboxRow[],
     cause: Exclude<SyncFailure, "superseded">,
   ): Promise<void> {
@@ -956,7 +958,7 @@ export class ProgressSync {
     await this.refreshOutbox(lease);
   }
 
-  private async blockPending(lease: AccountLease): Promise<void> {
+  private async blockPending(lease: ProgressLease): Promise<void> {
     if (!this.current(lease)) return;
     const database = await this.database();
     const rows = await database.listPending(lease);
@@ -997,7 +999,7 @@ export class ProgressSync {
     await this.refreshOutbox(lease);
   }
 
-  private async schedulePending(lease: AccountLease): Promise<void> {
+  private async schedulePending(lease: ProgressLease): Promise<void> {
     if (!this.current(lease)) return;
 
     try {

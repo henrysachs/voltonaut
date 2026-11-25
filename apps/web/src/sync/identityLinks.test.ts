@@ -7,7 +7,7 @@ import {
   type IdentityLinksLease,
   type IdentityLinksView,
 } from "./identityLinks.js";
-import { PrivateRequestError } from "./privateAuthTransport.js";
+import { PrivateRequestError } from "./apiRoute.js";
 
 const user: User = {
   id: "00000000-0000-4000-8000-000000000001",

@@ -8,12 +8,13 @@ import {
 } from "@voltonaut/shared";
 import { AccountSync } from "../accountSync.js";
 import { outboxKey, type AccountOutbox, type OutboxRow } from "../accountOutbox.js";
-import type { AccountLease, PrivateRequestError } from "../privateAuthTransport.js";
+import type { AccountSyncLease } from "../accountDataView.js";
+import type { PrivateRequestError } from "../apiRoute.js";
 import type { SessionView } from "../applicationSession.js";
 import { deletionOwnerKey, type DeletionOwner } from "../accountDeletion.js";
 import { accountExport } from "../../testdata/accountExport.js";
 import { localRide } from "./localRide.js";
-import { unusedStravaLease, unexpectedAccountParts } from "./unusedStravaLease.js";
+import { offlineIdentities, offlineMembership, offlineShop } from "./offlinePorts.js";
 
 export { accountExport };
 
@@ -24,7 +25,7 @@ export class SyncFixture {
   readonly rows = new Map<string, OutboxRow>();
   readonly uploads: string[] = [];
   readonly listeners = new Set<(view: SessionView) => void>();
-  active: AccountLease | undefined;
+  active: AccountSyncLease | undefined;
   nowMs = 100_000;
   profile: ProfileState = { status: "missing" };
   profilePending: Promise<ProfileState> | undefined;
@@ -122,7 +123,7 @@ export class SyncFixture {
     };
   }
 
-  login(userId: string): AccountLease {
+  login(userId: string): AccountSyncLease {
     const lease = this.lease(userId);
     this.active = lease;
 
@@ -142,24 +143,36 @@ export class SyncFixture {
     for (const listener of this.listeners) listener({ kind: "guest", message: "Gast" });
   }
 
-  private lease(userId: string): AccountLease {
-    const lease: AccountLease = {
-      ...unexpectedAccountParts,
-      strava: unusedStravaLease,
+  private lease(userId: string): AccountSyncLease {
+    const lease: AccountSyncLease = {
       signal: new AbortController().signal,
       userId,
       apiOrigin: "http://localhost:3000",
       generation: this.nowMs++,
       current: () => this.active === lease,
-      profile: () => this.profilePending ?? Promise.resolve(this.profile),
+      profile: {
+        load: () => this.profilePending ?? Promise.resolve(this.profile),
+        save: (value) =>
+          Promise.resolve({
+            status: "present",
+            profile: value,
+            updatedAt: "2026-11-20T00:00:00.000Z",
+          }),
+      },
+      rides: this.rides(userId),
+      data: this.data(),
+      identities: offlineIdentities,
+      membership: offlineMembership,
+      shop: offlineShop,
+    };
+
+    return lease;
+  }
+
+  private rides(userId: string): AccountSyncLease["rides"] {
+    return {
       history: () => Promise.resolve(this.history),
       detail: () => Promise.reject(new Error("not requested")),
-      saveProfile: (value) =>
-        Promise.resolve({
-          status: "present",
-          profile: value,
-          updatedAt: "2026-11-20T00:00:00.000Z",
-        }),
       upload: (ride) => {
         this.uploads.push(userId);
 
@@ -174,6 +187,11 @@ export class SyncFixture {
           })
         );
       },
+    };
+  }
+
+  private data(): AccountSyncLease["data"] {
+    return {
       exportAccount: () =>
         this.exportFailure
           ? Promise.reject(new Error("export failed"))
@@ -186,8 +204,6 @@ export class SyncFixture {
           : Promise.resolve();
       },
     };
-
-    return lease;
   }
 }
 

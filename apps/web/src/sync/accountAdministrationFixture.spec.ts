@@ -1,7 +1,11 @@
 import type { AccountStatus, AdminUsers, Membership } from "@voltonaut/shared";
 import { ApplicationSession } from "./applicationSession.js";
 import { AccountSync } from "./accountSync.js";
-import { privateAuthTransport, type PrivateAuthTransport } from "./privateAuthTransport.js";
+import {
+  privateAuthTransport,
+  type AccountLease,
+  type LeaseIssuer,
+} from "./privateAuthTransport.js";
 import type { AdministrationView } from "./accountAdministration.js";
 
 export class AdministrationFixture {
@@ -87,32 +91,42 @@ export class AdministrationFixture {
     };
   }
 
-  private transport(): PrivateAuthTransport {
+  private transport(): LeaseIssuer<AccountLease> {
     return {
       authorize: (authorization) => {
         this.signals.push(authorization.signal);
+        const real = privateAuthTransport("http://localhost:3000").authorize(authorization);
 
         return {
-          ...privateAuthTransport("http://localhost:3000").authorize(authorization),
-          profile: () => Promise.resolve({ status: "missing" }),
-          history: () => Promise.resolve({ rides: [], nextCursor: null }),
-          accountStatus: () => {
-            this.reads.push(authorization.userId);
-            const pending = this.statusPending;
-            this.statusPending = undefined;
-
-            return pending ?? Promise.resolve(this.status());
+          ...real,
+          profile: { ...real.profile, load: () => Promise.resolve({ status: "missing" }) },
+          rides: {
+            ...real.rides,
+            history: () => Promise.resolve({ rides: [], nextCursor: null }),
           },
-          adminUsers: () => this.usersPending ?? Promise.resolve(this.directory()),
-          saveMembership: (id, membership) => {
-            this.writes.push(`${authorization.userId}:${id}`);
-            this.membership = { ...membership };
-
-            return this.loseReply
-              ? Promise.reject(new Error("lost reply"))
-              : (this.writePending ?? Promise.resolve(this.status()));
-          },
+          membership: this.membershipPort(authorization.userId),
         };
+      },
+    };
+  }
+
+  private membershipPort(userId: string): AccountLease["membership"] {
+    return {
+      status: () => {
+        this.reads.push(userId);
+        const pending = this.statusPending;
+        this.statusPending = undefined;
+
+        return pending ?? Promise.resolve(this.status());
+      },
+      users: () => this.usersPending ?? Promise.resolve(this.directory()),
+      save: (id, membership) => {
+        this.writes.push(`${userId}:${id}`);
+        this.membership = { ...membership };
+
+        return this.loseReply
+          ? Promise.reject(new Error("lost reply"))
+          : (this.writePending ?? Promise.resolve(this.status()));
       },
     };
   }

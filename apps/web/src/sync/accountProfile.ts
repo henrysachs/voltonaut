@@ -1,11 +1,11 @@
 import type { ProfileBootstrap } from "../profileBootstrap.js";
 import type { OutboxRead } from "./accountOutbox.js";
 import type { OutboxItem } from "./accountDataView.js";
-import type { AccountLease } from "./privateAuthTransport.js";
+import type { LeaseBinding } from "./apiRoute.js";
 import { withProfileSelection } from "./profileSelection.js";
 
 interface ProfileApplication {
-  readonly lease: AccountLease;
+  readonly lease: LeaseBinding;
   readonly profile: Parameters<ProfileBootstrap["apply"]>[0];
   readonly currentRows: readonly OutboxItem[];
   readonly read: () => Promise<OutboxRead>;

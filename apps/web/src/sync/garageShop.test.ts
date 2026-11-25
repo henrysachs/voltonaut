@@ -6,10 +6,9 @@ import {
   InventoryResponseSchema,
 } from "@voltonaut/shared";
 
-import { GarageShop, type GarageShopView } from "./garageShop.js";
-import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
-import { ShopReceiptMismatch } from "./shopLease.js";
-import { unexpectedAccountParts, unusedStravaLease } from "./testdata/unusedStravaLease.js";
+import { GarageShop, type GarageShopView, type ShopLease } from "./garageShop.js";
+import { PrivateRequestError } from "./apiRoute.js";
+import { ShopReceiptMismatch } from "./shopPort.js";
 
 const ACQUIRED_AT = "2026-11-25T10:00:00.000Z";
 
@@ -20,20 +19,13 @@ class ShopServer {
   failure: Error | undefined;
   active = true;
 
-  lease(userId = "rider"): AccountLease {
+  lease(userId = "rider"): ShopLease {
     return {
-      ...unexpectedAccountParts,
-      strava: unusedStravaLease,
       signal: new AbortController().signal,
       apiOrigin: "http://localhost:3000",
       userId,
       generation: 1,
       current: () => this.active,
-      profile: () => Promise.reject(new Error("unused")),
-      saveProfile: () => Promise.reject(new Error("unused")),
-      history: () => Promise.reject(new Error("unused")),
-      detail: () => Promise.reject(new Error("unused")),
-      upload: () => Promise.reject(new Error("unused")),
       shop: {
         balance: () =>
           Promise.resolve(VoltsBalanceResponseSchema.parse({ voltsBalance: this.balance })),
@@ -205,7 +197,7 @@ it("rereads balance and ownership when an earlier purchase stayed unconfirmed", 
   });
 });
 
-function flakyLease(server: Readonly<Pick<ShopServer, "lease">>, up: () => boolean): AccountLease {
+function flakyLease(server: Readonly<Pick<ShopServer, "lease">>, up: () => boolean): ShopLease {
   const lease = server.lease();
 
   return {

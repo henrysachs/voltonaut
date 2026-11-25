@@ -1,11 +1,10 @@
 import { expect, it } from "vitest";
 import { DEFAULT_RIDER_PROFILE, type ProfileState } from "@voltonaut/shared";
 
-import { deliverAccountRow } from "./accountDelivery.js";
+import { deliverAccountRow, type DeliveryLease } from "./accountDelivery.js";
 import { newOutboxRow, type AccountOutbox, type OutboxRow } from "./accountOutbox.js";
-import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
+import { PrivateRequestError } from "./apiRoute.js";
 import { localRide } from "./testdata/localRide.js";
-import { unusedStravaLease, unexpectedAccountParts } from "./testdata/unusedStravaLease.js";
 
 const owner = {
   apiOrigin: "http://localhost:3000",
@@ -17,27 +16,24 @@ class DeliveryFixture {
   calls = 0;
   failure: PrivateRequestError | undefined;
   row: OutboxRow = newOutboxRow(owner, localRide, 1000);
-  readonly lease: AccountLease = {
-    ...unexpectedAccountParts,
-    strava: unusedStravaLease,
+  readonly lease: DeliveryLease = {
     signal: new AbortController().signal,
     ...owner,
     generation: 1,
     current: () => true,
-    profile: () => Promise.resolve({ status: "missing" }),
-    history: () => Promise.resolve({ rides: [], nextCursor: null }),
-    detail: () => Promise.reject(new Error("unused")),
-    saveProfile: () => Promise.resolve(this.profileReceipt),
-    upload: (payload) => {
-      this.calls += 1;
+    profile: { save: () => Promise.resolve(this.profileReceipt) },
+    rides: {
+      upload: (payload) => {
+        this.calls += 1;
 
-      if (this.failure !== undefined) return Promise.reject(this.failure);
+        if (this.failure !== undefined) return Promise.reject(this.failure);
 
-      return Promise.resolve({
-        rideId: payload.rideId,
-        storage: "stored",
-        assessment: { status: "unverified", reason: "legacy_missing_replay" },
-      });
+        return Promise.resolve({
+          rideId: payload.rideId,
+          storage: "stored",
+          assessment: { status: "unverified", reason: "legacy_missing_replay" },
+        });
+      },
     },
   };
   profileReceipt: ProfileState = { status: "missing" };
