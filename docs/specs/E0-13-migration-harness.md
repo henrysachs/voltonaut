@@ -6,7 +6,7 @@
 
 ## Ziel
 
-Jeder Upgrade-Test öffnet eine echte SQLite-Datei an einem benannten Migrations-Tag, legt Altbestand über einen Hook an, migriert auf den Kopfstand und prüft Altbestand und neue Invarianten. Eine neue Migration ändert keinen bestehenden Test mehr.
+Jeder Upgrade-Test öffnet eine echte SQLite-Datei an einem benannten Migrations-Tag, legt Altbestand über einen Hook an, migriert auf den Kopfstand und prüft Altbestand und neue Invarianten. Eine neue Migration, die nur Tabellen oder Indizes ergänzt, ändert keinen bestehenden Upgrade-Test mehr.
 
 ## Ausgangslage
 
@@ -20,12 +20,12 @@ Jeder Upgrade-Test öffnet eine echte SQLite-Datei an einem benannten Migrations
 
 - [x] AK1 – `apps/server/src/testing/migration-harness.spec.ts` bietet `upgradeFrom(tag, seed)`: Datei-DB über `createDatabase` an `tag`, prüft genau die Journal-Einträge bis `tag`, führt `seed` aus, schließt; `open()` migriert auf den Kopfstand, prüft per `expectHead` alle Journal-Einträge und lässt sich erneut öffnen.
 - [x] AK2 – Unbekannte Tags werfen sofort (`test: unknown migration tag …`).
-- [x] AK3 – Temp-Verzeichnisse (`scratchDirectory`) und offene Verbindungen werden über `onTestFinished` auch bei Fehlschlag entfernt bzw. geschlossen.
+- [x] AK3 – Temp-Verzeichnisse (`scratchDirectory`) und offene Verbindungen werden über `onTestFinished` auch bei Fehlschlag entfernt bzw. geschlossen. Vitest führt die Hooks in umgekehrter Registrierungsreihenfolge aus (`sequence.hooks: "stack"`). Deshalb wird der Close-Hook nach dem Verzeichnis registriert: Verbindungen schließen vor dem Löschen. `migration-harness.test.ts` belegt Reihenfolge, Schließen, Löschen und unbekannte Tags.
 - [x] AK4 – `seedOwners` legt `users` über die Spaltennamen des echten Drizzle-Schemas an und schreibt nur Spalten, die seit `0000` existieren; damit funktioniert es an jedem Tag.
 - [x] AK5 – Keine Kopie der Journal-Schneidelogik und kein `toHaveLength(<Migrationszahl>)` mehr in `apps/server/src`; kein `INSERT INTO users` außerhalb des Harness in den migrierten Dateien; positionsabhängige `INSERT … VALUES` in migrierten Dateien sind benannt.
 - [x] AK6 – Jede bisherige Upgrade-Garantie bleibt assertiert: Altzeilen byte-gleich, neue Spalten/Defaults, FKs, CHECKs, Trigger, Chiffrate entschlüsselbar, Reopen.
 - [x] AK7 – Economy-Tests (`grant`, `debit`, `indexes`, `range-validation`, `transaction`) säen den Eigentümer direkt statt per Login. Sie rufen nur `EconomyService`/`OperatorGrants` mit einer ID auf und prüfen keine Session.
-- [x] AK8 – Nachweis „neue Migration ändert keinen alten Test“: siehe unten.
+- [x] AK8 – Nachweis „eine neue Migration mit neuen Tabellen/Indizes ändert keinen alten Upgrade-Test“: siehe unten.
 
 ## Nachweis AK8
 
@@ -33,11 +33,13 @@ Kopfstand und Kopfzahl stammen ausschließlich aus `apps/server/drizzle/meta/_jo
 
 Probelauf (nicht committet, 25.11.2026): Ein zusätzlicher Journal-Eintrag `0013_scratch_probe` mit `CREATE TABLE scratch_probe` wurde ergänzt. Alle sieben Upgrade-Testdateien (15 Tests) liefen unverändert grün. Rot wurde nur `database.test.ts` → „creates owned tables…“, dessen ausdrückliche Tabellenliste die neue Tabelle meldet. Das ist gewollt: Eine neue Tabelle soll bewusst in die Liste aufgenommen werden. Danach wurde der Probelauf zurückgesetzt.
 
+Grenze: Neue Spalten an Tabellen, die alte Tests seeden, machen deren `SELECT *`-Vergleiche bewusst rot. Ein Spaltenzuwachs an Altbestand soll ausdrücklich geprüft und im betroffenen Test nachgezogen werden.
+
 ## Testplan (`docs/10-testing.md` §5 „Datenbankmigrationen“)
 
 | AK      | Ebene              | Datei                                                                                        |
 | ------- | ------------------ | -------------------------------------------------------------------------------------------- |
-| AK1–AK4 | Integration Server | `apps/server/src/testing/migration-harness.spec.ts` (genutzt von allen Upgrade-Tests)        |
+| AK1–AK4 | Integration Server | `apps/server/src/testing/migration-harness.test.ts`, genutzt von allen Upgrade-Tests         |
 | AK6     | Integration Server | `apps/server/src/database/*-migrations.test.ts`, `database.test.ts`, `rides.upgrade.test.ts` |
 | AK7     | Integration Server | `apps/server/src/economy/economy.{grant,debit,indexes,range-validation,transaction}.test.ts` |
 
@@ -50,7 +52,6 @@ Probelauf (nicht committet, 25.11.2026): Ein zusätzlicher Journal-Eintrag `0013
 ## Offene Fragen / Risiken
 
 - `seedOwners` schreibt nur die Ursprungsspalten. Bekommt `users` eine neue NOT-NULL-Spalte ohne Default, muss der Harness sie ergänzen (eine Stelle statt ~15).
-- Harness-Dateien enden auf `.spec.ts` und laufen nicht als eigene Testdateien; sie werden über die Upgrade-Tests ausgeführt.
 
 ## Doku-Updates
 

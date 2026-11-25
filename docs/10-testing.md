@@ -66,8 +66,8 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 
 - Upgrade-Tests nutzen ausschließlich `apps/server/src/testing/migration-harness.spec.ts` ([E0-13](specs/E0-13-migration-harness.md)). Muster: `upgradeFrom("<tag>", seed)` öffnet eine echte SQLite-Datei über `createDatabase` am benannten Tag. Danach legt der Hook den Altbestand an, `open()` migriert auf den Kopfstand und erlaubt ein erneutes Öffnen. Geprüft werden unveränderte Altzeilen und die neuen Invarianten.
 - Startpunkte sind Tags aus `drizzle/meta/_journal.json`, keine Indizes. Kopfstand und Migrationszahl liefert nur das Journal (`expectHead`); kein Test schreibt die Anzahl der Migrationen hart.
-- Eine neue Migration bekommt einen eigenen Upgrade-Test ab dem vorherigen Tag. Bestehende Upgrade-Tests bleiben unverändert. Die Tabellenliste in `database.test.ts` wird bewusst ergänzt.
-- Kontoinhaber legt `seedOwners` über die Spaltennamen des Schemas an; übrige Testzeilen nennen ihre Spalten (kein positionsabhängiges `INSERT … VALUES`). Temp-Verzeichnisse kommen aus `scratchDirectory` und werden nach jedem Test entfernt.
+- Eine neue Migration bekommt einen eigenen Upgrade-Test ab dem vorherigen Tag. Ergänzt sie nur Tabellen oder Indizes, bleiben bestehende Upgrade-Tests unverändert; die Tabellenliste in `database.test.ts` wird bewusst ergänzt. Neue Spalten an geseedeten Tabellen machen deren `SELECT *`-Vergleiche bewusst rot und werden im betroffenen Test nachgezogen.
+- Kontoinhaber legt `seedOwners` über die Spaltennamen des Schemas an; übrige Testzeilen nennen ihre Spalten (kein positionsabhängiges `INSERT … VALUES`). Temp-Verzeichnisse kommen aus `scratchDirectory` und werden nach jedem Test entfernt. `onTestFinished` läuft in umgekehrter Registrierungsreihenfolge; Hooks, die vor dem Löschen laufen müssen, werden nach dem Verzeichnis registriert.
 
 ## 6. E2E (Playwright, Sim-Modus)
 
