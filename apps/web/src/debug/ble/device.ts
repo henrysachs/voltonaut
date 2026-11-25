@@ -1,4 +1,13 @@
-import type { AdvertisementFrame, BleTransport, GattProfile } from "@voltonaut/ble";
+import {
+  createFtmsLabControl,
+  isFtmsControlPoint,
+  type AdvertisementFrame,
+  type BleTransport,
+  type CharacteristicRef,
+  type GattProfile,
+  type LabControl,
+  type LabControlOptions,
+} from "@voltonaut/ble";
 import { createSnifferSession, type SnifferSession } from "./session.js";
 
 type DeviceState =
@@ -7,6 +16,8 @@ type DeviceState =
 
 export type LabChange = "selection" | "profile" | "state" | "capture";
 
+export type LabTiming = Pick<LabControlOptions, "clock" | "ticker">;
+
 export class LabDevice {
   readonly session: SnifferSession;
   state: DeviceState = { kind: "connecting" };
@@ -14,7 +25,8 @@ export class LabDevice {
   firmware = "";
   notes = "";
   advertisement: AdvertisementFrame | undefined;
-  control: "unrequested" | "granted" = "unrequested";
+  /** FTMS preset authority of the current GATT session; replaced only by a new connect. */
+  ftms: LabControl | undefined;
   private queue = Promise.resolve();
   private readonly stopDisconnected: () => void;
   private stopAdvertisements = (): void => {};
@@ -24,16 +36,21 @@ export class LabDevice {
     readonly id: string,
     readonly name: string,
     transport: BleTransport,
+    private readonly timing: LabTiming,
     private readonly changed: (change: LabChange, device: Readonly<LabDevice>) => void,
   ) {
     this.session = createSnifferSession(transport, () => {
       changed("capture", this);
     });
     this.stopDisconnected = transport.onDisconnected(() => {
-      this.control = "unrequested";
+      this.endControl("Verbindung getrennt. Neu verbinden.");
       this.state = { kind: "disconnected" };
       changed("state", this);
     });
+  }
+
+  private endControl(reason: string): void {
+    this.ftms?.invalidate(reason);
   }
 
   readonly run = (operation: () => Promise<void>): void => {
@@ -52,10 +69,16 @@ export class LabDevice {
   }
 
   readonly connect = async (scan: Parameters<BleTransport["connect"]>[0]): Promise<void> => {
+    this.endControl("Neue Verbindung wird aufgebaut.");
+    this.ftms = undefined;
     this.state = { kind: "connecting" };
-    this.control = "unrequested";
     this.changed("state", this);
     this.profile = await this.session.transport.connect(scan, "remembered");
+    this.ftms = createFtmsLabControl({
+      transport: this.session.transport,
+      profile: this.profile,
+      ...this.timing,
+    });
     this.state = { kind: "ready" };
     this.stopAdvertisements();
     this.stopAdvertisements = this.session.transport.watchAdvertisements((frame) => {
@@ -66,13 +89,14 @@ export class LabDevice {
   };
 
   readonly disconnect = async (): Promise<void> => {
+    this.endControl("Verbindung getrennt. Neu verbinden.");
     await this.session.transport.disconnect();
-    this.control = "unrequested";
     this.state = { kind: "disconnected" };
     this.changed("state", this);
   };
 
   readonly dispose = async (): Promise<void> => {
+    this.endControl("Labor geschlossen.");
     this.stopAdvertisements();
     this.stopDisconnected();
     await this.session.dispose();
@@ -83,7 +107,10 @@ export class LabDevice {
     this.notes = notes;
   };
 
-  readonly grantControl = (): void => {
-    this.control = "granted";
+  /** A raw control-point write's late reply could satisfy a later preset wait. */
+  readonly rawWrite = (ref: CharacteristicRef): void => {
+    if (isFtmsControlPoint(ref)) {
+      this.endControl("Rohwrite auf FTMS Control Point. Für Presets neu verbinden.");
+    }
   };
 }

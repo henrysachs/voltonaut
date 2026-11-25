@@ -1,6 +1,6 @@
 import type { StatusPublisher } from "../adapterShell.js";
 import type { EventBus } from "@voltonaut/shared";
-import { type ByteReader, readOnlyBytes } from "../bytes.js";
+import type { ByteReader } from "../bytes.js";
 import type { SimClock, TickSource, Unsubscribe } from "../sim/index.js";
 import type {
   BleTransport,
@@ -14,6 +14,7 @@ import {
   ZWIFT_PLAY_CONTROL_POINT,
   ZWIFT_PLAY_COMMAND_RESPONSE,
 } from "../uuids.js";
+import { RIDE_ON } from "./handshake.js";
 import { parsePlayInput, type PlayInput, type PlaySide } from "./parse.js";
 
 export interface PlaySessionOptions {
@@ -23,8 +24,6 @@ export interface PlaySessionOptions {
   readonly transport: BleTransport;
   readonly side: PlaySide;
 }
-
-const RIDE_ON = readOnlyBytes(Uint8Array.from([0x52, 0x69, 0x64, 0x65, 0x4f, 0x6e]));
 
 const SCAN = {
   acceptAllDevices: false,

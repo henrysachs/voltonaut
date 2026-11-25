@@ -44,8 +44,9 @@ export const SNIFFER_FIXTURE = parseSyntheticFixture(
       { tMs: 500, service: "0x1826", char: "0x2ad2", hex: "45 00 b0 00 fa 00" },
       { tMs: 500, service: "0x180d", char: "0x2a37", hex: "00 40" },
       { tMs: 1000, service: "0x1826", char: "0x2ad9", hex: "80 00 01" },
-      { tMs: 1250, service: "0x1826", char: "0x2ad9", hex: "80 11 01" },
+      { tMs: 1250, service: "0x1826", char: "0x2ad9", hex: "80 07 01" },
       { tMs: 1500, service: "0x1826", char: "0x2ad9", hex: "80 11 01" },
+      { tMs: 1750, service: "0x1826", char: "0x2ad9", hex: "80 11 01" },
     ].map((entry: Readonly<{ tMs: number; service: string; char: string; hex: string }>) => ({
       tMs: entry.tMs,
       service: entry.service,
