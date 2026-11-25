@@ -1,9 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createEventBus } from "@voltonaut/shared";
 import {
-  createFakeTrainer,
   createManualClock,
   createManualTicker,
+  createRideDeviceSet,
+  createSimDeviceTransports,
   createSimScript,
 } from "@voltonaut/ble";
 import { createTestDocument } from "../../testdata/dom.js";
@@ -23,12 +24,15 @@ function rig(clockScale = 1) {
   const clock = createManualClock();
   const ticker = createManualTicker();
 
-  const trainer = createFakeTrainer({
+  const { trainer } = createRideDeviceSet({
     bus,
     clock,
     ticker,
     clockScale,
-    samples: createSimScript([{ powerW: 200, cadenceRpm: 90, heartRateBpm: 120, gearIndex: 11 }]),
+    transports: createSimDeviceTransports({
+      ticker,
+      samples: createSimScript([{ powerW: 200, cadenceRpm: 90, heartRateBpm: 120 }]),
+    }),
   });
 
   vi.stubGlobal("document", {
@@ -37,17 +41,7 @@ function rig(clockScale = 1) {
       return Object.assign(document.createElement(tag), { dataset: {} });
     },
   });
-  mountConnectDialog(
-    [
-      {
-        label: "Trainer",
-        adapter: trainer,
-        select: () => trainer.connect(),
-        trainer: trainer.control,
-      },
-    ],
-    bus,
-  );
+  mountConnectDialog([{ label: "Trainer", adapter: trainer }], bus);
 
   return { document, clock, ticker, trainer };
 }
@@ -57,6 +51,7 @@ it("keeps explicit control in the device overlay and shows acquisition before re
   expect(r.document.body.children).toHaveLength(2);
   expect(r.document.find("Widerstand aktivieren").disabled).toBe(true);
   await r.trainer.connect();
+  await settle();
   expect(r.document.find("Widerstand aktivieren").disabled).toBe(false);
   r.document.find("Widerstand aktivieren").click();
   expect(r.document.find("Freigabe läuft: control.")).toBeDefined();
@@ -72,6 +67,7 @@ it("keeps explicit control in the device overlay and shows acquisition before re
 it("separates requested grade from ACK and reports neutral/Stop only after confirmation", async () => {
   const r = rig();
   await r.trainer.connect();
+  await settle();
   r.document.find("Widerstand aktivieren").click();
   await settle();
   r.clock.advanceS(0.25);
@@ -104,6 +100,7 @@ it("separates requested grade from ACK and reports neutral/Stop only after confi
 it("shows accelerated-clock refusal honestly, with no acknowledged target", async () => {
   const r = rig(20);
   await r.trainer.connect();
+  await settle();
   r.document.find("Widerstand aktivieren").click();
   await settle();
   expect(

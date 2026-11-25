@@ -55,7 +55,7 @@ Durchgesetzt von **dependency-cruiser** (`docs/09-tooling.md` §6): Apps importi
 mise install            # gepinnte Node/pnpm-Versionen
 mise run install        # pnpm install --frozen-lockfile
 mise run dev            # Web (http://localhost:5173) + Server (http://localhost:3000)
-#   Sim-Modus: http://localhost:5173/?sim=1   (Fake-Trainer/HR/Play; Tastatur ↑/↓ schaltet)
+#   Sim-Modus: http://localhost:5173/?sim=1   (Sim-Trainer/HR hinter BleTransport; Tastatur ↑/↓ schaltet)
 #   Web Bluetooth nur über localhost/HTTPS – nicht über LAN-IP
 mise run fix            # oxlint --fix → oxfmt → oxlint
 mise run check          # DAS Gate (lokal = CI)

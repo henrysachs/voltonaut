@@ -1,8 +1,10 @@
 import {
-  createFakePlay,
-  createFakeTrainer,
+  createKeyboardAdapter,
   createManualTicker,
+  createRideDeviceSet,
+  createSimDeviceTransports,
   createSimScript,
+  type KeyboardSource,
   type TrainerEngineUpdate,
 } from "@voltonaut/ble";
 import type { RideSnapshot } from "@voltonaut/engine";
@@ -13,7 +15,7 @@ import type { CaptureView } from "./rideCaptureProtocol.js";
 import { createRideSession } from "./rideSession.js";
 import { createLoopbackWorker } from "./testdata/loopbackWorker.js";
 
-const SAMPLES = createSimScript([{ powerW: 250, cadenceRpm: 90, heartRateBpm: 130, gearIndex: 0 }]);
+const SAMPLES = createSimScript([{ powerW: 250, cadenceRpm: 90, heartRateBpm: 130 }]);
 
 function requireSnapshot(snapshot: RideSnapshot | undefined): RideSnapshot {
   if (snapshot === undefined) throw new Error("Expected a worker snapshot");
@@ -70,15 +72,47 @@ function gradeHundredths(commands: readonly (TrainerCommand | undefined)[]): rea
   );
 }
 
-/** Sim devices on a manual ticker and the real worker driver behind the loopback port. */
+/** Sim shifting path: the keyboard adapter fed by a scripted key source. */
+function scriptedKeys() {
+  let listener: Parameters<KeyboardSource["subscribe"]>[0] | undefined;
+
+  const source: KeyboardSource = {
+    subscribe(next) {
+      listener = next;
+
+      return () => {
+        listener = undefined;
+      };
+    },
+  };
+
+  return {
+    source,
+    pressShiftUp(): void {
+      listener?.("keydown", { key: "ArrowUp" });
+      listener?.("keyup", { key: "ArrowUp" });
+    },
+  };
+}
+
+/** Real adapters over sim peripherals on a manual ticker, and the real worker driver behind the loopback port. */
 async function ride() {
   const worker = createLoopbackWorker(1000, Date.parse("2026-11-25T08:00:00.000Z"));
   const bus = createEventBus();
   const ticker = createManualTicker();
   let simS = 0;
   const clock = { nowS: () => simS };
-  const trainer = createFakeTrainer({ bus, clock, ticker, clockScale: 1, samples: SAMPLES });
-  const play = createFakePlay({ bus, clock });
+
+  const { trainer } = createRideDeviceSet({
+    bus,
+    clock,
+    ticker,
+    clockScale: 1,
+    transports: createSimDeviceTransports({ ticker, samples: SAMPLES }),
+  });
+
+  const keys = scriptedKeys();
+  const keyboard = createKeyboardAdapter({ bus, clock, source: keys.source });
   const commands: TrainerCommand[] = [];
   const updates: TrainerEngineUpdate[] = [];
 
@@ -100,17 +134,17 @@ async function ride() {
     () => worker.port,
   );
 
-  await Promise.all([trainer.connect(), play.connect()]);
+  await Promise.all([trainer.connect(), keyboard.connect()]);
 
   const drive = driver(worker, ticker, (deltaS) => {
     simS += deltaS;
   });
 
-  return { worker, session, play, trainer, commands, updates, ...drive };
+  return { worker, session, keys, trainer, commands, updates, ...drive };
 }
 
 it("turns sim device events into snapshots, segments and trainer commands without a browser", async () => {
-  const { worker, session, play, commands, pedal } = await ride();
+  const { worker, session, keys, commands, pedal } = await ride();
 
   worker.flush();
   expect(session.snapshot()?.tS).toBe(0);
@@ -127,7 +161,7 @@ it("turns sim device events into snapshots, segments and trainer commands withou
   expect(session.segments().rows.map((row) => row.progress.kind)).toEqual(["idle", "idle"]);
   expect(commands.some((command) => command.type === "simulation")).toBe(true);
 
-  play.pressShiftUp();
+  keys.pressShiftUp();
   pedal(1);
   expect(session.snapshot()?.gear.index).toBe(moving.gear.index + 1);
 });

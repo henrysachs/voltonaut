@@ -72,7 +72,7 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 
 ## 6. E2E (Playwright, Sim-Modus)
 
-Flüsse (je ein Test): App lädt → Fake-Trainer/HR/Play verbinden → Fahrt starten → 2× hoch, 1× runter (HUD-Gang korrekt, Trainer-Kommandos im Sim-Trainer korrekt) → 2 km fahren (Sim-Zeit beschleunigt) → Blitz-Pickup eingesammelt → Fahrt beenden → Zusammenfassung zeigt Volts → (ab E5, gegen lokalen Testserver) Upload bestätigt, Kontostand gestiegen → (ab E7) Item kaufen, ausrüsten.
+Flüsse (je ein Test): App lädt → Sim-Trainer und Sim-Pulsgurt verbinden (echte Adapter über Sim-Transport, E0-15; Schalten per Tastatur) → Fahrt starten → 2× hoch, 1× runter (HUD-Gang korrekt, Trainer-Kommandos im Sim-Trainer korrekt) → 2 km fahren (Sim-Zeit beschleunigt) → Blitz-Pickup eingesammelt → Fahrt beenden → Zusammenfassung zeigt Volts → (ab E5, gegen lokalen Testserver) Upload bestätigt, Kontostand gestiegen → (ab E7) Item kaufen, ausrüsten.
 Sim-Modus hat eine **Test-Uhr** (`?sim=1&clock=fast`), damit Fahrten in Sekunden laufen.
 
 ## 7. Visuelle Regression
