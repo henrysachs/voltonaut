@@ -61,9 +61,13 @@ export class GarageShop {
   bind(lease?: AccountLease): void {
     this.#lease = lease;
 
-    // A re-authenticated session of the same account keeps open request ids (ADR-030 §3).
-    if (lease?.userId !== this.#retryUserId) this.#retryIds.clear();
-    this.#retryUserId = lease?.userId;
+    // A re-authenticated session of the same account keeps open request ids (ADR-030 §3). The
+    // session passes through a signed-out state on the way, so only another account clears them.
+    if (lease !== undefined) {
+      if (lease.userId !== this.#retryUserId) this.#retryIds.clear();
+      this.#retryUserId = lease.userId;
+    }
+
     this.#revision += 1;
     this.publish({ kind: lease === undefined ? "guest" : "loading" });
 

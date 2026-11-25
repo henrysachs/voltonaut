@@ -20,13 +20,13 @@ class ShopServer {
   failure: Error | undefined;
   active = true;
 
-  lease(): AccountLease {
+  lease(userId = "rider"): AccountLease {
     return {
       ...unexpectedAccountParts,
       strava: unusedStravaLease,
       signal: new AbortController().signal,
       apiOrigin: "http://localhost:3000",
-      userId: "rider",
+      userId,
       generation: 1,
       current: () => this.active,
       profile: () => Promise.reject(new Error("unused")),
@@ -242,6 +242,8 @@ it("keeps open request ids when the same account re-authenticates", async () => 
 
   server.failure = new PrivateRequestError("retry");
   await shop.purchase("helmet-red", 120);
+  // AccountSync unbinds while the session is busy, then binds the renewed lease.
+  shop.bind();
   shop.bind(server.lease());
   await vi.waitFor(() => {
     expect(shop.view().kind).toBe("ready");
@@ -250,6 +252,22 @@ it("keeps open request ids when the same account re-authenticates", async () => 
   await shop.purchase("helmet-red", 120);
 
   expect(server.orders.map(({ requestId }) => requestId)).toEqual(["r1", "r1"]);
+});
+
+it("drops open request ids when another account signs in", async () => {
+  const { server, shop } = await readyShop();
+
+  server.failure = new PrivateRequestError("retry");
+  await shop.purchase("helmet-red", 120);
+  shop.bind();
+  shop.bind(server.lease("other-rider"));
+  await vi.waitFor(() => {
+    expect(shop.view().kind).toBe("ready");
+  });
+  server.failure = undefined;
+  await shop.purchase("helmet-red", 120);
+
+  expect(server.orders.map(({ requestId }) => requestId)).toEqual(["r1", "r2"]);
 });
 
 it("treats a receipt for another item as a final rejection", async () => {

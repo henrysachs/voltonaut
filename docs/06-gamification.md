@@ -65,6 +65,8 @@ Die spätere Ermittlung tatsächlicher aktiver Fakten und die serverseitige Verg
 | epic       | 20 000        | ~17           | Level ≥ 15            |
 | legendary  | 60 000        | ~50           | Level ≥ 30 oder Badge |
 
+> **Übergang (E7-02, ADR-030 §4):** Der Server prüft das Mindestlevel noch nicht, weil die Progression fehlt. Bis dahin sind alle Shop-Items bei genug Volts kaufbar; Volts gibt es vorerst nur per Operator-Gutschrift. Die Levelprüfung muss spätestens mit den Fahrtbelohnungen (#59) aktiv werden. Schon gekaufte Items bleiben im Besitz.
+
 - Manche Items sind **nicht kaufbar**, sondern nur über Level, Badges oder Distanz-Meilensteine erreichbar (z. B. KOM-Trikot nur per `kom-hunter`).
 - Käufe sind endgültig (kein Wiederverkauf in v1); Kauf ist eine **Server-Transaktion** (Kontostand prüfen, abbuchen, Inventar ergänzen – atomar).
 - Kontostand und Transaktionen als Ledger (`volts_ledger`), Kontostand = Summe; nie direkt überschreiben.
