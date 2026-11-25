@@ -181,3 +181,39 @@ it("applies observed lower limits and Retry-After to hints and trusted work with
     readDayLimit: 1000,
   });
 });
+
+it("releases an unsent reservation only inside the window it was taken in", () => {
+  const { a, reopen } = fixture();
+  const rates = new StravaRateStore(a.db, stravaTables);
+  expect(rates.reserve("poll", 1000)).toEqual({ kind: "reserved" });
+  rates.release("poll", 1000, 900001);
+  expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    shortReset: 1800000,
+    shortUsage: 0,
+    readShortUsage: 0,
+    shortPending: 0,
+    readShortPending: 0,
+    dayUsage: 0,
+    readDayUsage: 0,
+    dayPending: 0,
+    readDayPending: 0,
+  });
+});
+
+it("keeps a peer's observed request counted when another owner releases its unsent reservation", () => {
+  const { a, b, reopen } = fixture();
+  const first = new StravaRateStore(a.db, stravaTables);
+  const second = new StravaRateStore(b.db, stravaTables);
+  first.reserve("upload", 1000);
+  first.observe(headers("1,1"), 201, 1000, 1000, "upload");
+  expect(first.reserve("upload", 1001)).toEqual({ kind: "reserved" });
+  expect(second.reserve("upload", 1001)).toEqual({ kind: "reserved" });
+  second.observe(headers("2,2"), 201, 1001, 1002, "upload");
+  first.release("upload", 1001, 1003);
+  expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    shortUsage: 2,
+    dayUsage: 2,
+    shortPending: 0,
+    dayPending: 0,
+  });
+});

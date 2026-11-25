@@ -1,3 +1,4 @@
+/* oxlint-disable eslint/max-classes-per-file -- Only the store that writes the dispatch commit may construct its proof. */
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
@@ -20,18 +21,26 @@ import type { OwnedDelivery, SubmittingDelivery } from "./strava.delivery-state.
 import { prepareDueDeliveries } from "./strava.delivery-state.js";
 import type { DueDeliveryKind } from "./strava.delivery-state.js";
 
-const COMMITTED: unique symbol = Symbol("strava.committed-attempt");
-
 /**
- * Proof that this store durably committed exactly one upload attempt (ADR-018).
- * `COMMITTED` stays module-private, so only `dispatch` can produce a value and
- * `StravaProvider.submit` cannot run before the commit.
+ * Proof that `dispatch` durably committed one upload attempt (ADR-018). The class stays
+ * unexported and its ECMAScript-private field makes it nominal, so neither literals nor spread
+ * copies type-check as `CommittedAttempt`. Single use relies on the one caller in the step.
  */
-export interface CommittedAttempt {
-  readonly [COMMITTED]: true;
-  readonly delivery: SubmittingDelivery;
-  readonly externalId: string;
+class DispatchedAttempt {
+  readonly #delivery: SubmittingDelivery;
+  public readonly externalId: string;
+
+  public constructor(delivery: SubmittingDelivery) {
+    this.#delivery = delivery;
+    this.externalId = `voltonaut-${delivery.rideId}.tcx`;
+  }
+
+  public get delivery(): SubmittingDelivery {
+    return this.#delivery;
+  }
 }
+
+export type CommittedAttempt = DispatchedAttempt;
 
 @Injectable()
 export class StravaDeliveryStore {
@@ -159,11 +168,7 @@ export class StravaDeliveryStore {
         };
 
         return canDispatch(job, work, source, current, nowMs) && this.transition(job, progress)
-          ? {
-              [COMMITTED]: true,
-              delivery: { ...job, progress },
-              externalId: `voltonaut-${job.rideId}.tcx`,
-            }
+          ? new DispatchedAttempt({ ...job, progress })
           : undefined;
       },
       { behavior: "immediate" },
