@@ -11,6 +11,8 @@ export const CaptureUnavailabilityReasonSchema = z.enum([
   "journal_observations",
   "journal_age",
   "invalid_input",
+  // A ride mode without journal replay was entered in this session (ADR-028).
+  "ride_mode",
 ]);
 
 const journal = z

@@ -58,22 +58,65 @@ function mountInstallButton(host: HTMLElement, status: HTMLElement): void {
   });
 }
 
-function mountUpdate(host: HTMLElement): (apply: ApplyUpdate) => void {
+/** Opens the menu on the App tab and focuses the update notice, so its recording warning is read first. */
+export type RevealUpdate = (focus: HTMLElement) => void;
+
+/** Cockpit shortcut next to „Menü“; hidden until a new version is waiting. */
+function updateShortcut(reveal: RevealUpdate, target: HTMLElement): HTMLButtonElement | undefined {
+  const actions = document.querySelector("#game-header-actions");
+
+  return actions instanceof HTMLElement ? appendShortcut(actions, reveal, target) : undefined;
+}
+
+function appendShortcut(
+  actions: HTMLElement,
+  reveal: RevealUpdate,
+  target: HTMLElement,
+): HTMLButtonElement {
+  const shortcut = document.createElement("button");
+  shortcut.type = "button";
+  shortcut.id = "pwa-update-shortcut";
+  shortcut.hidden = true;
+  shortcut.setAttribute("aria-haspopup", "dialog");
+  shortcut.setAttribute("aria-controls", "game-menu");
+  shortcut.textContent = "Neue Version";
+  shortcut.addEventListener("click", () => {
+    reveal(target);
+  });
+  actions.append(shortcut);
+
+  return shortcut;
+}
+
+function mountUpdate(host: HTMLElement, reveal: RevealUpdate): (apply: ApplyUpdate) => void {
   const notice = document.createElement("div");
   notice.hidden = true;
+  notice.id = "pwa-update-notice";
+  notice.tabIndex = -1;
+  notice.setAttribute("role", "group");
+  notice.setAttribute("aria-labelledby", "pwa-update-warning");
 
   const text = paragraph(
     "Eine neue Version ist bereit. Aktualisieren lädt die Seite neu und verwirft eine laufende Aufnahme.",
   );
 
+  text.id = "pwa-update-warning";
+
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = "Jetzt aktualisieren";
+  button.setAttribute("aria-describedby", "pwa-update-warning");
   notice.append(text, button);
   host.append(notice);
 
+  // Focus the notice, not the reload button: a held Enter must not discard a running recording.
+  const shortcut = updateShortcut(reveal, notice);
+
   return (apply) => {
     notice.hidden = false;
+
+    if (shortcut !== undefined) shortcut.hidden = false;
+
     button.addEventListener("click", apply, { once: true });
   };
 }
@@ -121,7 +164,7 @@ function mountHardReload(host: HTMLElement): void {
   host.append(trigger, confirmation);
 }
 
-function populate(host: HTMLElement): void {
+function populate(host: HTMLElement, reveal: RevealUpdate): void {
   const status = paragraph(
     isStandalone()
       ? "Voltonaut läuft als installierte App."
@@ -134,7 +177,7 @@ function populate(host: HTMLElement): void {
 
   host.append(status);
   mountInstallButton(host, status);
-  const onUpdateReady = mountUpdate(host);
+  const onUpdateReady = mountUpdate(host, reveal);
   host.append(offline);
   mountHardReload(host);
   renderHints(host);
@@ -146,8 +189,8 @@ function populate(host: HTMLElement): void {
   }
 }
 
-export function mountPwaPanel(): void {
+export function mountPwaPanel(reveal: RevealUpdate): void {
   const host = document.querySelector("#pwa-panel");
 
-  if (host instanceof HTMLElement) populate(host);
+  if (host instanceof HTMLElement) populate(host, reveal);
 }

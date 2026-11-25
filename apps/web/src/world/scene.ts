@@ -139,6 +139,8 @@ class RideSceneBridge implements RideScene {
     this.debug.dataset["cameraX"] = String(d.cameraPosition.x);
     this.debug.dataset["cameraY"] = String(d.cameraPosition.y);
     this.debug.dataset["cameraZ"] = String(d.cameraPosition.z);
+    this.debug.dataset["billboardsLeft"] = String(d.billboardsInView.left);
+    this.debug.dataset["billboardsRight"] = String(d.billboardsInView.right);
     this.debug.dataset["frameStage"] = "after-render-task";
 
     // The browser owns visible presentation; this marks only a completed render + following task.

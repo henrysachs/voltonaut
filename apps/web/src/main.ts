@@ -87,6 +87,9 @@ async function start(): Promise<void> {
     environment: parseEnvironmentSettings(params),
     debug: params.get("debug") === "1",
     recording: link.recording,
+    setMode: (mode) => {
+      link.setMode(mode);
+    },
   });
 
   const forwardEvent = (event: DeviceEvent): void => {

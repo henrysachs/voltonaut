@@ -7,6 +7,7 @@ import {
   ReplayCommandV2Schema,
   createRecordingTrackProjection,
   type CapturedRide,
+  type CaptureUnavailabilityReason,
   type DeviceEvent,
   type RecordingEntryV2,
   type ReplayObservationV2,
@@ -22,6 +23,7 @@ import type {
   CaptureCommand,
   CaptureResult,
   CaptureView,
+  RideRecorder,
 } from "./rideCaptureProtocol.js";
 import { validCaptureReading } from "./rideCaptureProtocol.js";
 
@@ -34,20 +36,6 @@ type RecorderState =
       lastSampleMs: number;
     }
   | { readonly kind: "completed"; readonly rideId: string; readonly capture: CapturedRide };
-
-export interface RideRecorder {
-  readonly view: (atMs: number) => CaptureView;
-  readonly ingest: (event: DeviceEvent, atMs: number) => void;
-  readonly arm: (atMs: number) => void;
-  readonly advance: (atMs: number, elapsedRealS: number) => void;
-  readonly outputs: (events: readonly RideEvent[], commands: readonly TrainerCommand[]) => void;
-  readonly sample: (atMs: number, snapshot: RideSnapshot) => void;
-  readonly command: (
-    command: CaptureCommand,
-    atMs: number,
-    snapshot: RideSnapshot,
-  ) => CaptureResult;
-}
 
 class Recorder implements RideRecorder {
   private readonly journal: RecordingJournal;
@@ -187,6 +175,10 @@ class Recorder implements RideRecorder {
     this.journal.boundary(atMs, kind, observation.snapshot, this.gap);
     this.projection.boundary([0, atMs, "boundary", kind], observation);
     this.gap = false;
+  }
+
+  invalidate(reason: CaptureUnavailabilityReason): void {
+    this.journal.invalidate(reason);
   }
 
   sample(atMs: number, snapshot: RideSnapshot): void {

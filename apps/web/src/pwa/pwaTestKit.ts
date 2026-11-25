@@ -116,7 +116,8 @@ export function cacheContents(page: Page): Promise<{ names: string[]; urls: stri
 
 export function startApi(requests: string[]): Promise<Listening> {
   return listen((request, response) => {
-    requests.push(request.url ?? "");
+    // CORS preflights are browser bookkeeping, not app traffic; Chromium repeats them once its 5 s cache expires.
+    if (request.method !== "OPTIONS") requests.push(request.url ?? "");
     response.writeHead(200, {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",

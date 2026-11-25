@@ -1,16 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
-import { AvatarConfigSchema } from "@voltonaut/shared";
+import { DEFAULT_AVATAR_CONFIG, SEASON_AVATAR_ITEMS, START_AVATAR_CATALOG } from "@voltonaut/rules";
+import { AvatarConfigSchema, type ItemDef } from "@voltonaut/shared";
+
+import { FRAME_SPECS, WHEEL_SPECS } from "./bikeSpecs.js";
+
+const FRAME_KEYS = FRAME_SPECS.map((spec) => spec.key);
+const WHEEL_KEYS = WHEEL_SPECS.map((spec) => spec.key);
 
 import { avatarLook } from "./look.js";
 
+function withBike(frameId: string, wheelsId: string): ReturnType<typeof AvatarConfigSchema.parse> {
+  return AvatarConfigSchema.parse({
+    ...DEFAULT_AVATAR_CONFIG,
+    bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId, wheelsId },
+  });
+}
+
 describe("procedural avatar look", () => {
-  it("keeps the default race bike and no glasses", () => {
-    expect(avatarLook(DEFAULT_AVATAR_CONFIG)).toEqual({
-      frameRadiusM: 0.025,
-      rimColor: 0xd3dadb,
-      rimRoughness: 0.25,
+  it("keeps the default race bike, alloy wheels and no glasses", () => {
+    const look = avatarLook(DEFAULT_AVATAR_CONFIG);
+
+    expect(look.frame.key).toBe("race");
+    expect(look.wheels.key).toBe("alloy");
+    expect(look).toMatchObject({
       shoeColor: 0xf5ebca,
       glassesVisible: false,
       jerseyAccentRadiusM: 0.152,
@@ -18,10 +31,9 @@ describe("procedural avatar look", () => {
     });
   });
 
-  it("varies frame thickness and visible accessories", () => {
+  it("varies shoes and glasses", () => {
     const aero = AvatarConfigSchema.parse({
       ...DEFAULT_AVATAR_CONFIG,
-      bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId: "frame.aero" },
       rider: {
         ...DEFAULT_AVATAR_CONFIG.rider,
         shoesId: "shoes.carbon",
@@ -29,35 +41,65 @@ describe("procedural avatar look", () => {
       },
     });
 
-    const gravel = AvatarConfigSchema.parse({
-      ...DEFAULT_AVATAR_CONFIG,
-      bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId: "frame.gravel" },
-    });
-
-    expect(avatarLook(aero)).toMatchObject({
-      frameRadiusM: 0.032,
-      shoeColor: 0x18272e,
-      glassesVisible: true,
-    });
-    expect(avatarLook(gravel).frameRadiusM).toBe(0.023);
+    expect(avatarLook(aero)).toMatchObject({ shoeColor: 0x18272e, glassesVisible: true });
   });
 });
 
-describe("procedural wheel look", () => {
-  it("varies rim color and roughness for every wheel item", () => {
-    const expected = [
-      ["wheels.carbon-flat", 0x58666b],
-      ["wheels.carbon-deep", 0x263238],
-      ["wheels.disc", 0x7d898d],
-    ];
+// Every catalog that can reach the garage, so a new frame or wheel item cannot silently render as the fallback.
+const ALL_ITEMS = [...START_AVATAR_CATALOG, ...SEASON_AVATAR_ITEMS];
+const FRAME_ITEMS = ALL_ITEMS.filter((item) => item.slot === "frame");
+const WHEEL_ITEMS = ALL_ITEMS.filter((item) => item.slot === "wheels");
 
-    for (const [wheelsId, rimColor] of expected) {
-      const config = AvatarConfigSchema.parse({
-        ...DEFAULT_AVATAR_CONFIG,
-        bike: { ...DEFAULT_AVATAR_CONFIG.bike, wheelsId },
-      });
+function specKeyOf(assetRef: string): string {
+  return assetRef.slice(assetRef.lastIndexOf("/") + 1);
+}
 
-      expect(avatarLook(config)).toMatchObject({ rimColor, rimRoughness: 0.5 });
-    }
+describe("frame and wheel items of the shop catalog", () => {
+  it.each(FRAME_ITEMS)("resolves $id to its own frame spec", (item) => {
+    expect(FRAME_KEYS).toContain(specKeyOf(item.assetRef));
+    expect(avatarLook(withBike(item.id, "wheels.alloy")).frame.key).toBe(specKeyOf(item.assetRef));
+  });
+
+  it.each(WHEEL_ITEMS)("resolves $id to its own wheel spec", (item) => {
+    expect(WHEEL_KEYS).toContain(specKeyOf(item.assetRef));
+    expect(avatarLook(withBike("frame.race", item.id)).wheels.key).toBe(specKeyOf(item.assetRef));
+  });
+});
+
+describe("bike specs for future catalog items", () => {
+  it("lets a new catalog item reuse or select a spec without code changes", () => {
+    const extra: ItemDef = {
+      id: "wheels.team-edition",
+      slot: "wheels",
+      name: "Team",
+      assetRef: "procedural://bike/wheels/carbon-deep",
+      colorable: 0,
+      unlock: { kind: "default" },
+      rarity: "rare",
+    };
+
+    const look = avatarLook(withBike("frame.race", "wheels.team-edition"), [
+      ...START_AVATAR_CATALOG,
+      extra,
+    ]);
+
+    expect(look.wheels.key).toBe("carbon-deep");
+  });
+
+  it("falls back to the default bike for unknown or non-procedural assets", () => {
+    const glb: ItemDef = {
+      id: "frame.future",
+      slot: "frame",
+      name: "Future",
+      assetRef: "assets/frame-future.glb",
+      colorable: 1,
+      unlock: { kind: "default" },
+      rarity: "common",
+    };
+
+    const look = avatarLook(withBike("frame.future", "wheels.missing"), [glb]);
+
+    expect(look.frame.key).toBe("race");
+    expect(look.wheels.key).toBe("alloy");
   });
 });

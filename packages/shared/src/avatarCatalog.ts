@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { SeasonIdSchema } from "./season.js";
+
 const itemId = z.string().trim().min(1).max(120);
 const assetRef = z.string().trim().min(1).max(200);
 const badgeId = z.string().trim().min(1).max(120);
@@ -46,6 +48,14 @@ export const UnlockRuleSchema = z.union([
     .readonly(),
   z
     .object({ kind: z.literal("shop"), priceVolts, minLevel: minLevel.optional() })
+    .strict()
+    .readonly(),
+  z
+    .object({
+      kind: z.literal("season"),
+      seasonId: SeasonIdSchema,
+      tier: z.number().finite().int().min(1),
+    })
     .strict()
     .readonly(),
 ]);

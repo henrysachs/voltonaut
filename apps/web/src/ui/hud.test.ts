@@ -40,6 +40,7 @@ function model(overrides: Partial<RideHudModel> = {}): RideHudModel {
     paused: false,
     dataAgeS: 0,
     connected: true,
+    mode: { kind: "normal" },
     ...overrides,
   };
 }
@@ -69,6 +70,7 @@ describe("hudText", () => {
       elevationGain: "210 m",
       energy: "641 kJ",
       warning: "",
+      item: "",
     });
   });
 
@@ -98,6 +100,7 @@ describe("renderHud", () => {
       warning: target(),
       sprint: target(),
       kom: target(),
+      item: target(),
     } satisfies HudTargets;
 
     renderHud(model({ gearIndex: 0, connected: false }), targets);

@@ -16,6 +16,33 @@ const CAMERA_OFFSETS: Readonly<Record<CameraMode, CameraOffset>> = {
   overview: { behindM: 6, sideM: 13, heightM: 9 },
 };
 
+export interface PoseXyz {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface CameraPose {
+  readonly position: PoseXyz;
+  readonly look: PoseXyz;
+}
+
+/** Target pose of the follow camera for a rider pose; the system eases towards it. */
+export function cameraPose(mode: CameraMode, rider: PoseXyz, headingRad: number): CameraPose {
+  const forwardX = Math.cos(headingRad);
+  const forwardZ = Math.sin(headingRad);
+  const { behindM, sideM, heightM } = CAMERA_OFFSETS[mode];
+
+  return {
+    position: {
+      x: rider.x - forwardX * behindM - forwardZ * sideM,
+      y: rider.y + heightM,
+      z: rider.z - forwardZ * behindM + forwardX * sideM,
+    },
+    look: { x: rider.x + forwardX * 3, y: rider.y + 0.95, z: rider.z + forwardZ * 3 },
+  };
+}
+
 export interface RideCamera {
   readonly system: RenderSystem;
   readonly toggle: () => void;
@@ -43,10 +70,7 @@ export function createRideCamera(camera: Readonly<THREE.PerspectiveCamera>): Rid
       init() {},
       update(frame) {
         const { x, y, z } = frame.ride.worldPos;
-        const heading = frame.ride.headingRad;
-        const forwardX = Math.cos(heading);
-        const forwardZ = Math.sin(heading);
-        const { behindM, sideM, heightM } = CAMERA_OFFSETS[mode];
+        const pose = cameraPose(mode, frame.ride.worldPos, frame.ride.headingRad);
 
         if (initialized) {
           movement.set(x, y, z).sub(previousPosition);
@@ -55,12 +79,8 @@ export function createRideCamera(camera: Readonly<THREE.PerspectiveCamera>): Rid
         }
 
         previousPosition.set(x, y, z);
-        desired.set(
-          x - forwardX * behindM - forwardZ * sideM,
-          y + heightM,
-          z - forwardZ * behindM + forwardX * sideM,
-        );
-        look.set(x + forwardX * 3, y + 0.95, z + forwardZ * 3);
+        desired.set(pose.position.x, pose.position.y, pose.position.z);
+        look.set(pose.look.x, pose.look.y, pose.look.z);
         const fraction = initialized ? followFraction(frame.dtS) : 1;
 
         camera.position.lerp(desired, fraction);

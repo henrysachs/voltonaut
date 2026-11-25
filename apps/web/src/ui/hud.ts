@@ -1,4 +1,5 @@
-import type { RideSnapshot } from "@voltonaut/engine";
+import type { ModeSnapshot, RideSnapshot } from "@voltonaut/engine";
+import type { FunItemId } from "@voltonaut/shared";
 import { gearLabel } from "@voltonaut/rules";
 import type { SegmentHudRow, SegmentHudView, SegmentProgress } from "../game/segments.js";
 
@@ -15,6 +16,8 @@ export interface RideHudModel {
   readonly paused: boolean;
   readonly dataAgeS: number;
   readonly connected: boolean;
+  /** Ride mode and its state (ADR-028); the item slot shows only in fun mode. */
+  readonly mode: ModeSnapshot;
 }
 
 /** Builds the HUD model from a snapshot plus the device connection state. */
@@ -31,6 +34,7 @@ export function rideHudModelFrom(snapshot: RideSnapshot, connected: boolean): Ri
     paused: snapshot.paused,
     dataAgeS: snapshot.dataAgeS,
     connected,
+    mode: snapshot.mode,
   };
 }
 
@@ -45,6 +49,7 @@ export interface HudText {
   readonly elevationGain: string;
   readonly energy: string;
   readonly warning: string;
+  readonly item: string;
 }
 
 /** Sink for one HUD value. DOM adapters write the text into the real element. */
@@ -65,6 +70,7 @@ export interface HudTargets {
   readonly elevationGain: TextTarget;
   readonly energy: TextTarget;
   readonly warning: TextTarget;
+  readonly item: TextTarget;
 }
 
 const INVALID_SEGMENT_LABELS: Readonly<
@@ -113,6 +119,33 @@ export function renderSegmentHud(
   }
 }
 
+const FUN_ITEM_NAMES: Readonly<Record<FunItemId, string>> = {
+  aeroBoost: "Aero-Boost",
+  featherweight: "Leichtgewicht",
+  tailwind: "Rückenwind",
+};
+
+/** Item slot text of a mode; empty (and hidden by CSS) for modes without items. */
+function itemText(mode: ModeSnapshot): string {
+  switch (mode.kind) {
+    case "normal":
+      return "";
+    case "fun":
+      if (mode.activeItem !== undefined)
+        return `${FUN_ITEM_NAMES[mode.activeItem]} aktiv · ${Math.ceil(mode.activeRemainingS)} s`;
+
+      // The Play grip's power-up field is unmeasured and has no game action yet (docs/02-bluetooth.md).
+      if (mode.heldItem !== undefined) return `${FUN_ITEM_NAMES[mode.heldItem]} bereit · Taste P`;
+
+      return "Spaß-Modus · nächste Item-Box sammeln";
+    default: {
+      const exhaustive: never = mode;
+
+      return exhaustive;
+    }
+  }
+}
+
 /** Data-loss warning threshold from docs/03 section 1 (> 3 s without data). */
 export const DATA_AGE_WARNING_S = 3;
 
@@ -134,6 +167,7 @@ export function hudText(model: RideHudModel, connectedLabel = "Sim connected"): 
     elevationGain: `${Math.round(model.elevationGainM)} m`,
     energy: `${Math.round(model.energyKj)} kJ`,
     warning: model.dataAgeS > DATA_AGE_WARNING_S ? "No trainer data" : "",
+    item: itemText(model.mode),
   };
 }
 
@@ -153,4 +187,5 @@ export function renderHud(
   targets.elevationGain.write(text.elevationGain);
   targets.energy.write(text.energy);
   targets.warning.write(text.warning);
+  targets.item.write(text.item);
 }
