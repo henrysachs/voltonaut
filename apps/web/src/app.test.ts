@@ -78,10 +78,6 @@ function createRideSource() {
       snapshot: (): RideSnapshot | undefined => engine.snapshot(),
       connected: () => true,
       segments: () => segments.view(),
-      dispose: () => {
-        engine.drainEvents();
-        segments.unavailable();
-      },
     },
   };
 }
@@ -121,23 +117,17 @@ it("re-renders on every tick and freezes after stop", () => {
 it("skips rendering while no snapshot exists yet", () => {
   const document = createDocument();
   const ticker = createManualTicker();
-  let disposed = false;
 
   const ride: RideHudSource = {
     snapshot: () => {},
     connected: () => false,
     segments: () => createSegmentProjector(FLAT_LOOP).view(),
-    dispose: () => {
-      disposed = true;
-    },
   };
 
-  const app = startApp({ document, ride, ticker });
+  startApp({ document, ride, ticker });
+  ticker.tick();
 
   expect(document.targets["hud-powerW"]?.read()).toBe("");
-
-  app.stop();
-  expect(disposed).toBe(true);
 });
 
 it("rejects a document with missing HUD elements", () => {
@@ -158,7 +148,6 @@ it("renders unavailable segments without inventing a missing engine snapshot", (
     snapshot: () => {},
     connected: () => false,
     segments: () => segments.view(),
-    dispose: () => {},
   };
 
   startApp({ document, ride, ticker: createManualTicker() });
@@ -166,7 +155,7 @@ it("renders unavailable segments without inventing a missing engine snapshot", (
   expect(document.targets["hud-powerW"]?.read()).toBe("");
 });
 
-it("pulls segment progress on the existing ticker and exposes invalidation on stop", () => {
+it("pulls segment progress and invalidation on the existing ticker", () => {
   const document = createDocument();
   const ticker = createManualTicker();
   const segments = createSegmentProjector(TEST_LOOP);
@@ -185,17 +174,15 @@ it("pulls segment progress on the existing ticker and exposes invalidation on st
     snapshot: () => snapshot,
     connected: () => true,
     segments: () => segments.view(),
-    dispose: () => {
-      segments.unavailable();
-    },
   };
 
-  const app = startApp({ document, ride, ticker });
+  startApp({ document, ride, ticker });
   expect(document.targets["hud-sprint"]?.read()).toContain("2.0 s · noch 300 m");
   segments.consume({ events: [], snapshot: { ...snapshot, tS: 4, routePosM: 2300 } });
   ticker.tick();
   expect(document.targets["hud-sprint"]?.read()).toContain("3.0 s · noch 200 m");
-  app.stop();
+  segments.unavailable();
+  ticker.tick();
   expect(document.targets["hud-sprint"]?.read()).toContain("ungültig · Engine nicht verfügbar");
 });
 
