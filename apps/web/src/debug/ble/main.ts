@@ -18,7 +18,7 @@ import { preset } from "./presets.js";
 const scan = { acceptAllDevices: true, filters: [], optionalServices: SNIFFER_OPTIONAL_SERVICES };
 const clock = { nowS: () => performance.now() / 1000 };
 const ticker = createIntervalTicker(50);
-const devices = new LabDevices(changed);
+const devices = new LabDevices({ clock, ticker }, changed);
 let paused = false;
 let refreshExplorer = (): void => {};
 
@@ -49,7 +49,7 @@ function changed(change: LabChange, source: Readonly<LabDevice>): void {
     (change === "selection" || (change === "profile" && target === source))
   ) {
     restoreMetadata(target);
-    refreshExplorer = renderExplorer("gatt", target.profile, target.session, target.run);
+    refreshExplorer = renderExplorer("gatt", target);
   }
 
   if (change === "selection") {
@@ -159,7 +159,7 @@ for (const definition of SNIFFER_PRESETS) {
   const button = document.createElement("button");
   button.textContent = definition.label;
   button.addEventListener("click", () => {
-    runSelected((device) => preset(device, definition, { clock, ticker }));
+    runSelected((device) => preset(device, definition));
   });
   element("presets").append(button);
 }
