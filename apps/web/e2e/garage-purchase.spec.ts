@@ -96,7 +96,7 @@ test("a purchase needs an explicit confirmation and sends exactly one request", 
   expect(server.purchases).toEqual([]);
 
   await purchase.click();
-  await confirm.click();
+  await confirm.dblclick();
   await expect(purchase).toHaveText("Im Besitz");
   await expect(page.getByTestId("garage-purchase-hint")).toContainText("Gekauft.");
   expect(server.purchases).toEqual(["jersey.stripe"]);

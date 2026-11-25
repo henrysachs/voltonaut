@@ -122,8 +122,14 @@ export class GaragePurchase {
     const offer = purchaseOffer(item, this.#view);
     const confirmation = purchaseConfirmation(item, this.#view);
 
-    // The confirmation lives only while the same price is still on offer.
-    if (confirmation?.priceVolts !== this.#open?.offer.priceVolts) this.#open = undefined;
+    const hadFocus = this.confirmation.contains(document.activeElement);
+
+    // The confirmation lives only while the same price is still on offer; the balance text follows the server.
+    if (this.#open !== undefined)
+      this.#open =
+        confirmation?.priceVolts === this.#open.offer.priceVolts
+          ? { itemId: this.#open.itemId, offer: confirmation }
+          : undefined;
 
     const open = this.#open !== undefined && this.#visible;
     this.button.textContent = offer.buttonText;
@@ -134,5 +140,8 @@ export class GaragePurchase {
     this.#question.textContent = this.#open?.offer.question ?? "";
     this.#confirm.textContent = this.#open?.offer.confirmText ?? "";
     this.hint.textContent = offer.hint;
+
+    // Closed by a view change (logout, failed load, balance): keep keyboard users in place.
+    if (hadFocus && this.confirmation.hidden) (offer.enabled ? this.button : this.hint).focus();
   }
 }
