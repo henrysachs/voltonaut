@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { Page, Route } from "@playwright/test";
+import type { Page, Response, Route } from "@playwright/test";
 import { openGameMenu } from "./helpers/gameMenu.js";
 
 // Connecting a further login provider (#97): a session that cannot be stored must not leave the
@@ -118,13 +118,24 @@ test("does not leave the tab to link while the session lives only in this tab", 
 
   const connect = account.getByRole("button", { name: "Mit authentik verbinden", exact: true });
 
-  await expect(connect).toBeDisabled();
+  await expect(connect).toHaveAttribute("aria-disabled", "true");
+  await expect(connect).toHaveAccessibleDescription(/ginge beim Wechsel zum Anbieter verloren/u);
+  // Still reachable by keyboard; activating it explains instead of leaving the tab.
+  await connect.focus();
+  await page.keyboard.press("Enter");
+  await expect(connect).toBeFocused();
   await expect(account).toContainText("ginge beim Wechsel zum Anbieter verloren");
+  expect(new URL(page.url()).pathname).toBe("/");
   await expect(account).toContainText("Angemeldet als rider@example.com");
   expect(api.calls.filter((call) => call.includes("/link"))).toEqual([]);
   expect(api.calls).not.toContain("POST /v1/auth/identities");
   expect(new URL(page.url()).pathname).toBe("/");
 });
+
+/** Only the completing POST; the initial GET of the same URL may still be in flight. */
+function isLinkCompletion(response: Readonly<Response>): boolean {
+  return response.url() === `${API}/v1/auth/identities` && response.request().method() === "POST";
+}
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("keeps a stored session through the provider round trip and completes the link once", async ({
@@ -134,7 +145,8 @@ test("keeps a stored session through the provider round trip and completes the l
   const account = page.getByRole("tabpanel", { name: "Konto", exact: true });
 
   await expect(account).toContainText("Session lokal gemerkt");
-  const returned = page.waitForResponse(`${API}/v1/auth/identities`, { timeout: 15_000 });
+
+  const returned = page.waitForResponse(isLinkCompletion, { timeout: 15_000 });
 
   await account.getByRole("button", { name: "Mit authentik verbinden", exact: true }).click();
   // The completion request only exists after the round trip back and the restored session.

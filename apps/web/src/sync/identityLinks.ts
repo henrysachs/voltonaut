@@ -101,7 +101,8 @@ export class IdentityLinks {
     if (lease === undefined || view.kind !== "ready") return;
 
     if (!view.linkable) {
-      this.#publish({ ...view, message: TAB_ONLY_TEXT });
+      // Republishing an unchanged view would rebuild the buttons and drop keyboard focus.
+      if (view.message !== TAB_ONLY_TEXT) this.#publish({ ...view, message: TAB_ONLY_TEXT });
 
       return;
     }
