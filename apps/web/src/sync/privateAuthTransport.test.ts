@@ -77,12 +77,12 @@ async function fixture() {
 
 it("keeps bearer on fixed known paths and rejects caller-controlled ride/cursor URLs", async () => {
   const f = await fixture();
-  expect(await f.lease.profile()).toEqual({ status: "missing" });
-  expect(() => f.lease.detail("https://other.invalid/exfil")).toThrow("Invalid uuid");
-  expect(() => f.lease.history("//other.invalid")).toThrow("Invalid uuid");
+  expect(await f.lease.profile.load()).toEqual({ status: "missing" });
+  expect(() => f.lease.rides.detail("https://other.invalid/exfil")).toThrow("Invalid uuid");
+  expect(() => f.lease.rides.history("//other.invalid")).toThrow("Invalid uuid");
   expect(f.calls).toEqual(["/v1/me/profile:Bearer private-token"]);
   f.supersede();
-  await expect(f.lease.profile()).rejects.toMatchObject({ cause: "superseded" });
+  await expect(f.lease.profile.load()).rejects.toMatchObject({ cause: "superseded" });
   expect(f.calls).toHaveLength(1);
 });
 
@@ -90,12 +90,12 @@ it("keeps membership credentials on encoded fixed admin paths and uses PATCH wit
   const f = await fixture();
   const status = { membership: { tier: "pro", vip: true }, authorization: { role: "user" } };
   f.reply(200, "application/json", JSON.stringify(status));
-  await expect(f.lease.accountStatus()).resolves.toEqual(status);
-  await expect(f.lease.saveMembership("existing", { tier: "pro", vip: true })).resolves.toEqual(
+  await expect(f.lease.membership.status()).resolves.toEqual(status);
+  await expect(f.lease.membership.save("existing", { tier: "pro", vip: true })).resolves.toEqual(
     status,
   );
   f.reply(200, "application/json", JSON.stringify({ users: [], nextCursor: null }));
-  await f.lease.adminUsers("first/second?query");
+  await f.lease.membership.users("first/second?query");
   expect(f.calls).toEqual([
     "/v1/me/account-status:Bearer private-token",
     "/v1/admin/users/existing/membership:Bearer private-token",
@@ -104,7 +104,7 @@ it("keeps membership credentials on encoded fixed admin paths and uses PATCH wit
   expect(f.methods).toEqual(["GET", "PATCH", "GET"]);
   f.supersede();
   await expect(
-    f.lease.saveMembership("existing", { tier: "normal", vip: false }),
+    f.lease.membership.save("existing", { tier: "normal", vip: false }),
   ).rejects.toMatchObject({ cause: "superseded" });
   expect(f.methods).toHaveLength(3);
 });
@@ -121,7 +121,7 @@ it.each([
 ])("categorizes HTTP %s without leaking the response body", async (status, cause) => {
   const f = await fixture();
   f.reply(status, "application/json", '{"private":"server details"}');
-  await expect(f.lease.profile()).rejects.toMatchObject({ cause, message: cause });
+  await expect(f.lease.profile.load()).rejects.toMatchObject({ cause, message: cause });
 });
 
 it.each([
@@ -131,7 +131,7 @@ it.each([
 ])("rejects malformed or mislabeled response %s", async (mime, body) => {
   const f = await fixture();
   f.reply(200, mime, body);
-  await expect(f.lease.profile()).rejects.toMatchObject({ cause: "contract" });
+  await expect(f.lease.profile.load()).rejects.toMatchObject({ cause: "contract" });
 });
 
 it("accepts only a valid stored receipt for the exact canonical ride ID", async () => {
@@ -144,13 +144,15 @@ it("accepts only a valid stored receipt for the exact canonical ride ID", async 
   };
 
   f.reply(200, "application/json", JSON.stringify(receipt));
-  await expect(f.lease.upload(localRide)).rejects.toMatchObject({ cause: "contract" });
+  await expect(f.lease.rides.upload(localRide)).rejects.toMatchObject({ cause: "contract" });
   f.reply(
     200,
     "application/json; charset=utf-8",
     JSON.stringify({ ...receipt, rideId: localRide.rideId }),
   );
-  await expect(f.lease.upload(localRide)).resolves.toMatchObject({ rideId: localRide.rideId });
+  await expect(f.lease.rides.upload(localRide)).resolves.toMatchObject({
+    rideId: localRide.rideId,
+  });
 });
 
 it("downloads a validated own export and confirms deletion only from an empty 204", async () => {
@@ -180,11 +182,19 @@ it("downloads a validated own export and confirms deletion only from an empty 20
   };
 
   f.reply(200, "application/json", JSON.stringify(exported));
-  await expect(f.lease.exportAccount()).resolves.toEqual(exported);
+  await expect(f.lease.data.exportAccount()).resolves.toEqual(exported);
+  f.reply(200, "application/json", "null");
+  await expect(f.lease.data.deleteAccount("rider@example.com")).rejects.toMatchObject({
+    cause: "contract",
+  });
   f.reply(204, "text/plain", "");
-  await expect(f.lease.deleteAccount("rider@example.com")).resolves.toBeUndefined();
-  expect(f.methods).toEqual(["GET", "DELETE"]);
-  expect(f.calls).toEqual(["/v1/me/export:Bearer private-token", "/v1/me:Bearer private-token"]);
+  await expect(f.lease.data.deleteAccount("rider@example.com")).resolves.toBeUndefined();
+  expect(f.methods).toEqual(["GET", "DELETE", "DELETE"]);
+  expect(f.calls).toEqual([
+    "/v1/me/export:Bearer private-token",
+    "/v1/me:Bearer private-token",
+    "/v1/me:Bearer private-token",
+  ]);
 });
 
 it("uses only canonical v2 ride routes for raw journals, history and detail", async () => {
@@ -195,12 +205,14 @@ it("uses only canonical v2 ride routes for raw journals, history and detail", as
     "application/json",
     JSON.stringify({ rideId: journalRide.rideId, storage: "stored", assessment }),
   );
-  await expect(f.lease.upload(journalRide)).resolves.toMatchObject({ rideId: journalRide.rideId });
+  await expect(f.lease.rides.upload(journalRide)).resolves.toMatchObject({
+    rideId: journalRide.rideId,
+  });
   f.reply(200, "application/json", JSON.stringify({ rides: [], nextCursor: null }));
-  await f.lease.history(null);
-  await f.lease.history(journalRide.rideId.toUpperCase());
+  await f.lease.rides.history(null);
+  await f.lease.rides.history(journalRide.rideId.toUpperCase());
   f.reply(200, "application/json", JSON.stringify({ recording: journalRide, assessment }));
-  await expect(f.lease.detail(journalRide.rideId)).resolves.toMatchObject({
+  await expect(f.lease.rides.detail(journalRide.rideId)).resolves.toMatchObject({
     recording: journalRide,
   });
   expect(f.calls).toEqual([

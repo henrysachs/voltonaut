@@ -1,7 +1,7 @@
 import type { LinkedIdentity, OidcProviderChoice } from "@voltonaut/shared";
 import type { SessionView } from "./applicationSession.js";
-import type { AccountLease } from "./privateAuthTransport.js";
-import { PrivateRequestError, type SyncFailure } from "./privateAuthTransport.js";
+import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
+import type { IdentityPort } from "./identityPort.js";
 
 export type IdentityLinksView =
   | { readonly kind: "hidden"; readonly message: string }
@@ -19,7 +19,9 @@ export type IdentityLinksView =
     };
 
 /** The part of an account lease this section uses. */
-export type IdentityLinksLease = Pick<AccountLease, "identities" | "current" | "generation">;
+export type IdentityLinksLease = Pick<LeaseBinding, "current" | "generation"> & {
+  readonly identities: IdentityPort;
+};
 
 interface IdentityLinksOptions {
   readonly session: {

@@ -87,4 +87,7 @@ export type LinkedIdentitiesResponse = z.infer<typeof LinkedIdentitiesResponseSc
 
 export const MeResponseSchema = z.object({ user: UserSchema });
 
+/** `POST /v1/auth/logout` confirms the revocation only with an empty 204. */
+export const LogoutResponseSchema = z.null();
+
 export type MeResponse = z.infer<typeof MeResponseSchema>;

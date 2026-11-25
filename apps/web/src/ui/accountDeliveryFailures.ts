@@ -1,4 +1,4 @@
-import type { SyncFailure } from "../sync/privateAuthTransport.js";
+import type { SyncFailure } from "../sync/apiRoute.js";
 
 export const accountDeliveryFailures: Readonly<Record<Exclude<SyncFailure, "superseded">, string>> =
   {

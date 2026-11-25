@@ -2,10 +2,9 @@ import { afterEach } from "vitest";
 import type { StravaStatus } from "@voltonaut/shared";
 import { ApplicationSession } from "./applicationSession.js";
 import { StravaSync } from "./stravaSync.js";
-import type { PrivateAuthTransport } from "./privateAuthTransport.js";
-import type { StravaPopup, StravaChannel } from "./stravaBridge.js";
+import type { StravaChannel, StravaLease, StravaPopup } from "./stravaBridge.js";
+import type { LeaseIssuer } from "./privateAuthTransport.js";
 import { deferred } from "./testdata/deferred.js";
-import { unusedStravaLease, unexpectedAccountParts } from "./testdata/unusedStravaLease.js";
 
 export const channelId = "00000000-0000-4000-8000-000000000001";
 const authorizationUrl = `https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=${encodeURIComponent("http://localhost:3000/v1/strava/callback")}&response_type=code&approval_prompt=force&scope=activity%3Awrite&state=${"s".repeat(43)}`;
@@ -82,22 +81,17 @@ export class StravaFixture {
       },
     };
   }
-  private transport(): PrivateAuthTransport {
+  private transport(): LeaseIssuer<StravaLease> {
     return {
       authorize: (authorization) => ({
-        ...unexpectedAccountParts,
         apiOrigin: "http://localhost:3000",
         userId: authorization.userId,
         generation: authorization.generation,
         signal: authorization.signal,
         current: authorization.current,
-        profile: unexpected,
-        saveProfile: unexpected,
-        history: unexpected,
-        detail: unexpected,
-        upload: unexpected,
         strava: {
-          ...unusedStravaLease,
+          disconnect: unexpected,
+          ride: unexpected,
           status: () =>
             this.#hold && authorization.userId === "a"
               ? this.pending.promise
@@ -117,10 +111,10 @@ export class StravaFixture {
               accessExpiresAt: "2027-01-01T00:00:00.000Z",
             });
           },
-          upload: (consent) => {
+          upload: () => {
             this.uploads.push(authorization.userId);
 
-            return unusedStravaLease.upload(consent);
+            return unexpected();
           },
         },
       }),
