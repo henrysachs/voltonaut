@@ -1,6 +1,9 @@
 import {
+  applyJournalEntry,
   createEngine,
   createRoute,
+  PHYSICS_REVISION,
+  replaySnapshotEqual,
   TEST_LOOP,
   type Engine,
   type RideSnapshot,
@@ -14,65 +17,12 @@ import {
   type ReplayWindowSummary,
 } from "@voltonaut/shared";
 
-import { replayCommandEqual, replayEventEqual, replaySnapshotEqual } from "./replayComparison.js";
+import { replayCommandEqual, replayEventEqual } from "./replayComparison.js";
 import { recordingV2Eligibility } from "./replayEligibility.js";
 
 export type RecordingV2Assessment =
   | RideAssessment
   | { readonly status: "rejected"; readonly reason: "invalid_contract" };
-
-function applyEntry(engine: Engine, entry: RecordingEntryV2, clockScale: number): void {
-  switch (entry[2]) {
-    case "trainer":
-      engine.ingest({ type: "trainer.data", tS: entry[1] / 1000, ...trainerFields(entry) });
-
-      return;
-    case "hr":
-      engine.ingest({ type: "hr.data", tS: entry[1] / 1000, bpm: entry[3] });
-
-      return;
-    case "shift":
-      engine.ingest({
-        type: "controller.button",
-        tS: entry[1] / 1000,
-        button: entry[3],
-        pressed: true,
-        source: "recording-v2",
-      });
-
-      return;
-    case "advance":
-      engine.advance(entry[3] * clockScale);
-      break;
-    case "status":
-    case "arm":
-    case "boundary":
-      break;
-  }
-}
-
-interface TrainerReadings {
-  powerW?: number;
-  cadenceRpm?: number;
-  speedMps?: number;
-}
-
-function trainerFields(
-  entry: Extract<
-    RecordingEntryV2,
-    readonly [number, number, "trainer", ...(readonly (number | null)[])]
-  >,
-): Readonly<TrainerReadings> {
-  const fields: TrainerReadings = {};
-
-  if (entry[3] !== null) fields.powerW = entry[3];
-
-  if (entry[4] !== null) fields.cadenceRpm = entry[4];
-
-  if (entry[5] !== null) fields.speedMps = entry[5];
-
-  return fields;
-}
 
 function windowSummary(
   start: RideSnapshot,
@@ -153,7 +103,7 @@ class ReplayRun {
 
     return {
       status: "replayed",
-      physicsRevision: "engine-v1",
+      physicsRevision: PHYSICS_REVISION,
       summary: windowSummary(this.start.snapshot, snapshot, {
         elapsedRealS: (entry[1] - this.start.workerMs) / 1000,
         eventCount: this.eventCount,
@@ -170,7 +120,7 @@ class ReplayRun {
       const observation = this.recording.observations[this.observationIndex];
 
       if (observation === undefined) return { status: "rejected", reason: "invalid_contract" };
-      applyEntry(this.engine, entry, this.recording.initialization.clockScale);
+      applyJournalEntry(this.engine, entry, this.recording.initialization.clockScale);
 
       if (!this.drain(observation)) return { status: "rejected", reason: "observation_mismatch" };
 
@@ -197,7 +147,7 @@ export function assessRecordingV2(recording: RecordingV2): RecordingV2Assessment
   const initialization = normalized.initialization;
 
   if (
-    initialization.physicsRevision !== "engine-v1" ||
+    initialization.physicsRevision !== PHYSICS_REVISION ||
     initialization.routeId !== "test-loop" ||
     initialization.routeRevision !== "1"
   ) {

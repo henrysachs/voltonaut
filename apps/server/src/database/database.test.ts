@@ -1,15 +1,16 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import request from "supertest";
 import { expect, it } from "vitest";
 
 import { createTestApp, getDatabase, httpServerOf, bodyOf } from "../testing/test-app.spec.js";
+import { LEGACY_TEST_PROVIDER, seedLegacySession } from "../testing/legacy-account.js";
 import {
-  LEGACY_TEST_PROVIDER,
-  legacyMigrations,
-  seedLegacySession,
-} from "../testing/legacy-account.js";
+  MIGRATIONS_DIR,
+  expectHead,
+  scratchDirectory,
+  seedOwners,
+  upgradeFrom,
+} from "../testing/migration-harness.spec.js";
 import { createToken } from "../auth/tokens.js";
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
@@ -51,42 +52,38 @@ it("creates owned tables, enforces foreign keys and closes on Nest shutdown", as
   );
   expect(db.$client.pragma("foreign_keys", { simple: true })).toBe(1);
   expect(() =>
-    db.$client.prepare("INSERT INTO sessions VALUES ('hash', 'missing', 0, 0, 100, NULL)").run(),
+    db.$client
+      .prepare(
+        "INSERT INTO sessions (token_hash,user_id,created_at,last_seen_at,expires_at) VALUES ('hash', 'missing', 0, 0, 100)",
+      )
+      .run(),
   ).toThrow("FOREIGN KEY");
   await app.close();
   expect(db.$client.open).toBe(false);
 });
 
 it("persists with WAL, creates the data directory and applies migrations idempotently", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "voltonaut-auth-db-"));
+  const directory = scratchDirectory("auth-db");
 
   const config = {
-    database: { path: join(directory, "data", "auth.db"), migrationsDir: "drizzle" },
+    database: { path: join(directory, "data", "auth.db"), migrationsDir: MIGRATIONS_DIR },
   };
 
-  try {
-    const first = await createTestApp({ config });
-    const db = getDatabase(first.app);
-    expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
-    const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(14);
-    db.$client
-      .prepare(
-        "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('persisted', 'persist@example.com', 0, NULL)",
-      )
-      .run();
-    await first.app.close();
-    const second = await createTestApp({ config });
-    expect(getDatabase(second.app).$client.prepare("SELECT id FROM users").all()).toEqual([
-      { id: "persisted" },
-    ]);
-    expect(
-      getDatabase(second.app).$client.prepare("SELECT * FROM __drizzle_migrations").all(),
-    ).toEqual(migrations);
-    await second.app.close();
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
+  const first = await createTestApp({ config });
+  const db = getDatabase(first.app);
+  expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
+  const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
+  expectHead(db);
+  seedOwners(db, [{ id: "persisted", email: "persist@example.com" }]);
+  await first.app.close();
+  const second = await createTestApp({ config });
+  expect(getDatabase(second.app).$client.prepare("SELECT id FROM users").all()).toEqual([
+    { id: "persisted" },
+  ]);
+  expect(
+    getDatabase(second.app).$client.prepare("SELECT * FROM __drizzle_migrations").all(),
+  ).toEqual(migrations);
+  await second.app.close();
 });
 
 it("fails startup with missing migrations instead of creating an empty application database", () => {
@@ -111,45 +108,34 @@ it("keeps health public and returns a safe 503 envelope when the database closes
 });
 
 it("upgrades the original migration without replacing legacy users, tokens, or sessions", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "voltonaut-oidc-upgrade-"));
-  const path = join(directory, "legacy.db");
+  const sessionToken = createToken();
+
+  const upgrade = upgradeFrom("0000_steep_trish_tilby", (old) => {
+    seedLegacySession(old, sessionToken);
+  });
+
+  const next = await createTestApp({
+    config: {
+      database: upgrade.headConfig.database,
+      auth: {
+        mode: "oidc",
+        providers: [LEGACY_TEST_PROVIDER],
+        allowLoopbackHttp: false,
+        tombstoneHmacKey: "0".repeat(64),
+      },
+    },
+  });
 
   try {
-    const first = await createTestApp({
-      config: { database: { path, migrationsDir: legacyMigrations(directory) } },
-    });
-
-    const sessionToken = createToken();
-    const legacyClient = getDatabase(first.app).$client;
-    seedLegacySession(legacyClient, sessionToken);
-    expect(legacyClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(1);
-    await first.app.close();
-
-    const next = await createTestApp({
-      config: {
-        database: { path, migrationsDir: "drizzle" },
-        auth: {
-          mode: "oidc",
-          providers: [LEGACY_TEST_PROVIDER],
-          allowLoopbackHttp: false,
-          tombstoneHmacKey: "0".repeat(64),
-        },
-      },
-    });
-
-    try {
-      const upgradedClient = getDatabase(next.app).$client;
-      expect(upgradedClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(14);
-      expect(upgradedClient.prepare("SELECT id FROM users").all()).toEqual([{ id: "legacy-user" }]);
-      expect(upgradedClient.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
-      await request(httpServerOf(next.app))
-        .get("/v1/me")
-        .set("Authorization", `Bearer ${sessionToken}`)
-        .expect(200);
-    } finally {
-      await next.app.close();
-    }
+    const upgradedClient = getDatabase(next.app).$client;
+    expectHead({ $client: upgradedClient });
+    expect(upgradedClient.prepare("SELECT id FROM users").all()).toEqual([{ id: "legacy-user" }]);
+    expect(upgradedClient.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
+    await request(httpServerOf(next.app))
+      .get("/v1/me")
+      .set("Authorization", `Bearer ${sessionToken}`)
+      .expect(200);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    await next.app.close();
   }
 });

@@ -1,5 +1,6 @@
 import {
   AuthConfigResponseSchema,
+  LogoutResponseSchema,
   MeResponseSchema,
   OidcExchangeRequestSchema,
   SessionResponseSchema,
@@ -7,6 +8,13 @@ import {
   type SessionResponse,
   type User,
 } from "@voltonaut/shared";
+import {
+  browserFetch,
+  sendRoute,
+  sessionRoute,
+  type ApiFetch,
+  type RouteTarget,
+} from "./apiRoute.js";
 
 export interface AuthTransport {
   readonly mode: (signal: Readonly<AbortSignal>) => Promise<AuthConfigResponse>;
@@ -15,54 +23,54 @@ export interface AuthTransport {
   readonly logout: (token: string, signal: Readonly<AbortSignal>) => Promise<void>;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Fetch owns RequestInit, including native Headers and AbortSignal contracts.
-async function request(url: string, init: Readonly<RequestInit>): Promise<Response> {
-  const response = await fetch(url, { ...init, cache: "no-store" });
+// Session routes run before or outside a lease, so the caller owns the generation check. Only the
+// one-time exchange sends the browser-bound handoff cookie; the others keep the fetch default.
+export const sessionRoutes = {
+  config: sessionRoute({
+    method: "GET",
+    path: () => "/v1/auth/config",
+    response: AuthConfigResponseSchema,
+    credentials: "same-origin",
+  }),
+  exchange: sessionRoute({
+    method: "POST",
+    path: () => "/v1/auth/oidc/exchange",
+    body: (code: string) => JSON.stringify(OidcExchangeRequestSchema.parse({ code })),
+    response: SessionResponseSchema,
+    credentials: "include",
+  }),
+  me: sessionRoute({
+    method: "GET",
+    path: () => "/v1/me",
+    response: MeResponseSchema,
+    credentials: "same-origin",
+  }),
+  logout: sessionRoute({
+    method: "POST",
+    path: () => "/v1/auth/logout",
+    body: null,
+    response: LogoutResponseSchema,
+    credentials: "same-origin",
+  }),
+};
 
-  if (!response.ok) throw new Error("Authentifizierung nicht verfügbar oder abgelaufen.");
+export function authTransport(apiOrigin: string, http: ApiFetch = browserFetch): AuthTransport {
+  const target = (signal: Readonly<AbortSignal>, bearer?: string): RouteTarget => ({
+    apiOrigin,
+    http,
+    bearer,
+    declareJson: "with-body",
+    current: () => true,
+    signal,
+  });
 
-  return response;
-}
-
-export function authTransport(origin: string): AuthTransport {
   return {
-    async mode(signal) {
-      const response = await request(`${origin}/v1/auth/config`, { signal });
-      const raw: unknown = await response.json();
-
-      return AuthConfigResponseSchema.parse(raw);
-    },
-    async exchange(code, signal) {
-      const response = await request(`${origin}/v1/auth/oidc/exchange`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(OidcExchangeRequestSchema.parse({ code })),
-        signal,
-      });
-
-      const raw: unknown = await response.json();
-
-      return SessionResponseSchema.parse(raw);
-    },
-    async me(token, signal) {
-      const response = await request(`${origin}/v1/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
-
-      const raw: unknown = await response.json();
-
-      return MeResponseSchema.parse(raw).user;
-    },
+    mode: (signal) => sendRoute(target(signal), sessionRoutes.config, null),
+    exchange: (code, signal) => sendRoute(target(signal), sessionRoutes.exchange, code),
+    me: async (token, signal) =>
+      (await sendRoute(target(signal, token), sessionRoutes.me, null)).user,
     async logout(token, signal) {
-      const response = await request(`${origin}/v1/auth/logout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
-
-      if (response.status !== 204) throw new Error("Widerruf nicht bestätigt.");
+      await sendRoute(target(signal, token), sessionRoutes.logout, null);
     },
   };
 }

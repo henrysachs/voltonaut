@@ -1,62 +1,48 @@
 import {
-  runBlePreset,
+  FTMS_CONTROL_POINT_REF,
   ZWIFT_PLAY_LEGACY_SERVICE,
   ZWIFT_PLAY_V2_SERVICE,
   type BlePreset,
+  type CharacteristicRef,
 } from "@voltonaut/ble";
 import type { LabDevice } from "./device.js";
 
-function devicePreset(device: Readonly<LabDevice>, definition: BlePreset): BlePreset {
+type PlayPreset = Extract<BlePreset, { readonly kind: "zwiftPlay" }>;
+
+async function playHandshake(device: Readonly<LabDevice>, definition: PlayPreset): Promise<void> {
   const playService = device.profile.services.find(
     (service) =>
       service.uuid === ZWIFT_PLAY_LEGACY_SERVICE || service.uuid === ZWIFT_PLAY_V2_SERVICE,
   );
 
-  return definition.id === "zwift-play-handshake" && playService !== undefined
-    ? {
-        ...definition,
-        steps: definition.steps.map((step) => ({
-          ...step,
-          ref: { ...step.ref, serviceUuid: playService.uuid },
-        })),
-      }
-    : definition;
-}
-
-export async function preset(
-  device: Readonly<LabDevice>,
-  definition: BlePreset,
-  timing: Pick<Parameters<typeof runBlePreset>[0], "clock" | "ticker">,
-): Promise<void> {
-  if (definition.id === "ftms-sim-five" && device.control !== "granted") {
-    throw new Error("Zuerst FTMS Request Control + Sim 0 % erfolgreich ausführen");
-  }
+  const onDevice = (ref: CharacteristicRef): CharacteristicRef =>
+    playService === undefined ? ref : { ...ref, serviceUuid: playService.uuid };
 
   const session = device.session;
+  await Promise.all(definition.observe.map((ref) => session.observe(onDevice(ref))));
+  await session.transport.write(onDevice(definition.write.ref), definition.write.bytes);
+}
 
-  const selectedPreset = devicePreset(device, definition);
+export async function preset(device: Readonly<LabDevice>, definition: BlePreset): Promise<void> {
+  if (definition.kind === "zwiftPlay") {
+    await playHandshake(device, definition);
+  } else {
+    const ftms = device.ftms;
 
-  if (definition.id === "zwift-play-handshake") {
-    await Promise.all(
-      selectedPreset.steps.map((step) =>
-        step.kind === "subscribe" ? session.observe(step.ref) : Promise.resolve(),
-      ),
-    );
+    if (ftms === undefined) {
+      throw new Error("Zuerst verbinden");
+    }
+
+    const refusal = ftms.refusal(definition);
+
+    if (refusal !== undefined) {
+      throw new Error(refusal);
+    }
+
+    // The capture keeps recording control-point rx after a failed procedure stops listening.
+    await device.session.observe(FTMS_CONTROL_POINT_REF);
+    await ftms.run(definition);
   }
 
-  const ok = await runBlePreset({
-    transport: session.transport,
-    preset: selectedPreset,
-    ...timing,
-  });
-
-  if (!ok) {
-    throw new Error("Preset timeout: keine erfolgreiche Control-Point-Antwort");
-  }
-
-  if (definition.id === "ftms-request-control-sim-zero") {
-    device.grantControl();
-  }
-
-  session.marker(`Preset abgeschlossen: ${definition.label}`);
+  device.session.marker(`Preset abgeschlossen: ${definition.label}`);
 }

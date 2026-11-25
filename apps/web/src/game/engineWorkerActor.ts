@@ -5,7 +5,13 @@ import {
   type RideModeTraits,
   type RiderProfile,
 } from "@voltonaut/shared";
-import { createEngine, createRoute, TEST_ROUTES, type Engine } from "@voltonaut/engine";
+import {
+  createEngine,
+  createRoute,
+  PHYSICS_REVISION,
+  TEST_ROUTES,
+  type Engine,
+} from "@voltonaut/engine";
 import { createEngineWorkerProgress, type EngineWorkerProgress } from "./engineWorkerProgress.js";
 import type { RideRecorder } from "./rideCaptureProtocol.js";
 import { createRideRecorder } from "./rideRecorder.js";
@@ -51,7 +57,7 @@ export function initializeActor(
   const recorder = createRideRecorder({
     initializedAt: new Date(timeOriginMs + initializedWorkerMs).toISOString(),
     initialization: {
-      physicsRevision: "engine-v1",
+      physicsRevision: PHYSICS_REVISION,
       routeId: message.routeId,
       routeRevision: "1",
       profile,

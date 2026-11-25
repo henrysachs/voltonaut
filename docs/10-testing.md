@@ -47,6 +47,7 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 | rules/economy                                                           | Volts-Kontostand nie negativ bei beliebiger Folge aus Verdienst/Käufen; Ledger-Summe = Kontostand           |
 | rules/xp                                                                | XP monoton in Distanz/Höhenmetern; Level monoton in XP                                                      |
 | engine/segments                                                         | Segmentzeit ≤ Fahrzeit; Start vor Ende                                                                      |
+| engine/journal                                                          | Kodiertes Journal nachgerechnet ⇒ nach jedem Advance gleiche Snapshots, Events, Kommandos wie live (E0-07)  |
 | Seeds werden bei Fehlschlag ausgegeben und als Regressionstest fixiert. |
 
 ## 5. Contract-Tests
@@ -61,6 +62,13 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 - Memory-IDB-Tests prüfen Kapazität, Widerruf, Retry, Quittungen und den deterministischen 1200-Append-Probelauf. Der Probelauf läuft in einem eigenen Vitest-Projekt nach den übrigen Tests, damit fremde Builds seine 25-ms-p95- und 50-ms-Max-Schwelle nicht verfälschen. Ein Append validiert den offenen Batch nur einmal an der IndexedDB-Grenze; Hash, Fortsetzung und neue Zeilen arbeiten danach mit dem bereits geprüften Batch. Ein Playwright-Test prüft Sequenzindex und Persistenz nach Reload in echter IndexedDB. Echte Offline-Reload-Prüfungen bleiben offen.
 - Die Lieferung liest höchstens zehn ausstehende Zeilen pro Seite über den Primärschlüssel-Cursor. `prepareDelivery` versiegelt den offenen Batch und entfernt quittierte Zeilen über den Statusindex, ohne den ganzen Store zu lesen. `nextRetryAt` liest den frühesten automatischen Retry über den `account-retry`-Index. Ein ausdrücklicher Consent-Widerruf liest einmal alle ausstehenden Zeilen, um sie vollständig zu blockieren.
 - Nest-Tests mit echter SQLite-Datenbank prüfen Consent, Sessionbindung, Tickfolge, Belohnungstag, atomare Volts-Buchung, Konkurrenz und identische Präfix-Wiederholungen.
+
+### Datenbankmigrationen
+
+- Upgrade-Tests nutzen ausschließlich `apps/server/src/testing/migration-harness.spec.ts` ([E0-13](specs/E0-13-migration-harness.md)). Muster: `upgradeFrom("<tag>", seed)` öffnet eine echte SQLite-Datei über `createDatabase` am benannten Tag. Danach legt der Hook den Altbestand an, `open()` migriert auf den Kopfstand und erlaubt ein erneutes Öffnen. Geprüft werden unveränderte Altzeilen und die neuen Invarianten.
+- Startpunkte sind Tags aus `drizzle/meta/_journal.json`, keine Indizes. Kopfstand und Migrationszahl liefert nur das Journal (`expectHead`); kein Test schreibt die Anzahl der Migrationen hart.
+- Eine neue Migration bekommt einen eigenen Upgrade-Test ab dem vorherigen Tag. Ergänzt sie nur Tabellen oder Indizes, bleiben bestehende Upgrade-Tests unverändert (Tabellen per Probelauf belegt, Indizes per Codelektüre); die Tabellenliste in `database.test.ts` wird bewusst ergänzt. Neue Spalten an geseedeten Tabellen machen deren `SELECT *`-Vergleiche bewusst rot und werden im betroffenen Test nachgezogen.
+- Kontoinhaber legt `seedOwners` über die Spaltennamen des Schemas an; übrige Testzeilen nennen ihre Spalten (kein positionsabhängiges `INSERT … VALUES`). Temp-Verzeichnisse kommen aus `scratchDirectory` und werden nach jedem Test entfernt. `onTestFinished` läuft in umgekehrter Registrierungsreihenfolge; Hooks, die vor dem Löschen laufen müssen, werden nach dem Verzeichnis registriert.
 
 ## 6. E2E (Playwright, Sim-Modus)
 

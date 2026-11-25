@@ -1,6 +1,7 @@
+/* oxlint-disable eslint/max-classes-per-file -- Only the store that writes the dispatch commit may construct its proof. */
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { StravaProgressSchema } from "@voltonaut/shared";
 import type { StravaConsent, StravaProgress } from "@voltonaut/shared";
 import { DRIZZLE } from "../database/drizzle.provider.js";
@@ -10,13 +11,41 @@ import type { StravaTables } from "./strava.schema.js";
 import type { StravaConnection } from "./strava.store.js";
 import { stravaConflict } from "./strava.provider.js";
 import type { SubmitResult, ProviderUploadState } from "./strava.upload-provider.js";
-import { parseDelivery, observedProgress, canDispatch } from "./strava.delivery-state.js";
-import type { OwnedDelivery } from "./strava.delivery-state.js";
+import {
+  parseDelivery,
+  observedProgress,
+  canDispatch,
+  submittedProgress,
+} from "./strava.delivery-state.js";
+import type { OwnedDelivery, SubmittingDelivery } from "./strava.delivery-state.js";
+import { prepareDueDeliveries } from "./strava.delivery-state.js";
+import type { DueDeliveryKind } from "./strava.delivery-state.js";
+
+/**
+ * Proof that `dispatch` durably committed one upload attempt (ADR-018). The class stays
+ * unexported and its ECMAScript-private field makes it nominal, so neither literals nor spread
+ * copies type-check as `CommittedAttempt`. Single use relies on the one caller in the step.
+ */
+class DispatchedAttempt {
+  readonly #delivery: SubmittingDelivery;
+  public readonly externalId: string;
+
+  public constructor(delivery: SubmittingDelivery) {
+    this.#delivery = delivery;
+    this.externalId = `voltonaut-${delivery.rideId}.tcx`;
+  }
+
+  public get delivery(): SubmittingDelivery {
+    return this.#delivery;
+  }
+}
+
+export type CommittedAttempt = DispatchedAttempt;
 
 @Injectable()
 export class StravaDeliveryStore {
   private readonly dueQueries: {
-    [Kind in "prepare" | "recover" | "poll"]?: ReturnType<StravaDeliveryStore["prepareDue"]>;
+    [Kind in DueDeliveryKind]?: ReturnType<typeof prepareDueDeliveries>;
   } = {};
 
   public constructor(
@@ -125,13 +154,13 @@ export class StravaDeliveryStore {
     work: StravaConnection,
     source: StravaConsent,
     nowMs: number,
-  ): OwnedDelivery | undefined {
+  ): CommittedAttempt | undefined {
     return this.db.transaction(
-      (): OwnedDelivery | undefined => {
+      (): CommittedAttempt | undefined => {
         const table = this.tables.connections;
         const current = this.db.select().from(table).where(eq(table.userId, job.userId)).get();
 
-        const progress: StravaProgress = {
+        const progress: SubmittingDelivery["progress"] = {
           kind: "submitting",
           attemptId: randomUUID(),
           startedAtMs: nowMs,
@@ -139,15 +168,15 @@ export class StravaDeliveryStore {
         };
 
         return canDispatch(job, work, source, current, nowMs) && this.transition(job, progress)
-          ? { ...job, progress }
+          ? new DispatchedAttempt({ ...job, progress })
           : undefined;
       },
       { behavior: "immediate" },
     );
   }
 
-  public submitted(job: OwnedDelivery, result: SubmitResult, nowMs: number): void {
-    if (job.progress.kind !== "submitting") return;
+  public submitted(attempt: CommittedAttempt, result: SubmitResult, nowMs: number): void {
+    const job = attempt.delivery;
     const current = this.own(job.userId, job.rideId);
 
     if (
@@ -157,18 +186,7 @@ export class StravaDeliveryStore {
     )
       return;
 
-    const progress: StravaProgress =
-      result.kind === "known"
-        ? observedProgress(result.receipt, result.state, nowMs)
-        : result.kind === "refused"
-          ? { kind: "submission_rejected", reason: result.reason }
-          : {
-              kind: "submission_unknown",
-              attemptId: job.progress.attemptId,
-              reason: result.reason,
-            };
-
-    this.transition(current, progress);
+    this.transition(current, submittedProgress(job.progress.attemptId, result, nowMs));
   }
 
   public pollResult(
@@ -229,28 +247,10 @@ export class StravaDeliveryStore {
       this.transition(job, { ...job.progress, nextPollAtMs });
   }
 
-  private due(kind: "prepare" | "recover" | "poll", nowMs: number): readonly OwnedDelivery[] {
-    return (this.dueQueries[kind] ??= this.prepareDue(kind))
+  private due(kind: DueDeliveryKind, nowMs: number): readonly OwnedDelivery[] {
+    return (this.dueQueries[kind] ??= prepareDueDeliveries(this.db, this.tables, kind))
       .all({ nowMs })
       .map((row) => parseDelivery(row));
-  }
-
-  private prepareDue(kind: "prepare" | "recover" | "poll") {
-    const table = this.tables.deliveries;
-    const nowMs = sql.placeholder("nowMs");
-    const progressKind = sql`json_extract(${table.progress}, '$.kind')`;
-    const authorityKind = sql`json_extract(${table.authority}, '$.kind')`;
-
-    const conditions = {
-      prepare: sql`${authorityKind} = 'consented' AND ((${progressKind} = 'queued' AND json_extract(${table.progress}, '$.notBeforeMs') <= ${nowMs}) OR (${progressKind} = 'preparing' AND json_extract(${table.progress}, '$.leaseUntilMs') <= ${nowMs}))`,
-      recover: sql`${progressKind} = 'submitting' AND json_extract(${table.progress}, '$.leaseUntilMs') <= ${nowMs}`,
-      poll: sql`${authorityKind} = 'consented' AND ${progressKind} = 'processing' AND json_extract(${table.progress}, '$.nextPollAtMs') <= ${nowMs}`,
-    };
-
-    const order = sql`coalesce(json_extract(${table.progress}, '$.notBeforeMs'), json_extract(${table.progress}, '$.leaseUntilMs'), json_extract(${table.progress}, '$.nextPollAtMs'), 0)`;
-    const query = this.db.select().from(table).where(conditions[kind]);
-
-    return query.orderBy(order).limit(100).prepare();
   }
 
   public stopRide(

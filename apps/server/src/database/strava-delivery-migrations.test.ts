@@ -1,12 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { expect, it } from "vitest";
 import { z } from "zod";
-import { createDatabase } from "./drizzle.provider.js";
-import { legacyStrava } from "./strava-migrations.spec.js";
-import { testServerConfig } from "../config.js";
+import { BEFORE_STRAVA_DELIVERY, seedLegacyStrava } from "./strava-migrations.spec.js";
 import { decryptTokens } from "../strava/strava.crypto.js";
+import { upgradeFrom } from "../testing/migration-harness.spec.js";
 
 const UpgradedConnectionsSchema = z.array(
   z.object({
@@ -23,45 +19,34 @@ const UpgradedConnectionsSchema = z.array(
 );
 
 it("upgrades existing encrypted Strava connections once without replacing their credentials", () => {
-  const directory = mkdtempSync(join(tmpdir(), "voltonaut-strava-delivery-upgrade-"));
-  const path = join(directory, "existing.db");
   const key = "a".repeat(64);
   const tokens = { accessToken: "existing-access-token", refreshToken: "existing-refresh-token" };
 
-  try {
-    const before = legacyStrava(directory, key, tokens);
-    const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
-    const upgraded = createDatabase(config);
-    expect(
-      upgraded.$client
-        .prepare(
-          "SELECT user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,revoke_lease_until,handoff_hash,binding_hash,confirm_by FROM strava_connections ORDER BY user_id",
-        )
-        .all(),
-    ).toEqual(before);
+  const upgrade = upgradeFrom(BEFORE_STRAVA_DELIVERY, (old) => seedLegacyStrava(old, key, tokens));
 
-    const rows = UpgradedConnectionsSchema.parse(
-      upgraded.$client.prepare("SELECT * FROM strava_connections ORDER BY user_id").all(),
-    );
+  const upgraded = upgrade.open();
+  expect(
+    upgraded.$client
+      .prepare(
+        "SELECT user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,revoke_lease_until,handoff_hash,binding_hash,confirm_by FROM strava_connections ORDER BY user_id",
+      )
+      .all(),
+  ).toEqual(upgrade.seeded);
 
-    expect(new Set(rows.map((row) => row.generation)).size).toBe(2);
+  const rows = UpgradedConnectionsSchema.parse(
+    upgraded.$client.prepare("SELECT * FROM strava_connections ORDER BY user_id").all(),
+  );
 
-    for (const row of rows)
-      expect(decryptTokens(row.encrypted_tokens, key, row.user_id, row.athlete_id)).toEqual(tokens);
+  expect(new Set(rows.map((row) => row.generation)).size).toBe(2);
 
-    const state = upgraded.$client
-      .prepare("SELECT * FROM strava_connections ORDER BY user_id")
-      .all();
+  for (const row of rows)
+    expect(decryptTokens(row.encrypted_tokens, key, row.user_id, row.athlete_id)).toEqual(tokens);
 
-    expect(upgraded.$client.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
-    upgraded.$client.close();
-    const reopened = createDatabase(config);
-    expect(
-      reopened.$client.prepare("SELECT * FROM strava_connections ORDER BY user_id").all(),
-    ).toEqual(state);
-    expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(14);
-    reopened.$client.close();
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
+  const state = upgraded.$client.prepare("SELECT * FROM strava_connections ORDER BY user_id").all();
+
+  expect(upgraded.$client.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  upgraded.$client.close();
+  expect(
+    upgrade.open().$client.prepare("SELECT * FROM strava_connections ORDER BY user_id").all(),
+  ).toEqual(state);
 });

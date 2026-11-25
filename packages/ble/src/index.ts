@@ -16,6 +16,8 @@ export * from "./ftms/feature.js";
 
 export * from "./ftms/parse.js";
 
+export * from "./ftms/labControl.js";
+
 export * from "./ftms/presets.js";
 
 export * from "./hrs/adapter.js";

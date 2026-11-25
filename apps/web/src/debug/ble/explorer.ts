@@ -1,14 +1,15 @@
 import {
   parseHex,
   type CharacteristicRef,
-  type GattProfile,
   type CharacteristicInfo,
   type BleTransport,
 } from "@voltonaut/ble";
+import type { LabDevice } from "./device.js";
 import { element } from "./dom.js";
-import type { SnifferSession } from "./session.js";
 
 export type RunOperation = (operation: () => Promise<void>) => void;
+
+type ExplorerDevice = Readonly<Pick<LabDevice, "profile" | "session" | "run" | "rawWrite">>;
 
 function action(
   label: string,
@@ -28,6 +29,7 @@ function writeControls(
   ref: CharacteristicRef,
   transport: BleTransport,
   run: RunOperation,
+  rawWrite: ExplorerDevice["rawWrite"],
 ): HTMLElement {
   const group = document.createElement("span");
   const input = document.createElement("input");
@@ -59,6 +61,7 @@ function writeControls(
         throw new Error("Ungültige Hex-Bytes");
       }
 
+      rawWrite(ref);
       await transport.write(ref, bytes);
     }),
   );
@@ -69,10 +72,10 @@ function writeControls(
 function characteristicRow(
   info: CharacteristicInfo,
   ref: CharacteristicRef,
-  session: SnifferSession,
-  run: RunOperation,
+  device: ExplorerDevice,
   registerUpdate: (update: () => void) => void,
 ): HTMLElement {
+  const { session, run } = device;
   const row = document.createElement("section");
   const transport = session.transport;
   const title = document.createElement("p");
@@ -110,23 +113,18 @@ function characteristicRow(
   }
 
   if (info.properties.includes("write") || info.properties.includes("writeWithoutResponse")) {
-    row.append(writeControls(ref, transport, run));
+    row.append(writeControls(ref, transport, run, device.rawWrite));
   }
 
   return row;
 }
 
-export function renderExplorer(
-  rootId: string,
-  profile: GattProfile,
-  session: SnifferSession,
-  run: RunOperation,
-): () => void {
+export function renderExplorer(rootId: string, device: ExplorerDevice): () => void {
   const root = element(rootId);
   const updates: (() => void)[] = [];
   root.replaceChildren();
 
-  for (const service of profile.services) {
+  for (const service of device.profile.services) {
     const heading = document.createElement("h3");
     heading.textContent = service.uuid;
     root.append(heading);
@@ -136,8 +134,7 @@ export function renderExplorer(
         characteristicRow(
           info,
           { serviceUuid: service.uuid, characteristicUuid: info.uuid },
-          session,
-          run,
+          device,
           (update) => {
             updates.push(update);
           },

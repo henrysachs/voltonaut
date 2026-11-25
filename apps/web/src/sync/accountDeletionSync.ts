@@ -2,7 +2,8 @@ import type { AccountExport } from "@voltonaut/shared";
 import type { AccountDataView } from "./accountDataView.js";
 import type { AccountOutbox } from "./accountOutbox.js";
 import type { DeletionIntents, DeletionOwner } from "./accountDeletion.js";
-import type { AccountLease } from "./privateAuthTransport.js";
+import type { AccountDataPort } from "./accountPorts.js";
+import type { LeaseBinding } from "./apiRoute.js";
 import type { ApplicationSession } from "./applicationSession.js";
 import type { ProgressOutbox } from "./progressOutbox.js";
 
@@ -13,18 +14,20 @@ interface DeletionSyncOptions {
   readonly deletions: DeletionIntents;
 }
 
-type PatchAccount = (lease: AccountLease, message: string) => void;
+type DataLease = LeaseBinding & { readonly data: AccountDataPort };
+
+type PatchAccount = (lease: LeaseBinding, message: string) => void;
 
 type PublishView = (view: AccountDataView) => void;
 
 export async function exportAccountData(
-  lease: AccountLease | undefined,
+  lease: DataLease | undefined,
   patch: PatchAccount,
 ): Promise<AccountExport | undefined> {
   if (lease === undefined) return undefined;
 
   try {
-    const value = await lease.exportAccount();
+    const value = await lease.data.exportAccount();
 
     return lease.current() ? value : undefined;
   } catch {
@@ -38,7 +41,7 @@ export async function exportAccountData(
 }
 
 export async function deleteAccountData(
-  lease: AccountLease | undefined,
+  lease: DataLease | undefined,
   confirmation: string,
   options: DeletionSyncOptions,
   publish: PublishView,
@@ -47,7 +50,7 @@ export async function deleteAccountData(
   if (lease === undefined) return false;
 
   try {
-    await lease.deleteAccount(confirmation);
+    await lease.data.deleteAccount(confirmation);
   } catch {
     patch(
       lease,
