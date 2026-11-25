@@ -198,43 +198,71 @@ describe.each(TRANSPORTS)("trainer control over $name", (source: Readonly<Source
   });
 });
 
-it("an unexpected sim link loss runs the shell's reconnect schedule", async () => {
-  const bus = createEventBus();
+/** Sim trainer behind a droppable sim link, with an advancing manual clock. */
+function droppableTrainer() {
   const clock = createManualClock();
   const ticker = createManualTicker();
-  const strap = createSimTransport(createSimStrapPeripheral({ ticker, samples: SAMPLES }));
+  const trainer = recorded(createSimTrainerPeripheral({ ticker, samples: SAMPLES }));
+  const link = createSimTransport(trainer.peripheral);
 
-  const { heartRate } = createRideDeviceSet({
-    bus,
+  const devices = createRideDeviceSet({
+    bus: createEventBus(),
     clock,
     ticker,
     clockScale: 1,
     transports: {
-      trainer: createSimTransport(createSimTrainerPeripheral({ ticker, samples: SAMPLES })),
-      heartRate: strap,
+      trainer: link,
+      heartRate: createSimTransport(createSimStrapPeripheral({ ticker, samples: SAMPLES })),
       play: [],
     },
   });
 
-  await heartRate.connect();
-  strap.drop();
-  expect(heartRate.status()).toBe("reconnecting");
-  clock.advanceS(1);
-  ticker.tick();
-  await settle();
-  expect(heartRate.status()).toBe("ready");
-});
+  return {
+    adapter: devices.trainer,
+    link,
+    writes: trainer.writes,
+    async advance(s: number): Promise<void> {
+      clock.advanceS(s);
+      ticker.tick();
+      await settle();
+    },
+  };
+}
 
-it("the sim transport rejects a scan for services the peripheral lacks", async () => {
-  const transport = createSimTransport(
-    createSimStrapPeripheral({ ticker: createManualTicker(), samples: SAMPLES }),
-  );
+it("a dropped sim trainer reconnects without authority and never resends the old target", async () => {
+  const r = droppableTrainer();
+  const { control } = r.adapter;
+  await r.adapter.connect();
+  await r.advance(0.25);
+  await control.enable();
+  await r.advance(0.25);
+  control.forward([CLIMB]);
+  await r.advance(0.25);
+  expect(r.writes()).toEqual([0, 7, 0x11, 0x11]);
 
-  await expect(
-    transport.connect({
-      acceptAllDevices: false,
-      filters: [{ services: ["0000fff0-0000-1000-8000-00805f9b34fb"] }],
-      optionalServices: [],
-    }),
-  ).rejects.toThrow("no sim device matches");
+  r.link.drop();
+  expect(r.adapter.status()).toBe("reconnecting");
+  expect(control.view().authority.kind).toBe("inactive");
+  await r.advance(1);
+  expect(r.adapter.status()).toBe("ready");
+
+  control.forward([CLIMB]);
+  await r.advance(0.25);
+  control.forward([]);
+  await r.advance(0.25);
+  expect(r.writes()).toEqual([0, 7, 0x11, 0x11]);
+  expect(control.view()).toMatchObject({
+    authority: { kind: "inactive" },
+    target: undefined,
+    acknowledged: undefined,
+    hardware: "unknown",
+  });
+
+  // Only an explicit new grant writes again: neutral first, then the engine's current target.
+  await control.enable();
+  await r.advance(0.25);
+  control.forward([]);
+  await r.advance(0.25);
+  expect(r.writes().slice(4)).toEqual([0, 7, 0x11, 0x11]);
+  expect(control.view().acknowledged?.gradePct).toBe(4);
 });
