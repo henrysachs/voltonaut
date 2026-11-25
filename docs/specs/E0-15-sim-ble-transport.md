@@ -46,7 +46,7 @@ createSimDeviceTransports({ ticker, samples }): DeviceTransports;
 - `ftms/simTrainer.ts`: FTMS-Peripherie mit `0x2ACC` (Bit 13), `0x2AD2` aus dem Sim-Skript und `0x2AD9` über den bestehenden `SimControlPoint`. `SimControlPoint` antwortet jetzt auf GATT-Ebene, statt eine eigene `FtmsControl` zu bauen.
 - `hrs/simStrap.ts`: Heart-Rate-Peripherie (`0x180D`/`0x2A37`).
 - Bytes kommen aus Encodern neben den Parsern: `encodeIndoorBikeData`, `encodeHeartRateMeasurement`, `encodeFitnessMachineFeature`. Die synthetischen Fixtures `ftmsKickr`/`hrsStrap` nutzen dieselben Encoder; ihre erzeugten Bytes bleiben gleich. Keine handgeschriebenen Bytes in `apps/web`.
-- `rideDevices.ts`: eine `setupRideDevices(bus, clockScale, source)`. `DeviceSource` ist `{ transports, connectOnMount }`. Sim verbindet beim Mount ohne Picker, echte Geräte erst nach Nutzerklick.
+- `rideDevices.ts`: eine `setupRideDevices(bus, clockScale, source)`. `DeviceSource` ist `{ transports, connectOnMount }`. Sim verbindet beim Mount ohne Picker, echte Geräte erst nach Nutzerklick. `RideDevices` ist die `RideTrainerSink` aus #129 und reicht `forward({ paused, commands })` an `trainer.control` weiter.
 - `ConnectSlot` ist nur noch `{ label, adapter }`. `adapter` ist ein `ConnectableDevice` (`DeviceAdapter` + `select`, optional `description` und `control`). `PlayAdapter` trägt dafür `side`.
 - Entfernt: `createFakeTrainer`, `createFakeHeartRate`, `createFakePlay`, `createSimTrainerControl` samt Tests sowie `SimSample.gearIndex` (ohne Aufrufer außerhalb der Fakes).
 
@@ -67,15 +67,16 @@ Entfernt, kein Play-Peripheriegerät im Sim. Der Adapter war in der App tot (nic
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK   | Ebene                        | Datei                                                                                                  |
-| ---- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1–4  | Integration, parametrisiert  | `packages/ble/src/devices.test.ts` (`testdata/peripheralCentral.ts`)                                   |
-| 4, 8 | Sim-Peripherie               | `packages/ble/src/sim/peripherals.test.ts`, Trainer-`drop()` in `packages/ble/src/devices.test.ts`     |
-| 3    | UI über Sim-Transport        | `apps/web/src/ui/connect/trainerControl.test.ts`                                                       |
-| 5    | UI                           | `apps/web/src/ui/connect/dialog.test.ts`                                                               |
-| 6    | Property                     | `packages/ble/src/encode.test.ts`                                                                      |
-| 7    | E2E Sim und native GATT-Fake | `apps/web/e2e/{sim,ride-menu-dismissal,game-menu,connect-ride,play-controller,native-control}.spec.ts` |
-| alle | Gate                         | `E2E_PORT=5190 mise run check`                                                                         |
+| AK   | Ebene                                          | Datei                                                                                                                                        |
+| ---- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1–4  | Integration, parametrisiert                    | `packages/ble/src/devices.test.ts` (`testdata/peripheralCentral.ts`)                                                                         |
+| 4, 8 | Sim-Peripherie                                 | `packages/ble/src/sim/peripherals.test.ts`, Trainer-`drop()` in `packages/ble/src/devices.test.ts`                                           |
+| 3    | UI über Sim-Transport                          | `apps/web/src/ui/connect/trainerControl.test.ts`                                                                                             |
+| 3    | Fahrtsitzung über echten Worker, Sim-Transport | `apps/web/src/game/rideSession.loopback.test.ts` (inkl. Auto-Pause-Verwerfen aus #129; Schalten über `createKeyboardAdapter` statt FakePlay) |
+| 5    | UI                                             | `apps/web/src/ui/connect/dialog.test.ts`                                                                                                     |
+| 6    | Property                                       | `packages/ble/src/encode.test.ts`                                                                                                            |
+| 7    | E2E Sim und native GATT-Fake                   | `apps/web/e2e/{sim,ride-menu-dismissal,game-menu,connect-ride,play-controller,native-control}.spec.ts`                                       |
+| alle | Gate                                           | `E2E_PORT=5190 mise run check`                                                                                                               |
 
 ## Nicht-Ziele
 
