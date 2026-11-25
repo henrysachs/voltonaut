@@ -160,7 +160,11 @@ it("deletes only the confirmed owner, revokes sessions and blocks silent recreat
   await request(f.server).get("/v1/me").set(bearer(f.other.sessionToken)).expect(200);
   assertOwnerPurged(f);
   assertTombstone(f);
-  expect(f.db.$client.prepare("SELECT * FROM volts_grant_operators").all()).toEqual([]);
+  expect(
+    f.db.$client.prepare("SELECT entry_id, operator_user_id FROM volts_grant_operators").all(),
+  ).toEqual([
+    { entry_id: "30000000-0000-4000-8000-000000000004", operator_user_id: f.owner.user.id },
+  ]);
 
   const mailCount = f.mail.readSent().length;
   await request(f.server)

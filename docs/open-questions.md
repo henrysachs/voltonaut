@@ -81,7 +81,7 @@ Henry prüft noch manuell:
 
 Stand nach #107 (gemergt) und PR #126 (offen, enthält #115 und #116).
 
-- **#65 Ausrüsten:** Das Issue nennt als Voraussetzung die Zweige `refactor/private-api-routes` und `refactor/account-scope`. Stand 25.11.2026 abends: `private-api-routes` ist als #133 gemergt (`apps/web/src/sync/apiRoute.ts`, `accountPorts.ts`). `account-scope` ist als PR #134 offen und baut die Konto-Sync-Schicht um, auf der `GarageShop` aufsetzt. #124 (Render-Worker) ist ebenfalls offen und berührt dieselben Dateien wie #65.
+- **#65 Ausrüsten:** Das Issue nennt als Voraussetzung die Zweige `refactor/private-api-routes` und `refactor/account-scope`. Stand 25.11.2026 abends: `private-api-routes` ist als #133 gemergt (`apps/web/src/sync/apiRoute.ts`, `accountPorts.ts`). `account-scope` ist als PR #134 offen und baut die Konto-Sync-Schicht um, auf der `GarageShop` aufsetzt. #124 (aufgezeichnete Fahrt im Worker) ist gemergt (`77add9b`).
 - **Mindestlevel im Shop:** Bis zur Progression prüft der Server kein Level (ADR-031). Level-Items sind dadurch früher kaufbar als vorgesehen; gekaufte Items bleiben im Besitz.
 - **Operator-Audit (E7-04):** Die Admin-Prüfung läuft im CLI vor der Buchungstransaktion. Ein gleichzeitiges `admin revoke` des Operators wird nicht erkannt. Eine per Roh-SQL oder Restore ohne Audit-Eintrag geschriebene Gutschrift lässt eine spätere Wiederholung mit `500` scheitern.
 - **Gegenbuchung:** Fehlerhafte Gutschriften lassen sich nicht korrigieren, solange es keine Gegenbuchung gibt.

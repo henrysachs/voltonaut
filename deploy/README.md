@@ -115,6 +115,7 @@ admin credit --operator <henrysUserId> <fahrerUserId> <volts> <referenz>
 - Ab E7-04 (#116) muss `--operator` ein aktives Konto mit Rolle `admin` sein. Ohne diese Angabe wird nichts gebucht. Gutschriften vor E7-04 stehen im Audit als „Operator unbekannt (vor Einführung)“.
 - Die Referenz (`[A-Za-z0-9][A-Za-z0-9._-]{0,99}`, z. B. `abnahme-e7-2026-11-26`) macht die Gutschrift idempotent: Dieselbe Referenz mit gleichem Betrag bucht nur einmal, ein anderer Betrag oder ein anderer Operator ergibt einen Konflikt.
 - Gutschriften lassen sich nicht löschen, nur später durch eine Gegenbuchung korrigieren. Die Gegenbuchung gibt es noch nicht (ADR-031). Betrag vor dem Absenden prüfen.
+- Ein Rollback auf ein Image vor Migration `0013` lässt das Schema auf `0013`. Das alte Image kann dann Konten mit Gutschrift nicht löschen (`500`, keine Datenänderung) und bucht Gutschriften ohne Audit-Eintrag; deren Wiederholung scheitert nach dem nächsten Release mit `500`. Während eines solchen Rollbacks keine Gutschriften buchen.
 - Die Ausgabe ist JSON mit Beleg und neuem Kontostand. Sie enthält keine Secrets, aber Konto-IDs; nicht in öffentliche Kanäle kopieren.
 
 ## Backup nur bei ausdrücklicher Auswahl

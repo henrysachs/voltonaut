@@ -190,7 +190,7 @@ it("keeps the operator audit immutable and consistent in SQLite itself", async (
 });
 
 it("rejects a deleted operator account", async () => {
-  const { userId, grants, db, operatorId } = await grantApp();
+  const { userId, economy, grants, db, operatorId } = await grantApp();
 
   db.prepare("UPDATE users SET deleted_at = 1, email = 'gone@voltonaut.invalid' WHERE id = ?").run(
     operatorId,
@@ -199,6 +199,8 @@ it("rejects a deleted operator account", async () => {
   expect(() => grants.grant(userId, grant("late", 500, operatorId))).toThrow(
     "operator account is deleted",
   );
+  expect(economy.balance(userId)).toBe(0);
+  expect(db.prepare("SELECT COUNT(*) AS count FROM volts_ledger").get()).toEqual({ count: 0 });
 });
 
 it("makes a ledger rebuild fail loudly instead of dropping the operator audit", async () => {

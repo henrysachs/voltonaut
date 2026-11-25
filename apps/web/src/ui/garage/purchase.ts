@@ -77,7 +77,8 @@ export class GaragePurchase {
     this.confirmation.className = "garage__purchase-confirm";
     this.confirmation.dataset["testid"] = "garage-purchase-confirmation";
     this.confirmation.setAttribute("role", "group");
-    this.confirmation.setAttribute("aria-labelledby", QUESTION_ID);
+    // Short group name; the buttons carry the full question as their description.
+    this.confirmation.setAttribute("aria-label", "Kauf bestätigen");
     this.confirmation.hidden = true;
     this.#question.id = QUESTION_ID;
     this.#question.className = "garage__purchase-question";

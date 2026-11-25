@@ -14,7 +14,7 @@ const USER = {
 };
 
 interface ShopServer {
-  readonly purchases: string[];
+  readonly purchases: { readonly itemId: string; readonly expectedPriceVolts: number }[];
   balance: number;
 }
 
@@ -22,7 +22,7 @@ async function fulfillPurchase(route: Route, server: ShopServer): Promise<void> 
   const raw: unknown = route.request().postDataJSON();
   const order = PurchaseRequestSchema.parse(raw);
 
-  server.purchases.push(order.itemId);
+  server.purchases.push({ itemId: order.itemId, expectedPriceVolts: order.expectedPriceVolts });
   server.balance -= order.expectedPriceVolts;
   await route.fulfill({
     json: {
@@ -84,14 +84,26 @@ test("a purchase needs an explicit confirmation and sends exactly one request", 
     "„Blitzstreifen“ für 1.500 ⚡ kaufen? Kontostand danach: 500 ⚡.",
   );
   await expect(cancel).toBeFocused();
+  await expect(page.getByRole("group", { name: "Kauf bestätigen", exact: true })).toBeVisible();
   await expect(confirm).toHaveAttribute("aria-describedby", "garage-purchase-question");
+  await expect(cancel).toHaveAttribute("aria-describedby", "garage-purchase-question");
 
   // A repeated Enter toggles between button and „Abbrechen“; it never confirms.
   await page.keyboard.press("Enter");
+  await expect(purchase).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(cancel).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(purchase).toBeFocused();
   await page.keyboard.press("Enter");
-  await cancel.click();
+  await expect(cancel).toBeFocused();
+
+  // A held Enter sends repeated keydowns; focus stays off the confirm button.
+  await page.keyboard.down("Enter");
+  await page.keyboard.down("Enter");
+  await page.keyboard.down("Enter");
+  await page.keyboard.up("Enter");
+  await expect(confirm).not.toBeFocused();
   await expect(purchase).toBeFocused();
   expect(server.purchases).toEqual([]);
 
@@ -99,7 +111,7 @@ test("a purchase needs an explicit confirmation and sends exactly one request", 
   await confirm.dblclick();
   await expect(purchase).toHaveText("Im Besitz");
   await expect(page.getByTestId("garage-purchase-hint")).toContainText("Gekauft.");
-  expect(server.purchases).toEqual(["jersey.stripe"]);
+  expect(server.purchases).toEqual([{ itemId: "jersey.stripe", expectedPriceVolts: 1500 }]);
 });
 
 test("switching the item closes an open confirmation without buying", async ({ page }) => {
