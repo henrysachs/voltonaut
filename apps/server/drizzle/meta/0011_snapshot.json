@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1bd06bb0-6458-4bcb-a61a-9ecda841564f",
-  "prevId": "a703a9e7-92ab-4005-86a1-0934514d05e5",
+  "id": "9b8d3e1f-0c6a-4d73-8cad-1b0a9d2c050d",
+  "prevId": "701aa981-dd13-4a89-aab3-a11076344c9e",
   "tables": {
     "account_status": {
       "name": "account_status",
@@ -1109,6 +1109,23 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "auth_identity_tombstones": {
+      "name": "auth_identity_tombstones",
+      "columns": {
+        "identity_hash": {
+          "name": "identity_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "login_tokens": {
       "name": "login_tokens",
       "columns": {
@@ -1403,6 +1420,13 @@
         "deleted_at": {
           "name": "deleted_at",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_email_hash": {
+          "name": "deleted_email_hash",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

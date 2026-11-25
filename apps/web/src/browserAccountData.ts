@@ -3,6 +3,7 @@ import type { ApplicationSession } from "./sync/applicationSession.js";
 import { AccountSync } from "./sync/accountSync.js";
 import { openAccountOutbox } from "./sync/accountOutboxDatabase.js";
 import { openRideDatabase } from "./sync/rideDatabase.js";
+import { accountDeletionIntents } from "./sync/accountDeletion.js";
 import { mountAccountDataPanel } from "./ui/accountDataPanel.js";
 import { mountAccountMembershipPanel } from "./ui/accountMembershipPanel.js";
 
@@ -22,7 +23,9 @@ function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
 }
 
 export async function setupBrowserAccountData(
-  session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>,
+  session: Readonly<
+    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
+  >,
   profile: () => Promise<ProfileBootstrap>,
 ): Promise<AccountSync> {
   const localProfile = await profile();
@@ -34,6 +37,7 @@ export async function setupBrowserAccountData(
     profile: localProfile,
     outbox,
     archive: async () => (await archive()).list(),
+    deletions: accountDeletionIntents(() => window.localStorage),
     nowMs: Date.now,
   });
 

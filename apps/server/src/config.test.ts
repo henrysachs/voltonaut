@@ -26,18 +26,39 @@ it("defaults development/test to memory and refuses incomplete production mail c
       AUTH_MODE: "magic-link",
       CLOUDFLARE_EMAIL_API_TOKEN: "test-token",
       CLOUDFLARE_EMAIL_ACCOUNT_ID: "test-account",
+      AUTH_TOMBSTONE_HMAC_KEY: "a".repeat(64),
     },
     "production",
   );
 
   const resend = parseServerConfig(
-    { AUTH_MODE: "magic-link", MAIL_PROVIDER: "resend", RESEND_API_KEY: "test-key" },
+    {
+      AUTH_MODE: "magic-link",
+      MAIL_PROVIDER: "resend",
+      RESEND_API_KEY: "test-key",
+      AUTH_TOMBSTONE_HMAC_KEY: "a".repeat(64),
+    },
     "production",
   );
 
   expect(createMailSender(cloudflare)).toBeInstanceOf(CloudflareEmailSender);
   expect(createMailSender(resend)).toBeInstanceOf(ResendSender);
   expect(cloudflare.mail.clientOrigin).toBe("https://voltonaut.stammkneipe.dev");
+});
+
+it("requires a stable 32-byte tombstone HMAC key in production", () => {
+  expect(() => parseServerConfig({ AUTH_MODE: "disabled" }, "production")).toThrow(
+    /AUTH_TOMBSTONE_HMAC_KEY/u,
+  );
+  expect(() =>
+    parseServerConfig({ AUTH_MODE: "disabled", AUTH_TOMBSTONE_HMAC_KEY: "not-hex" }, "production"),
+  ).toThrow(/AUTH_TOMBSTONE_HMAC_KEY/u);
+  expect(
+    parseServerConfig(
+      { AUTH_MODE: "disabled", AUTH_TOMBSTONE_HMAC_KEY: "b".repeat(64) },
+      "production",
+    ).auth.tombstoneHmacKey,
+  ).toBe("b".repeat(64));
 });
 
 it("rejects unsafe origins and malformed runtime limits before startup", () => {

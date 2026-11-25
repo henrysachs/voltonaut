@@ -68,7 +68,11 @@ it("runs the compiled production entrypoint without HTTP or scheduler and grants
   const path = join(directory, "operator.db");
   const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
   const db = createDatabase(config);
-  db.$client.prepare("INSERT INTO users VALUES ('existing','operator@example.com',123,NULL)").run();
+  db.$client
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing','operator@example.com',123,NULL)",
+    )
+    .run();
   db.$client.prepare("INSERT INTO account_status VALUES ('existing','pro',1,'user')").run();
   db.$client.close();
   const listed = await cli(path, "admin", "list");
@@ -102,11 +106,16 @@ it("runs the compiled production entrypoint without HTTP or scheduler and grants
   reopened.$client.close();
 }, 30000);
 
+const CREDIT_USERS = `
+  INSERT INTO users (id,email,created_at) VALUES ('existing','operator@example.com',123);
+  INSERT INTO users (id,email,created_at,deleted_at) VALUES ('deleted','gone@example.com',123,456);
+`;
+
 it("credits Volts to an existing account once per reference through the compiled CLI", async () => {
   const path = join(directory, "credit.db");
   const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
   const db = createDatabase(config);
-  db.$client.prepare("INSERT INTO users VALUES ('existing','operator@example.com',123,NULL)").run();
+  db.$client.exec(CREDIT_USERS);
   db.$client.close();
 
   const first = CreditSchema.parse(
@@ -127,6 +136,10 @@ it("credits Volts to an existing account once per reference through the compiled
     "ledger conflict",
   );
   await expect(cli(path, "admin", "credit", "missing", "10", "other")).rejects.toThrow(
+    "account not found",
+  );
+  // A deleted account is a tombstone and never receives Volts again.
+  await expect(cli(path, "admin", "credit", "deleted", "10", "late")).rejects.toThrow(
     "account not found",
   );
   await expect(cli(path, "admin", "credit", "existing", "-5", "neg")).rejects.toThrow("ZodError");

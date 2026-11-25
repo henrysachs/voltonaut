@@ -6,6 +6,7 @@ import type { ServerConfig } from "../config.module.js";
 import { SERVER_CONFIG } from "../config.module.js";
 import { MailModule } from "../mail/mail.module.js";
 import { AuthController } from "./auth.controller.js";
+import { AuthAccountDataService } from "./auth-account-data.service.js";
 import { AuthService } from "./auth.service.js";
 import { OIDC_CONTROLLERS, OIDC_SERVICES } from "./oidc-routes.js";
 import { MeController } from "./me.controller.js";
@@ -54,8 +55,8 @@ function authThrottlers(config: ServerConfig): ThrottlerOptions[] {
     }),
   ],
   controllers: [AuthController, ...OIDC_CONTROLLERS, MeController],
-  providers: [AuthService, ...OIDC_SERVICES],
-  exports: [AuthService],
+  providers: [AuthService, AuthAccountDataService, ...OIDC_SERVICES],
+  exports: [AuthService, AuthAccountDataService],
 })
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest modules are empty decorated classes; the framework reads the decorator, not class members.
 export class AuthModule {}

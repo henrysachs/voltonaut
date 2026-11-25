@@ -26,6 +26,17 @@ export const InventoryResponseSchema = z
   .strict()
   .readonly();
 
+/** Personal data export: purchased items only; catalog defaults belong to every account. */
+const PurchasedItemSchema = InventoryItemSchema.refine((item) => item.source !== "default", {
+  message: "Exports list purchased items only",
+  path: ["source"],
+});
+
+export const InventoryAccountExportSchema = z
+  .object({ items: z.array(PurchasedItemSchema).max(1000).readonly() })
+  .strict()
+  .readonly();
+
 /** `requestId` makes a retried purchase idempotent; `expectedPriceVolts` guards against price changes. */
 export const PurchaseRequestSchema = z
   .object({
@@ -58,6 +69,8 @@ export type InventorySource = z.infer<typeof InventorySourceSchema>;
 export type InventoryItem = z.infer<typeof InventoryItemSchema>;
 
 export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
+
+export type InventoryAccountExport = z.infer<typeof InventoryAccountExportSchema>;
 
 export type PurchaseRequest = z.infer<typeof PurchaseRequestSchema>;
 

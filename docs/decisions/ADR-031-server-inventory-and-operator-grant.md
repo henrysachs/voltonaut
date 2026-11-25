@@ -1,4 +1,4 @@
-# ADR-030 – Server-Inventar, atomare Käufe und Operator-Gutschrift
+# ADR-031 – Server-Inventar, atomare Käufe und Operator-Gutschrift
 
 - **Status:** Angenommen für E7-02 (Entscheidungen Henrys über den Auftraggeber, 25.11.2026)
 - **Bezug:** Issue #64, Spec [E7-02](../specs/E7-02-server-inventory-shop.md), [ADR-027](ADR-027-server-volts-ledger.md), ADR-005

@@ -70,7 +70,7 @@ function priorMigrations(directory: string, migrationCount: number): string {
 
 function readAuthState(client: DatabaseReader["$client"], migrationCount: number) {
   return {
-    users: client.prepare("SELECT * FROM users").all(),
+    users: client.prepare("SELECT id, email, created_at, deleted_at FROM users").all(),
     sessions: client.prepare("SELECT * FROM sessions").all(),
     identities: migrationCount === 2 ? client.prepare("SELECT * FROM auth_identities").all() : [],
     handoffs: migrationCount === 2 ? client.prepare("SELECT * FROM oidc_handoffs").all() : [],
@@ -88,7 +88,9 @@ function createExistingDatabase(directory: string, migrationCount: number) {
     client.pragma("foreign_keys = ON");
     migrate(drizzle(client), { migrationsFolder: legacy });
     client
-      .prepare("INSERT INTO users VALUES ('legacy-user', 'legacy@example.com', 123, NULL)")
+      .prepare(
+        "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('legacy-user', 'legacy@example.com', 123, NULL)",
+      )
       .run();
     client
       .prepare(

@@ -153,6 +153,37 @@ it("accepts only a valid stored receipt for the exact canonical ride ID", async 
   await expect(f.lease.upload(localRide)).resolves.toMatchObject({ rideId: localRide.rideId });
 });
 
+it("downloads a validated own export and confirms deletion only from an empty 204", async () => {
+  const f = await fixture();
+
+  const exported = {
+    schemaVersion: 2,
+    exportedAt: "2026-11-20T00:00:00.000Z",
+    account: {
+      user: {
+        id: "00000000-0000-4000-8000-000000000001",
+        email: "rider@example.com",
+        createdAt: "2026-11-20T00:00:00.000Z",
+      },
+      membership: { tier: "normal", vip: false },
+      authorization: { role: "user" },
+      identities: [],
+    },
+    profile: { status: "missing" },
+    rides: [],
+    inventory: { items: [] },
+    progression: { volts: { balance: 0, journal: [] } },
+    strava: { status: { status: "disabled" }, deliveries: [] },
+  };
+
+  f.reply(200, "application/json", JSON.stringify(exported));
+  await expect(f.lease.exportAccount()).resolves.toEqual(exported);
+  f.reply(204, "text/plain", "");
+  await expect(f.lease.deleteAccount("rider@example.com")).resolves.toBeUndefined();
+  expect(f.methods).toEqual(["GET", "DELETE"]);
+  expect(f.calls).toEqual(["/v1/me/export:Bearer private-token", "/v1/me:Bearer private-token"]);
+});
+
 it("uses only canonical v2 ride routes for raw journals, history and detail", async () => {
   const f = await fixture();
   const assessment = { status: "unverified", reason: "unknown_revision" };

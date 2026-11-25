@@ -32,7 +32,9 @@ it("keeps constructors inert and retries failed first preparation after schema a
 it("reads later inserts, fresh IDs and peer token generations without retaining rows", () => {
   const { a, b, reopen } = fixture();
   expect(a.credentials.connection("other")).toBeUndefined();
-  b.db.$client.exec("INSERT INTO users VALUES ('other','other@example.test',0,NULL)");
+  b.db.$client.exec(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('other','other@example.test',0,NULL)",
+  );
   b.db.$client.exec(
     "INSERT INTO strava_connections(user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,generation) VALUES ('other','43','connected','other-encrypted',2000000,'activity:write','generation-b')",
   );

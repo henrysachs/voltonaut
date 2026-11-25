@@ -3,6 +3,7 @@ import type { ServerDatabase } from "../database/drizzle.provider.js";
 import { ApiError } from "../api-error.js";
 import { authIdentities, oidcHandoffs } from "./auth.schema.js";
 import { hashToken } from "./tokens.js";
+import { assertIdentityNotTombstoned } from "./auth-recreation-guards.js";
 
 export interface LinkHandoff {
   readonly userId: string;
@@ -58,6 +59,7 @@ export function linkIdentity(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
   link: Readonly<{ userId: string; issuer: string; subject: string }>,
+  hmacKey: string,
 ): void {
   db.transaction(
     () => {
@@ -80,6 +82,7 @@ export function linkIdentity(
         return;
       }
 
+      assertIdentityNotTombstoned(db, hmacKey, link.issuer, link.subject);
       db.insert(authIdentities)
         .values({ issuer: link.issuer, subject: link.subject, userId: link.userId })
         .run();

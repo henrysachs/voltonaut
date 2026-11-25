@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common";
 
 import { InventoryController } from "./inventory.controller.js";
 import { INVENTORY_TABLES, type InventoryTables } from "./inventory.schema.js";
+import { InventoryAccountDataService } from "./inventory.account-data.js";
 import { InventoryService } from "./inventory.service.js";
 
 @Module({})
@@ -18,7 +19,12 @@ export class InventoryModule {
       module: InventoryModule,
       imports: [economy],
       controllers: [InventoryController],
-      providers: [InventoryService, { provide: INVENTORY_TABLES, useValue: tables }],
+      providers: [
+        InventoryService,
+        InventoryAccountDataService,
+        { provide: INVENTORY_TABLES, useValue: tables },
+      ],
+      exports: [InventoryAccountDataService],
     };
   }
 }

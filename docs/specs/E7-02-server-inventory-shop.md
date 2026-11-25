@@ -2,7 +2,7 @@
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E7, Checkbox „`inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items"
 - **Issue:** #64 · Abhängigkeiten: [E6-05](E6-05-volts-ledger.md) (Volts-Ledger), [E7-01](E7-01-garage-shop-foundation.md) (Garage/Shop-Fundament)
-- **ADR:** [ADR-030](../decisions/ADR-030-server-inventory-and-operator-grant.md)
+- **ADR:** [ADR-031](../decisions/ADR-031-server-inventory-and-operator-grant.md)
 - **Status:** Implementiert und softwaregeprüft (Unit, Integration, Mutation `rules`, E2E im Gastmodus). Merge, Bereitstellung und Henrys Abnahme mit echten Volts offen.
 - **Betroffene Module:** `packages/shared`, `packages/rules`, `apps/server/src/{economy,inventory}`, `apps/web/src/{sync,ui/garage}`. Keine neue externe Abhängigkeit.
 
@@ -25,6 +25,7 @@ Angemeldete Fahrer kaufen Items aus dem Start-Katalog mit Volts. Der Server prü
 - [x] AK6 – `GET /v1/me/inventory` liefert alle besessenen Items (gespeicherte und Standard-Items) mit `no-store`. Ein zweites Gerät desselben Kontos sieht denselben Besitz.
 - [x] AK7 – Das Volts-Journal kennt den Grund `operator_grant` (positive Gutschrift ohne Fahrtfelder). Die Migration erhält bestehende Buchungen. Der Admin-Befehl `admin credit <userId> <volts> <reference>` schreibt genau eine idempotente Gutschrift.
 - [x] AK8 – Die Garage zeigt für angemeldete Fahrer Kontostand und Besitz vom Server. „Kaufen (n ⚡)“ ist nur aktiv, wenn das Item kaufbar ist und das Guthaben reicht. Nach dem Kauf zeigt sie das Item als besessen. Gäste und Offline-Nutzer sehen weiterhin nur die Vorschau.
+- [x] AK9 – Integration mit E5-11 (Kontodaten): Migration `0011_volts_operator_grant` folgt auf `0010_common_jack_flag`, legt die Lösch-Trigger für `volts_ledger` nach dem Tabellenneubau wieder an und sichert `inventory` ebenso ab. Der Kontoexport (`schemaVersion` 2) enthält gekaufte Items und Operator-Gutschriften; die Kontolöschung entfernt das Inventar.
 
 ## Testplan (`docs/10-testing.md`)
 
@@ -47,4 +48,4 @@ Kein dauerhaftes Ausrüsten (#65), keine Level-Prüfung, keine Rückerstattung, 
 
 ## Doku-Updates
 
-- [x] Roadmap (Statusabsatz; Checkbox bleibt offen bis #65) · [x] `docs/08-backend.md` · [x] ADR-030
+- [x] Roadmap (Statusabsatz; Checkbox bleibt offen bis #65) · [x] `docs/08-backend.md` · [x] ADR-031

@@ -16,7 +16,9 @@ declare global {
 }
 
 export interface BrowserAccount {
-  readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
+  readonly session: Readonly<
+    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
+  >;
   readonly accounts: Readonly<
     Promise<Readonly<Awaited<ReturnType<typeof setupBrowserAccountData>>>>
   >;
@@ -42,7 +44,6 @@ export function setupBrowserAccount(
 
   try {
     const origin = apiOrigin(window.location.origin, import.meta.env["VITE_API_ORIGIN"]);
-
     const transport = authTransport(origin);
 
     const session = new ApplicationSession({

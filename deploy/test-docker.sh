@@ -55,6 +55,8 @@ chmod 600 "$temporary/base.env"
 cat >"$temporary/base-override.yaml" <<YAML
 services:
   server:
+    environment:
+      AUTH_TOMBSTONE_HMAC_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
     labels:
       traefik.enable: "false"
     volumes:
@@ -80,6 +82,8 @@ cp "$temporary/litestream.yml" "$temporary/working-litestream.yml"
 cat >"$temporary/override.yaml" <<YAML
 services:
   server:
+    environment:
+      AUTH_TOMBSTONE_HMAC_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
     labels:
       traefik.enable: "false"
     volumes:
@@ -153,8 +157,9 @@ const valid = { PATH: process.env.PATH, NODE_ENV: 'production', AUTH_MODE: 'oidc
   OIDC_PROVIDERS: 'cloudflare', OIDC_CLOUDFLARE_ISSUER: 'https://identity.example.invalid/oidc/proof',
   OIDC_CLOUDFLARE_CLIENT_ID: crypto.randomUUID(), OIDC_CLOUDFLARE_CLIENT_SECRET: crypto.randomUUID(),
   CLIENT_ORIGIN: 'https://voltonaut.stammkneipe.dev',
+  AUTH_TOMBSTONE_HMAC_KEY: '0'.repeat(64),
   OIDC_CLOUDFLARE_REDIRECT_URI: 'https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback' };
-const invalid = ['AUTH_MODE','OIDC_PROVIDERS','OIDC_CLOUDFLARE_ISSUER','OIDC_CLOUDFLARE_CLIENT_ID','OIDC_CLOUDFLARE_CLIENT_SECRET','OIDC_CLOUDFLARE_REDIRECT_URI']
+const invalid = ['AUTH_MODE','AUTH_TOMBSTONE_HMAC_KEY','OIDC_PROVIDERS','OIDC_CLOUDFLARE_ISSUER','OIDC_CLOUDFLARE_CLIENT_ID','OIDC_CLOUDFLARE_CLIENT_SECRET','OIDC_CLOUDFLARE_REDIRECT_URI']
   .map((key) => ({ ...valid, [key]: undefined }));
 invalid.push({ ...valid, OIDC_CLOUDFLARE_REDIRECT_URI: 'https://api.voltonaut.stammkneipe.dev/wrong' });
 invalid.push({ ...valid, AUTH_MODE: 'magic-link', MAIL_PROVIDER: 'memory' });

@@ -20,7 +20,9 @@ function existingDatabase(directory: string, migrations: number) {
     testServerConfig({ database: { path, migrationsDir: legacyFolder(directory, migrations) } }),
   );
 
-  old.$client.exec("INSERT INTO users VALUES ('owner','owner@example.test',123,NULL)");
+  old.$client.exec(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('owner','owner@example.test',123,NULL)",
+  );
   old.$client.exec(
     "INSERT INTO sessions VALUES ('existing-session','owner',1,2,999999,'original-agent')",
   );

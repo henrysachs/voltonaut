@@ -10,7 +10,11 @@ it("keeps existing legacy owner and session on an OIDC email collision", async (
   const db = getDatabase(context.app);
   const userId = crypto.randomUUID();
   const sessionToken = "legacy-session";
-  db.$client.prepare("INSERT INTO users VALUES (?, 'rider@example.com', 0, NULL)").run(userId);
+  db.$client
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, 'rider@example.com', 0, NULL)",
+    )
+    .run(userId);
   db.$client
     .prepare("INSERT INTO sessions VALUES (?, ?, 0, 0, ?, NULL)")
     .run(hashToken(sessionToken), userId, context.time.nowMs + 86_400_000);
@@ -34,7 +38,11 @@ it("enforces unique issuer/subject and foreign keys independently of application
   const session = await login(context);
   const client = getDatabase(context.app).$client;
   const otherId = crypto.randomUUID();
-  client.prepare("INSERT INTO users VALUES (?, 'other@example.com', 0, NULL)").run(otherId);
+  client
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, 'other@example.com', 0, NULL)",
+    )
+    .run(otherId);
   expect(() =>
     client
       .prepare("INSERT INTO auth_identities VALUES (?, 'local-test-subject', ?)")

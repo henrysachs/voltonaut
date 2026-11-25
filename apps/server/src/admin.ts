@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import {
   AdminUsersQuerySchema,
@@ -93,5 +93,11 @@ export function adminMain(args: readonly string[]): void {
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns its mutable driver state; this lookup only reads.
 function existingUser(db: ServerDatabase, userId: string): boolean {
-  return db.select({ id: users.id }).from(users).where(eq(users.id, userId)).get() !== undefined;
+  return (
+    db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .get() !== undefined
+  );
 }

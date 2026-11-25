@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a703a9e7-92ab-4005-86a1-0934514d05e5",
+  "id": "701aa981-dd13-4a89-aab3-a11076344c9e",
   "prevId": "0def8242-e741-4c6c-8b1a-e45932caf4c0",
   "tables": {
     "account_status": {
@@ -939,7 +939,7 @@
         },
         "volts_ledger_reason": {
           "name": "volts_ledger_reason",
-          "value": "\"volts_ledger\".\"reason\" IN ('ride_reward', 'purchase', 'operator_grant')"
+          "value": "\"volts_ledger\".\"reason\" IN ('ride_reward', 'purchase')"
         },
         "volts_ledger_ride_reward": {
           "name": "volts_ledger_ride_reward",
@@ -948,10 +948,6 @@
         "volts_ledger_purchase": {
           "name": "volts_ledger_purchase",
           "value": "\"volts_ledger\".\"reason\" <> 'purchase' OR (\"volts_ledger\".\"reward_day\" IS NULL AND \"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL AND \"volts_ledger\".\"candidate_volts\" IS NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NULL AND \"volts_ledger\".\"delta_volts\" < 0)"
-        },
-        "volts_ledger_operator_grant": {
-          "name": "volts_ledger_operator_grant",
-          "value": "\"volts_ledger\".\"reason\" <> 'operator_grant' OR (\"volts_ledger\".\"reward_day\" IS NULL AND \"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL AND \"volts_ledger\".\"candidate_volts\" IS NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NULL AND \"volts_ledger\".\"delta_volts\" > 0)"
         },
         "volts_ledger_ticks": {
           "name": "volts_ledger_ticks",
@@ -1017,6 +1013,23 @@
           "name": "auth_identities_issuer_subject_pk"
         }
       },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "auth_identity_tombstones": {
+      "name": "auth_identity_tombstones",
+      "columns": {
+        "identity_hash": {
+          "name": "identity_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -1314,6 +1327,13 @@
         "deleted_at": {
           "name": "deleted_at",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_email_hash": {
+          "name": "deleted_email_hash",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

@@ -122,7 +122,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 - [x] [E5-10](specs/E5-10-membership-admin.md): Normal/Premium/Pro und unabhängiges VIP manuell im Konto-Overlay verwalten. Serverberechtigung bleibt getrennt. Additive Migration, Operator-CLI, Sessiongrenzen und Bestätigungsrennen sind softwaregeprüft und unabhängig geprüft. CI, Integration, Bereitstellung und Henrys erster bestätigter Adminzugang stehen noch aus. Keine Preise oder Spielsperren.
 - [ ] `rides/`: Upload (idempotent), Plausibilitätsprüfung Stufe 1–4 (`08-backend.md`), Fahrthistorie
 - [ ] Client `sync/`: Cache, Outbox mit Retry, Gastmodus, Status-Anzeige „offline / synchronisiert"
-- [ ] `@nestjs/throttler`, Daten-Export/Löschung; VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
+- [x] `@nestjs/throttler` und [E5-11](specs/E5-11-account-data-export-deletion.md): Kontodaten exportieren und löschen. Export einschließlich Identitäten und Volts-Journal, atomare Löschung, HMAC-Identitätssperren, späte Schreib-/Link-Guards, Outbox-Bereinigung und Browserfluss sind implementiert und durch fokussierte Tests belegt. Vollständiges Gate auf dem integrierten Head, erneutes unabhängiges Review, CI und Bereitstellung bleiben getrennte Nachweise.
+- [ ] VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
 - [ ] Domänen-Metriken (ADR-010): OIDC-Login success/failed ohne Identitäts- oder Tokenlabels, Fahrt-Uploads accepted/flagged/rejected, SQLite- und Litestream-Gesundheit (Backup-Lag)
 - [ ] Tests: `@nestjs/testing` + Supertest, Golden-Fahrten auch gegen `POST /v1/rides`, Plausibilitäts-Fixtures (echte Fahrt ok, manipulierte Fahrt flagged)
       **Abnahme:** Henry meldet sich am Laptop an, fährt eine Stunde, Fahrt erscheint in der Server-Historie; Fahrt offline gefahren wird später automatisch hochgeladen; Sim-Fahrt bringt keine Belohnung.
@@ -155,7 +156,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-01](specs/E7-01-garage-shop-foundation.md) liefert den softwaregeprüften Tab „Garage / Shop" mit striktem Katalog, Slot- und Farbauswahl, provisorischer 3D-Vorschau sowie Freischaltbedingungen und Preisen. Vollständiges Gate, Mutation, Build und unabhängiges Review sind grün. Käufe, Besitz und dauerhaftes Ausrüsten bleiben deaktiviert. Die vollständigen E7-Kriterien, Merge und Bereitstellung bleiben offen.
 
-[E7-02](specs/E7-02-server-inventory-shop.md) ergänzt das Server-Inventar mit atomaren, idempotenten Käufen, die Operator-Gutschrift `admin credit` und den aktiven Kaufknopf der Garage für angemeldete Fahrer. Das Mindestlevel bleibt bis zur Progression ungeprüft (ADR-030). Stand: implementiert und softwaregeprüft (Unit, Integration, E2E im Gastmodus); Merge, Bereitstellung und Henrys Abnahme offen. Ausrüsten nur besessener Items folgt mit #65.
+[E7-02](specs/E7-02-server-inventory-shop.md) ergänzt das Server-Inventar mit atomaren, idempotenten Käufen, die Operator-Gutschrift `admin credit` und den aktiven Kaufknopf der Garage für angemeldete Fahrer. Das Mindestlevel bleibt bis zur Progression ungeprüft (ADR-031). Stand: implementiert und softwaregeprüft (Unit, Integration, E2E im Gastmodus); Merge, Bereitstellung und Henrys Abnahme offen. Ausrüsten nur besessener Items folgt mit #65.
 
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
@@ -202,7 +203,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
 - [ ] Optionale ERG-Workouts (nutzt `ftpW`)
 - [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
-- [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
+- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung vorgeschlagen: kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis und Freigabe offen.
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Installierbare PWA ([E10-09](specs/E10-09-installable-pwa.md), [Issue #88](https://github.com/henrysachs/voltonaut/issues/88))
   - [x] Manifest, Icons, versionierter App-Shell-Cache, kontrolliertes Update und Menü „App" am gebauten Artefakt softwaregeprüft (Offline-Reload, kein Cache für API-Daten).

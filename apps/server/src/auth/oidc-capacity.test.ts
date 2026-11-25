@@ -107,7 +107,11 @@ it("commits bounded expired cleanup despite rejected starts and recovers legacy 
   const context = await setup();
   const client = getDatabase(context.app).$client;
   const userId = crypto.randomUUID();
-  client.prepare("INSERT INTO users VALUES (?, 'legacy@example.com', 0, NULL)").run(userId);
+  client
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, 'legacy@example.com', 0, NULL)",
+    )
+    .run(userId);
 
   const transaction = client.prepare(
     "INSERT INTO oidc_transactions (state_hash, binding_hash, nonce, verifier, expires_at) VALUES (?, 'binding', 'nonce', 'verifier', 0)",

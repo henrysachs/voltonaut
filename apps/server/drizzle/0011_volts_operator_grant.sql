@@ -1,3 +1,17 @@
+CREATE TABLE `inventory` (
+	`user_id` text NOT NULL,
+	`item_id` text NOT NULL,
+	`source` text NOT NULL,
+	`purchase_request_id` text,
+	`acquired_at` integer NOT NULL,
+	PRIMARY KEY(`user_id`, `item_id`),
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "inventory_source" CHECK("inventory"."source" IN ('shop')),
+	CONSTRAINT "inventory_shop_request" CHECK("inventory"."source" <> 'shop' OR "inventory"."purchase_request_id" IS NOT NULL),
+	CONSTRAINT "inventory_acquired_at" CHECK(typeof("inventory"."acquired_at") = 'integer' AND "inventory"."acquired_at" >= 0)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `inventory_owner_purchase_request_unique` ON `inventory` (`user_id`,`purchase_request_id`);--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_volts_ledger` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -34,4 +48,20 @@ CREATE UNIQUE INDEX `volts_ledger_owner_idempotency_unique` ON `volts_ledger` (`
 CREATE UNIQUE INDEX `volts_ledger_ride_start_unique` ON `volts_ledger` (`ref_id`,`start_tick`) WHERE "volts_ledger"."reason" = 'ride_reward';--> statement-breakpoint
 CREATE UNIQUE INDEX `volts_ledger_ride_end_unique` ON `volts_ledger` (`ref_id`,`end_tick`) WHERE "volts_ledger"."reason" = 'ride_reward';--> statement-breakpoint
 CREATE INDEX `volts_ledger_owner_day_reason_idx` ON `volts_ledger` (`user_id`,`reward_day`,`reason`);--> statement-breakpoint
-CREATE INDEX `volts_ledger_owner_created_id_idx` ON `volts_ledger` (`user_id`,`created_at`,`id`);
+CREATE INDEX `volts_ledger_owner_created_id_idx` ON `volts_ledger` (`user_id`,`created_at`,`id`);--> statement-breakpoint
+-- Rebuilding volts_ledger drops its 0010 deletion guards; restore them and guard the new inventory table.
+CREATE TRIGGER `volts_ledger_reject_deleted_owner_insert` BEFORE INSERT ON `volts_ledger`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `volts_ledger_reject_deleted_owner_update` BEFORE UPDATE ON `volts_ledger`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `inventory_reject_deleted_owner_insert` BEFORE INSERT ON `inventory`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `inventory_reject_deleted_owner_update` BEFORE UPDATE ON `inventory`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
