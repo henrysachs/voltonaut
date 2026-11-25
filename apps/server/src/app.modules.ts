@@ -12,12 +12,14 @@ import {
 import { StravaModule } from "./strava/strava.module.js";
 
 const ridesModule = RidesModule.register(ridesTables);
+const stravaModule = StravaModule.register(stravaTables, ridesModule);
 const economyModule = EconomyModule.register(economyTables);
+const progressModule = ProgressModule.register(progressTables, economyModule);
 
 export const applicationModules = [
-  AccountsModule.register(accountsTables),
+  AccountsModule.register(accountsTables, ridesModule, stravaModule, economyModule, progressModule),
   economyModule,
-  ProgressModule.register(progressTables, economyModule),
+  progressModule,
   ridesModule,
-  StravaModule.register(stravaTables, ridesModule),
+  stravaModule,
 ];

@@ -49,6 +49,7 @@ class DeliveryFixture {
 
       return Promise.resolve();
     },
+    purgeOwner: () => Promise.resolve(),
   };
   run(mode: "manual" | "resume" = "resume"): ReturnType<typeof deliverAccountRow> {
     return deliverAccountRow(this.lease, this.database, this.row, () => this.nowMs, mode);

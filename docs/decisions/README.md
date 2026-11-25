@@ -29,3 +29,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [027](ADR-027-server-volts-ledger.md) | Serverseitiges Volts-Journal und gemeinsame Rules-Rechnung | Angenommen für E6-05 |
 | [028](ADR-028-ride-modes-and-fun-items.md) | Spielmodi als Union mit Eigenschaften; Spaß-Modus-Items wirken in Phase 1 nur auf die Fahrphysik, Malus erst nach Freigabe | Vorgeschlagen; Henrys Freigabe für Phase 2 ausstehend |
 | [029](ADR-029-progress-transport-policy.md) | Progress-Transport, Quellenpolitik und UTC-Tagesgrenze | Angenommen für E6-07 bis E6-10 |
+| [030](ADR-030-webgpu-renderer.md) | WebGPU ohne zweites Render-Backend, Ultra zurückgestellt | Vorgeschlagen, Henrys Freigabe ausstehend |

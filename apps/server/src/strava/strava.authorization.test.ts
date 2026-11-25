@@ -78,7 +78,9 @@ it("keeps a later known upload pollable after a day of forged hints", async () =
 
 it("skips a busy oldest hint and proves an eligible second connection", async () => {
   const { a, hints, authorization, peer, grant, config } = await setup();
-  a.db.$client.exec("INSERT INTO users VALUES ('other','other@example.test',0,NULL)");
+  a.db.$client.exec(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('other','other@example.test',0,NULL)",
+  );
   a.db.$client
     .prepare(
       "INSERT INTO strava_connections(user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,generation,authorization_hint_revision,authorization_check_after) VALUES ('other','43','connected',?,999999,'activity:write','other-generation',1,1)",

@@ -49,10 +49,11 @@ export interface ServerConfig {
   readonly http: { readonly host: string; readonly port: number };
 }
 
-export type AuthConfig =
+export type AuthConfig = (
   | { readonly mode: "disabled" }
   | { readonly mode: "magic-link" }
-  | OidcAuthConfig;
+  | OidcAuthConfig
+) & { readonly tombstoneHmacKey: string };
 
 function parseAuthConfig(
   env: Readonly<Record<string, string | undefined>>,
@@ -62,9 +63,23 @@ function parseAuthConfig(
     .enum(["disabled", "magic-link", "oidc"])
     .parse(env["AUTH_MODE"] ?? (nodeEnv === "production" ? undefined : "magic-link"));
 
-  if (mode !== "oidc") return { mode };
+  const configuredKey = env["AUTH_TOMBSTONE_HMAC_KEY"];
 
-  return parseOidcConfig(env, nodeEnv === "development" || nodeEnv === "test");
+  if (nodeEnv === "production" && configuredKey === undefined) {
+    throw new Error("config: AUTH_TOMBSTONE_HMAC_KEY is required in production");
+  }
+
+  const tombstoneHmacKey = z
+    .string()
+    .regex(/^[a-f0-9]{64}$/u, "AUTH_TOMBSTONE_HMAC_KEY must be 64 lowercase hex characters")
+    .parse(configuredKey ?? "0".repeat(64));
+
+  if (mode !== "oidc") return { mode, tombstoneHmacKey };
+
+  return {
+    ...parseOidcConfig(env, nodeEnv === "development" || nodeEnv === "test"),
+    tombstoneHmacKey,
+  };
 }
 
 function envInt(

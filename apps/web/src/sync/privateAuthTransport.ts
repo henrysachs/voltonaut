@@ -1,5 +1,7 @@
-/* oxlint-disable eslint/max-lines -- The private lease keeps every bearer capability behind one generation-checked request boundary. */
 import {
+  AccountDeletionRequestSchema,
+  AccountDeletionResponseSchema,
+  AccountExportSchema,
   ProfileInputSchema,
   ProfileStateSchema,
   ProgressCheckpointBatchSchema,
@@ -24,6 +26,7 @@ import {
   AdminUsersSchema,
   MembershipSchema,
   type AccountStatus,
+  type AccountExport,
   type AdminUsers,
   type Membership,
   type ProfileInput,
@@ -42,22 +45,16 @@ import {
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 import type { ProfileWriteLease } from "./profile-store.js";
+import {
+  PrivateRequestError,
+  authorizedRequest,
+  type LeaseAuthorization,
+} from "./privateAuthRequest.js";
 import { identityLease, type IdentityLease } from "./identityLease.js";
 
-export type SyncFailure =
-  | "reauth"
-  | "forbidden"
-  | "missing"
-  | "conflict"
-  | "contract"
-  | "retry"
-  | "superseded";
+export { PrivateRequestError } from "./privateAuthRequest.js";
 
-export class PrivateRequestError extends Error {
-  constructor(override readonly cause: SyncFailure) {
-    super(cause);
-  }
-}
+export type { SyncFailure } from "./privateAuthRequest.js";
 
 export interface AccountLease extends ProfileWriteLease {
   readonly apiOrigin: string;
@@ -69,6 +66,8 @@ export interface AccountLease extends ProfileWriteLease {
   readonly history: (cursor: string | null) => Promise<RideList>;
   readonly detail: (rideId: string) => Promise<RideDetail>;
   readonly upload: (ride: RideUpload) => Promise<RideReceipt>;
+  readonly exportAccount: () => Promise<AccountExport>;
+  readonly deleteAccount: (confirmation: string) => Promise<void>;
   readonly strava: StravaLease;
   readonly progress: ProgressLease;
   readonly identities: IdentityLease;
@@ -95,35 +94,8 @@ export interface StravaLease {
   readonly upload: (consent: StravaConsent) => Promise<StravaDelivery>;
 }
 
-interface LeaseAuthorization {
-  readonly token: string;
-  readonly userId: string;
-  readonly generation: number;
-  readonly signal: Readonly<AbortSignal>;
-  readonly current: () => boolean;
-}
-
 export interface PrivateAuthTransport {
   readonly authorize: (authorization: LeaseAuthorization) => AccountLease;
-}
-
-function statusFailure(status: number): SyncFailure {
-  switch (status) {
-    case 401:
-      return "reauth";
-    case 403:
-      return "forbidden";
-    case 404:
-      return "missing";
-    case 409:
-      return "conflict";
-    default:
-      return status >= 500 || status === 429 ? "retry" : "contract";
-  }
-}
-
-interface ResponseSchema<T> {
-  readonly parse: (...input: readonly [Parameters<typeof ProfileStateSchema.parse>[0]]) => T;
 }
 
 function progressLease(
@@ -131,8 +103,7 @@ function progressLease(
   generation: number,
 ): ProgressLease {
   return {
-    status: () =>
-      request("/v1/me/progress-consent", ProgressConsentStateSchema, undefined, "omit", "GET"),
+    status: () => request("/v1/me/progress-consent", ProgressConsentStateSchema),
     update: (enabled) =>
       request(
         "/v1/me/progress-consent",
@@ -140,8 +111,6 @@ function progressLease(
         JSON.stringify(
           ProgressConsentUpdateSchema.parse({ enabled, sessionGeneration: generation }),
         ),
-        "omit",
-        "PUT",
       ),
     async submit(batch) {
       const payload = ProgressCheckpointBatchSchema.parse(batch);
@@ -233,6 +202,16 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
             RideListSchema,
           ),
         detail: (rideId) => request(`/v2/rides/${RideIdSchema.parse(rideId)}`, RideDetailSchema),
+        exportAccount: () => request("/v1/me/export", AccountExportSchema),
+        deleteAccount: async (confirmation) => {
+          await request(
+            "/v1/me",
+            AccountDeletionResponseSchema,
+            JSON.stringify(AccountDeletionRequestSchema.parse({ confirmation })),
+            "omit",
+            "DELETE",
+          );
+        },
         async upload(ride) {
           const payload = RideUploadSchema.parse(ride);
           const receipt = await request("/v2/rides", RideReceiptSchema, JSON.stringify(payload));
@@ -265,91 +244,4 @@ function membershipLease(
         JSON.stringify(MembershipSchema.parse(membership)),
       ),
   };
-}
-
-type PrivatePath =
-  | "/v1/me/account-status"
-  | "/v1/admin/users"
-  | `/v1/admin/users?cursor=${string}`
-  | `/v1/admin/users/${string}/membership`
-  | "/v1/me/profile"
-  | "/v1/me/progress-consent"
-  | "/v1/progress/checkpoints"
-  | "/v2/rides"
-  | `/v2/rides?cursor=${string}`
-  | `/v2/rides/${string}`
-  | "/v1/strava/connection"
-  | "/v1/strava/connect-start"
-  | "/v1/strava/confirm"
-  | "/v1/strava/disconnect"
-  | "/v1/auth/identities"
-  | `/v1/auth/oidc/${string}/link`
-  | `/v1/strava/rides/${string}`;
-
-function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization) {
-  return async function request<T>(
-    path: PrivatePath,
-    schema: ResponseSchema<T>,
-    body?: string,
-    credentials: "omit" | "include" = "omit",
-    method?: "GET" | "PUT" | "POST",
-  ): Promise<T> {
-    if (!authorization.current()) throw new PrivateRequestError("superseded");
-
-    try {
-      const response = await fetch(`${apiOrigin}${path}`, {
-        method:
-          method ??
-          (body === undefined
-            ? "GET"
-            : path === "/v1/me/profile" || path === "/v1/me/progress-consent"
-              ? "PUT"
-              : path.startsWith("/v1/admin/users/")
-                ? "PATCH"
-                : "POST"),
-        headers: {
-          Authorization: `Bearer ${authorization.token}`,
-          "Content-Type": "application/json",
-        },
-        body: body ?? null,
-        signal: AbortSignal.any([authorization.signal, AbortSignal.timeout(8000)]),
-        cache: "no-store",
-        credentials,
-        redirect: "error",
-      });
-
-      if (!authorization.current()) throw new PrivateRequestError("superseded");
-
-      const value = await parseResponse(response, schema);
-
-      if (!authorization.current()) throw new PrivateRequestError("superseded");
-
-      return value;
-    } catch (error) {
-      if (!authorization.current()) throw new PrivateRequestError("superseded");
-      throw error instanceof PrivateRequestError ? error : new PrivateRequestError("retry");
-    }
-  };
-}
-
-async function parseResponse<T>(
-  response: Readonly<Pick<Response, "status" | "json">> & {
-    readonly headers: Readonly<Pick<Headers, "get">>;
-  },
-  schema: ResponseSchema<T>,
-): Promise<T> {
-  if (response.status !== 200) throw new PrivateRequestError(statusFailure(response.status));
-
-  if (
-    response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json"
-  )
-    throw new PrivateRequestError("contract");
-
-  try {
-    const raw: unknown = await response.json();
-
-    return schema.parse(raw);
-  } catch {
-    throw new PrivateRequestError("contract");
-  }
 }

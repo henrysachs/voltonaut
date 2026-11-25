@@ -71,6 +71,14 @@ export class ProgressRangeStore {
     }
   }
 
+  public rangeFacts(range: Readonly<RideProgressRangeRow>): RewardFacts {
+    try {
+      return RewardFactsSchema.parse(JSON.parse(range.cumulativeFactsJson));
+    } catch {
+      throw progressError(500, "internal_error", "corrupt progress range facts");
+    }
+  }
+
   public payload(range: Readonly<RideProgressRangeRow>): ProgressCheckpointBatch {
     try {
       return ProgressCheckpointBatchSchema.parse(JSON.parse(range.payloadJson));

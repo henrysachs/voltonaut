@@ -77,4 +77,27 @@ CREATE TABLE `ride_progress_ranges` (
 CREATE UNIQUE INDEX `ride_progress_ranges_journal_start_unique` ON `ride_progress_ranges` (`journal_id`,`start_tick`);--> statement-breakpoint
 CREATE UNIQUE INDEX `ride_progress_ranges_journal_end_unique` ON `ride_progress_ranges` (`journal_id`,`end_tick`);--> statement-breakpoint
 CREATE INDEX `ride_progress_ranges_owner_created_id_idx` ON `ride_progress_ranges` (`user_id`,`created_at`,`id`);--> statement-breakpoint
-CREATE INDEX `ride_progress_ranges_owner_journal_idx` ON `ride_progress_ranges` (`user_id`,`journal_id`,`start_tick`);
+CREATE INDEX `ride_progress_ranges_owner_journal_idx` ON `ride_progress_ranges` (`user_id`,`journal_id`,`start_tick`);--> statement-breakpoint
+CREATE TRIGGER `progress_consents_reject_deleted_owner_insert` BEFORE INSERT ON `progress_consents`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `progress_consents_reject_deleted_owner_update` BEFORE UPDATE ON `progress_consents`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `ride_progress_journals_reject_deleted_owner_insert` BEFORE INSERT ON `ride_progress_journals`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `ride_progress_journals_reject_deleted_owner_update` BEFORE UPDATE ON `ride_progress_journals`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `ride_progress_ranges_reject_deleted_owner_insert` BEFORE INSERT ON `ride_progress_ranges`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `ride_progress_ranges_reject_deleted_owner_update` BEFORE UPDATE ON `ride_progress_ranges`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;

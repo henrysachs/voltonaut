@@ -4,7 +4,14 @@ const releases = new Map<string, () => Promise<void>>();
 
 export function holdDatabase(name: "voltonaut" | "voltonaut-account-outbox"): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(name, 1);
+    const request = indexedDB.open(name, name === "voltonaut" ? 1 : 2);
+    request.addEventListener("upgradeneeded", () => {
+      if (name === "voltonaut") request.result.createObjectStore("profile");
+      else {
+        request.result.createObjectStore("outbox");
+        request.result.createObjectStore("deleted-owners");
+      }
+    });
     request.addEventListener("error", () => {
       reject(new Error("Native lock setup failed"));
     });
@@ -106,7 +113,7 @@ export async function corruptOutbox(owner: PendingInput): Promise<void> {
   await queuePending(owner);
   const row = newOutboxRow(owner, DEFAULT_RIDER_PROFILE, Date.now());
   await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open("voltonaut-account-outbox", 1);
+    const request = indexedDB.open("voltonaut-account-outbox", 2);
     request.addEventListener("success", () => {
       const database = request.result;
       const transaction = database.transaction("outbox", "readwrite");

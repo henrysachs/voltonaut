@@ -1,24 +1,30 @@
-import { archivedRideTrack, RideUploadSchema, type ArchivedRide } from "@voltonaut/shared";
+import type { AccountExport, ArchivedRide } from "@voltonaut/shared";
 
 import {
   historyCursor,
   initialAccountData,
-  loadedOutbox,
-  localArchiveView,
   profileApplicationMessage,
   type AccountDataView,
   type SyncOptions,
 } from "./accountDataView.js";
-import {
-  newOutboxRow,
-  type AccountOutbox,
-  type OutboxRead,
-  type OutboxRow,
-} from "./accountOutbox.js";
+import { type AccountOutbox, type OutboxRead, type OutboxRow } from "./accountOutbox.js";
 import { deliverAccountRow } from "./accountDelivery.js";
 import { applyAccountProfile } from "./accountProfile.js";
 import type { AccountLease } from "./privateAuthTransport.js";
 import { AccountAdministration } from "./accountAdministration.js";
+import {
+  deleteAccountData,
+  exportAccountData,
+  recoverAccountDeletions,
+} from "./accountDeletionSync.js";
+import {
+  claimArchivedRide,
+  loadHistory,
+  loadIdentities,
+  loadLocalArchive,
+  loadOutboxRows,
+  queueLocalProfile,
+} from "./accountSyncLoading.js";
 
 export class AccountSync {
   readonly administration = new AccountAdministration();
@@ -33,6 +39,9 @@ export class AccountSync {
 
   constructor(options: SyncOptions) {
     this.#options = options;
+    void recoverAccountDeletions(this.#options, (view) => {
+      if (this.#view.kind === "guest") this.publish(view);
+    });
     options.session.subscribe((view) => {
       const lease = view.kind === "authenticated" ? options.session.authorize() : undefined;
       this.#lease = lease;
@@ -78,13 +87,44 @@ export class AccountSync {
       this.publish({ ...this.#view, ...patch });
   }
 
+  exportAccount(): Promise<AccountExport | undefined> {
+    return exportAccountData(this.#lease, (lease, message) => {
+      this.patch(lease, { message });
+    });
+  }
+
+  deleteAccount(confirmation: string): Promise<boolean> {
+    return deleteAccountData(
+      this.#lease,
+      confirmation,
+      this.#options,
+      (view) => {
+        this.publish(view);
+      },
+      (lease, message) => {
+        this.patch(lease, { message });
+      },
+    );
+  }
+
+  async recoverDeletions(): Promise<void> {
+    await recoverAccountDeletions(this.#options, (view) => {
+      if (this.#view.kind === "guest") this.publish(view);
+    });
+  }
+
   async refresh(): Promise<void> {
     const lease = this.#lease;
 
     if (lease === undefined) return;
     await Promise.all([
       this.loadProfile(lease),
-      this.loadHistory(lease, null),
+      loadIdentities(lease, (current, patch) => {
+        this.patch(current, patch);
+      }),
+      loadHistory(lease, null, (current, patch) => {
+        this.patch(current, patch);
+      }),
       this.loadLocal(lease),
       this.loadRows(lease),
     ]);
@@ -98,91 +138,52 @@ export class AccountSync {
     }
   }
 
-  private async loadHistory(lease: AccountLease, cursor: string | null): Promise<void> {
-    try {
-      const value = await lease.history(cursor);
-      this.patch(lease, { history: { kind: "ready", value } });
-    } catch {
-      this.patch(lease, { history: { kind: "failed" } });
-    }
-  }
-
   async nextHistory(): Promise<void> {
     const lease = this.#lease;
     const cursor = historyCursor(this.#view);
 
-    if (lease !== undefined && cursor !== null) await this.loadHistory(lease, cursor);
+    if (lease !== undefined && cursor !== null)
+      await loadHistory(lease, cursor, (current, patch) => {
+        this.patch(current, patch);
+      });
   }
 
   private async loadLocal(lease: AccountLease): Promise<void> {
-    try {
-      const archive = await this.#options.archive();
+    const archive = await loadLocalArchive(lease, this.#options.archive, (current, patch) => {
+      this.patch(current, patch);
+    });
 
-      if (!lease.current()) return;
-      this.#archive = archive;
-      this.patch(lease, { local: localArchiveView(archive) });
-    } catch {
-      this.patch(lease, {
-        message: "Lokales Archiv nicht verfügbar. Aufnahme und TCX bleiben unabhängig.",
-      });
-    }
+    if (archive !== undefined) this.#archive = archive;
   }
 
-  private async loadRows(lease: AccountLease): Promise<OutboxRead> {
-    this.patch(lease, { outbox: { kind: "loading" } });
-
-    try {
-      const rows = await (await this.#options.outbox()).list(lease);
-
-      this.patch(lease, { outbox: loadedOutbox(rows) });
-
-      return { kind: "ready", rows };
-    } catch {
-      this.patch(lease, {
-        outbox: { kind: "failed" },
-        message:
-          "Kontowarteschlange nicht verfügbar. Neue Aufträge sind nicht dauerhaft vorgemerkt.",
-      });
-
-      return { kind: "failed" };
-    }
+  private loadRows(lease: AccountLease): Promise<OutboxRead> {
+    return loadOutboxRows(lease, this.#options.outbox, (current, patch) => {
+      this.patch(current, patch);
+    });
   }
 
   async claim(rideId: string): Promise<void> {
     const lease = this.#lease;
 
     if (lease === undefined) return;
-    const ride = this.#archive.find((item) => archivedRideTrack(item).rideId === rideId);
-
-    if (ride === undefined || ride.kind === "local_only") return;
-    await this.queue(
-      lease,
-      newOutboxRow(lease, RideUploadSchema.parse(ride.recording), this.#options.nowMs()),
-    );
+    await claimArchivedRide(lease, this.#archive, rideId, this.#options.nowMs, (current, row) => {
+      return this.queue(current, row);
+    });
   }
 
   async queueProfile(): Promise<void> {
     const lease = this.#lease;
 
     if (lease === undefined) return;
-
-    try {
-      const profile = await this.#options.profile.saved();
-
-      if (!lease.current()) return;
-
-      if (profile === undefined) {
-        this.patch(lease, {
-          message: "Noch kein lokal gespeichertes Profil. Zuerst das Profilformular speichern.",
-        });
-
-        return;
-      }
-
-      await this.queue(lease, newOutboxRow(lease, profile, this.#options.nowMs()));
-    } catch {
-      this.patch(lease, { message: "Lokales Profil nicht lesbar. Nicht vorgemerkt." });
-    }
+    await queueLocalProfile(
+      lease,
+      this.#options.profile.saved,
+      this.#options.nowMs,
+      (current, row) => this.queue(current, row),
+      (current, patch) => {
+        this.patch(current, patch);
+      },
+    );
   }
 
   private async queue(lease: AccountLease, row: OutboxRow): Promise<void> {
@@ -256,7 +257,12 @@ export class AccountSync {
       await this.deliverNext(lease, database, rows, 0, mode);
 
       if (lease.current())
-        await Promise.all([this.loadProfile(lease), this.loadHistory(lease, null)]);
+        await Promise.all([
+          this.loadProfile(lease),
+          loadHistory(lease, null, (current, patch) => {
+            this.patch(current, patch);
+          }),
+        ]);
     } catch {
       this.patch(lease, {
         message: "Speicheränderung nicht bestätigt. Bitte später aktualisieren.",

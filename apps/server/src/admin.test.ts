@@ -61,7 +61,11 @@ it("runs the compiled production entrypoint without HTTP or scheduler and grants
   const path = join(directory, "operator.db");
   const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
   const db = createDatabase(config);
-  db.$client.prepare("INSERT INTO users VALUES ('existing','operator@example.com',123,NULL)").run();
+  db.$client
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing','operator@example.com',123,NULL)",
+    )
+    .run();
   db.$client.prepare("INSERT INTO account_status VALUES ('existing','pro',1,'user')").run();
   db.$client.close();
   const listed = await cli(path, "admin", "list");

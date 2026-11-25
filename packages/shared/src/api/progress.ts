@@ -1,8 +1,10 @@
 import { z } from "zod";
 
-import { VoltsRideRangeReceiptSchema } from "../economy.js";
+import { JournalIdSchema, VoltsRewardDaySchema, VoltsRideRangeReceiptSchema } from "../economy.js";
+import { RewardFactsSchema } from "../rewards.js";
 import {
   RideProgressCheckpointSchema,
+  RideProgressPhysicsSchema,
   type RideProgressCheckpoint,
   type RideProgressMetadata,
 } from "../rideProgress.js";
@@ -148,6 +150,68 @@ export const ProgressRangeResponseSchema = z
   .object({ range: VoltsRideRangeReceiptSchema })
   .strict()
   .readonly();
+
+const exportedAt = z.string().datetime({ precision: 3 });
+const safeInteger = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const exportRevision = z.string().min(1).max(100);
+
+/** Server-stored progress data of one account; session bindings stay internal. */
+export const ProgressAccountExportSchema = z
+  .object({
+    consent: z.discriminatedUnion("status", [
+      z.object({ status: z.literal("missing") }).strict(),
+      z
+        .object({
+          status: z.literal("present"),
+          version: safeInteger,
+          enabled: z.boolean(),
+          sessionGeneration: ProgressSessionGenerationSchema,
+          updatedAt: exportedAt,
+        })
+        .strict(),
+    ]),
+    journals: z.array(
+      z
+        .object({
+          journalId: JournalIdSchema,
+          sessionGeneration: ProgressSessionGenerationSchema,
+          consentVersion: safeInteger.positive(),
+          source: z.literal("ble"),
+          clockScale: z.literal(1),
+          physicsRevision: exportRevision,
+          routeId: exportRevision,
+          routeRevision: exportRevision,
+          physics: RideProgressPhysicsSchema,
+          startedAtMs: safeInteger,
+          lastEndTick: safeInteger,
+          lastSequence: safeInteger,
+          lastEndedAtMs: safeInteger,
+          lastRewardDay: VoltsRewardDaySchema,
+          cumulativeFacts: RewardFactsSchema,
+          createdAt: exportedAt,
+        })
+        .strict(),
+    ),
+    ranges: z.array(
+      z
+        .object({
+          id: z.string().uuid(),
+          journalId: JournalIdSchema,
+          startTick: safeInteger,
+          endTick: safeInteger,
+          payloadHash: z.string().regex(/^[a-f0-9]{64}$/u),
+          payload: ProgressCheckpointBatchSchema,
+          cumulativeFacts: RewardFactsSchema,
+          receipt: VoltsRideRangeReceiptSchema,
+          createdAt: exportedAt,
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+  .readonly();
+
+export type ProgressAccountExport = z.infer<typeof ProgressAccountExportSchema>;
 
 export type ProgressSessionGeneration = z.infer<typeof ProgressSessionGenerationSchema>;
 

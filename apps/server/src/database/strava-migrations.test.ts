@@ -11,11 +11,11 @@ import { legacyFolder } from "./strava-migrations.spec.js";
 
 function legacyAuth(client: Readonly<Database.Database>) {
   client.exec(
-    "INSERT INTO users VALUES ('existing', 'existing@example.com', 123, NULL); INSERT INTO sessions VALUES ('existing-session', 'existing', 123, 123, 9999999999999, NULL)",
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing', 'existing@example.com', 123, NULL); INSERT INTO sessions VALUES ('existing-session', 'existing', 123, 123, 9999999999999, NULL)",
   );
 
   return {
-    users: client.prepare("SELECT * FROM users").all(),
+    users: client.prepare("SELECT id, email, created_at, deleted_at FROM users").all(),
     sessions: client.prepare("SELECT * FROM sessions").all(),
   };
 }
@@ -34,9 +34,11 @@ it.each([1, 2, 3])(
       client.close();
       const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
       const db = createDatabase(config);
-      expect(db.$client.prepare("SELECT * FROM users").all()).toEqual(auth.users);
+      expect(
+        db.$client.prepare("SELECT id, email, created_at, deleted_at FROM users").all(),
+      ).toEqual(auth.users);
       expect(db.$client.prepare("SELECT * FROM sessions").all()).toEqual(auth.sessions);
-      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(11);
+      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(12);
       expect(db.$client.prepare("PRAGMA foreign_key_list(strava_connections)").all()).toMatchObject(
         [{ table: "users", from: "user_id", to: "id" }],
       );
@@ -76,7 +78,7 @@ it("keeps existing profiles and rides byte-identical across the additive migrati
     const client = new Database(path);
     migrate(drizzle(client), { migrationsFolder: legacyFolder(directory, 3) });
     client.exec(
-      "INSERT INTO users VALUES ('existing', 'existing@example.com', 123, NULL); INSERT INTO profiles VALUES ('existing', '{\"displayName\":\"unchanged\"}', 123); INSERT INTO rides VALUES ('legacy-ride', 'existing', '{}', 'hash', '{}', '{}', '2026-11-20T00:00:00.000Z', 0, 1000, 0, 'sim')",
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing', 'existing@example.com', 123, NULL); INSERT INTO profiles VALUES ('existing', '{\"displayName\":\"unchanged\"}', 123); INSERT INTO rides VALUES ('legacy-ride', 'existing', '{}', 'hash', '{}', '{}', '2026-11-20T00:00:00.000Z', 0, 1000, 0, 'sim')",
     );
 
     const before = {

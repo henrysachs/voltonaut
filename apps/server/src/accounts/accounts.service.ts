@@ -112,6 +112,14 @@ export class AccountsService {
     );
   }
 
+  public deleteOwn(userId: string): void {
+    this.db.delete(this.tables.profiles).where(eq(this.tables.profiles.userId, userId)).run();
+    this.db
+      .delete(this.tables.accountStatus)
+      .where(eq(this.tables.accountStatus.userId, userId))
+      .run();
+  }
+
   public setRole(userId: string, authorization: Readonly<Authorization>): AccountStatus {
     return this.db.transaction(
       () => {

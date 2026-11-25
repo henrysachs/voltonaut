@@ -137,7 +137,13 @@ export class OidcService {
 
     const { requireEmailVerified } = provider;
     const grant = { identity, requireEmailVerified, transaction, code };
-    replaceTransactionByHandoff(this.db, this.auth, grant, nowMs);
+    replaceTransactionByHandoff(
+      this.db,
+      this.auth,
+      grant,
+      nowMs,
+      this.config.auth.tombstoneHmacKey,
+    );
 
     return this.finishUrl("code", code);
   }

@@ -21,7 +21,7 @@ export const NativeTickFactsSchema = z
 
 export type NativeTickFacts = z.infer<typeof NativeTickFactsSchema>;
 
-const physicsSchema = z
+export const RideProgressPhysicsSchema = z
   .object({
     massKg: finite.positive(),
     bikeMassKg: nonnegative,
@@ -50,7 +50,7 @@ const progressFields = {
   physicsRevision: revision,
   routeId: revision,
   routeRevision: revision,
-  physics: physicsSchema,
+  physics: RideProgressPhysicsSchema,
   facts: z.array(NativeTickFactsSchema).max(120).readonly(),
   quality: qualitySchema,
 };

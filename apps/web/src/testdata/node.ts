@@ -7,6 +7,10 @@ export interface TestNodeView {
 export class TestElement {
   textContent = "";
   value = "";
+  checked = false;
+  type = "";
+  required = false;
+  autocomplete = "";
   id = "";
   hidden = false;
   disabled = false;
@@ -27,6 +31,9 @@ export class TestElement {
   }
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
+  }
+  getAttribute(name: string): string | undefined {
+    return this.attributes.get(name);
   }
   addEventListener(name: string, listener: () => void): void {
     const listeners = this.listeners.get(name) ?? [];

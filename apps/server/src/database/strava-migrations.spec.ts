@@ -33,7 +33,7 @@ export function legacyStrava(
   const previous = new Database(join(directory, "existing.db"));
   migrate(drizzle(previous), { migrationsFolder: legacyFolder(directory, 5) });
   previous.exec(
-    "INSERT INTO users VALUES ('first', 'first@example.test', 123, NULL), ('second', 'second@example.test', 123, NULL)",
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('first', 'first@example.test', 123, NULL), ('second', 'second@example.test', 123, NULL)",
   );
 
   for (const { userId, athleteId } of [

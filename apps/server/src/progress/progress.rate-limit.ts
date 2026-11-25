@@ -1,4 +1,5 @@
-import { ThrottlerGuard } from "@nestjs/throttler";
+import type { DynamicModule } from "@nestjs/common";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { ApiError } from "../api-error.js";
 import type { ExecutionContextPort, ThrottleDetailPort } from "../api-error.js";
@@ -14,6 +15,17 @@ export function progressCheckpointTracker(request: TrackerRequest): string {
   }
 
   return request.session.userId;
+}
+
+export function progressCheckpointThrottlerModule(): DynamicModule {
+  return ThrottlerModule.forRoot([
+    {
+      name: PROGRESS_CHECKPOINT_THROTTLER,
+      limit: PROGRESS_CHECKPOINT_LIMIT,
+      ttl: PROGRESS_CHECKPOINT_TTL_MS,
+      getTracker: progressCheckpointTracker,
+    },
+  ]);
 }
 
 export class ProgressCheckpointRateLimitGuard extends ThrottlerGuard {

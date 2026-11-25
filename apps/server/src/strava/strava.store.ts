@@ -93,6 +93,17 @@ export class StravaStore {
     this.db.delete(table).where(eq(table.stateHash, stateHash)).run();
   }
 
+  public deleteOwn(userId: string): void {
+    const { transactions, connections } = this.tables;
+    this.db.transaction(
+      () => {
+        this.db.delete(transactions).where(eq(transactions.userId, userId)).run();
+        this.db.delete(connections).where(eq(connections.userId, userId)).run();
+      },
+      { behavior: "immediate" },
+    );
+  }
+
   public pending(stateHash: string, connection: NewConnection, nowMs: number): void {
     const { transactions, connections } = this.tables;
     this.db.transaction(
