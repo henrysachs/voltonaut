@@ -181,6 +181,17 @@ const ALLOY: WheelSpec = {
 export const WHEEL_SPECS = [
   ALLOY,
   {
+    // Season 01 „Winterblitz“ reward: deep icy-white carbon rims.
+    key: "season-01",
+    rimDepthM: 0.05,
+    rimHalfWidthM: 0.0135,
+    spokeCount: 20,
+    rearDisc: false,
+    rimColor: 0xe6eef2,
+    rimMetalness: 0.2,
+    rimRoughness: 0.28,
+  },
+  {
     key: "carbon-flat",
     rimDepthM: 0.04,
     rimHalfWidthM: 0.013,

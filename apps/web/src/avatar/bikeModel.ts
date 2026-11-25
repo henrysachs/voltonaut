@@ -117,15 +117,21 @@ export class BikeModel {
     this.parts = assembleBike(this.geometryValue, this.materialOf);
     this.root.add(this.parts.root);
     this.setMotion(crankRad, wheelRad);
+    this.applyFinishes();
 
     return true;
   }
 
   /** Applies the colourable paint plus the finishes that come with the current specs. */
   setColors(frameColor: string): void {
+    this.materials.paint.color.set(frameColor);
+    this.applyFinishes();
+  }
+
+  /** Spec-owned finishes; a variant switch applies them without touching the paint. */
+  private applyFinishes(): void {
     const { frame, wheel } = this.geometryValue;
 
-    this.materials.paint.color.set(frameColor);
     this.materials.accent.color.setHex(frame.decalColor);
     this.materials.sidewall.color.setHex(frame.tireSidewallColor);
     this.materials.rim.color.setHex(wheel.rimColor);

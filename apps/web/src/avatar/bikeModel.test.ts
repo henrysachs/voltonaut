@@ -103,6 +103,22 @@ describe("procedural road bike customisation", () => {
     expect(bike.geometry.frame.key).toBe("aero");
     expect(bike.crank.rotation.z).toBeCloseTo(-0.7);
   });
+});
+
+describe("procedural road bike variant finishes", () => {
+  it("applies the new spec finishes on a variant switch and keeps the paint", () => {
+    const bike = new BikeModel(2.105);
+
+    bike.setColors("#336699");
+    bike.setVariant(
+      frameSpecFor("procedural://bike/frame/gravel"),
+      wheelSpecFor("procedural://bike/wheels/carbon-flat"),
+    );
+
+    expect(material(bike, "frame-paint").color.getHexString()).toBe("336699");
+    expect(material(bike, "wheel_front-sidewall").color.getHex()).toBe(0x8a5a32);
+    expect(material(bike, "wheel_front-rim").roughness).toBe(0.42);
+  });
 
   it("applies the frame colour and the finishes of the selected specs", () => {
     const bike = new BikeModel(

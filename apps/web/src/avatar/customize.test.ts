@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 
-import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
+import { DEFAULT_AVATAR_CONFIG, SEASON_AVATAR_ITEMS, START_AVATAR_CATALOG } from "@voltonaut/rules";
 import { AvatarConfigSchema } from "@voltonaut/shared";
 
 import { bikeGeometry, pedalPoint } from "./bikeGeometry.js";
 import { DEFAULT_FRAME_SPEC, DEFAULT_WHEEL_SPEC } from "./bikeSpecs.js";
 import { createAvatarPreview } from "./customize.js";
+
+const AVATAR_ITEMS = [...START_AVATAR_CATALOG, ...SEASON_AVATAR_ITEMS];
+const FRAME_ITEMS = AVATAR_ITEMS.filter((item) => item.slot === "frame");
+const WHEEL_ITEMS = AVATAR_ITEMS.filter((item) => item.slot === "wheels");
 
 function meshByName(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three owns the mutable scene graph inspected by this test helper.
@@ -64,6 +68,55 @@ describe("avatar preview model", () => {
       });
       expect(meshByName(preview.root, "jersey-accent").scale.x).toBe(0.152);
       expect(accent.roughness).toBe(0.85);
+    } finally {
+      preview.dispose();
+    }
+  });
+});
+
+function triangleCount(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three geometries are mutable library objects only inspected here.
+  geometry: Readonly<THREE.BufferGeometry>,
+): number {
+  return (geometry.index?.count ?? geometry.getAttribute("position").count) / 3;
+}
+
+function sceneTriangles(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three owns the mutable scene graph inspected by this test helper.
+  root: Readonly<THREE.Group>,
+): number {
+  let count = 0;
+
+  root.traverse(
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three invokes traversal with its mutable Object3D contract.
+    (object) => {
+      if (object instanceof THREE.Mesh && object.visible) {
+        const geometry: unknown = object.geometry;
+
+        if (geometry instanceof THREE.BufferGeometry) count += triangleCount(geometry);
+      }
+    },
+  );
+
+  return count;
+}
+
+describe("avatar preview budget", () => {
+  it("keeps rider and bike within the docs/04 §11 triangle budget for every variant", () => {
+    const preview = createAvatarPreview(2.105);
+
+    try {
+      for (const frame of FRAME_ITEMS) {
+        for (const wheels of WHEEL_ITEMS) {
+          preview.setLook(
+            AvatarConfigSchema.parse({
+              ...DEFAULT_AVATAR_CONFIG,
+              bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId: frame.id, wheelsId: wheels.id },
+            }),
+          );
+          expect(sceneTriangles(preview.root)).toBeLessThanOrEqual(32_000);
+        }
+      }
     } finally {
       preview.dispose();
     }

@@ -1,4 +1,4 @@
-import { START_AVATAR_CATALOG } from "@voltonaut/rules";
+import { SEASON_AVATAR_ITEMS, START_AVATAR_CATALOG } from "@voltonaut/rules";
 import type { AvatarConfig, ItemDef } from "@voltonaut/shared";
 
 import { frameSpecFor, wheelSpecFor, type FrameSpec, type WheelSpec } from "./bikeSpecs.js";
@@ -12,6 +12,11 @@ export interface AvatarLook {
   readonly jerseyAccentRoughness: number;
 }
 
+const AVATAR_ITEMS: readonly Readonly<ItemDef>[] = [
+  ...START_AVATAR_CATALOG,
+  ...SEASON_AVATAR_ITEMS,
+];
+
 function assetRefOf(itemId: string, catalog: readonly Readonly<ItemDef>[]): string | undefined {
   return catalog.find((item) => item.id === itemId)?.assetRef;
 }
@@ -19,7 +24,7 @@ function assetRefOf(itemId: string, catalog: readonly Readonly<ItemDef>[]): stri
 /** Resolves catalog items to render specs through their `assetRef`; unknown items fall back to defaults. */
 export function avatarLook(
   config: Readonly<AvatarConfig>,
-  catalog: readonly Readonly<ItemDef>[] = START_AVATAR_CATALOG,
+  catalog: readonly Readonly<ItemDef>[] = AVATAR_ITEMS,
 ): AvatarLook {
   return {
     frame: frameSpecFor(assetRefOf(config.bike.frameId, catalog)),

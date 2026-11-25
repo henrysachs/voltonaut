@@ -213,10 +213,9 @@ export function mergeGeometries(
     copyAttribute(positions, geometry.getAttribute("position"), offset);
     copyAttribute(normals, geometry.getAttribute("normal"), offset);
     offset += geometry.getAttribute("position").count;
-    geometry.dispose();
   }
 
-  for (const geometry of geometries) geometry.dispose();
+  for (const geometry of new Set([...flat, ...geometries])) geometry.dispose();
 
   const merged = new THREE.BufferGeometry();
 

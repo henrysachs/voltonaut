@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_AVATAR_CONFIG, START_AVATAR_CATALOG } from "@voltonaut/rules";
+import { DEFAULT_AVATAR_CONFIG, SEASON_AVATAR_ITEMS, START_AVATAR_CATALOG } from "@voltonaut/rules";
 import { AvatarConfigSchema, type ItemDef } from "@voltonaut/shared";
 
 import { FRAME_SPECS, WHEEL_SPECS } from "./bikeSpecs.js";
@@ -45,8 +45,10 @@ describe("procedural avatar look", () => {
   });
 });
 
-const FRAME_ITEMS = START_AVATAR_CATALOG.filter((item) => item.slot === "frame");
-const WHEEL_ITEMS = START_AVATAR_CATALOG.filter((item) => item.slot === "wheels");
+// Every catalog that can reach the garage, so a new frame or wheel item cannot silently render as the fallback.
+const ALL_ITEMS = [...START_AVATAR_CATALOG, ...SEASON_AVATAR_ITEMS];
+const FRAME_ITEMS = ALL_ITEMS.filter((item) => item.slot === "frame");
+const WHEEL_ITEMS = ALL_ITEMS.filter((item) => item.slot === "wheels");
 
 function specKeyOf(assetRef: string): string {
   return assetRef.slice(assetRef.lastIndexOf("/") + 1);

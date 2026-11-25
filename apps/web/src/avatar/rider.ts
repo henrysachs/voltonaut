@@ -12,8 +12,10 @@ import { placeTube, poseLegs, solveTwoBone, type Point3, type RiderLeg } from ".
 
 const TORSO_M = 0.58;
 const TORSO_RAD = (38 * Math.PI) / 180;
-const UPPER_ARM_M = 0.29;
-const FOREARM_M = 0.3;
+
+// Long enough to keep a slight elbow bend on the longest-reach frame (aero).
+export const UPPER_ARM_M = 0.31;
+export const FOREARM_M = 0.31;
 
 export interface RiderModel {
   readonly root: THREE.Group;
@@ -48,6 +50,30 @@ export function torsoPoints(geometry: Readonly<BikeGeometry>): TorsoPoints {
     pelvis,
     neck: offset(pelvis, Math.cos(TORSO_RAD) * TORSO_M, Math.sin(TORSO_RAD) * TORSO_M),
   };
+}
+
+/** Arm chain from the shoulder to the hand resting on the hood grip of one side. */
+export interface ArmPose {
+  readonly shoulder: Point3;
+  readonly elbow: Point3;
+  readonly wrist: Point3;
+  readonly grip: Point3;
+}
+
+export function armPose(geometry: Readonly<BikeGeometry>, side: 1 | -1): ArmPose {
+  const { neck } = torsoPoints(geometry);
+  const shoulder = offset(neck, -0.04, -0.035, side * 0.165);
+
+  const grip: Point3 = [
+    geometry.hoodGrip[0],
+    geometry.hoodGrip[1] + 0.012,
+    side * geometry.hoodGrip[2],
+  ];
+
+  const wrist = offset(grip, -0.035, 0.018);
+  const elbow = solveTwoBone(shoulder, wrist, UPPER_ARM_M, FOREARM_M, [-0.35, -1, side * 0.6]);
+
+  return { shoulder, elbow, wrist, grip };
 }
 
 class Bicycle implements RiderModel {
@@ -165,21 +191,7 @@ class Bicycle implements RiderModel {
     this.helmetShell.rotation.z = -0.25;
 
     for (const arm of this.arms) {
-      const shoulder = offset(neck, -0.04, -0.035, arm.side * 0.165);
-
-      const grip: Point3 = [
-        geometry.hoodGrip[0],
-        geometry.hoodGrip[1] + 0.012,
-        arm.side * geometry.hoodGrip[2],
-      ];
-
-      const wrist = offset(grip, -0.035, 0.018);
-
-      const elbow = solveTwoBone(shoulder, wrist, UPPER_ARM_M, FOREARM_M, [
-        -0.35,
-        -1,
-        arm.side * 0.6,
-      ]);
+      const { shoulder, elbow, wrist, grip } = armPose(geometry, arm.side);
 
       placeTube(arm.upper, shoulder, elbow, 0.047);
       placeTube(arm.lower, elbow, wrist, 0.035);
