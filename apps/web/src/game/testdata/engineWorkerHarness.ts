@@ -1,10 +1,7 @@
-import { expect } from "vitest";
-
 import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
 
 import {
   bindEngineWorker,
-  WAKE_INTERVAL_MS,
   type EngineWorkerRequest,
   type EngineWorkerResponse,
   type WorkerScopeLike,
@@ -12,6 +9,7 @@ import {
 import type { RideInit } from "../recordedRide.js";
 import type { CaptureCommand } from "../rideCaptureProtocol.js";
 import { FIRST_RIDE_ID } from "./recordedRideHarness.js";
+import { createFakeTimers, createManualClock } from "./workerClock.js";
 
 type EngineUpdate = Extract<EngineWorkerResponse, { readonly type: "engine.update" }>;
 
@@ -34,40 +32,6 @@ function createFakeScope() {
     send: (message: EngineWorkerRequest) => {
       handler?.({ data: message });
     },
-  };
-}
-
-function createManualClock(startMs: number) {
-  let now = startMs;
-
-  return {
-    nowMs: () => now,
-    advanceMs: (deltaMs: number) => {
-      now += deltaMs;
-    },
-  };
-}
-
-function createFakeTimers() {
-  const handlers = new Map<number, () => void>();
-  let nextId = 1;
-
-  return {
-    schedule: (handler: () => void, intervalMs: number): number => {
-      expect(intervalMs).toBe(WAKE_INTERVAL_MS);
-      const id = nextId;
-      nextId += 1;
-      handlers.set(id, handler);
-
-      return id;
-    },
-    cancel: (id: number) => {
-      handlers.delete(id);
-    },
-    tick: () => {
-      for (const handler of handlers.values()) handler();
-    },
-    active: () => handlers.size,
   };
 }
 

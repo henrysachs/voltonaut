@@ -7,6 +7,7 @@ import {
   type RideUpdate,
 } from "../recordedRide.js";
 import type { CaptureCommand, CaptureResult } from "../rideCaptureProtocol.js";
+import { createManualClock } from "./workerClock.js";
 
 export const FIRST_RIDE_ID = "550e8400-e29b-41d4-a716-446655440000";
 export const SECOND_RIDE_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -62,9 +63,9 @@ function captureCommands(ride: RecordedRide, nowMs: () => number) {
 
 /** Drives one recorded ride directly with a manual worker clock. */
 export function createRideHarness(options: RideHarnessOptions = {}) {
-  let atMs = options.startMs ?? 0;
-  const nowMs = () => atMs;
-  const started = startHarnessRide(options, atMs);
+  const clock = createManualClock(options.startMs ?? 0);
+  const { nowMs } = clock;
+  const started = startHarnessRide(options, nowMs());
   const { ride } = started;
   const updates: RideUpdate[] = [started.update];
 
@@ -74,19 +75,17 @@ export function createRideHarness(options: RideHarnessOptions = {}) {
     nowMs,
     ...captureCommands(ride, nowMs),
     latest: (): RideUpdate => updates.at(-1) ?? started.update,
-    elapse: (elapsedMs: number) => {
-      atMs += elapsedMs;
-    },
+    elapse: clock.advanceMs,
     advanceTo: (toMs: number) => {
-      atMs = toMs;
+      clock.advanceMs(toMs - nowMs());
     },
     /** The first wake of a ride only arms its clock and yields no update. */
     arm: () => {
-      if (ride.wake(atMs) !== undefined) throw new Error("Expected an arming wake");
+      if (ride.wake(nowMs()) !== undefined) throw new Error("Expected an arming wake");
     },
     wake: (elapsedMs = 0): RideUpdate => {
-      atMs += elapsedMs;
-      const update = ride.wake(atMs);
+      clock.advanceMs(elapsedMs);
+      const update = ride.wake(nowMs());
 
       if (update === undefined) throw new Error("Expected an advancing wake");
       updates.push(update);
@@ -94,10 +93,10 @@ export function createRideHarness(options: RideHarnessOptions = {}) {
       return update;
     },
     ingest: (event: DeviceEvent) => {
-      ride.ingest(event, atMs);
+      ride.ingest(event, nowMs());
     },
     setMode: (mode: RideMode) => {
-      ride.setMode(mode, atMs);
+      ride.setMode(mode, nowMs());
     },
   };
 }
