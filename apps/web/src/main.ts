@@ -1,4 +1,4 @@
-import type { DeviceEvent } from "@voltonaut/shared";
+import type { DeviceEvent, EventBus } from "@voltonaut/shared";
 import { createEventBus } from "@voltonaut/shared";
 
 import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
@@ -58,9 +58,30 @@ function startHud(
   startApp({ document: createDomDocument(document), ride, connectedLabel });
 }
 
+function withProgress(
+  callbacks: Parameters<typeof createRideSession>[1],
+  onProgress: Parameters<typeof createRideSession>[1]["onProgress"],
+): Parameters<typeof createRideSession>[1] {
+  return onProgress === undefined ? callbacks : { ...callbacks, onProgress };
+}
+
+function forwardDeviceEvents(
+  bus: Readonly<EventBus>,
+  link: Readonly<ReturnType<typeof createRideSession>["link"]>,
+): void {
+  const forwardEvent = (event: DeviceEvent): void => {
+    link.ingest(event);
+  };
+
+  bus.subscribe("trainer.data", forwardEvent);
+  bus.subscribe("hr.data", forwardEvent);
+  bus.subscribe("controller.button", forwardEvent);
+  bus.subscribe("device.status", forwardEvent);
+}
+
 async function start(): Promise<void> {
   const profileReady = setupProfile();
-  setupBrowserAccount(() => profileReady);
+  const account = setupBrowserAccount(() => profileReady);
   const params = new URLSearchParams(window.location.search);
   const simMode = params.get("sim") === "1";
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
@@ -70,7 +91,11 @@ async function start(): Promise<void> {
     ? setupSimDevices(bus, clockScale)
     : setupBluetoothDevices(bus, clockScale);
 
-  const session = createRideSession(APP_ROUTE_ID, devices ?? {});
+  const session = createRideSession(
+    APP_ROUTE_ID,
+    withProgress(devices ?? {}, account?.progress.accept),
+  );
+
   const { link } = session;
   const connection = createConnectionMonitor(bus);
 
@@ -92,14 +117,7 @@ async function start(): Promise<void> {
     },
   });
 
-  const forwardEvent = (event: DeviceEvent): void => {
-    link.ingest(event);
-  };
-
-  bus.subscribe("trainer.data", forwardEvent);
-  bus.subscribe("hr.data", forwardEvent);
-  bus.subscribe("controller.button", forwardEvent);
-  bus.subscribe("device.status", forwardEvent);
+  forwardDeviceEvents(bus, link);
 
   startHud(document, session, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupKeyboard(bus);

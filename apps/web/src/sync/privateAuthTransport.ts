@@ -1,6 +1,11 @@
+/* oxlint-disable eslint/max-lines -- The private lease keeps every bearer capability behind one generation-checked request boundary. */
 import {
   ProfileInputSchema,
   ProfileStateSchema,
+  ProgressCheckpointBatchSchema,
+  ProgressConsentStateSchema,
+  ProgressConsentUpdateSchema,
+  ProgressRangeResponseSchema,
   RideDetailSchema,
   RideIdSchema,
   RideListSchema,
@@ -23,6 +28,8 @@ import {
   type Membership,
   type ProfileInput,
   type ProfileState,
+  type ProgressCheckpointBatch,
+  type ProgressConsentState,
   type RideDetail,
   type RideList,
   type RideReceipt,
@@ -32,6 +39,7 @@ import {
   type StravaRideView,
   type StravaConsent,
   type StravaDelivery,
+  type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 import type { ProfileWriteLease } from "./profile-store.js";
 import { identityLease, type IdentityLease } from "./identityLease.js";
@@ -62,6 +70,7 @@ export interface AccountLease extends ProfileWriteLease {
   readonly detail: (rideId: string) => Promise<RideDetail>;
   readonly upload: (ride: RideUpload) => Promise<RideReceipt>;
   readonly strava: StravaLease;
+  readonly progress: ProgressLease;
   readonly identities: IdentityLease;
   readonly accountStatus: () => Promise<AccountStatus>;
   readonly adminUsers: (cursor: string | null) => Promise<AdminUsers>;
@@ -69,6 +78,12 @@ export interface AccountLease extends ProfileWriteLease {
     userId: string,
     membership: Readonly<Membership>,
   ) => Promise<AccountStatus>;
+}
+
+export interface ProgressLease {
+  readonly status: () => Promise<ProgressConsentState>;
+  readonly update: (enabled: boolean) => Promise<ProgressConsentState>;
+  readonly submit: (batch: ProgressCheckpointBatch) => Promise<VoltsRideRangeReceipt>;
 }
 
 export interface StravaLease {
@@ -109,6 +124,44 @@ function statusFailure(status: number): SyncFailure {
 
 interface ResponseSchema<T> {
   readonly parse: (...input: readonly [Parameters<typeof ProfileStateSchema.parse>[0]]) => T;
+}
+
+function progressLease(
+  request: ReturnType<typeof authorizedRequest>,
+  generation: number,
+): ProgressLease {
+  return {
+    status: () =>
+      request("/v1/me/progress-consent", ProgressConsentStateSchema, undefined, "omit", "GET"),
+    update: (enabled) =>
+      request(
+        "/v1/me/progress-consent",
+        ProgressConsentStateSchema,
+        JSON.stringify(
+          ProgressConsentUpdateSchema.parse({ enabled, sessionGeneration: generation }),
+        ),
+        "omit",
+        "PUT",
+      ),
+    async submit(batch) {
+      const payload = ProgressCheckpointBatchSchema.parse(batch);
+
+      const response = await request(
+        "/v1/progress/checkpoints",
+        ProgressRangeResponseSchema,
+        JSON.stringify(payload),
+      );
+
+      if (
+        !payload.checkpoints.every(
+          (checkpoint) => response.range.journalId === checkpoint.journalId,
+        )
+      )
+        throw new PrivateRequestError("contract");
+
+      return response.range;
+    },
+  };
 }
 
 function stravaLease(request: ReturnType<typeof authorizedRequest>): StravaLease {
@@ -164,6 +217,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         signal: authorization.signal,
         current: authorization.current,
         strava: stravaLease(request),
+        progress: progressLease(request, authorization.generation),
         identities: identityLease(request),
         ...membershipLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
@@ -219,6 +273,8 @@ type PrivatePath =
   | `/v1/admin/users?cursor=${string}`
   | `/v1/admin/users/${string}/membership`
   | "/v1/me/profile"
+  | "/v1/me/progress-consent"
+  | "/v1/progress/checkpoints"
   | "/v2/rides"
   | `/v2/rides?cursor=${string}`
   | `/v2/rides/${string}`
@@ -236,19 +292,21 @@ function authorizedRequest(apiOrigin: string, authorization: LeaseAuthorization)
     schema: ResponseSchema<T>,
     body?: string,
     credentials: "omit" | "include" = "omit",
+    method?: "GET" | "PUT" | "POST",
   ): Promise<T> {
     if (!authorization.current()) throw new PrivateRequestError("superseded");
 
     try {
       const response = await fetch(`${apiOrigin}${path}`, {
         method:
-          body === undefined
+          method ??
+          (body === undefined
             ? "GET"
-            : path === "/v1/me/profile"
+            : path === "/v1/me/profile" || path === "/v1/me/progress-consent"
               ? "PUT"
               : path.startsWith("/v1/admin/users/")
                 ? "PATCH"
-                : "POST",
+                : "POST"),
         headers: {
           Authorization: `Bearer ${authorization.token}`,
           "Content-Type": "application/json",

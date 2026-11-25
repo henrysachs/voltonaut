@@ -2,21 +2,23 @@
 
 ## Grundprinzip: ein Besitzer pro State
 
-| State                                                                      | Besitzer                                              | Wer liest                                        | Wie wird geändert                                                      |
-| -------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
-| Verbindungsstatus, Rohdaten der Geräte                                     | `devices/` (je Adapter)                               | engine, ui                                       | nur Adapter selbst                                                     |
-| `RideState` (Position, Tempo, Gang, Zeit, Summen, Bots, Drafting, Pickups) | `packages/engine` (nur `internal/`)                   | world, avatar, game, ui (als `RideSnapshot`)     | nur `engine.tick()` und Engine-Intents                                 |
-| `Route` / `ElevationProfile`                                               | `world/` (Laden/Erzeugen)                             | engine (Steigung), world (Mesh), game (Segmente) | unveränderlich nach Laden                                              |
-| `AvatarConfig`                                                             | `avatar/`                                             | ui (Garage), game (Unlock-Prüfung)               | Intent `avatar.setConfig`                                              |
-| `RiderProfile` (Gewicht, Größe, FTP, Kettenblatt …)                        | Server `accounts/`, Client-Cache in `sync/`           | engine (zu Fahrtbeginn), avatar (Größe), ui      | Intent `profile.update` → `sync/` → `PUT /v1/me/profile`               |
-| Mitgliedsstufe, VIP und getrennte Adminberechtigung                        | Server `accounts/`, Spiegel unter `AccountSync`       | Konto-Menü, geschützte Adminrouten               | Mitgliedschaft über Admin-PATCH, Rolle ausschließlich per Operator-CLI |
-| `Progression`, Inventar, Volts (verbindlich)                               | **Server** (`progression/`, `inventory/`, `economy/`) | Client über `sync/`-Cache                        | nur Server, ausgelöst durch akzeptierte Fahrt-Uploads und Käufe        |
-| Vorläufige Fahrt-Belohnungen (XP/Volts live)                               | `game/`                                               | ui                                               | game, aus Ride-Events; nach Upload durch Server-Antwort ersetzt        |
-| Outbox (unhochgeladene Fahrten)                                            | `sync/`                                               | ui (Status)                                      | sync                                                                   |
-| Laufende lokale Aufnahme mit echter Zeitachse                              | `game/rideRecorder`                                   | ui                                               | explizite Aufnahmebefehle, rohe Geräteereignisse, Snapshot-Distanz     |
-| Abgeschlossene lokale Aufnahmen                                            | `sync/`                                               | ui über injizierte Schnittstelle                 | validiertes Speichern in separater IndexedDB                           |
-| UI-Zustand (offene Panels)                                                 | `ui/`                                                 | –                                                | ui                                                                     |
-| Anwendungssession und private Bearer-Zugangsdaten                          | `sync/applicationSession`                             | Kontopanel über tokenfreie Ansicht               | ausdrückliche Anmeldung, Übergabe, Wiederherstellung und Abmeldung     |
+| State                                                                      | Besitzer                                              | Wer liest                                        | Wie wird geändert                                                                  |
+| -------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Verbindungsstatus, Rohdaten der Geräte                                     | `devices/` (je Adapter)                               | engine, ui                                       | nur Adapter selbst                                                                 |
+| `RideState` (Position, Tempo, Gang, Zeit, Summen, Bots, Drafting, Pickups) | `packages/engine` (nur `internal/`)                   | world, avatar, game, ui (als `RideSnapshot`)     | nur `engine.tick()` und Engine-Intents                                             |
+| `Route` / `ElevationProfile`                                               | `world/` (Laden/Erzeugen)                             | engine (Steigung), world (Mesh), game (Segmente) | unveränderlich nach Laden                                                          |
+| `AvatarConfig`                                                             | `avatar/`                                             | ui (Garage), game (Unlock-Prüfung)               | Intent `avatar.setConfig`                                                          |
+| `RiderProfile` (Gewicht, Größe, FTP, Kettenblatt …)                        | Server `accounts/`, Client-Cache in `sync/`           | engine (zu Fahrtbeginn), avatar (Größe), ui      | Intent `profile.update` → `sync/` → `PUT /v1/me/profile`                           |
+| Mitgliedsstufe, VIP und getrennte Adminberechtigung                        | Server `accounts/`, Spiegel unter `AccountSync`       | Konto-Menü, geschützte Adminrouten               | Mitgliedschaft über Admin-PATCH, Rolle ausschließlich per Operator-CLI             |
+| `Progression`, Inventar, Volts (verbindlich)                               | **Server** (`progression/`, `inventory/`, `economy/`) | Client über `sync/`-Cache                        | nur Server, ausgelöst durch akzeptierte Fahrt-Uploads, Progress-Bereiche und Käufe |
+| Progress-Consent, Journalbindung, Session-Generation, Highwater            | **Server** (`progress/`)                              | Client über `sync/progressSync`                  | explizite Zustimmung, authentifizierte Checkpoint-Annahme                          |
+| Lokale Progress-Outbox                                                     | `apps/web/src/sync`                                   | UI über schmales Statusport                      | `progressSync`, nach Zustimmung und nur für BLE                                    |
+| Vorläufige Fahrt-Belohnungen (XP/Volts live)                               | `game/`                                               | ui                                               | game, aus Ride-Events; nach Upload durch Server-Antwort ersetzt                    |
+| Outbox (unhochgeladene Fahrten)                                            | `sync/`                                               | ui (Status)                                      | sync                                                                               |
+| Laufende lokale Aufnahme mit echter Zeitachse                              | `game/rideRecorder`                                   | ui                                               | explizite Aufnahmebefehle, rohe Geräteereignisse, Snapshot-Distanz                 |
+| Abgeschlossene lokale Aufnahmen                                            | `sync/`                                               | ui über injizierte Schnittstelle                 | validiertes Speichern in separater IndexedDB                                       |
+| UI-Zustand (offene Panels)                                                 | `ui/`                                                 | –                                                | ui                                                                                 |
+| Anwendungssession und private Bearer-Zugangsdaten                          | `sync/applicationSession`                             | Kontopanel über tokenfreie Ansicht               | ausdrückliche Anmeldung, Übergabe, Wiederherstellung und Abmeldung                 |
 
 Kommunikation: **typisierter Event-Bus** (`packages/shared/src/bus.ts`) für diskrete Ereignisse + **Snapshot-Pull** pro Frame für kontinuierliche Werte (Render-Loop holt `engine.snapshot()`).
 
@@ -285,7 +287,7 @@ flowchart LR
   SY -- REST Bearer --> API
   NET -- WSS /v1/live --> LIVE
   subgraph Server[Hetzner-VPS: NestJS + Drizzle]
-    API[auth · accounts · inventory · economy · rides · progression · catalog]
+    API[auth · accounts · inventory · economy · progress · rides · progression · catalog]
     LIVE[live/ Räume In-Memory]
     API --> DB[(SQLite WAL)]
     DB -. Litestream .-> BK[(Backup)]

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 
 import {
   RewardFactsSchema,
@@ -14,6 +15,7 @@ import {
 } from "@voltonaut/shared";
 
 import { ApiError } from "../api-error.js";
+import type { ServerDatabase } from "../database/drizzle.provider.js";
 import type { EconomyTables } from "./economy.schema.js";
 
 export type LedgerRow = EconomyTables["voltsLedger"]["$inferSelect"];
@@ -21,6 +23,11 @@ export type LedgerRow = EconomyTables["voltsLedger"]["$inferSelect"];
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Shared Volts commands contain nested Zod primitive brands. */
 export interface VoltsLedgerTransaction {
   balance(userId: string): VoltsBalance;
+  rideRangeReceipt(
+    userId: string,
+    journalId: string,
+    startTick: number,
+  ): VoltsRideRangeReceipt | undefined;
   creditRideRange(userId: string, command: Readonly<VoltsRideRangeCommand>): VoltsRideRangeReceipt;
   debit(userId: string, command: Readonly<VoltsDebitCommand>): VoltsDebitReceipt;
 }
@@ -139,4 +146,23 @@ export function parseStoredDebitReceipt(row: Readonly<LedgerRow>): VoltsDebitRec
     refId: row.refId,
     amountVolts: -row.deltaVolts,
   });
+}
+
+export function findRideRangeReceipt(
+  db: Readonly<Pick<ServerDatabase, "select">>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle table metadata must retain its original column references.
+  ledger: Readonly<EconomyTables["voltsLedger"]>,
+  userId: string,
+  journalId: string,
+  startTick: number,
+): VoltsRideRangeReceipt | undefined {
+  const row = db
+    .select()
+    .from(ledger)
+    .where(
+      and(eq(ledger.userId, userId), eq(ledger.idempotencyKey, `ride:${journalId}:${startTick}`)),
+    )
+    .get();
+
+  return row === undefined ? undefined : parseStoredRangeReceipt(row);
 }

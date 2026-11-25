@@ -3,6 +3,7 @@ import { z } from "zod";
 const finite = z.number().finite();
 const nonnegative = finite.nonnegative();
 const tick = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const timestampMs = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const revision = z.string().min(1).max(100);
 
 /** Effective raw readings and local physics contributions from one native engine tick. */
@@ -41,9 +42,9 @@ const qualitySchema = z
   .readonly();
 
 const progressFields = {
-  journalId: z.string().uuid(),
-  startedAtMs: nonnegative,
-  endedAtMs: nonnegative,
+  journalId: z.string().uuid().toLowerCase(),
+  startedAtMs: timestampMs,
+  endedAtMs: timestampMs,
   source: z.enum(["sim", "ble"]),
   clockScale: finite.min(1).max(20),
   physicsRevision: revision,

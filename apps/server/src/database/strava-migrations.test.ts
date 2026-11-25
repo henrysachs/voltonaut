@@ -36,7 +36,7 @@ it.each([1, 2, 3])(
       const db = createDatabase(config);
       expect(db.$client.prepare("SELECT * FROM users").all()).toEqual(auth.users);
       expect(db.$client.prepare("SELECT * FROM sessions").all()).toEqual(auth.sessions);
-      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(10);
+      expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(11);
       expect(db.$client.prepare("PRAGMA foreign_key_list(strava_connections)").all()).toMatchObject(
         [{ table: "users", from: "user_id", to: "id" }],
       );

@@ -131,13 +131,17 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 
 **Ziel:** Jede Fahrt bringt verbindlichen Fortschritt – mit Spielgefühl.
 
-Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnlicher Fahrt, unabhängig vom Aufnahme-Knopf. Der Server bestätigt Fahrtabschnitte; bestätigte Gewinne bleiben bei Abbruch erhalten. Eine laufende Vorschau allein erfüllt diesen Auftrag nicht. Die verbindliche Vergabe bleibt noch zu implementieren.
+Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnlicher Fahrt, unabhängig vom Aufnahme-Knopf. Der Server bestätigt Fahrtabschnitte; bestätigte Gewinne bleiben bei Abbruch erhalten. Die erste verbindliche Volts-Buchung ist implementiert und softwaregeprüft. Produktive Quellenfreigabe und Hardwareabnahme bleiben offen.
 
 - [ ] `progression/`: XP/Level serverseitig aus akzeptierten Fahrten; Level-Up-Effekt im Client
   - [x] [E6-02](specs/E6-02-base-reward-quotes.md): reine Basisangebote für XP, Level und Volts mit explizitem Tagesrestbudget softwaregeprüft. Keine Vergabe oder Kontobuchung.
   - [x] [E6-03](specs/E6-03-native-ride-facts.md): native Tickfakten für spätere laufende Auswertung. Gate, Mutation, Build, Basisvergleich und unabhängiges Review softwaregeprüft. Keine Uploads, Freigaben oder Belohnungsbuchungen; Deployment folgt mit dem Merge.
-  - [x] [E6-04](specs/E6-04-ride-progress-journal.md): HR-freie, unveränderliche Checkpoint-Projektion aus genau einem Advance pro Wake. Gesamtgate, Mutation, Build, Basisverhalten und unabhängiges Review softwaregeprüft. Keine Persistenz, Uploads, Freigaben, Belohnungsbuchungen oder dauerhafte Progress-UI; Merge und CI stehen noch aus.
-- [x] [E6-05](specs/E6-05-volts-ledger.md): `economy/`-Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ". Kumulative Tickbereiche, Tagesbudget und echte SQLite-Konkurrenz softwaregeprüft; automatische Vergabe, Shop-Kauf und Deployment folgen getrennt.
+  - [x] [E6-04](specs/E6-04-ride-progress-journal.md): HR-freie, unveränderliche Checkpoint-Projektion aus genau einem Advance pro Wake. Gesamtgate, Mutation, Build, Basisverhalten und unabhängiges Review softwaregeprüft. Der Projector besitzt keine Persistenz; E6-07 bis E6-10 ergänzen Outbox und Serverbuchung.
+- [x] [E6-05](specs/E6-05-volts-ledger.md): `economy/`-Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ". Kumulative Tickbereiche, Tagesbudget und echte SQLite-Konkurrenz softwaregeprüft. Automatische Progress-Buchung ist in E6-07 bis E6-10 softwaregeprüft und produktiv weiterhin gesperrt. Shop-Kauf und Hardwareabnahme bleiben getrennt.
+  - [x] [E6-07](specs/E6-07-progress-policy.md): Transport-, Quellen-, Zustimmungs- und UTC-Tagespolitik softwaregeprüft. Produktive Quellenpolitik bleibt deaktiviert.
+  - [x] [E6-08](specs/E6-08-progress-consent.md): versionierte, widerrufbare Zustimmung und globale Journal-/Sessionbindung softwaregeprüft.
+  - [x] [E6-09](specs/E6-09-progress-outbox.md): HR-freie lokale Outbox mit Offline-Status, Kapazität und idempotentem Retry softwaregeprüft. Echte Browser-IDB-Offlineprüfung bleibt offen.
+  - [x] [E6-10](specs/E6-10-progress-server-intake.md): authentifizierte Checkpoint-Annahme und atomare Volts-Buchung softwaregeprüft. Keine XP, synthetischen Fahrten oder produktive Quellenfreigabe.
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)

@@ -93,7 +93,7 @@ it.each([6, 7])(
         authorization_checked_revision: 1,
         authorization_check_after: 60000,
       });
-      expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(10);
+      expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(11);
       reopened.$client.close();
     } finally {
       rmSync(directory, { recursive: true, force: true });
