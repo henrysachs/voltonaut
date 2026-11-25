@@ -2,6 +2,7 @@ import type { EngineRoute } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import { offsetPosition } from "./landscape-plan.js";
+import { planWaymarks } from "./waymark-plan.js";
 
 const DIGITS = [
   "abcedf",
@@ -60,9 +61,8 @@ export function createWaymarks(route: EngineRoute): THREE.Group {
 
   root.add(createDashes(route));
 
-  for (let km = 0; km < route.lengthM / 1000; km += 1) {
-    const distanceM = km * 1000 + 30;
-    const position = offsetPosition(route, distanceM, -6.2);
+  for (const { km, distanceM, lateralM } of planWaymarks(route)) {
+    const position = offsetPosition(route, distanceM, lateralM);
     const sign = new THREE.Group();
     const post = new THREE.Mesh(box, paint);
     const board = new THREE.Mesh(box, dark);

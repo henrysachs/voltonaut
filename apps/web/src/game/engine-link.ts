@@ -1,6 +1,7 @@
 import type {
   DeviceEvent,
   RideEvent,
+  RideMode,
   RideProgressCheckpoint,
   RiderProfile,
   TrainerCommand,
@@ -39,6 +40,8 @@ export interface EngineLinkInit {
 export interface EngineLink {
   readonly init: (options: EngineLinkInit) => void;
   readonly ingest: (event: DeviceEvent) => void;
+  /** Ride mode intent (spec E9-01); the worker refuses fun mode during a recording. */
+  readonly setMode: (mode: RideMode) => void;
   readonly latestSnapshot: () => RideSnapshot | undefined;
   readonly recording: RecordingControls;
   readonly dispose: () => void;
@@ -136,6 +139,11 @@ class WorkerLink implements EngineLink {
   ingest(event: DeviceEvent): void {
     if (this.actorId !== undefined && !this.disposed && !this.failed)
       this.send({ type: "engine.ingest", actorId: this.actorId, event });
+  }
+
+  setMode(mode: RideMode): void {
+    if (this.actorId !== undefined && !this.disposed && !this.failed)
+      this.send({ type: "engine.setMode", actorId: this.actorId, mode });
   }
 
   latestSnapshot(): RideSnapshot | undefined {

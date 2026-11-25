@@ -1,4 +1,11 @@
-import type { CapturedRide, CaptureUnavailabilityReason } from "@voltonaut/shared";
+import type {
+  CapturedRide,
+  CaptureUnavailabilityReason,
+  DeviceEvent,
+  RideEvent,
+  TrainerCommand,
+} from "@voltonaut/shared";
+import type { RideSnapshot } from "@voltonaut/engine";
 
 export type CaptureAvailability =
   | { readonly kind: "journal" }
@@ -46,4 +53,20 @@ export function isNewCaptureRequest(requestId: number, lastRequestId: number): b
 
 export function validCaptureReading(value: number | undefined, max: number): number | null {
   return value !== undefined && Number.isFinite(value) && value >= 0 && value <= max ? value : null;
+}
+
+export interface RideRecorder {
+  readonly view: (atMs: number) => CaptureView;
+  readonly ingest: (event: DeviceEvent, atMs: number) => void;
+  readonly arm: (atMs: number) => void;
+  readonly advance: (atMs: number, elapsedRealS: number) => void;
+  readonly outputs: (events: readonly RideEvent[], commands: readonly TrainerCommand[]) => void;
+  readonly sample: (atMs: number, snapshot: RideSnapshot) => void;
+  /** Makes every later capture of this session local-only with the given reason. */
+  readonly invalidate: (reason: CaptureUnavailabilityReason) => void;
+  readonly command: (
+    command: CaptureCommand,
+    atMs: number,
+    snapshot: RideSnapshot,
+  ) => CaptureResult;
 }

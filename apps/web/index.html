@@ -77,6 +77,14 @@
           <p id="hud-sprint" data-testid="hud-sprint" aria-label="Sprint-Vorschau"></p>
           <p id="hud-kom" data-testid="hud-kom" aria-label="KOM-Vorschau"></p>
         </section>
+        <p
+          class="hud__item"
+          id="hud-item"
+          data-testid="hud-item"
+          aria-label="Spaß-Modus-Item"
+          aria-live="polite"
+          lang="de"
+        ></p>
         <p class="hud__warning" id="hud-warning" data-testid="hud-warning"></p>
         <p class="hud__hint">Sim mode: use ArrowUp and ArrowDown to shift.</p>
       </section>
@@ -97,6 +105,10 @@
           <button id="game-menu-close" type="button" autofocus>Zurück zur Fahrt</button>
         </header>
         <p class="game-menu__hint">Die Fahrt läuft weiter. Escape schließt das Menü.</p>
+        <fieldset id="ride-mode" class="game-menu__mode" lang="de">
+          <legend>Spielmodus</legend>
+          <p id="ride-mode-hint" class="game-menu__mode-hint" aria-live="polite"></p>
+        </fieldset>
         <div class="game-menu__tabs" role="tablist" aria-label="Fahrtmenü-Bereiche">
           <button
             id="game-tab-profile"

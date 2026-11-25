@@ -22,6 +22,7 @@ function context(route = FLAT): EngineContext {
     gearRatios: GEAR_RATIOS,
     physicalRatio: 3,
     trainerMassKg: 83,
+    itemBoxesM: [],
   };
 }
 
@@ -31,6 +32,8 @@ function state(routePosM = 0, speedMps = 0): RideState {
     gearRatio: GEAR_RATIOS[START_GEAR_INDEX] ?? 2.3,
     speedMps,
     routePosM,
+    mode: "normal",
+    seed: 42,
   });
 }
 
@@ -41,6 +44,8 @@ function inputs(overrides: Partial<TickInputs> = {}): TickInputs {
     hrBpm: undefined,
     shifts: 0,
     trainerDataFresh: true,
+    useItem: false,
+    mode: "normal",
     ...overrides,
   };
 }

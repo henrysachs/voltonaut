@@ -1,10 +1,14 @@
 import * as THREE from "three";
 
+import { planBillboards } from "./billboard-plan.js";
+import { createBillboards } from "./billboards.js";
 import { createLandscapePlan } from "./landscape-plan.js";
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
 import { createScenery } from "./scenery.js";
 import { createLake, createTerrain } from "./terrain.js";
+
+export { billboardsInView } from "./billboards.js";
 
 export function createLandscapeSystem(): RenderSystem {
   const root = new THREE.Group();
@@ -16,7 +20,12 @@ export function createLandscapeSystem(): RenderSystem {
     init(context) {
       const plan = createLandscapePlan(context.route);
 
-      root.add(createTerrain(plan), createLake(plan), createScenery(plan));
+      root.add(
+        createTerrain(plan),
+        createLake(plan),
+        createScenery(plan),
+        createBillboards(planBillboards(plan).billboards),
+      );
       context.scene.add(root);
     },
     update() {},

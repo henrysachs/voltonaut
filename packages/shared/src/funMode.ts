@@ -1,0 +1,23 @@
+import type { Mps, Seconds } from "./units.js";
+
+/** Phase 1 items of the fun ride mode (spec E9-01). Order defines the seeded pick order. */
+export const FUN_ITEM_IDS = Object.freeze(["aeroBoost", "featherweight", "tailwind"] as const);
+
+export type FunItemId = (typeof FUN_ITEM_IDS)[number];
+
+export interface FunItemEffect {
+  readonly durationS: Seconds;
+  /** Multiplier on the rider's CdA; 1 = unchanged. */
+  readonly cdaFactor: number;
+  /** Multiplier on rider and bike mass; 1 = unchanged. */
+  readonly massFactor: number;
+  /** Physics-only wind; negative = tailwind. Never sent to the trainer (ADR-028). */
+  readonly windMps: Mps;
+}
+
+/** ⚠️ Starting values. */
+export const FUN_ITEMS: Readonly<Record<FunItemId, FunItemEffect>> = Object.freeze({
+  aeroBoost: Object.freeze({ durationS: 15, cdaFactor: 0.85, massFactor: 1, windMps: 0 }),
+  featherweight: Object.freeze({ durationS: 20, cdaFactor: 1, massFactor: 0.9, windMps: 0 }),
+  tailwind: Object.freeze({ durationS: 10, cdaFactor: 1, massFactor: 1, windMps: -3 }),
+});

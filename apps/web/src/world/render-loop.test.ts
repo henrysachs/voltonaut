@@ -58,6 +58,7 @@ class LoopFixture {
         cameraPosition: { x: 3, y: 4, z: 5 },
         widthPx: 800,
         heightPx: 400,
+        billboardsInView: { left: 0, right: 0 },
       };
     },
     resize: () => {

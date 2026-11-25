@@ -139,6 +139,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
+- [ ] Season Pass ([E6-06](specs/E6-06-season-pass.md)): Phase A (Schemas, reine Rechenlogik, `season-01` als Daten) in Arbeit; Vergabe und Menü warten auf bestätigte Abschnitte und Server-Inventar
 - [ ] Segmente (1 Sprint, 1 KOM) mit Banner-Torbögen, Countdown-Flaggen, Live-Delta, PB-Konfetti; PBs serverseitig
   - [x] [E6-01](specs/E6-01-visible-segments.md): vorläufige Sprint-/KOM-Anzeige mit laufender Zeit, Restdistanz und Rundenergebnis softwaregeprüft. Keine bestätigten PBs oder Belohnungsbuchungen.
 - [ ] Zielbogen/Rundenanzeige; 9 Start-Badges (Prädikate in `packages/rules`)
@@ -171,6 +172,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] **Day/Night-Zyklus** (Sonne, Sky, Sterne, Laternen, Radlicht) und **Wetter** (Wolken, Nebel, Regen mit nasser Straße, Wind-Animation)
 - [ ] **Post-Processing:** SMAA, Bloom, SSAO (High), Farb-LUT pro Biom, Tiefenunschärfe für Cinematic
 - [ ] **Roadside life:** Zuschauer mit Vertex-Animation an KOM/Sprint/Ziel, Fahnen, Tiere, Vögel, Verpflegungsstand
+  - [ ] [E8-02](specs/E8-02-roadside-billboards.md): Billboards mit 3 pro km, Prioritätsorten im Raster, drei rotierenden Platzhaltermotiven, 2 Draw Calls ohne Schattenpass und freier Kamerasicht im Sim-Modus softwaregeprüft. Kongstrong-Motiv mit Lizenz und Messung auf Henrys Laptop stehen aus.
 - [ ] **Kameras:** TV-Seitenkamera, **Cinematic-Modus** mit automatischem Schnitt, Fotomodus
 - [ ] **Audio/Musik:** räumlicher Jubel, Reifen/Untergrund, Wetter-Ambience, Biom-Musik (CC0/eigen), Mixer
 - [ ] Performance-Budget-Szene „Peloton am KOM" (30 Bots, Regen, Abend) im Budget
@@ -185,6 +187,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] Remote-Fahrer als `RiderView` (Name-Tag, Avatar aus Server); Windschatten hinter Freunden (v2, Latenz prüfen)
 - [ ] `mise run sim:crowd` (Fake-Clients für Lasttest)
 - [ ] Domänen-Metriken: aktive Fahrten, offene WebSocket-Verbindungen, Gruppenfahrt-Räume
+- [ ] Spaß-Modus ([E9-01](specs/E9-01-fun-mode-items.md), #45): Phase 1 (Item-Boxen, Power-ups solo) im Sim-Modus softwaregeprüft, Hardware und Review offen; Malus gegen Bots nach #70, gegen Freunde nach #73/#74
       **Abnahme:** Zwei Accounts sehen sich flüssig auf derselben Strecke; Server übersteht Client-Abbrüche; 30 Fake-Clients ohne Ruckeln.
 
 ## E10 – Mehr Spiel: Inhalte & Extras

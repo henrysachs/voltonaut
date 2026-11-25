@@ -82,6 +82,8 @@ type UnlockRule =
 
 Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magnet, `04-world-3d.md` §7). Aktivierung per Play-Power-up-Taste; physikrelevant → im Ride-Upload protokolliert, serverseitig nachgerechnet; Segmentzeiten mit Power-up werden getrennt markiert. Kosten nichts, bringen keine Volts.
 
+Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-028](decisions/ADR-028-ride-modes-and-fun-items.md)). Er hat eigene Item-Boxen und Items, und für ihn gilt die Protokollierung oben ausdrücklich nicht: Er erzeugt keine Belohnungen, keine Fortschritts-Checkpoints und keine Aufnahme. Wer ihn in einer Sitzung betritt, macht alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `ride_mode`), weil das Aufnahmeprotokoll keinen Modus kennt und der Server nur ohne Modus nachrechnet. Eine nachrechenbare Variante wäre ein eigener Schritt (Modus- und Item-Einträge in RecordingV2).
+
 ## XP & Level
 
 - XP pro Fahrt: **20 XP/km** + **2 XP/Hm** + **1 XP/Minute** + Boni (Segment-PB 50, Badge 100–500, erste Fahrt des Tages 25).
@@ -89,6 +91,10 @@ Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magne
 - Basis-XP werden aus `activeDistanceM`, `activeElevationGainM` und `activeTimeS` berechnet. Jeder Bestandteil wird **einmal nach Aggregation der ganzen Fahrt abgerundet**, danach werden die drei Ganzzahlen summiert. Nicht pro Tick und nicht erst die ungerundete Gesamtsumme abrunden.
 - Level 1 beginnt bei **0 Gesamt-XP**. Level 0 ist ungültig. Für Level 2 bis 50 gilt `xpForLevel(n) = round(500 · n^1.6)` → Level 2 = 1516 XP, Level 10 = 19 905 XP. `levelForXp` liefert die höchste erreichte Stufe, maximal 50. Gesamt-XP müssen sichere nichtnegative Ganzzahlen sein. ⚠️ Kurve justieren.
 - Jedes Level vergibt mindestens ein Item oder Volts-Bonus (`game/data/levels.json`, Server und Client teilen die Datei).
+
+## Season Pass
+
+Spec: [E6-06](specs/E6-06-season-pass.md). Eine Saison dauert 8 bis 12 Wochen und hat mindestens 20 Stufen. Saisonpunkte entsprechen den Basis-XP derselben bestätigten Fahrtabschnitte. Pro Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, damit die Rundung der ganzen Fahrt gilt. Ein Abschnitt zählt, wenn seine Fahrzeit im Zeitraum liegt (Start inklusive, Ende exklusiv). Jede Stufe vergibt ein Saison-Item (`UnlockRule` `{ kind: "season" }`) oder einen Volts-Bonus, und zwar genau einmal. Verdiente Items bleiben nach Saisonende. `season-01`: 20 Stufen zu je 1 800 Punkten ⚠️ Startwert. Bisher sind nur Schemas, Rechenlogik und Daten umgesetzt, keine Vergabe.
 
 ## Badges / Achievements (Startliste)
 

@@ -42,7 +42,10 @@ type Attempt =
   | (Extract<SegmentProgress, { readonly kind: "finished" }> & { readonly exitedTS: number })
   | { readonly kind: "running"; readonly lap: number; readonly enteredTS: number };
 
-type TimedEvent = Extract<RideEvent, { readonly tS: number }>;
+type TimedEvent = Extract<
+  RideEvent,
+  { readonly type: "segment.entered" | "segment.exited" | "lap.completed" }
+>;
 
 class SessionSegments implements SegmentProjector {
   private readonly definitions: readonly SegmentDef[];

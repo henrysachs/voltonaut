@@ -65,6 +65,15 @@ describe("garage text", () => {
     ).toBe("Kauf bald");
   });
 
+  it("names the season and tier of a season reward", () => {
+    expect(
+      itemUnlockText({
+        ...withoutPrice(),
+        unlock: { kind: "season", seasonId: "season-01", tier: 12 },
+      }),
+    ).toBe("Saison 01 · Stufe 12");
+  });
+
   it("shows catalog prices and keeps every purchase disabled", () => {
     expect(priceText(item)).toBe("6.000 ⚡");
     expect(priceText(withoutPrice())).toBe("Kein Kauf");
