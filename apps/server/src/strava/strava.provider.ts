@@ -7,6 +7,7 @@ import type { SubmitResult, PollResult, RefreshResult } from "./strava.upload-pr
 import type { StravaReceipt } from "@voltonaut/shared";
 import { boundedBody, isJsonResponse, stravaMultipart } from "./strava.provider-http.js";
 import { verifyAthlete } from "./strava.authorization-provider.js";
+import type { CommittedAttempt } from "./strava.delivery-store.js";
 
 const RefreshResponseSchema = z.object({
   token_type: z.literal("Bearer"),
@@ -189,10 +190,12 @@ export class StravaProvider {
     }
   }
 
+  /** Sends the single POST of an attempt that `StravaDeliveryStore.dispatch` already committed. */
   public async submit(
-    input: ResourceInput & { readonly tcx: string; readonly externalId: string },
+    input: ResourceInput & { readonly attempt: CommittedAttempt; readonly tcx: string },
   ): Promise<SubmitResult> {
-    const form = stravaMultipart(input.tcx, input.externalId);
+    const { externalId } = input.attempt;
+    const form = stravaMultipart(input.tcx, externalId);
 
     try {
       const response = await fetch(
@@ -229,7 +232,7 @@ export class StravaProvider {
       }
 
       const body = await boundedBody(response);
-      const receipt = uploadReceipt(body, input.externalId);
+      const receipt = uploadReceipt(body, externalId);
 
       if (receipt === undefined) return { kind: "unknown", reason: "protocol" };
 

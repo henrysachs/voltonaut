@@ -72,15 +72,7 @@ export function authorizationFixture(
 ) {
   const rates = new StravaRateStore(owner.db, stravaTables);
   const hints = new StravaAuthorizationStore(owner.db, stravaTables);
-
-  const authorization = new StravaAuthorization(
-    owner.credentials,
-    owner.jobs,
-    hints,
-    provider,
-    rates,
-    clock,
-  );
+  const authorization = new StravaAuthorization(owner.credentials, owner.jobs, provider, clock);
 
   return { rates, hints, authorization };
 }

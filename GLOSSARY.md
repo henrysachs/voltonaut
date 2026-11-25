@@ -30,6 +30,10 @@ _Vermeiden_: TCX-Download oder Kontozuordnung als Uploadzustimmung.
 Ein Versand, dessen Annahme durch Strava nicht sicher bekannt ist. Er ist weder bestätigter Erfolg noch sicher gescheitert.
 _Vermeiden_: fehlgeschlagen als Grund für automatischen Neuversand.
 
+**Festgeschriebener Strava-Versuch**:
+Der dauerhaft vor dem Anbieteraufruf gespeicherte einzige Uploadversuch einer Fahrt. Nur er berechtigt zum Upload-POST.
+_Vermeiden_: Wiederholung oder neuer Versuch nach einem unklaren Ergebnis.
+
 **Mitgliedsstufe**:
 Die manuell vergebbare Einstufung eines Kontos als Normal, Premium oder Pro. Eine Stufe allein verspricht noch keinen Preis oder unterschiedliche Spielrechte.
 _Vermeiden_: Adminrolle als höhere Mitgliedsstufe.
