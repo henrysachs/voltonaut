@@ -47,9 +47,9 @@ Ein angemeldeter Kontoinhaber kann alle serverseitig gespeicherten eigenen Daten
 ## Nachweisstand
 
 - **Implementiert:** Export-/Löschvertrag einschließlich Identitäten und Volts-Journal, Servertransaktion über Economy-Ports, HMAC-Tombstones, metadatengeprüfte Trigger einschließlich späten Link-Callbacks, Browser-Overlay mit konkreten Anbietern und Outbox-Bereinigung. Korruptes TCX bricht den Export kontrolliert ab. `AccountDataOwner` ist ein lokaler Sync-Vertrag, kein Shared-API-Vertrag.
-- **Am tatsächlichen Artefakt softwaregeprüft:** Fokussierte Contract-, Serverintegrations-, Migrations-, OIDC-, Sync- und UI-Tests belegen Exportinhalt, Fremddaten, Löschung, späte Ledger-/Link-Zugriffe, beide Rollback-Pfade, HMAC und Download-Lebenszyklus. Das vollständige Gate auf dem integrierten Head wird abschließend ausgeführt und erst danach hier mit Ergebnis vermerkt.
+- **Am tatsächlichen Artefakt softwaregeprüft:** Fokussierte Contract-, Serverintegrations-, Migrations-, OIDC-, Sync- und UI-Tests belegen Exportinhalt, Fremddaten, Löschung, späte Ledger-/Link-Zugriffe, beide Rollback-Pfade, HMAC und Download-Lebenszyklus. `CI=1 mise run check` ist auf dem integrierten Stand grün: 1532 Unit- und Integrationstests sowie 75 E2E-Tests. `deploy/test-deploy.sh` und die Python-Provisionierungstests sind grün.
 - **An echter Hardware geprüft:** nein, nicht hardwarerelevant.
-- **Bereitgestellt:** nein, kein Produktionsdeploy in dieser Aufgabe.
+- **Bereitgestellt:** nein. Für den nächsten Main-Deploy liegt der Schlüssel bereits in `/srv/voltonaut/auth.env` (Modus `600`). `deploy.env` bleibt unverändert und ist weiter provisionierbar.
 
 ## Doku-Updates (Pflicht beim Abschluss)
 

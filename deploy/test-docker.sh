@@ -37,7 +37,6 @@ printf 'project=%s\nbase-project=%s\nimage=%s\nreplica=%s\nrestored=%s\nlegacy=%
   "$project" "$project-base" "$image" "$replica" "$restored" "$legacy" >"$temporary/resources.txt"
 cat >"$temporary/local.env" <<ENV
 AUTH_MODE=disabled
-AUTH_TOMBSTONE_HMAC_KEY=0000000000000000000000000000000000000000000000000000000000000000
 CLIENT_ORIGIN=https://voltonaut.stammkneipe.dev
 OIDC_PROVIDERS=cloudflare
 OIDC_CLOUDFLARE_ISSUER=https://identity.example.invalid/oidc/proof
@@ -56,6 +55,8 @@ chmod 600 "$temporary/base.env"
 cat >"$temporary/base-override.yaml" <<YAML
 services:
   server:
+    environment:
+      AUTH_TOMBSTONE_HMAC_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
     labels:
       traefik.enable: "false"
     volumes:
@@ -81,6 +82,8 @@ cp "$temporary/litestream.yml" "$temporary/working-litestream.yml"
 cat >"$temporary/override.yaml" <<YAML
 services:
   server:
+    environment:
+      AUTH_TOMBSTONE_HMAC_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
     labels:
       traefik.enable: "false"
     volumes:

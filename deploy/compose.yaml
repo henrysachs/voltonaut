@@ -8,6 +8,10 @@ services:
     image: ${VOLTONAUT_IMAGE:-voltonaut-server}:${VOLTONAUT_TAG:?explicit release tag required}
     restart: unless-stopped
     env_file:
+      # AUTH_TOMBSTONE_HMAC_KEY lives apart from the provisioned deploy.env; check-config rejects a
+      # production start without it before any release switch.
+      - path: ./auth.env
+        required: false
       - path: ./strava.env
         required: false
       - path: ./strava-webhook.env
@@ -17,7 +21,6 @@ services:
       NODE_ENV: production
       DATABASE_PATH: /app/data/voltonaut.db
       AUTH_MODE: ${AUTH_MODE:?explicit auth mode required}
-      AUTH_TOMBSTONE_HMAC_KEY: ${AUTH_TOMBSTONE_HMAC_KEY:?32-byte tombstone HMAC key required}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:?canonical client origin required}
       CORS_ORIGINS: ${CLIENT_ORIGIN:?canonical client origin required}
       OIDC_PROVIDERS: ${OIDC_PROVIDERS:-}
