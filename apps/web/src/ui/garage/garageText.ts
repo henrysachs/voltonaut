@@ -38,9 +38,10 @@ export function itemUnlockText(item: ItemDef): string {
     case "distanceTotal":
       return `${VOLTS_FORMAT.format(item.unlock.km)} km Gesamtstrecke`;
     case "shop":
+      // Transition (spec E7-02): the server does not check levels until progression exists.
       return item.unlock.minLevel === undefined
-        ? "Kauf bald"
-        : `Kauf bald · ab Level ${item.unlock.minLevel}`;
+        ? "Shop"
+        : `Shop · ab Level ${item.unlock.minLevel} (Prüfung folgt)`;
     case "season":
       return `Saison ${item.unlock.seasonId.replace("season-", "")} · Stufe ${item.unlock.tier}`;
     default: {
@@ -52,8 +53,4 @@ export function itemUnlockText(item: ItemDef): string {
 
 export function priceText(item: ItemDef): string {
   return item.priceVolts === undefined ? "Kein Kauf" : `${VOLTS_FORMAT.format(item.priceVolts)} ⚡`;
-}
-
-export function purchaseButtonText(item: ItemDef): string {
-  return item.priceVolts === undefined ? "Nicht käuflich" : "Kauf nicht verfügbar";
 }

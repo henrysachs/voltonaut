@@ -157,7 +157,7 @@ it("downloads a validated own export and confirms deletion only from an empty 20
   const f = await fixture();
 
   const exported = {
-    schemaVersion: 1,
+    schemaVersion: 3,
     exportedAt: "2026-11-20T00:00:00.000Z",
     account: {
       user: {
@@ -171,7 +171,7 @@ it("downloads a validated own export and confirms deletion only from an empty 20
     },
     profile: { status: "missing" },
     rides: [],
-    inventory: { status: "not_stored" },
+    inventory: { items: [] },
     progression: {
       volts: { balance: 0, journal: [] },
       progress: { consent: { status: "missing" }, journals: [], ranges: [] },

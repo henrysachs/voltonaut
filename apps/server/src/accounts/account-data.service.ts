@@ -1,3 +1,4 @@
+/* oxlint-disable import/max-dependencies -- Account export and deletion run one transaction across every user-data owner port. */
 import { Inject, Injectable } from "@nestjs/common";
 
 import { AccountExportSchema, type AccountExport } from "@voltonaut/shared";
@@ -5,6 +6,7 @@ import { ApiError } from "../api-error.js";
 import { AuthAccountDataService } from "../auth/auth-account-data.service.js";
 import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
 import { EconomyAccountDataService } from "../economy/economy.account-data.js";
+import { InventoryAccountDataService } from "../inventory/inventory.account-data.js";
 import { ProgressAccountDataService } from "../progress/progress.account-data.js";
 import { RidesService } from "../rides/rides.service.js";
 import { StravaAccountDataService } from "../strava/strava.account-data-service.js";
@@ -25,6 +27,8 @@ export class AccountDataService {
     private readonly strava: Readonly<StravaAccountDataService>,
     @Inject(EconomyAccountDataService)
     private readonly economy: Readonly<EconomyAccountDataService>,
+    @Inject(InventoryAccountDataService)
+    private readonly inventory: Readonly<InventoryAccountDataService>,
     @Inject(ProgressAccountDataService)
     private readonly progress: Readonly<ProgressAccountDataService>,
   ) {}
@@ -36,7 +40,7 @@ export class AccountDataService {
         const status = this.accounts.status(userId);
 
         return AccountExportSchema.parse({
-          schemaVersion: 1,
+          schemaVersion: 3,
           exportedAt: new Date(nowMs).toISOString(),
           account: {
             user,
@@ -46,7 +50,7 @@ export class AccountDataService {
           },
           profile: this.accounts.getProfile(userId),
           rides: this.rides.exportOwn(userId),
-          inventory: { status: "not_stored" },
+          inventory: this.inventory.exportOwn(userId),
           progression: {
             volts: this.economy.exportOwn(userId),
             progress: this.progress.exportOwn(userId),
@@ -68,6 +72,7 @@ export class AccountDataService {
 
         this.rides.deleteOwn(userId);
         this.strava.deleteOwn(userId);
+        this.inventory.deleteOwn(userId);
         this.progress.deleteOwn(userId);
         this.economy.deleteOwn(userId);
         this.accounts.deleteOwn(userId);

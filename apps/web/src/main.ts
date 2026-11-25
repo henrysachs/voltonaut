@@ -8,7 +8,7 @@ import { startApp } from "./app.js";
 import { createRideSession } from "./game/rideSession.js";
 import { createConnectionMonitor, type ConnectionMonitor } from "./game/connectionMonitor.js";
 import { setupProfile } from "./profileBootstrap.js";
-import { setupBrowserAccount } from "./browserAccount.js";
+import { setupBrowserAccount, type BrowserAccount } from "./browserAccount.js";
 import { setupRidePresentation } from "./ridePresentation.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
 import { parseEnvironmentSettings } from "./world/environment.js";
@@ -79,6 +79,16 @@ function forwardDeviceEvents(
   bus.subscribe("device.status", forwardEvent);
 }
 
+/** Garage purchases use the account's server shop once account data is ready; guests keep the preview. */
+async function attachGarageShop(
+  garage: ReturnType<typeof mountGameMenu>,
+  account: Readonly<Pick<BrowserAccount, "accounts">> | undefined,
+): Promise<void> {
+  const sync = await account?.accounts.catch(() => null);
+
+  if (garage !== undefined && sync !== undefined && sync !== null) garage.attachShop(sync.shop);
+}
+
 async function start(): Promise<void> {
   const profileReady = setupProfile();
   const account = setupBrowserAccount(() => profileReady);
@@ -123,7 +133,7 @@ async function start(): Promise<void> {
   setupKeyboard(bus);
 
   devices?.mount();
-  mountGameMenu(profile.bike.wheelCircM);
+  void attachGarageShop(mountGameMenu(profile.bike.wheelCircM), account);
 }
 
 await start();

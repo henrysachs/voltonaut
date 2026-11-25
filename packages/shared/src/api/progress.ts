@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { JournalIdSchema, VoltsRewardDaySchema, VoltsRideRangeReceiptSchema } from "../economy.js";
+import {
+  JournalIdSchema,
+  VoltsAccountExportSchema,
+  VoltsRewardDaySchema,
+  VoltsRideRangeReceiptSchema,
+} from "../economy.js";
 import { RewardFactsSchema } from "../rewards.js";
 import {
   RideProgressCheckpointSchema,
@@ -212,6 +217,11 @@ export const ProgressAccountExportSchema = z
   .readonly();
 
 export type ProgressAccountExport = z.infer<typeof ProgressAccountExportSchema>;
+
+/** Progression section of the account export: Volts journal plus automatic progress data. */
+export const ProgressionAccountExportSchema = z
+  .object({ volts: VoltsAccountExportSchema, progress: ProgressAccountExportSchema })
+  .strict();
 
 export type ProgressSessionGeneration = z.infer<typeof ProgressSessionGenerationSchema>;
 

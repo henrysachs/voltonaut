@@ -73,6 +73,18 @@ export const VoltsDebitCommandSchema = z
   .strict()
   .readonly();
 
+/** Operator credit from the admin CLI (spec E7-02 AK7); keys start with `operator:`. */
+export const VoltsGrantCommandSchema = z
+  .object({
+    idempotencyKey: VoltsIdempotencyKeySchema.refine((key) => key.startsWith("operator:"), {
+      message: "Grant idempotency key must start with operator:",
+    }),
+    refId: z.string().min(1).max(200),
+    amountVolts: VoltsDebitAmountSchema,
+  })
+  .strict()
+  .readonly();
+
 export const VoltsRideRangeReceiptSchema = z
   .object({
     entryId: z.string().uuid(),
@@ -119,6 +131,15 @@ export const VoltsDebitReceiptSchema = z
   .strict()
   .readonly();
 
+export const VoltsGrantReceiptSchema = z
+  .object({
+    entryId: z.string().uuid(),
+    refId: z.string().min(1).max(200),
+    amountVolts: VoltsDebitAmountSchema,
+  })
+  .strict()
+  .readonly();
+
 const VoltsLedgerEntryBaseSchema = z
   .object({
     id: z.string().uuid(),
@@ -133,6 +154,7 @@ const VoltsLedgerEntryBaseSchema = z
 type ExportEntryValidation = Readonly<
   | { reason: "ride_reward"; deltaVolts: number; startTick: number; endTick: number }
   | { reason: "purchase"; deltaVolts: number }
+  | { reason: "operator_grant"; deltaVolts: number }
 >;
 
 function validateExportEntry(
@@ -149,6 +171,10 @@ function validateExportEntry(
 
   if (entry.reason === "purchase" && entry.deltaVolts >= 0) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid purchase export" });
+  }
+
+  if (entry.reason === "operator_grant" && entry.deltaVolts <= 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid operator grant export" });
   }
 }
 
@@ -167,6 +193,9 @@ export const VoltsLedgerExportEntrySchema = z
     VoltsLedgerEntryBaseSchema.extend({
       reason: z.literal("purchase"),
     }).strict(),
+    VoltsLedgerEntryBaseSchema.extend({
+      reason: z.literal("operator_grant"),
+    }).strict(),
   ])
   .superRefine(validateExportEntry)
   .readonly();
@@ -178,6 +207,10 @@ export const VoltsAccountExportSchema = z
   })
   .strict()
   .readonly();
+
+export type VoltsGrantCommand = z.infer<typeof VoltsGrantCommandSchema>;
+
+export type VoltsGrantReceipt = z.infer<typeof VoltsGrantReceiptSchema>;
 
 export type VoltsAccountExport = z.infer<typeof VoltsAccountExportSchema>;
 

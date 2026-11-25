@@ -4,12 +4,15 @@ import { and, eq } from "drizzle-orm";
 import {
   RewardFactsSchema,
   VoltsDebitReceiptSchema,
+  VoltsGrantReceiptSchema,
   VoltsRideRangeReceiptSchema,
   type BaseVoltsQuote,
   type RewardFacts,
   type VoltsBalance,
   type VoltsDebitCommand,
   type VoltsDebitReceipt,
+  type VoltsGrantCommand,
+  type VoltsGrantReceipt,
   type VoltsRideRangeCommand,
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
@@ -60,6 +63,18 @@ export function rideRangePayloadHash(command: Readonly<VoltsRideRangeCommand>): 
 export function debitPayloadHash(command: Readonly<VoltsDebitCommand>): string {
   return payloadHash(
     JSON.stringify({
+      idempotencyKey: command.idempotencyKey,
+      refId: command.refId,
+      amountVolts: command.amountVolts,
+    }),
+  );
+}
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Shared Volts commands contain nested Zod primitive brands.
+export function grantPayloadHash(command: Readonly<VoltsGrantCommand>): string {
+  return payloadHash(
+    JSON.stringify({
+      kind: "operator_grant",
       idempotencyKey: command.idempotencyKey,
       refId: command.refId,
       amountVolts: command.amountVolts,
@@ -165,4 +180,22 @@ export function findRideRangeReceipt(
     .get();
 
   return row === undefined ? undefined : parseStoredRangeReceipt(row);
+}
+
+export function parseStoredGrantReceipt(row: Readonly<LedgerRow>): VoltsGrantReceipt {
+  if (
+    row.reason !== "operator_grant" ||
+    row.rewardDay !== null ||
+    row.startTick !== null ||
+    row.cumulativeFactsJson !== null ||
+    row.deltaVolts <= 0
+  ) {
+    throw new ApiError(500, "internal_error", "corrupt Volts ledger entry");
+  }
+
+  return VoltsGrantReceiptSchema.parse({
+    entryId: row.id,
+    refId: row.refId,
+    amountVolts: row.deltaVolts,
+  });
 }

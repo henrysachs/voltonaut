@@ -51,6 +51,7 @@ import {
   type LeaseAuthorization,
 } from "./privateAuthRequest.js";
 import { identityLease, type IdentityLease } from "./identityLease.js";
+import { shopLease, type ShopLease } from "./shopLease.js";
 
 export { PrivateRequestError } from "./privateAuthRequest.js";
 
@@ -71,6 +72,7 @@ export interface AccountLease extends ProfileWriteLease {
   readonly strava: StravaLease;
   readonly progress: ProgressLease;
   readonly identities: IdentityLease;
+  readonly shop: ShopLease;
   readonly accountStatus: () => Promise<AccountStatus>;
   readonly adminUsers: (cursor: string | null) => Promise<AdminUsers>;
   readonly saveMembership: (
@@ -185,9 +187,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         generation: authorization.generation,
         signal: authorization.signal,
         current: authorization.current,
-        strava: stravaLease(request),
-        progress: progressLease(request, authorization.generation),
-        identities: identityLease(request),
+        ...capabilityLeases(request, authorization.generation),
         ...membershipLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>
@@ -222,6 +222,18 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         },
       };
     },
+  };
+}
+
+function capabilityLeases(
+  request: ReturnType<typeof authorizedRequest>,
+  generation: number,
+): Pick<AccountLease, "strava" | "progress" | "identities" | "shop"> {
+  return {
+    strava: stravaLease(request),
+    progress: progressLease(request, generation),
+    identities: identityLease(request),
+    shop: shopLease(request),
   };
 }
 

@@ -23,6 +23,9 @@ export interface BrowserAccount {
   readonly session: Readonly<
     Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
   >;
+  readonly accounts: Readonly<
+    Promise<Readonly<Awaited<ReturnType<typeof setupBrowserAccountData>>>>
+  >;
   readonly progress: ProgressSync;
 }
 
@@ -81,7 +84,7 @@ export function setupBrowserAccount(
     else if (handoff.kind === "error") host?.append(handoffErrorText(handoff.error));
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");
 
-    return { session, progress };
+    return { session, accounts, progress };
   } catch {
     host?.append("Anmeldung nicht konfiguriert. Gastbetrieb bleibt verfügbar.");
 

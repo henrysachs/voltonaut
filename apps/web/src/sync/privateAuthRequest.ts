@@ -46,6 +46,9 @@ export type PrivatePath =
   | "/v1/strava/disconnect"
   | "/v1/auth/identities"
   | `/v1/auth/oidc/${string}/link`
+  | "/v1/me/volts"
+  | "/v1/me/inventory"
+  | "/v1/shop/purchase"
   | `/v1/strava/rides/${string}`;
 
 function statusFailure(status: number): SyncFailure {

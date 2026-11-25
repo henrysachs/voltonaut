@@ -17,7 +17,7 @@ it("normalizes only the deletion confirmation and rejects extra ownership fields
 });
 
 const exportInput = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   exportedAt: "2026-11-24T12:00:00.000Z",
   account: {
     user: {
@@ -31,7 +31,7 @@ const exportInput = {
   },
   profile: { status: "missing" },
   rides: [],
-  inventory: { status: "not_stored" },
+  inventory: { items: [] },
   progression: {
     volts: {
       balance: 12,
@@ -77,7 +77,7 @@ const exportInput = {
 it("exports the honest current server state without sessions or credentials", () => {
   const value = AccountExportSchema.parse(exportInput);
 
-  expect(value.inventory).toEqual({ status: "not_stored" });
+  expect(value.inventory).toEqual({ items: [] });
   expect(value.progression.volts.balance).toBe(12);
   expect(value.progression.volts.journal).toHaveLength(2);
   expect(value.account.identities).toEqual([

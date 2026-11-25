@@ -84,7 +84,10 @@ it("exports every own ride and account record without sessions or credentials", 
     tcx: null,
   });
   expect(exported.rides.some((item) => item.recording.rideId === ride(2).rideId)).toBe(false);
-  expect(exported.inventory).toEqual({ status: "not_stored" });
+  // Purchased items only, never another account's; catalog defaults carry no personal data.
+  expect(exported.inventory).toEqual({
+    items: [{ itemId: "jersey.stripe", source: "shop", acquiredAt: "2026-11-24T12:00:00.000Z" }],
+  });
   expect(exported.strava.deliveries).toHaveLength(1);
   expect(response.text).not.toContain(f.owner.sessionToken);
   expect(response.text).not.toContain("private-ciphertext");
@@ -96,8 +99,8 @@ it("exports only the owner's Volts journal and derived balance", async () => {
 
   const { balance, journal } = exported.progression.volts;
 
-  expect(balance).toBe(12);
-  expect(journal).toHaveLength(2);
+  expect(balance).toBe(17);
+  expect(journal).toHaveLength(3);
   expect(journal).toContainEqual(
     expect.objectContaining({
       reason: "ride_reward",
@@ -123,6 +126,14 @@ it("exports only the owner's Volts journal and derived balance", async () => {
       deltaVolts: -8,
       refId: "item-one",
       idempotencyKey: "purchase:item-one",
+    }),
+  );
+  expect(journal).toContainEqual(
+    expect.objectContaining({
+      reason: "operator_grant",
+      deltaVolts: 5,
+      refId: "acceptance",
+      idempotencyKey: "operator:acceptance",
     }),
   );
   expect(JSON.stringify(journal)).not.toContain("20000000-0000-4000-8000-000000000002");

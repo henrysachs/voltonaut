@@ -45,6 +45,7 @@ export async function setupBrowserAccountData(
   mountAccountMembershipPanel(sync.administration);
   window.addEventListener("online", () => {
     void sync.retry("resume");
+    void sync.shop.retry();
   });
 
   return sync;

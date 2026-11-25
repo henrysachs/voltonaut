@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 import { MAX_LOCAL_RIDE_MS } from "../localRide.js";
-import { VoltsAccountExportSchema } from "../economy.js";
 import { RiderProfileSchema } from "../profile.js";
 import { RideRecordingSchema } from "../recordingCapture.js";
 import { UserSchema } from "./auth.js";
 import { MembershipSchema, AuthorizationSchema } from "./account-status.js";
-import { ProgressAccountExportSchema } from "./progress.js";
+import { ProgressionAccountExportSchema } from "./progress.js";
 import { RideAssessmentSchema, RideReceiptSchema, ReplayWindowSummarySchema } from "./rides.js";
+import { InventoryAccountExportSchema } from "./shop.js";
 import { StravaDeliverySchema, StravaStatusSchema } from "./strava.js";
 
 export const ProfileInputSchema = RiderProfileSchema.extend({
@@ -43,8 +43,6 @@ export type AccountDeletionRequest = z.infer<typeof AccountDeletionRequestSchema
 
 export const AccountDeletionResponseSchema = z.null();
 
-const NotStoredSchema = z.object({ status: z.literal("not_stored") }).strict();
-
 const AccountExportRideSchema = z
   .object({
     recording: RideRecordingSchema,
@@ -72,7 +70,7 @@ const AccountExportRideSchema = z
 
 export const AccountExportSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(3),
     exportedAt: z.string().datetime({ precision: 3 }),
     account: z
       .object({
@@ -91,10 +89,8 @@ export const AccountExportSchema = z
       .strict(),
     profile: ProfileStateSchema,
     rides: z.array(AccountExportRideSchema),
-    inventory: NotStoredSchema,
-    progression: z
-      .object({ volts: VoltsAccountExportSchema, progress: ProgressAccountExportSchema })
-      .strict(),
+    inventory: InventoryAccountExportSchema,
+    progression: ProgressionAccountExportSchema,
     strava: z
       .object({
         status: StravaStatusSchema,
