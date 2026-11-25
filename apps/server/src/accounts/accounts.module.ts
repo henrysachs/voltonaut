@@ -19,10 +19,11 @@ export class AccountsModule {
     rides: Readonly<DynamicModule>,
     strava: Readonly<DynamicModule>,
     economy: Readonly<DynamicModule>,
+    inventory: Readonly<DynamicModule>,
   ): DynamicModule {
     return {
       module: AccountsModule,
-      imports: [AuthModule, rides, strava, economy],
+      imports: [AuthModule, rides, strava, economy, inventory],
       controllers: [AccountsController, AdminUsersController],
       providers: [
         AccountsService,

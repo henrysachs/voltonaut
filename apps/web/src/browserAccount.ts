@@ -15,11 +15,18 @@ declare global {
   }
 }
 
+export interface BrowserAccount {
+  readonly session: Readonly<
+    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
+  >;
+  readonly accounts: Readonly<
+    Promise<Readonly<Awaited<ReturnType<typeof setupBrowserAccountData>>>>
+  >;
+}
+
 export function setupBrowserAccount(
   profile: () => Promise<ProfileBootstrap>,
-):
-  | Readonly<Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">>
-  | undefined {
+): BrowserAccount | undefined {
   const handoff = takeAuthHandoff(window.location.href, (path) => {
     window.history.replaceState(null, "", path);
   });
@@ -58,7 +65,7 @@ export function setupBrowserAccount(
     else if (handoff.kind === "error") host?.append(handoffErrorText(handoff.error));
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");
 
-    return session;
+    return { session, accounts };
   } catch {
     host?.append("Anmeldung nicht konfiguriert. Gastbetrieb bleibt verfügbar.");
 

@@ -12,6 +12,7 @@ import { deliverAccountRow } from "./accountDelivery.js";
 import { applyAccountProfile } from "./accountProfile.js";
 import type { AccountLease } from "./privateAuthTransport.js";
 import { AccountAdministration } from "./accountAdministration.js";
+import { GarageShop } from "./garageShop.js";
 import {
   deleteAccountData,
   exportAccountData,
@@ -28,6 +29,7 @@ import {
 
 export class AccountSync {
   readonly administration = new AccountAdministration();
+  readonly shop = new GarageShop();
   readonly #options: SyncOptions;
   readonly #listeners = new Set<(view: AccountDataView) => void>();
   readonly #sending = new Set<number>();
@@ -46,6 +48,7 @@ export class AccountSync {
       const lease = view.kind === "authenticated" ? options.session.authorize() : undefined;
       this.#lease = lease;
       this.administration.bind(lease);
+      this.shop.bind(lease);
       this.#archive = [];
       this.#reauth = false;
 
@@ -78,6 +81,14 @@ export class AccountSync {
 
     for (const listener of this.#listeners) listener(view);
   }
+
+  /** Bound so loaders can take it as their patch callback. */
+  private readonly patchAccount = (
+    lease: AccountLease,
+    patch: Partial<Extract<AccountDataView, { readonly kind: "account" }>>,
+  ): void => {
+    this.patch(lease, patch);
+  };
 
   private patch(
     lease: AccountLease,
@@ -119,12 +130,8 @@ export class AccountSync {
     if (lease === undefined) return;
     await Promise.all([
       this.loadProfile(lease),
-      loadIdentities(lease, (current, patch) => {
-        this.patch(current, patch);
-      }),
-      loadHistory(lease, null, (current, patch) => {
-        this.patch(current, patch);
-      }),
+      loadIdentities(lease, this.patchAccount),
+      loadHistory(lease, null, this.patchAccount),
       this.loadLocal(lease),
       this.loadRows(lease),
     ]);
@@ -142,24 +149,17 @@ export class AccountSync {
     const lease = this.#lease;
     const cursor = historyCursor(this.#view);
 
-    if (lease !== undefined && cursor !== null)
-      await loadHistory(lease, cursor, (current, patch) => {
-        this.patch(current, patch);
-      });
+    if (lease !== undefined && cursor !== null) await loadHistory(lease, cursor, this.patchAccount);
   }
 
   private async loadLocal(lease: AccountLease): Promise<void> {
-    const archive = await loadLocalArchive(lease, this.#options.archive, (current, patch) => {
-      this.patch(current, patch);
-    });
+    const archive = await loadLocalArchive(lease, this.#options.archive, this.patchAccount);
 
     if (archive !== undefined) this.#archive = archive;
   }
 
   private loadRows(lease: AccountLease): Promise<OutboxRead> {
-    return loadOutboxRows(lease, this.#options.outbox, (current, patch) => {
-      this.patch(current, patch);
-    });
+    return loadOutboxRows(lease, this.#options.outbox, this.patchAccount);
   }
 
   async claim(rideId: string): Promise<void> {
@@ -180,9 +180,7 @@ export class AccountSync {
       this.#options.profile.saved,
       this.#options.nowMs,
       (current, row) => this.queue(current, row),
-      (current, patch) => {
-        this.patch(current, patch);
-      },
+      this.patchAccount,
     );
   }
 
@@ -257,12 +255,7 @@ export class AccountSync {
       await this.deliverNext(lease, database, rows, 0, mode);
 
       if (lease.current())
-        await Promise.all([
-          this.loadProfile(lease),
-          loadHistory(lease, null, (current, patch) => {
-            this.patch(current, patch);
-          }),
-        ]);
+        await Promise.all([this.loadProfile(lease), loadHistory(lease, null, this.patchAccount)]);
     } catch {
       this.patch(lease, {
         message: "Speicheränderung nicht bestätigt. Bitte später aktualisieren.",

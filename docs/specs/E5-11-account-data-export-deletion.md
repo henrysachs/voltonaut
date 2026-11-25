@@ -11,7 +11,7 @@ Ein angemeldeter Kontoinhaber kann alle serverseitig gespeicherten eigenen Daten
 
 ## Abnahmekriterien (aus der Roadmap übernommen und präzisiert)
 
-- [x] AK1 – `GET /v1/me/export` verlangt eine gültige Session und liefert ausschließlich Daten des authentifizierten Kontos: Profil, Mitgliedschaft, verknüpfte Identitäten mit Issuer/Subject, vollständige eigene Aufnahmen mit Beleg/Bewertung, Strava-Status sowie den abgeleiteten Volts-Kontostand und das vollständige Volts-Journal in Progression. Inventar bleibt ehrlich `not_stored`. Antworten sind `no-store`; Sessions, Tokens und verschlüsselte Zugangsdaten erscheinen nicht. Korruptes oder unvollständig gespeichertes TCX führt zu einem kontrollierten Fehler statt zu einem lückenhaften Export.
+- [x] AK1 – `GET /v1/me/export` verlangt eine gültige Session und liefert ausschließlich Daten des authentifizierten Kontos: Profil, Mitgliedschaft, verknüpfte Identitäten mit Issuer/Subject, vollständige eigene Aufnahmen mit Beleg/Bewertung, Strava-Status sowie den abgeleiteten Volts-Kontostand und das vollständige Volts-Journal in Progression. Inventar war bis E7-02 ehrlich `not_stored`; seit E7-02 (`schemaVersion` 2) exportiert es die gekauften Items. Antworten sind `no-store`; Sessions, Tokens und verschlüsselte Zugangsdaten erscheinen nicht. Korruptes oder unvollständig gespeichertes TCX führt zu einem kontrollierten Fehler statt zu einem lückenhaften Export.
 - [x] AK2 – Ein fremdes Konto kann weder exportiert noch gelöscht werden. Es gibt keine Kontoparameter am Export- oder Löschpfad; die Löschung vergleicht die eingegebene Bestätigung mit der E-Mail der aktuellen Session und verlangt den exakten `CLIENT_ORIGIN`.
 - [x] AK3 – `DELETE /v1/me` löscht nach Bestätigung atomar Profil, Mitgliedschaft, eigene Aufnahmen, Volts-Journal, Strava-Transaktionen/Verbindung/Aufträge, Identitätszuordnungen, offene Link-Transaktionen, Handoffs und Sessions. Der Nutzer bleibt nur als pseudonymer Löschtombstein; E-Mail und Identität werden durch serverseitig gekeyete HMACs gesperrt. Bearer- und Login-Tokens behalten normale SHA-256-Hashes.
 - [x] AK4 – Nach der Löschung schlagen späte oder erneute Schreibversuche fehl. Datenbank-Trigger verhindern INSERT/UPDATE auf allen Tabellen mit `user_id`-Fremdschlüssel auf `users`; der Migrationstest leitet diese Menge aus SQLite-Metadaten ab. Magic-Link- und OIDC-Login mit derselben E-Mail bzw. Identität legen kein Konto still neu an. Ein später Link-Callback endet kontrolliert als ungültiger Login, nicht als Triggerfehler.
@@ -31,7 +31,7 @@ Ein angemeldeter Kontoinhaber kann alle serverseitig gespeicherten eigenen Daten
 
 ## Nicht-Ziele
 
-- Keine Einführung serverseitigen Inventars oder weiterer Progressvergabe. Das auf `main` vorhandene Volts-Ledger wird über schmale Economy-Ports exportiert und gelöscht; Inventar bleibt `not_stored`.
+- Keine Einführung serverseitigen Inventars oder weiterer Progressvergabe. Das auf `main` vorhandene Volts-Ledger wird über schmale Economy-Ports exportiert und gelöscht; Inventar blieb hier `not_stored` (seit E7-02 exportiert und gelöscht).
 - Kein Export-Streaming oder spekulativer Umbau des Browser-Downloads. Der unbegrenzte synchrone Gesamtexport bleibt ein bewusster Tradeoff für den aktuellen kleinen Nutzerkreis.
 - Keine automatische Löschung lokaler Fahrtarchive oder des gemeinsamen Gastprofils. Besitz und Nutzerentscheidung sind dort nicht accountgebunden.
 - Keine Löschung bereits an Strava übertragener Aktivitäten. Der Export und die Löschbestätigung erklären diese externen Kopien.

@@ -121,6 +121,25 @@ function seedVolts(economy: Readonly<EconomyService>, ownerId: string, otherId: 
   economy.creditRideRange(otherId, reward("20000000-0000-4000-8000-000000000002", 7));
 }
 
+function seedInventoryAndGrant(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Test fixture intentionally exposes mutable SQLite handles.
+  db: Readonly<ServerDatabase>,
+  ownerId: string,
+  otherId: string,
+): void {
+  const insert = db.$client.prepare(
+    "INSERT INTO inventory (user_id, item_id, source, purchase_request_id, acquired_at) VALUES (?, 'jersey.stripe', 'shop', ?, ?)",
+  );
+
+  insert.run(ownerId, "30000000-0000-4000-8000-000000000001", NOW_MS);
+  insert.run(otherId, "30000000-0000-4000-8000-000000000002", NOW_MS);
+  db.$client
+    .prepare(
+      "INSERT INTO volts_ledger (id, user_id, delta_volts, reason, ref_id, idempotency_key, payload_hash, created_at) VALUES ('30000000-0000-4000-8000-000000000003', ?, 5, 'operator_grant', 'acceptance', 'operator:acceptance', ?, ?)",
+    )
+    .run(ownerId, "c".repeat(64), NOW_MS);
+}
+
 export async function accountDataFixture() {
   const context = await createTestApp({ clock: { nowMs: () => NOW_MS } });
   cleanup.add(() => context.app.close());
@@ -138,6 +157,7 @@ export async function accountDataFixture() {
   rides.store(owner.user.id, ride(1), NOW_MS);
   rides.store(other.user.id, ride(2), NOW_MS);
   seedVolts(economy, owner.user.id, other.user.id);
+  seedInventoryAndGrant(db, owner.user.id, other.user.id);
   seedAuthAndStrava(db, owner.user.id);
 
   return {
@@ -170,6 +190,9 @@ export function assertOwnerPurged(f: Readonly<AccountDataFixture>): void {
   ).toHaveLength(1);
   expect(
     f.db.$client.prepare("SELECT user_id FROM volts_ledger WHERE user_id = ?").all(f.other.user.id),
+  ).toHaveLength(1);
+  expect(
+    f.db.$client.prepare("SELECT user_id FROM inventory WHERE user_id = ?").all(f.other.user.id),
   ).toHaveLength(1);
 }
 

@@ -30,6 +30,7 @@ it("creates owned tables, enforces foreign keys and closes on Nest shutdown", as
       "account_status",
       "auth_identities",
       "auth_identity_tombstones",
+      "inventory",
       "login_tokens",
       "oidc_handoffs",
       "oidc_transactions",
@@ -64,7 +65,7 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(11);
+    expect(migrations).toHaveLength(12);
     db.$client
       .prepare(
         "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('persisted', 'persist@example.com', 0, NULL)",
@@ -134,7 +135,7 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
 
     try {
       const upgradedClient = getDatabase(next.app).$client;
-      expect(upgradedClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(11);
+      expect(upgradedClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(12);
       expect(upgradedClient.prepare("SELECT id FROM users").all()).toEqual([{ id: "legacy-user" }]);
       expect(upgradedClient.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
       await request(httpServerOf(next.app))

@@ -44,6 +44,7 @@ import {
   type LeaseAuthorization,
 } from "./privateAuthRequest.js";
 import { identityLease, type IdentityLease } from "./identityLease.js";
+import { shopLease, type ShopLease } from "./shopLease.js";
 
 export { PrivateRequestError } from "./privateAuthRequest.js";
 
@@ -63,6 +64,7 @@ export interface AccountLease extends ProfileWriteLease {
   readonly deleteAccount: (confirmation: string) => Promise<void>;
   readonly strava: StravaLease;
   readonly identities: IdentityLease;
+  readonly shop: ShopLease;
   readonly accountStatus: () => Promise<AccountStatus>;
   readonly adminUsers: (cursor: string | null) => Promise<AdminUsers>;
   readonly saveMembership: (
@@ -138,6 +140,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         current: authorization.current,
         strava: stravaLease(request),
         identities: identityLease(request),
+        shop: shopLease(request),
         ...membershipLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>

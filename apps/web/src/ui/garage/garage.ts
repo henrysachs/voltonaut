@@ -1,14 +1,9 @@
 import { AVATAR_SLOTS, avatarItemsForSlot } from "@voltonaut/rules";
 import type { ItemDef } from "@voltonaut/shared";
 
-import {
-  itemUnlockText,
-  priceText,
-  purchaseButtonText,
-  rarityText,
-  slotText,
-} from "./garageText.js";
+import { itemUnlockText, priceText, rarityText, slotText } from "./garageText.js";
 import { previewColorOptions } from "./palettes.js";
+import { GaragePurchase, type GarageShopSource } from "./purchase.js";
 import { createGaragePreviewView, type GaragePreviewView } from "./preview.js";
 import {
   createInitialGarageState,
@@ -35,8 +30,7 @@ class GaragePanel {
   readonly #itemMeta = document.createElement("p");
   readonly #price = document.createElement("p");
   readonly #colors = document.createElement("fieldset");
-  readonly #purchase = button("");
-  readonly #purchaseHint = document.createElement("p");
+  readonly #purchase = new GaragePurchase();
   readonly #rotateLeft = button("Links drehen");
   readonly #rotateRight = button("Rechts drehen");
   readonly #rotateToggle = button("Drehung pausieren");
@@ -70,6 +64,10 @@ class GaragePanel {
     });
   }
 
+  attachShop(source: GarageShopSource): void {
+    this.#purchase.attach(source);
+  }
+
   mount(): void {
     this.host.append(this.#root);
     this.#render();
@@ -86,7 +84,8 @@ class GaragePanel {
     const status = document.createElement("p");
     status.className = "garage__status";
     status.setAttribute("role", "status");
-    status.textContent = "Nur Vorschau. Käufe, Besitz und Volts-Buchung sind noch nicht verfügbar.";
+    status.textContent =
+      "Vorschau ändert nur die Ansicht. Käufe bucht der Server; Ausrüsten folgt später.";
 
     this.#root.className = "garage";
     this.#root.dataset["testid"] = "garage-shop";
@@ -151,21 +150,13 @@ class GaragePanel {
     this.#price.dataset["testid"] = "garage-price";
     this.#colors.className = "garage__colors";
 
-    this.#purchase.className = "garage__purchase";
-    this.#purchase.disabled = true;
-    this.#purchase.dataset["testid"] = "garage-purchase";
-
-    this.#purchaseHint.className = "garage__purchase-hint";
-    this.#purchaseHint.textContent =
-      "Server-Inventar und Volts-Buchung fehlen. Es wird nichts abgezogen, verliehen oder gespeichert.";
-
     section.append(
       this.#itemName,
       this.#itemMeta,
       this.#price,
       this.#colors,
-      this.#purchase,
-      this.#purchaseHint,
+      this.#purchase.button,
+      this.#purchase.hint,
     );
 
     return section;
@@ -240,11 +231,9 @@ class GaragePanel {
     this.#itemName.textContent = skin ? "Hautfarbe" : item.name;
     this.#itemMeta.textContent = `${rarityText(item.rarity)} · ${itemUnlockText(item)}`;
     this.#price.textContent = priceText(item);
-    this.#purchase.textContent = purchaseButtonText(item);
     this.#itemMeta.hidden = skin;
     this.#price.hidden = skin;
-    this.#purchase.hidden = skin;
-    this.#purchaseHint.hidden = skin;
+    this.#purchase.show(item, !skin);
     this.#colors.hidden = colors.length === 0;
     this.#colors.replaceChildren();
 
@@ -290,11 +279,15 @@ class GaragePanel {
   }
 }
 
+export type GarageHandle = Pick<GaragePanel, "attachShop">;
+
 export function mountGarage(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The panel owns the host's menu children.
   host: HTMLElement,
   wheelCircM: number,
-): void {
+): GarageHandle {
   const panel = new GaragePanel(host, wheelCircM);
   panel.mount();
+
+  return panel;
 }
