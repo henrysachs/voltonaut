@@ -7,10 +7,11 @@ import { sessionPersistence } from "./sync/sessionPersistence.js";
 import { mountAccountPanels, resumeIdentityLink } from "./browserAccountPanels.js";
 import { privateAuthTransport } from "./sync/privateAuthTransport.js";
 import type { ProfileBootstrap } from "./profileBootstrap.js";
-import { setupBrowserAccountData } from "./browserAccountData.js";
+import { lazyResource, setupBrowserAccountData } from "./browserAccountData.js";
 import { setupBrowserStrava } from "./browserStrava.js";
 import { ProgressSync } from "./sync/progressSync.js";
 import { openProgressOutboxDatabase } from "./sync/progressOutboxDatabase.js";
+import type { ProgressOutbox } from "./sync/progressOutbox.js";
 import { mountProgressPanel } from "./ui/progressPanel.js";
 
 declare global {
@@ -29,8 +30,11 @@ export interface BrowserAccount {
   readonly progress: ProgressSync;
 }
 
-function setupProgress(session: Readonly<ApplicationSession>): ProgressSync {
-  const progress = new ProgressSync({ session, outbox: openProgressOutboxDatabase });
+function setupProgress(
+  session: Readonly<ApplicationSession>,
+  outbox: () => Promise<ProgressOutbox>,
+): ProgressSync {
+  const progress = new ProgressSync({ session, outbox });
   mountProgressPanel(progress);
   window.addEventListener("online", () => {
     void progress.retry("resume");
@@ -74,9 +78,10 @@ export function setupBrowserAccount(
     });
 
     const links = mountAccountPanels(session, transport);
-    const accounts = setupBrowserAccountData(session, profile);
+    const progressOutbox = lazyResource(() => openProgressOutboxDatabase());
+    const accounts = setupBrowserAccountData(session, profile, progressOutbox);
     void setupBrowserStrava(session, accounts);
-    const progress = setupProgress(session);
+    const progress = setupProgress(session, progressOutbox);
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
     else if (handoff.kind === "link") void resumeIdentityLink(session, links, handoff.code);

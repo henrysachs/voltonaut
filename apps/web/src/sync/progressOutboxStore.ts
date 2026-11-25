@@ -89,6 +89,12 @@ class IndexedProgressStore implements ProgressIndexedStore {
       .getAll(IDBKeyRange.only([owner.apiOrigin, owner.userId, "stored"]));
   }
 
+  accountRows(owner: Readonly<ProgressAccountOwner>): IDBRequest<ProgressOutboxRow[]> {
+    return this.#store
+      .index(PROGRESS_OUTBOX_INDEX_ACCOUNT)
+      .getAll(IDBKeyRange.only([owner.apiOrigin, owner.userId]));
+  }
+
   sequenceRows(
     owner: Readonly<ProgressJournalOwner>,
     sequence: number,

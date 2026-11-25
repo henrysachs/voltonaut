@@ -110,6 +110,8 @@ export interface ProgressOutbox {
     owner: Readonly<ProgressAccountOwner>,
     afterMs: number,
   ) => Promise<number | undefined>;
+  /** Removes every row of one API origin and account after a confirmed server account deletion. */
+  readonly purgeOwner: (owner: Readonly<ProgressAccountOwner>) => Promise<void>;
   readonly markSending: (input: Readonly<ProgressMarkSending>) => Promise<ProgressOutboxRow>;
   readonly markStored: (input: Readonly<ProgressMarkStored>) => Promise<ProgressOutboxRow>;
   readonly markBlocked: (input: Readonly<ProgressMarkBlocked>) => Promise<ProgressOutboxRow>;

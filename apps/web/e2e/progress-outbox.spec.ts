@@ -224,6 +224,27 @@ async function expectReloadedProgress(
   expect(pending.afterBackoffRetryAt).toBeUndefined();
 }
 
+async function purgeOwnerRows() {
+  const { openProgressOutboxDatabase } = await import("../src/sync/progressOutboxDatabase.js");
+  const { owner, userB } = await import("../src/sync/progressOutboxTestdata.js");
+  const outbox = await openProgressOutboxDatabase();
+
+  await outbox.purgeOwner(owner);
+
+  return {
+    owner: await outbox.state(owner),
+    other: await outbox.listPendingPage({ ...owner, userId: userB }, 10),
+  };
+}
+
+async function expectOwnerPurge(page: Readonly<Page>): Promise<void> {
+  const purged = await page.evaluate(purgeOwnerRows);
+
+  expect(purged.owner).toMatchObject({ kind: "ready", counts: { rows: 0, remaining: 1200 } });
+  expect(purged.other).toHaveLength(1);
+  expect(purged.other[0]?.userId).toBe("00000000-0000-4000-8000-000000000002");
+}
+
 test("real IndexedDB uses the v1 composite sequence schema and persists rows across reload", async ({
   page,
 }: Readonly<{ page: Readonly<Page> }>) => {
@@ -270,4 +291,5 @@ test("real IndexedDB uses the v1 composite sequence schema and persists rows acr
   });
 
   await expectReloadedProgress(page, seeded.first, seeded.sealedRevision, seeded.view, rows);
+  await expectOwnerPurge(page);
 });

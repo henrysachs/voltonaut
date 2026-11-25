@@ -34,6 +34,7 @@ export {
   runProgressKeyedChange,
   runProgressNextRetryAt,
   runProgressOpenChange,
+  runProgressOwnerPurge,
   runProgressPendingPage,
   runProgressStoredCleanup,
 } from "./progressOutboxChange.js";

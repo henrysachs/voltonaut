@@ -355,6 +355,13 @@ class MemoryOutbox implements ProgressOutbox {
     return next;
   }
 
+  async purgeOwner(account: ProgressAccountOwner): Promise<void> {
+    for (const [key, row] of this.#rows) {
+      if (row.apiOrigin === account.apiOrigin && row.userId === account.userId)
+        this.#rows.delete(key);
+    }
+  }
+
   async markSending(input: ProgressMarkSending): Promise<ProgressOutboxRow> {
     this.checkRow(input.fence, input.row);
     const existing = this.#rows.get(rowKey(input.row));

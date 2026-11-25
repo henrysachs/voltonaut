@@ -25,6 +25,7 @@ import {
   runProgressJournalPending,
   runProgressNextRetryAt,
   runProgressOpenChange,
+  runProgressOwnerPurge,
   runProgressPendingPage,
   runProgressStoredCleanup,
   type ProgressIndexedDatabase,
@@ -176,6 +177,10 @@ class IndexedProgressOutbox implements ProgressOutbox {
     }
 
     return runProgressNextRetryAt(this.#database, owner, afterMs);
+  }
+
+  purgeOwner(ownerInput: Readonly<ProgressAccountOwner>): Promise<void> {
+    return runProgressOwnerPurge(this.#database, normalizeProgressOwner(ownerInput));
   }
 
   async markSending(input: Readonly<ProgressMarkSending>): Promise<ProgressOutboxRow> {

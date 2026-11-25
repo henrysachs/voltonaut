@@ -4,10 +4,12 @@ import type { AccountOutbox } from "./accountOutbox.js";
 import type { DeletionIntents, DeletionOwner } from "./accountDeletion.js";
 import type { AccountLease } from "./privateAuthTransport.js";
 import type { ApplicationSession } from "./applicationSession.js";
+import type { ProgressOutbox } from "./progressOutbox.js";
 
 interface DeletionSyncOptions {
   readonly session: Readonly<Pick<ApplicationSession, "endAfterAccountDeletion">>;
   readonly outbox: () => Promise<AccountOutbox>;
+  readonly progressOutbox: () => Promise<Pick<ProgressOutbox, "purgeOwner">>;
   readonly deletions: DeletionIntents;
 }
 
@@ -101,12 +103,15 @@ async function cleanupOwner(
   owner: Readonly<DeletionOwner>,
   options: Readonly<DeletionSyncOptions>,
 ): Promise<boolean> {
-  try {
-    await (await options.outbox()).purgeOwner(owner);
-    options.deletions.forget(owner);
+  const results = await Promise.allSettled([
+    options.outbox().then((outbox) => outbox.purgeOwner(owner)),
+    options.progressOutbox().then((outbox) => outbox.purgeOwner(owner)),
+  ]);
 
-    return true;
-  } catch {
+  if (results.some((result: Readonly<PromiseSettledResult<void>>) => result.status === "rejected"))
     return false;
-  }
+
+  options.deletions.forget(owner);
+
+  return true;
 }

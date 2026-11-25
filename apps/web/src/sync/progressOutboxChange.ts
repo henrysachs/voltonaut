@@ -240,6 +240,35 @@ export function runProgressNextRetryAt(
   );
 }
 
+export function runProgressOwnerPurge(
+  database: Readonly<ProgressIndexedDatabase>,
+  owner: Readonly<ProgressAccountOwner>,
+): Promise<void> {
+  let ownedRaw: readonly ProgressOutboxRow[] = [];
+
+  return runProgressTransactionChange(
+    database,
+    "readwrite",
+    undefined,
+    (store, ready, fail) => {
+      const request = store.accountRows(owner);
+      request.addEventListener("success", () => {
+        ownedRaw = request.result;
+        ready();
+      });
+      request.addEventListener("error", () => {
+        fail(
+          progressError("storage", "Progress-Bereinigung fehlgeschlagen. Keine Daten geändert."),
+        );
+      });
+    },
+    () => ({
+      value: undefined,
+      deletes: accountProgressRows(decodeProgressRows(ownedRaw), owner),
+    }),
+  );
+}
+
 export function runProgressStoredCleanup(
   database: Readonly<ProgressIndexedDatabase>,
   fence: Readonly<ProgressWriteFence>,

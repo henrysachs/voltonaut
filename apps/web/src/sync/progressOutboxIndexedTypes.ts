@@ -46,6 +46,7 @@ export interface ProgressIndexedStore {
     after?: Readonly<ProgressPendingPageCursor>,
   ): ProgressIndexedRequest<ProgressOutboxRow[]>;
   storedRows(owner: Readonly<ProgressAccountOwner>): ProgressIndexedRequest<ProgressOutboxRow[]>;
+  accountRows(owner: Readonly<ProgressAccountOwner>): ProgressIndexedRequest<ProgressOutboxRow[]>;
   sequenceRows(
     owner: Readonly<ProgressJournalOwner>,
     sequence: number,

@@ -48,5 +48,16 @@ export function createMemoryJournalReads(state: Readonly<MemoryJournalReadState>
 
       return read(indexedRows(rows, indexes.stored.get(accountKey(owner))));
     },
+    accountRows: (owner: Readonly<ProgressAccountOwner>) => {
+      metrics.accountRows += 1;
+
+      const journals = indexes.accountJournals.get(accountKey(owner)) ?? [];
+
+      return read(
+        [...journals].flatMap((journalId) =>
+          indexedRows(rows, indexes.journals.get(journalKey({ ...owner, journalId }))?.values()),
+        ),
+      );
+    },
   };
 }

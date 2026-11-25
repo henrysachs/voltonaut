@@ -9,6 +9,7 @@ export interface MemoryOutboxMetrics {
   journalRows: number;
   pendingPage: number;
   storedRows: number;
+  accountRows: number;
   sequenceRows: number;
   lastJournalRow: number;
 }
@@ -25,6 +26,7 @@ export function emptyMetrics(): MemoryOutboxMetrics {
     journalRows: 0,
     pendingPage: 0,
     storedRows: 0,
+    accountRows: 0,
     sequenceRows: 0,
     lastJournalRow: 0,
   };
