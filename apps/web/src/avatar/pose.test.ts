@@ -57,22 +57,37 @@ function elbowAngleDeg(shoulder: Point3, elbow: Point3, wrist: Point3): number {
 }
 
 describe("rider fit", () => {
-  it.each(FRAME_SPECS)("reaches the $key hoods with a relaxed, bent elbow", (frame) => {
-    const geometry = bikeGeometry(2.105, frame, DEFAULT_WHEEL_SPEC);
-    const { pelvis } = torsoPoints(geometry);
+  it.each(FRAME_SPECS)(
+    "puts the hands on the $key hoods with a bent elbow and the hip over the saddle",
+    (frame) => {
+      const geometry = bikeGeometry(2.105, frame, DEFAULT_WHEEL_SPEC);
+      const { pelvis } = torsoPoints(geometry);
 
-    for (const side of SIDES) {
-      const arm = armPose(geometry, side);
+      for (const side of SIDES) {
+        const arm = armPose(geometry, side);
 
-      expect(distance(arm.shoulder, arm.elbow)).toBeCloseTo(UPPER_ARM_M, 6);
-      expect(distance(arm.elbow, arm.wrist)).toBeCloseTo(FOREARM_M, 6);
-      // A locked arm (≈ 180°) means the hood is out of reach; a sharp bend means a cramped fit.
-      expect(elbowAngleDeg(arm.shoulder, arm.elbow, arm.wrist)).toBeGreaterThan(120);
-      expect(elbowAngleDeg(arm.shoulder, arm.elbow, arm.wrist)).toBeLessThan(165);
-      // The elbow bends down and out, never up into the torso.
-      expect(arm.elbow[1]).toBeLessThan(arm.shoulder[1]);
-      expect(side * arm.elbow[2]).toBeGreaterThan(side * arm.shoulder[2]);
-      expect(arm.wrist[0]).toBeGreaterThan(pelvis[0]);
-    }
-  });
+        const hood: Point3 = [
+          geometry.hoodGrip[0],
+          geometry.hoodGrip[1],
+          side * geometry.hoodGrip[2],
+        ];
+
+        const along = (arm.elbow[0] - arm.shoulder[0]) / (arm.wrist[0] - arm.shoulder[0]);
+
+        expect(distance(arm.grip, hood)).toBeLessThan(0.03);
+        expect(distance(arm.shoulder, arm.elbow)).toBeCloseTo(UPPER_ARM_M, 6);
+        expect(distance(arm.elbow, arm.wrist)).toBeCloseTo(FOREARM_M, 6);
+        // A locked arm (≈ 180°) means the hood is out of reach; a sharp bend means a cramped fit.
+        expect(elbowAngleDeg(arm.shoulder, arm.elbow, arm.wrist)).toBeGreaterThan(120);
+        expect(elbowAngleDeg(arm.shoulder, arm.elbow, arm.wrist)).toBeLessThan(165);
+        // The elbow sags below the shoulder→wrist line and flares out, never up into the torso.
+        expect(arm.elbow[1]).toBeLessThan(
+          arm.shoulder[1] + along * (arm.wrist[1] - arm.shoulder[1]),
+        );
+        expect(side * arm.elbow[2]).toBeGreaterThan(side * arm.shoulder[2]);
+      }
+
+      expect(Math.abs(pelvis[0] - geometry.saddleTop[0])).toBeLessThan(0.05);
+    },
+  );
 });
