@@ -2,12 +2,16 @@ import type { ConnectionStatus, DeviceAdapter, EventBus } from "@voltonaut/share
 import type { TrainerControlPanel } from "@voltonaut/ble";
 import { renderTrainerControl } from "./trainerControl.js";
 
-export interface ConnectSlot {
-  readonly label: string;
-  readonly adapter: DeviceAdapter;
+/** The device surface the dialog uses; every BLE adapter (real or sim transport) provides it. */
+export interface ConnectableDevice extends DeviceAdapter {
   readonly select: () => Promise<void>;
   readonly description?: () => string;
-  readonly trainer?: TrainerControlPanel;
+  readonly control?: TrainerControlPanel;
+}
+
+export interface ConnectSlot {
+  readonly label: string;
+  readonly adapter: ConnectableDevice;
 }
 
 const STATUS_TEXT: Readonly<Record<ConnectionStatus, string>> = {
@@ -83,7 +87,7 @@ function slotElements(slot: ConnectSlot): SlotElements {
 }
 
 function renderSlotState(
-  slot: Readonly<Pick<ConnectSlot, "description">>,
+  slot: ConnectSlot,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM nodes are mutable render targets; this view only reads their references.
   elements: SlotElements,
   current: ConnectionStatus,
@@ -91,7 +95,7 @@ function renderSlotState(
   elements.status.textContent = STATUS_TEXT[current];
   elements.row.dataset["state"] = current;
   elements.rawStatus.textContent = current;
-  elements.description.textContent = slot.description?.() ?? "";
+  elements.description.textContent = slot.adapter.description?.() ?? "";
   elements.description.hidden = elements.description.textContent === "";
   elements.retry.hidden = current !== "error";
   elements.disconnect.disabled = current === "disconnected";
@@ -115,8 +119,8 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
   bindActions(slot, elements, connect);
   bus.subscribe("device.status", update);
 
-  if (slot.trainer !== undefined)
-    elements.row.append(renderTrainerControl(slot.trainer, elements.diagnosticBody));
+  if (slot.adapter.control !== undefined)
+    elements.row.append(renderTrainerControl(slot.adapter.control, elements.diagnosticBody));
 
   renderSlotState(slot, elements, slot.adapter.status());
 
@@ -137,7 +141,7 @@ function bindActions(
   connect: (action: () => Promise<void>) => void,
 ): void {
   buttons.choose.addEventListener("click", () => {
-    connect(slot.select);
+    connect(() => slot.adapter.select());
   });
   buttons.retry.addEventListener("click", () => {
     connect(() => slot.adapter.connect());

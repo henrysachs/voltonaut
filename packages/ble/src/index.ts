@@ -4,6 +4,8 @@ export * from "./cps/adapter.js";
 
 export * from "./cps/parse.js";
 
+export * from "./devices.js";
+
 export * from "./fixtureSchema.js";
 
 export * from "./ftms/adapter.js";
@@ -29,6 +31,8 @@ export * from "./zwift-play/parse.js";
 export * from "./zwift-play/adapter.js";
 
 export * from "./reconnect.js";
+
+export * from "./simDevices.js";
 
 export * from "./replay/ReplayTransport.js";
 
