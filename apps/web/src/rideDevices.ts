@@ -1,4 +1,4 @@
-import type { EventBus, TrainerCommand } from "@voltonaut/shared";
+import type { EventBus } from "@voltonaut/shared";
 import {
   createFakeHeartRate,
   createFakePlay,
@@ -14,9 +14,8 @@ import {
   type KeyboardSource,
   type PlayAdapterOptions,
   type WebBluetoothCentral,
-  type TrainerControl,
 } from "@voltonaut/ble";
-import type { RideSnapshot } from "@voltonaut/engine";
+import type { RideTrainerSink } from "./game/rideSession.js";
 import { mountConnectDialog } from "./ui/connect/dialog.js";
 
 const SIM_SAMPLES = createSimScript([
@@ -95,26 +94,14 @@ export function setupKeyboard(bus: EventBus): void {
   void keyboard.connect();
 }
 
-/** Receives each engine update as its snapshot, then that update's commands. */
-export interface RideDevices {
+export interface RideDevices extends RideTrainerSink {
   readonly mount: () => void;
-  readonly onSnapshot: (snapshot: RideSnapshot) => void;
-  readonly onCommands: (commands: readonly TrainerCommand[]) => void;
 }
 
-/** Joins one engine update for the trainer, which owns all control timing. */
-function forwardTo(
-  control: Readonly<Pick<TrainerControl, "forward">>,
-): Pick<RideDevices, "onSnapshot" | "onCommands"> {
-  let paused = true;
-
-  return {
-    onSnapshot(snapshot) {
-      ({ paused } = snapshot);
-    },
-    onCommands(commands) {
-      control.forward({ paused, commands });
-    },
+/** Binds the trainer control as the ride's sink; the adapter owns all control timing. */
+function forwardTo(control: RideTrainerSink): RideTrainerSink["forward"] {
+  return (update) => {
+    control.forward(update);
   };
 }
 
@@ -126,7 +113,7 @@ export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices 
   const play = createFakePlay({ bus, clock });
 
   return {
-    ...forwardTo(trainer.control),
+    forward: forwardTo(trainer.control),
     mount() {
       mountConnectDialog(
         [
@@ -196,7 +183,7 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
   });
 
   return {
-    ...forwardTo(trainer.control),
+    forward: forwardTo(trainer.control),
     mount() {
       mountConnectDialog(
         [

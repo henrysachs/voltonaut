@@ -61,11 +61,8 @@ function setup(extra: Partial<Pick<RideSessionOptions, "onProgress">> = {}) {
       source: "sim",
       clockScale: 1,
       trainer: {
-        onSnapshot: () => {
-          calls.push("snapshot");
-        },
-        onCommands: () => {
-          calls.push("commands");
+        forward: (update) => {
+          calls.push(`paused=${String(update.paused)} commands=${update.commands.length}`);
         },
       },
     },
@@ -128,7 +125,7 @@ it("feeds trainer callbacks in order, consumes segment batches and tracks the co
   ride.bus.publish({ type: "device.status", tS: 0, kind: "trainer", id: "t", status: "ready" });
   expect(ride.session.connected()).toBe(true);
   ride.deliver(4, [entry]);
-  expect(ride.calls).toEqual(["snapshot", "commands"]);
+  expect(ride.calls).toEqual(["paused=false commands=0"]);
   expect(ride.session.segments().rows[0]?.progress).toEqual({
     kind: "active",
     lap: 0,
