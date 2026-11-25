@@ -30,7 +30,7 @@ function createTrainerHarness(samples: SimScript): TrainerHarness {
     statusEvents.push(event);
   });
 
-  const trainer = createFakeTrainer({ bus, clock, ticker, samples });
+  const trainer = createFakeTrainer({ bus, clock, ticker, clockScale: 1, samples });
 
   return {
     trainer,

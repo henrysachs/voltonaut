@@ -14,6 +14,7 @@ it("requests FTMS or CPS devices with both services authorized at the browser pi
     bus: createEventBus(),
     clock: createManualClock(),
     ticker: createManualTicker(),
+    clockScale: 1,
     transport: createWebBluetoothTransport({ central: fake.central }),
   });
 

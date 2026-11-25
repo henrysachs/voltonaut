@@ -1,10 +1,10 @@
+import type { EventBus } from "@voltonaut/shared";
 import { bytesToDataView, type ReadOnlyBytes } from "../bytes.js";
-import type { SimClock } from "../sim/clock.js";
-import type { TickSource } from "../sim/tick.js";
 import type { NotificationListener } from "../transport.js";
 import { FITNESS_MACHINE_CONTROL_POINT, FITNESS_MACHINE_SERVICE } from "../uuids.js";
-import { createFtmsControl } from "./control.js";
+import { createFtmsControl } from "./controlConnection.js";
 import type { ControlTransport } from "./controlProcedure.js";
+import type { ControlOptions } from "./controlState.js";
 
 class SimControlPoint {
   private phase: "unowned" | "owned" | "started" = "unowned";
@@ -49,9 +49,9 @@ class SimControlPoint {
 }
 
 /** Protocol simulator, not a physical trainer model: uses the production ACK/authority path. */
-export function createSimTrainerControl(clock: SimClock, ticker: TickSource) {
+export function createSimTrainerControl(options: Omit<ControlOptions, "transport">, bus: EventBus) {
   const io = new SimControlPoint();
-  const control = createFtmsControl({ clock, ticker, transport: io.transport });
+  const control = createFtmsControl({ ...options, transport: io.transport }, bus);
 
   return {
     control,

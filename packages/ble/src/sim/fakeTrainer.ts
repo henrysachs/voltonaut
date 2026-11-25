@@ -11,6 +11,8 @@ export interface FakeTrainerOptions {
   readonly clock: SimClock;
   readonly ticker: TickSource;
   readonly samples: SimScript;
+  /** Ride clock scale, fixed for the trainer's lifetime; control requires exactly 1. */
+  readonly clockScale: number;
   readonly id?: string;
 }
 
@@ -20,9 +22,9 @@ export interface FakeTrainer extends DeviceAdapter {
 }
 
 export function createFakeTrainer(options: FakeTrainerOptions): FakeTrainer {
-  const { bus, clock, ticker, samples } = options;
+  const { bus, clock, ticker, samples, clockScale } = options;
   const id = options.id ?? "sim-trainer";
-  const simulation = createSimTrainerControl(clock, ticker);
+  const simulation = createSimTrainerControl({ clock, ticker, clockScale }, bus);
   let status: "disconnected" | "ready" = "disconnected";
   let stopTick: (() => void) | undefined;
   let sampleIndex = 0;
@@ -44,8 +46,7 @@ export function createFakeTrainer(options: FakeTrainerOptions): FakeTrainer {
         const sample = samples[sampleIndex] ?? samples[0];
         sampleIndex = (sampleIndex + 1) % samples.length;
         gearIndex = sample.gearIndex;
-        simulation.control.observeCadence(sample.cadenceRpm);
-        bus.publish({
+        simulation.control.publishData({
           type: "trainer.data",
           tS: clock.nowS(),
           powerW: sample.powerW,

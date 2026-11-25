@@ -27,6 +27,7 @@ function rig(clockScale = 1) {
     bus,
     clock,
     ticker,
+    clockScale,
     samples: createSimScript([{ powerW: 200, cadenceRpm: 90, heartRateBpm: 120, gearIndex: 11 }]),
   });
 
@@ -42,7 +43,7 @@ function rig(clockScale = 1) {
         label: "Trainer",
         adapter: trainer,
         select: () => trainer.connect(),
-        trainer: { control: trainer.control, clockScale },
+        trainer: trainer.control,
       },
     ],
     bus,
@@ -75,12 +76,17 @@ it("separates requested grade from ACK and reports neutral/Stop only after confi
   await settle();
   r.clock.advanceS(0.25);
   r.ticker.tick();
-  r.trainer.control.submit({
-    type: "simulation",
-    gradePct: 6,
-    windMps: 0,
-    crr: 0.004,
-    cwKgPerM: 0.51,
+  r.trainer.control.forward({
+    paused: false,
+    commands: [
+      {
+        type: "simulation",
+        gradePct: 6,
+        windMps: 0,
+        crr: 0.004,
+        cwKgPerM: 0.51,
+      },
+    ],
   });
   expect(r.document.find("Ziel: 6.00 %")).toBeDefined();
   expect(r.document.find("ACK: 0.00 % · Neutralziel bestätigt")).toBeDefined();
