@@ -38,7 +38,7 @@ volts_total  = min(volts_work + volts_climb + volts_pickup + volts_bonus, restbu
 Größenordnung: 1 h @ 180 W ≈ 650 kJ, 300 Hm, 8 Pickups → ≈ 650 + 450 + 80 = **≈ 1 180 Volts/h**.
 Regeln: keine Volts im Sim-Modus und ohne echten Leistungsmesser; Abfahrt ohne Treten bringt 0 kJ. Werte sind Startwerte ⚠️, nach 2–3 Wochen Nutzung nachjustieren.
 
-Das Tageslimit beträgt **3000 Volts über alle Fahrten zusammen**, nicht je Fahrt. Der Server muss das verbleibende Budget rekonstruieren. Ein reines Zahlenangebot entscheidet nicht über Quellenakzeptanz oder tatsächliche Vergabe.
+Das Tageslimit beträgt **3000 Volts über alle Fahrten zusammen**, nicht je Fahrt. Volts-Boni aus dem Season Pass zählen nicht dagegen ([E6-06](specs/E6-06-season-pass.md)). Eine spätere Erhöhung des Limits ist vorgesehen. Der Server muss das verbleibende Budget rekonstruieren. Ein reines Zahlenangebot entscheidet nicht über Quellenakzeptanz oder tatsächliche Vergabe.
 
 ### Reines Basisangebot aus E6-02
 
