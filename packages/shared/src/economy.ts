@@ -81,9 +81,17 @@ export const VoltsGrantCommandSchema = z
     }),
     refId: z.string().min(1).max(200),
     amountVolts: VoltsDebitAmountSchema,
+    /** Active admin account that issued the credit (issue #116). */
+    operatorUserId: z.string().min(1).max(200),
   })
   .strict()
   .readonly();
+
+/** Who issued a credit; grants booked before the audit existed stay explicitly unknown. */
+export const VoltsGrantOperatorSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("recorded"), userId: z.string().min(1).max(200) }).strict(),
+  z.object({ kind: z.literal("unknown_before_audit") }).strict(),
+]);
 
 export const VoltsRideRangeReceiptSchema = z
   .object({
@@ -136,6 +144,7 @@ export const VoltsGrantReceiptSchema = z
     entryId: z.string().uuid(),
     refId: z.string().min(1).max(200),
     amountVolts: VoltsDebitAmountSchema,
+    operator: VoltsGrantOperatorSchema,
   })
   .strict()
   .readonly();
@@ -211,6 +220,8 @@ export const VoltsAccountExportSchema = z
 export type VoltsGrantCommand = z.infer<typeof VoltsGrantCommandSchema>;
 
 export type VoltsGrantReceipt = z.infer<typeof VoltsGrantReceiptSchema>;
+
+export type VoltsGrantOperator = z.infer<typeof VoltsGrantOperatorSchema>;
 
 export type VoltsAccountExport = z.infer<typeof VoltsAccountExportSchema>;
 

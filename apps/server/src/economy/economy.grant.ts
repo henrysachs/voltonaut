@@ -6,7 +6,9 @@ import {
   VoltsBalanceSchema,
   VoltsDeltaSchema,
   VoltsGrantCommandSchema,
+  VoltsGrantOperatorSchema,
   type VoltsGrantCommand,
+  type VoltsGrantOperator,
   type VoltsGrantReceipt,
 } from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
@@ -18,6 +20,7 @@ import type { EconomyTables } from "./economy.schema.js";
 interface GrantContext {
   readonly db: Readonly<Pick<ServerDatabase, "select" | "insert" | "get">>;
   readonly ledger: EconomyTables["voltsLedger"];
+  readonly operators: EconomyTables["voltsGrantOperators"];
   readonly nowMs: () => number;
 }
 
@@ -28,6 +31,32 @@ function findEntry(context: GrantContext, userId: string, key: string): LedgerRo
     .from(context.ledger)
     .where(and(eq(context.ledger.userId, userId), eq(context.ledger.idempotencyKey, key)))
     .get();
+}
+
+function storedOperator(context: GrantContext, entryId: string): VoltsGrantOperator {
+  const audit = context.db
+    .select()
+    .from(context.operators)
+    .where(eq(context.operators.entryId, entryId))
+    .get();
+
+  if (audit === undefined) throw new ApiError(500, "internal_error", "operator audit missing");
+
+  return VoltsGrantOperatorSchema.parse(
+    audit.provenance === "recorded"
+      ? { kind: "recorded", userId: audit.operatorUserId }
+      : { kind: "unknown_before_audit" },
+  );
+}
+
+/** A replay must come from the recorded operator; a pre-audit grant has none to compare. */
+function replayGrant(context: GrantContext, existing: LedgerRow, operatorUserId: string) {
+  const operator = storedOperator(context, existing.id);
+
+  if (operator.kind === "recorded" && operator.userId !== operatorUserId)
+    throw new ApiError(409, "ledger_conflict", "ledger conflict");
+
+  return parseStoredGrantReceipt(existing, operator);
 }
 
 function balanceWithin(context: GrantContext, userId: string) {
@@ -56,7 +85,7 @@ export function grantWithin(
     if (existing.payloadHash !== hash)
       throw new ApiError(409, "ledger_conflict", "ledger conflict");
 
-    return parseStoredGrantReceipt(existing);
+    return replayGrant(context, existing, parsed.operatorUserId);
   }
 
   // Same safe-integer guard as debits: an overflowing credit would make every later balance read fail.
@@ -86,7 +115,22 @@ export function grantWithin(
 
   if (stored === undefined) throw new ApiError(500, "internal_error", "Volts ledger write lost");
 
-  return parseStoredGrantReceipt(stored);
+  return recordOperator(context, stored, parsed.operatorUserId);
+}
+
+/** Writes the operator audit in the same transaction as the booking (issue #116). */
+function recordOperator(context: GrantContext, stored: LedgerRow, operatorUserId: string) {
+  context.db
+    .insert(context.operators)
+    .values({
+      entryId: stored.id,
+      operatorUserId,
+      provenance: "recorded",
+      recordedAt: stored.createdAt,
+    })
+    .run();
+
+  return parseStoredGrantReceipt(stored, storedOperator(context, stored.id));
 }
 
 /**
@@ -96,7 +140,7 @@ export function grantWithin(
 export class OperatorGrants {
   public constructor(
     private readonly db: ServerDatabase,
-    private readonly tables: Pick<EconomyTables, "voltsLedger">,
+    private readonly tables: Pick<EconomyTables, "voltsLedger" | "voltsGrantOperators">,
     private readonly clock: Readonly<Clock>,
   ) {}
 
@@ -104,7 +148,12 @@ export class OperatorGrants {
     return this.db.transaction(
       (tx: Readonly<Pick<ServerDatabase, "select" | "insert" | "get">>) =>
         grantWithin(
-          { db: tx, ledger: this.tables.voltsLedger, nowMs: this.clock.nowMs },
+          {
+            db: tx,
+            ledger: this.tables.voltsLedger,
+            operators: this.tables.voltsGrantOperators,
+            nowMs: this.clock.nowMs,
+          },
           userId,
           command,
         ),
