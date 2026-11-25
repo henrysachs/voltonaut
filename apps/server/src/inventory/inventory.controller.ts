@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, Inject, Post } from "@nestjs/common";
 
 import {
   PurchaseRequestSchema,
@@ -25,6 +25,7 @@ export class InventoryController {
   }
 
   @Post("shop/purchase")
+  @HttpCode(200)
   @Header("Cache-Control", "no-store")
   public purchase(
     @CurrentSession() session: SessionPrincipal,

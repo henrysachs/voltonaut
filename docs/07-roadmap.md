@@ -153,6 +153,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-01](specs/E7-01-garage-shop-foundation.md) liefert den softwaregeprüften Tab „Garage / Shop" mit striktem Katalog, Slot- und Farbauswahl, provisorischer 3D-Vorschau sowie Freischaltbedingungen und Preisen. Vollständiges Gate, Mutation, Build und unabhängiges Review sind grün. Käufe, Besitz und dauerhaftes Ausrüsten bleiben deaktiviert. Die vollständigen E7-Kriterien, Merge und Bereitstellung bleiben offen.
 
+[E7-02](specs/E7-02-server-inventory-shop.md) ergänzt das Server-Inventar mit atomaren, idempotenten Käufen, die Operator-Gutschrift `admin credit` und den aktiven Kaufknopf der Garage für angemeldete Fahrer. Das Mindestlevel bleibt bis zur Progression ungeprüft (ADR-029). Stand: implementiert und softwaregeprüft (Unit, Integration, E2E im Gastmodus); Merge, Bereitstellung und Henrys Abnahme offen. Ausrüsten nur besessener Items folgt mit #65.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
 - [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items

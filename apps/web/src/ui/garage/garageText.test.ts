@@ -2,13 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ItemDef, NonShopItemDef } from "@voltonaut/shared";
 
-import {
-  itemUnlockText,
-  priceText,
-  purchaseButtonText,
-  rarityText,
-  slotText,
-} from "./garageText.js";
+import { itemUnlockText, priceText, rarityText, slotText } from "./garageText.js";
 
 const item: ItemDef = {
   id: "frame.aero",
@@ -59,10 +53,10 @@ describe("garage text", () => {
     expect(itemUnlockText({ ...withoutPrice(), unlock: { kind: "distanceTotal", km: 100 } })).toBe(
       "100 km Gesamtstrecke",
     );
-    expect(itemUnlockText(item)).toBe("Kauf bald · ab Level 5");
+    expect(itemUnlockText(item)).toBe("Shop · ab Level 5 (Prüfung folgt)");
     expect(
       itemUnlockText({ ...item, unlock: { kind: "shop", priceVolts: 1500 }, priceVolts: 1500 }),
-    ).toBe("Kauf bald");
+    ).toBe("Shop");
   });
 
   it("names the season and tier of a season reward", () => {
@@ -74,10 +68,8 @@ describe("garage text", () => {
     ).toBe("Saison 01 · Stufe 12");
   });
 
-  it("shows catalog prices and keeps every purchase disabled", () => {
+  it("shows catalog prices", () => {
     expect(priceText(item)).toBe("6.000 ⚡");
     expect(priceText(withoutPrice())).toBe("Kein Kauf");
-    expect(purchaseButtonText(item)).toBe("Kauf nicht verfügbar");
-    expect(purchaseButtonText(withoutPrice())).toBe("Nicht käuflich");
   });
 });

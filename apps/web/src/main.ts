@@ -58,9 +58,19 @@ function startHud(
   startApp({ document: createDomDocument(document), ride, connectedLabel });
 }
 
+/** Garage purchases use the account's server shop once account data is ready; guests keep the preview. */
+async function attachGarageShop(
+  garage: ReturnType<typeof mountGameMenu>,
+  account: Readonly<ReturnType<typeof setupBrowserAccount>>,
+): Promise<void> {
+  const sync = await account?.accounts.catch(() => null);
+
+  if (garage !== undefined && sync !== undefined && sync !== null) garage.attachShop(sync.shop);
+}
+
 async function start(): Promise<void> {
   const profileReady = setupProfile();
-  setupBrowserAccount(() => profileReady);
+  const account = setupBrowserAccount(() => profileReady);
   const params = new URLSearchParams(window.location.search);
   const simMode = params.get("sim") === "1";
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
@@ -105,7 +115,7 @@ async function start(): Promise<void> {
   setupKeyboard(bus);
 
   devices?.mount();
-  mountGameMenu(profile.bike.wheelCircM);
+  void attachGarageShop(mountGameMenu(profile.bike.wheelCircM), account);
 }
 
 await start();

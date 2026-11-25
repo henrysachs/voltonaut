@@ -61,4 +61,7 @@ export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
 
 export type PurchaseRequest = z.infer<typeof PurchaseRequestSchema>;
 
+/** Unbranded purchase order as a client builds it before `PurchaseRequestSchema` parses it. */
+export type PurchaseOrder = z.input<typeof PurchaseRequestSchema>;
+
 export type PurchaseResponse = z.infer<typeof PurchaseResponseSchema>;

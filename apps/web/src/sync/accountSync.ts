@@ -19,9 +19,11 @@ import { deliverAccountRow } from "./accountDelivery.js";
 import { applyAccountProfile } from "./accountProfile.js";
 import type { AccountLease } from "./privateAuthTransport.js";
 import { AccountAdministration } from "./accountAdministration.js";
+import { GarageShop } from "./garageShop.js";
 
 export class AccountSync {
   readonly administration = new AccountAdministration();
+  readonly shop = new GarageShop();
   readonly #options: SyncOptions;
   readonly #listeners = new Set<(view: AccountDataView) => void>();
   readonly #sending = new Set<number>();
@@ -37,6 +39,7 @@ export class AccountSync {
       const lease = view.kind === "authenticated" ? options.session.authorize() : undefined;
       this.#lease = lease;
       this.administration.bind(lease);
+      this.shop.bind(lease);
       this.#archive = [];
       this.#reauth = false;
 

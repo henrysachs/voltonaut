@@ -3,7 +3,7 @@
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E7, Checkbox „`inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items"
 - **Issue:** #64 · Abhängigkeiten: [E6-05](E6-05-volts-ledger.md) (Volts-Ledger), [E7-01](E7-01-garage-shop-foundation.md) (Garage/Shop-Fundament)
 - **ADR:** [ADR-029](../decisions/ADR-029-server-inventory-and-operator-grant.md)
-- **Status:** In Arbeit
+- **Status:** Implementiert und softwaregeprüft (Unit, Integration, Mutation `rules`, E2E im Gastmodus). Merge, Bereitstellung und Henrys Abnahme mit echten Volts offen.
 - **Betroffene Module:** `packages/shared`, `packages/rules`, `apps/server/src/{economy,inventory}`, `apps/web/src/{sync,ui/garage}`. Keine neue externe Abhängigkeit.
 
 ## Ziel
@@ -17,24 +17,24 @@ Angemeldete Fahrer kaufen Items aus dem Start-Katalog mit Volts. Der Server prü
 
 ## Abnahmekriterien
 
-- [ ] AK1 – Shared validiert Kaufauftrag (`requestId` UUID, `itemId`, `expectedPriceVolts`), Kaufbeleg, Inventareintrag und Inventarantwort strikt. Neue Fehlercodes: `already_owned`, `item_not_for_sale`, `price_changed`.
-- [ ] AK2 – Eine reine Kaufentscheidung in `packages/rules` liefert für ein Katalog-Item: kaufbar mit Preis, `unknown_item`, `not_for_sale` (keine Shop-Freischaltung), `price_changed` (erwarteter ≠ Katalogpreis) oder `already_owned`. `minLevel` wird ausdrücklich nicht geprüft (Übergang).
-- [ ] AK3 – `inventory/` besitzt die additive Tabelle `inventory(user_id, item_id, source, purchase_request_id, acquired_at)` mit Primärschlüssel aus Konto und Item. Standard-Items gelten als besessen, ohne gespeichert zu werden.
-- [ ] AK4 – `POST /v1/shop/purchase` bucht Abbuchung und Inventareintrag in einer unmittelbaren SQLite-Transaktion. Fehlt Guthaben, ändert sich nichts (`409 insufficient_volts`). Scheitert der Inventareintrag, wird auch die Abbuchung zurückgerollt.
-- [ ] AK5 – Idempotenz: Dieselbe `requestId` liefert denselben Beleg ohne zweite Abbuchung. Ein zweiter Kauf desselben Items mit anderer `requestId` ergibt `409 already_owned`, auch bei konkurrierenden Anfragen.
-- [ ] AK6 – `GET /v1/me/inventory` liefert alle besessenen Items (gespeicherte und Standard-Items) mit `no-store`. Ein zweites Gerät desselben Kontos sieht denselben Besitz.
-- [ ] AK7 – Das Volts-Journal kennt den Grund `operator_grant` (positive Gutschrift ohne Fahrtfelder). Die Migration erhält bestehende Buchungen. Der Admin-Befehl `credit <userId> <amount> <note>` schreibt genau eine idempotente Gutschrift.
-- [ ] AK8 – Die Garage zeigt für angemeldete Fahrer Kontostand und Besitz vom Server. „Kaufen (n ⚡)“ ist nur aktiv, wenn das Item kaufbar ist und das Guthaben reicht. Nach dem Kauf zeigt sie das Item als besessen. Gäste und Offline-Nutzer sehen weiterhin nur die Vorschau.
+- [x] AK1 – Shared validiert Kaufauftrag (`requestId` UUID, `itemId`, `expectedPriceVolts`), Kaufbeleg, Inventareintrag und Inventarantwort strikt. Neue Fehlercodes: `already_owned`, `item_not_for_sale`, `price_changed`.
+- [x] AK2 – Eine reine Kaufentscheidung in `packages/rules` liefert für ein Katalog-Item: kaufbar mit Preis, `unknown_item`, `not_for_sale` (keine Shop-Freischaltung), `price_changed` (erwarteter ≠ Katalogpreis) oder `already_owned`. `minLevel` wird ausdrücklich nicht geprüft (Übergang).
+- [x] AK3 – `inventory/` besitzt die additive Tabelle `inventory(user_id, item_id, source, purchase_request_id, acquired_at)` mit Primärschlüssel aus Konto und Item. Standard-Items gelten als besessen, ohne gespeichert zu werden.
+- [x] AK4 – `POST /v1/shop/purchase` bucht Abbuchung und Inventareintrag in einer unmittelbaren SQLite-Transaktion. Fehlt Guthaben, ändert sich nichts (`409 insufficient_volts`). Scheitert der Inventareintrag, wird auch die Abbuchung zurückgerollt.
+- [x] AK5 – Idempotenz: Dieselbe `requestId` liefert denselben Beleg ohne zweite Abbuchung. Ein zweiter Kauf desselben Items mit anderer `requestId` ergibt `409 already_owned`, auch bei konkurrierenden Anfragen.
+- [x] AK6 – `GET /v1/me/inventory` liefert alle besessenen Items (gespeicherte und Standard-Items) mit `no-store`. Ein zweites Gerät desselben Kontos sieht denselben Besitz.
+- [x] AK7 – Das Volts-Journal kennt den Grund `operator_grant` (positive Gutschrift ohne Fahrtfelder). Die Migration erhält bestehende Buchungen. Der Admin-Befehl `admin credit <userId> <volts> <reference>` schreibt genau eine idempotente Gutschrift.
+- [x] AK8 – Die Garage zeigt für angemeldete Fahrer Kontostand und Besitz vom Server. „Kaufen (n ⚡)“ ist nur aktiv, wenn das Item kaufbar ist und das Guthaben reicht. Nach dem Kauf zeigt sie das Item als besessen. Gäste und Offline-Nutzer sehen weiterhin nur die Vorschau.
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK       | Ebene              | Datei                                                                  |
-| -------- | ------------------ | ---------------------------------------------------------------------- |
-| AK1      | Unit               | `packages/shared/src/api/shop.test.ts`                                 |
-| AK2      | Unit, Mutation     | `packages/rules/src/shop.test.ts`                                      |
-| AK3–AK6  | Integration        | `apps/server/src/inventory/*.test.ts` (SQLite, Supertest)              |
-| AK7      | Integration        | `apps/server/src/economy/economy.grant.test.ts`, Migrationstest, Admin |
-| AK8      | Unit               | `apps/web/src/sync/garageShop.test.ts`, `apps/web/src/ui/garage/*`     |
+| AK      | Ebene          | Datei                                                                                                |
+| ------- | -------------- | ---------------------------------------------------------------------------------------------------- |
+| AK1     | Unit           | `packages/shared/src/api/shop.test.ts`                                                               |
+| AK2     | Unit, Mutation | `packages/rules/src/shop.test.ts`                                                                    |
+| AK3–AK6 | Integration    | `apps/server/src/inventory/*.test.ts` (SQLite, Supertest)                                            |
+| AK7     | Integration    | `apps/server/src/economy/economy.grant.test.ts`, Migrationstest, Admin                               |
+| AK8     | Unit           | `apps/web/src/sync/garageShop.test.ts`, `ui/garage/purchaseOffer.test.ts`, `e2e/garage-shop.spec.ts` |
 
 ## Nicht-Ziele
 
@@ -47,4 +47,4 @@ Kein dauerhaftes Ausrüsten (#65), keine Level-Prüfung, keine Rückerstattung, 
 
 ## Doku-Updates
 
-- [ ] Roadmap · [ ] `docs/08-backend.md` · [ ] ADR-029
+- [x] Roadmap (Statusabsatz; Checkbox bleibt offen bis #65) · [x] `docs/08-backend.md` · [x] ADR-029

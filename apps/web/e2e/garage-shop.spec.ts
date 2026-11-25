@@ -34,7 +34,7 @@ async function expectMinimumHitArea(target: Readonly<Locator>): Promise<void> {
   expect(box.height).toBeGreaterThanOrEqual(44);
 }
 
-test("garage previews items and colors while purchases stay disabled and the ride continues", async ({
+test("garage previews items and colors, keeps guest purchases disabled and the ride continues", async ({
   page,
 }: Readonly<PageFixture>, testInfo: Readonly<TestInfo>) => {
   await page.goto("/?sim=1&debug=1");
@@ -52,10 +52,13 @@ test("garage previews items and colors while purchases stay disabled and the rid
   await page.getByTestId("garage-item-jersey.stripe").click();
   await expect(page.getByTestId("garage-item-name")).toHaveText("Blitzstreifen");
   await expect(page.getByTestId("garage-price")).toHaveText("1.500 ⚡");
-  await expect(panel).toContainText("Common · Kauf bald");
+  await expect(panel).toContainText("Common · Shop");
   await expect(page.getByTestId("garage-purchase")).toBeDisabled();
   await expect(page.getByTestId("garage-purchase")).toHaveText("Kauf nicht verfügbar");
-  await expect(panel).not.toContainText("Kontostand");
+  await expect(page.getByTestId("garage-purchase-hint")).toHaveText(
+    "Zum Kaufen anmelden. Bis dahin nur Vorschau.",
+  );
+  await expect(panel).not.toContainText("Guthaben");
 
   const firstColor = page.getByRole("radio", { name: "Farbe 1: #45c4b0", exact: true });
   await firstColor.check();
@@ -65,7 +68,7 @@ test("garage previews items and colors while purchases stay disabled and the rid
   await page.getByTestId("garage-item-frame.aero").click();
   await expect(page.getByTestId("garage-item-name")).toHaveText("Aero");
   await expect(page.getByTestId("garage-price")).toHaveText("6.000 ⚡");
-  await expect(panel).toContainText("Kauf bald · ab Level 5");
+  await expect(panel).toContainText("Shop · ab Level 5 (Prüfung folgt)");
 
   const diagnostics = page.getByLabel("Render diagnostics");
   const distanceM = Number(await diagnostics.getAttribute("data-distance-m"));
@@ -96,7 +99,7 @@ test("skin selection uses direct colors instead of named items", async ({
   await expect(darkSkin).toBeChecked();
 });
 
-test("garage preview is not persisted and sends no purchase request", async ({
+test("garage preview is not persisted and a guest sends no purchase request", async ({
   page,
 }: Readonly<PageFixture>) => {
   const purchaseRequests = watchPurchaseRequests(page);

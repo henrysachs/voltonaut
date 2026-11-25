@@ -94,7 +94,7 @@ it("lists default items for a new account without storing them", async () => {
 it("buys an item, debits its price and owns it in the same commit", async () => {
   const f = await shop(2000);
 
-  const response = await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(201);
+  const response = await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(200);
 
   expect(PurchaseResponseSchema.parse(bodyOf(response))).toEqual({
     voltsBalance: 500,
@@ -119,9 +119,9 @@ it("refuses a purchase without enough Volts and changes nothing", async () => {
 it("replays the same request id without a second debit and refuses a second purchase", async () => {
   const f = await shop(5000);
 
-  const first = bodyOf(await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(201));
+  const first = bodyOf(await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(200));
 
-  expect(bodyOf(await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(201))).toEqual(first);
+  expect(bodyOf(await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(200))).toEqual(first);
   expect(bodyOf(await f.purchase(REQUEST_TWO, "helmet.aero", 1500).expect(409))).toMatchObject({
     error: { code: "already_owned" },
   });
@@ -153,14 +153,14 @@ it("maps unknown, non-shop and repriced items to explicit errors", async () => {
 it("sells level-gated items until progression exists (spec E7-02 transition)", async () => {
   const f = await shop(6000);
 
-  await f.purchase(REQUEST_ONE, "wheels.carbon-flat", 6000).expect(201);
+  await f.purchase(REQUEST_ONE, "wheels.carbon-flat", 6000).expect(200);
   expect(ownedIds(await f.inventory())).toContain("wheels.carbon-flat");
 });
 
 it("shows the same ownership to a second session of the same account", async () => {
   const f = await shop(2000);
 
-  await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(201);
+  await f.purchase(REQUEST_ONE, "helmet.aero", 1500).expect(200);
 
   const second = await loginTestUser(
     f.testApp.app,
@@ -202,7 +202,7 @@ it("lets exactly one of two concurrent purchases of the same item win", async ()
 
   for (const response of responses) statuses.push(response.status);
 
-  expect(statuses.toSorted((a, b) => a - b)).toEqual([201, 409]);
+  expect(statuses.toSorted((a, b) => a - b)).toEqual([200, 409]);
   expect(f.economy.balance(f.owner.user.id)).toBe(3500);
   expect(f.db.prepare("SELECT COUNT(*) AS n FROM inventory").get()).toEqual({ n: 1 });
 });

@@ -1,0 +1,146 @@
+import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
+
+export type GarageShopView =
+  | { readonly kind: "guest" }
+  | { readonly kind: "loading" }
+  | { readonly kind: "failed"; readonly message: string }
+  | {
+      readonly kind: "ready";
+      readonly voltsBalance: number;
+      readonly ownedItemIds: readonly string[];
+      /** Item whose purchase is waiting for the server; at most one at a time. */
+      readonly pendingItemId: string | null;
+      readonly message: string;
+    };
+
+type ReadyView = Extract<GarageShopView, { readonly kind: "ready" }>;
+
+const UNREACHABLE = "Shop nicht erreichbar. Besitz und Volts nicht bestätigt.";
+
+const REJECTED =
+  "Kauf abgelehnt: Preis, Besitz oder Guthaben passt nicht mehr. Serverstand neu gelesen.";
+
+const UNCONFIRMED =
+  "Kauf nicht bestätigt. Ein neuer Versuch nutzt dieselbe Anfrage, ohne doppelte Abbuchung.";
+
+/**
+ * Server-confirmed Volts balance and inventory for the garage (spec E7-02 AK8).
+ * Owns no authoritative state: every value comes from the account's server.
+ */
+export class GarageShop {
+  readonly #listeners = new Set<(view: GarageShopView) => void>();
+  /** Unconfirmed purchases keep their request id so a retry cannot charge twice. */
+  readonly #retryIds = new Map<string, string>();
+  readonly #newRequestId: () => string;
+  #view: GarageShopView = { kind: "guest" };
+  #lease: AccountLease | undefined;
+  #revision = 0;
+
+  constructor(newRequestId: () => string = () => crypto.randomUUID()) {
+    this.#newRequestId = newRequestId;
+  }
+
+  bind(lease?: AccountLease): void {
+    this.#lease = lease;
+    this.#retryIds.clear();
+    this.#revision += 1;
+    this.publish({ kind: lease === undefined ? "guest" : "loading" });
+
+    if (lease !== undefined) void this.refresh(lease, "");
+  }
+
+  view(): GarageShopView {
+    return this.#view;
+  }
+
+  subscribe(listener: (view: GarageShopView) => void): () => void {
+    this.#listeners.add(listener);
+    listener(this.#view);
+
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  }
+
+  /** Buys one item at the price the garage shows; ignored while another purchase is open. */
+  async purchase(itemId: string, priceVolts: number): Promise<void> {
+    const lease = this.#lease;
+    const view = this.#view;
+
+    if (lease === undefined || view.kind !== "ready" || view.pendingItemId !== null) return;
+    const requestId = this.#retryIds.get(itemId) ?? this.#newRequestId();
+    const revision = ++this.#revision;
+    this.#retryIds.set(itemId, requestId);
+    this.publish({ ...view, pendingItemId: itemId, message: "Kauf wird bestätigt …" });
+
+    try {
+      const receipt = await lease.shop.purchase({
+        requestId,
+        itemId,
+        expectedPriceVolts: priceVolts,
+      });
+
+      if (!this.current(lease, revision)) return;
+      this.#retryIds.delete(itemId);
+      this.publish({
+        kind: "ready",
+        voltsBalance: receipt.voltsBalance,
+        ownedItemIds: [...new Set([...view.ownedItemIds, receipt.item.itemId])],
+        pendingItemId: null,
+        message: "Gekauft. Das Item gehört jetzt zu deinem Konto.",
+      });
+    } catch (error) {
+      const rejected = error instanceof PrivateRequestError && error.cause === "conflict";
+
+      if (this.current(lease, revision)) await this.failPurchase(lease, view, itemId, rejected);
+    }
+  }
+
+  private async failPurchase(
+    lease: AccountLease,
+    view: ReadyView,
+    itemId: string,
+    rejected: boolean,
+  ): Promise<void> {
+    if (rejected) {
+      this.#retryIds.delete(itemId);
+      await this.refresh(lease, REJECTED);
+
+      return;
+    }
+
+    this.publish({ ...view, pendingItemId: null, message: UNCONFIRMED });
+  }
+
+  private current(lease: AccountLease, revision: number): boolean {
+    return this.#lease === lease && lease.current() && revision === this.#revision;
+  }
+
+  private publish(view: GarageShopView): void {
+    this.#view = view;
+
+    for (const listener of this.#listeners) listener(view);
+  }
+
+  private async refresh(lease: AccountLease, message: string): Promise<void> {
+    const revision = ++this.#revision;
+
+    try {
+      const [balance, inventory] = await Promise.all([
+        lease.shop.balance(),
+        lease.shop.inventory(),
+      ]);
+
+      if (!this.current(lease, revision)) return;
+      this.publish({
+        kind: "ready",
+        voltsBalance: balance.voltsBalance,
+        ownedItemIds: inventory.items.map(({ itemId }) => itemId),
+        pendingItemId: null,
+        message,
+      });
+    } catch {
+      if (this.current(lease, revision)) this.publish({ kind: "failed", message: UNREACHABLE });
+    }
+  }
+}

@@ -14,7 +14,7 @@ export interface IdentityLease {
   readonly completeLink: (code: string) => Promise<LinkedIdentitiesResponse>;
 }
 
-type IdentityPath = "/v1/auth/identities" | `/v1/auth/oidc/${string}/link`;
+export type IdentityPath = "/v1/auth/identities" | `/v1/auth/oidc/${string}/link`;
 
 interface IdentitySchema<T> {
   readonly parse: (

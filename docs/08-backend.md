@@ -88,7 +88,9 @@ Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitz
 
 Die Module definieren `createAccountsTables(userIdColumn: SQLiteColumn)`, `createRidesTables(userIdColumn: SQLiteColumn)` und `createEconomyTables(userIdColumn: SQLiteColumn)` mit echten `.references()`-Fremdschlüsseln. Nur der Composition Root `src/schema.ts` importiert `users` und diese Fabriken. Er exportiert konkrete Tabellen für Drizzle Kit. `AppModule` übergibt die Tabellen an die jeweiligen `register`-Fabriken. Services injizieren `DRIZZLE` und ausschließlich eigene Tabellen. Ein Schema-Registry oder Import fremder Modul-Schemas ist dafür nicht nötig.
 
-[E6-05](specs/E6-05-volts-ledger.md) lässt `economy/` die additive Tabelle `volts_ledger` besitzen. Der Kontostand ist die Summe ihrer Deltas; eine mutable Wallet-Spalte existiert nicht. Idempotenzschlüssel und Auftragshash verhindern doppelte oder abweichende Wiederholungen. Fahrtbereiche speichern kumulative Volts-Komponenten und buchen nur die Differenz zum vorherigen Bereich; Lücken, Überlappungen und fremde Journals werden abgewiesen. Belohnungen und Abbuchungen laufen in unmittelbaren SQLite-Transaktionen; das schmale `EconomyService.transaction`-Port erlaubt später eine atomare Kombination mit Inventar. `GET /v1/me/volts` liefert den eigenen Kontostand mit `no-store`. Belohnungs- und Kauf-POSTs folgen erst mit Checkpoint-Freigabe beziehungsweise Issue #64.
+[E6-05](specs/E6-05-volts-ledger.md) lässt `economy/` die additive Tabelle `volts_ledger` besitzen. Der Kontostand ist die Summe ihrer Deltas; eine mutable Wallet-Spalte existiert nicht. Idempotenzschlüssel und Auftragshash verhindern doppelte oder abweichende Wiederholungen. Fahrtbereiche speichern kumulative Volts-Komponenten und buchen nur die Differenz zum vorherigen Bereich; Lücken, Überlappungen und fremde Journals werden abgewiesen. Belohnungen und Abbuchungen laufen in unmittelbaren SQLite-Transaktionen; das schmale `EconomyService.transaction`-Port erlaubt später eine atomare Kombination mit Inventar. `GET /v1/me/volts` liefert den eigenen Kontostand mit `no-store`. Belohnungs-POSTs folgen erst mit Checkpoint-Freigabe.
+
+[E7-02](specs/E7-02-server-inventory-shop.md) und [ADR-029](decisions/ADR-029-server-inventory-and-operator-grant.md) lassen `inventory/` die additive Tabelle `inventory` besitzen. Gespeichert werden nur gekaufte Items; Standard-Items gelten ohne Zeile als besessen. `POST /v1/shop/purchase` prüft Katalog, Shop-Freischaltung, erwarteten Preis und Besitz über `decidePurchase` aus `@voltonaut/rules` und bucht Abbuchung und Inventareintrag in derselben unmittelbaren Transaktion von `EconomyService.transaction`. Die `requestId` des Clients macht Wiederholungen idempotent. Das Mindestlevel wird bis zur Progression nicht geprüft (Übergang). Der Operatorbefehl `node dist/main.js admin credit <userId> <volts> <reference>` schreibt eine idempotente Gutschrift mit Grund `operator_grant`; einen Web-Endpunkt dafür gibt es nicht.
 
 Die gemeinsame Datenmigration ist `0002_owned_profiles_rides.sql`. `0003` ergänzt Strava-Verbindungen. Die additive `0004_replayed_ride_exports.sql` ergänzt Zusammenfassung und Exportspalten, ohne bestehende Nutzlasten, Hashes oder Belege umzuschreiben. Die Migrationen `0000` bis `0003` bleiben unverändert. Der Browser verwendet die Fahrtendpunkte seit [E5-09](specs/E5-09-account-bound-sync.md) nach ausdrücklicher Zuordnung lokaler Fahrtkopien.
 
@@ -101,8 +103,9 @@ sessions(token_hash TEXT PK, user_id, created_at, last_seen_at, expires_at, user
 -- Server-owned login transactions: state, nonce, PKCE verifier, browser binding, expiry, one-time consumption.
 -- login_tokens from PR #6 remain only for explicitly selected legacy operation until cutover.
 profiles(user_id PK, display_name, mass_kg, height_cm, ftp_w, max_hr, bike_json, avatar_json, updated_at)
-inventory(user_id, item_id, source TEXT /* default|level|badge|shop|distance */, acquired_at, PK(user_id,item_id))
-volts_ledger(id PK, user_id, delta_volts INT, reason TEXT /* ride_reward|purchase */, ref_id,
+inventory(user_id, item_id, source TEXT /* shop; default items are implicit */, purchase_request_id, acquired_at,
+          PK(user_id,item_id), UNIQUE(user_id,purchase_request_id))
+volts_ledger(id PK, user_id, delta_volts INT, reason TEXT /* ride_reward|purchase|operator_grant */, ref_id,
              idempotency_key, payload_hash, reward_day, start_tick, end_tick, candidate_volts,
              cumulative_work_volts, cumulative_climb_volts, cumulative_facts_json, created_at,
              UNIQUE(user_id,idempotency_key),
@@ -136,7 +139,9 @@ GET  /v1/me/volts                                                 → { voltsBal
 PUT  /v1/me/profile             RiderProfile                      → profile          (Validierung: Bereiche wie 03 §2a)
 PUT  /v1/me/avatar              AvatarConfig                      → avatar           (nur Items aus dem Inventar)
 GET  /v1/catalog                                                  → { items[], levels[], version }   (öffentlich, cachebar)
-POST /v1/shop/purchase          { itemId, expectedPriceVolts }    → { voltsBalance, inventoryItem } | 409 insufficient_volts | 409 already_owned
+GET  /v1/me/inventory                                             → { items: [{ itemId, source, acquiredAt }] } (E7-02, no-store)
+POST /v1/shop/purchase          { requestId, itemId, expectedPriceVolts } → 200 { voltsBalance, item } | 404 not_found
+                                | 409 insufficient_volts | already_owned | item_not_for_sale | price_changed | ledger_conflict
 POST /v2/rides                  RideRecording (JSON)              → { rideId, storage:'stored', assessment }
                                 (idempotent: gleiche rideId → gleiche Antwort)
 GET  /v2/rides?cursor=…                                           → { rides: RideSummary[], nextCursor }
