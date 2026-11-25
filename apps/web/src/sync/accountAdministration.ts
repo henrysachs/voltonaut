@@ -1,6 +1,9 @@
 import type { AccountStatus, AdminUser, AdminUsers, Membership } from "@voltonaut/shared";
 import type { MembershipPort } from "./accountPorts.js";
 import type { LeaseBinding } from "./apiRoute.js";
+import { AccountLane } from "./accountLane.js";
+import type { AccountScope } from "./accountScope.js";
+import { AccountState } from "./accountState.js";
 
 /** Membership reads and admin writes; writes are never retried (ADR-021). */
 export type MembershipLease = LeaseBinding & { readonly membership: MembershipPort };
@@ -23,35 +26,39 @@ export type AdministrationView = Immutable<
 >;
 
 export class AccountAdministration {
-  readonly #listeners = new Set<(view: AdministrationView) => void>();
-  #view: AdministrationView = { kind: "guest" };
-  #lease: MembershipLease | undefined;
+  readonly #state: AccountState<AdministrationView, MembershipLease>;
+  /** The newest read or write wins; older answers are dropped. */
+  readonly #lane = new AccountLane();
+  /** A write holds its binding until its authoritative readback completed. */
   #writing: MembershipLease | undefined;
-  #revision = 0;
   #cursor: string | null = null;
 
-  bind(lease?: MembershipLease): void {
-    this.#lease = lease;
-    this.#writing = undefined;
-    this.#revision += 1;
-    this.#cursor = null;
-    this.publish({ kind: lease === undefined ? "guest" : "loading" });
+  constructor(scope: AccountScope<MembershipLease>) {
+    this.#state = new AccountState<AdministrationView, MembershipLease>(
+      { kind: "guest" },
+      {
+        enter: (binding) => {
+          this.#writing = undefined;
+          this.#cursor = null;
 
-    if (lease !== undefined) void this.refresh(lease);
+          return { kind: binding.kind === "signedIn" ? "loading" : "guest" };
+        },
+        start: ({ lease }) => {
+          void this.refresh(lease);
+        },
+      },
+    );
+    this.#state.follow(scope);
   }
 
   subscribe(listener: (view: AdministrationView) => void): () => void {
-    this.#listeners.add(listener);
-    listener(this.#view);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
+    return this.#state.subscribe(listener);
   }
 
   actions() {
-    const lease = this.#lease;
-    const next = this.#view.kind === "ready" ? this.#view.directory?.nextCursor : null;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
+    const next = view.kind === "ready" ? view.directory?.nextCursor : null;
 
     return Object.freeze({
       refresh: () =>
@@ -67,38 +74,27 @@ export class AccountAdministration {
     });
   }
 
-  private current(lease: MembershipLease): boolean {
-    return this.#lease === lease && lease.current();
-  }
-
-  private publish(view: AdministrationView): void {
-    this.#view = view;
-
-    for (const listener of this.#listeners) listener(view);
-  }
-
   private async refresh(lease: MembershipLease, cursor: string | null = null): Promise<void> {
-    if (!this.current(lease)) return;
-    const revision = ++this.#revision;
-    this.publish({ kind: "loading" });
+    if (!lease.current()) return;
+    const turn = this.#lane.begin(lease);
+    this.#state.publish({ kind: "loading" });
 
     try {
       const status = await lease.membership.status();
 
-      if (!this.current(lease) || revision !== this.#revision) return;
+      if (!turn.current()) return;
 
       const directory =
         status.authorization.role === "admin" ? await lease.membership.users(cursor) : null;
 
-      if (!this.current(lease) || revision !== this.#revision) return;
+      if (!turn.current()) return;
       this.#cursor = cursor;
-      this.publish({ kind: "ready", status, directory, busy: false, message: "" });
+      this.#state.publish({ kind: "ready", status, directory, busy: false, message: "" });
     } catch {
-      if (this.current(lease) && revision === this.#revision)
-        this.publish({
-          kind: "failed",
-          message: "Mitgliedschaft nicht erreichbar. Serverstand nicht bestätigt.",
-        });
+      this.#state.update(turn, () => ({
+        kind: "failed",
+        message: "Mitgliedschaft nicht erreichbar. Serverstand nicht bestätigt.",
+      }));
     }
   }
 
@@ -107,33 +103,31 @@ export class AccountAdministration {
     userId: string,
     membership: Readonly<Membership>,
   ): Promise<void> {
-    const view = this.#view;
+    const view = this.#state.view();
 
     if (
-      !this.current(lease) ||
+      !lease.current() ||
       view.kind !== "ready" ||
       this.#writing !== undefined ||
       view.status.authorization.role !== "admin"
     )
       return;
-    const revision = ++this.#revision;
+    const turn = this.#lane.begin(lease);
     this.#writing = lease;
-    this.publish({ ...view, busy: true, message: "Änderung wird bestätigt …" });
+    this.#state.publish({ ...view, busy: true, message: "Änderung wird bestätigt …" });
 
     try {
       await lease.membership.save(userId, membership);
 
-      if (!this.current(lease) || revision !== this.#revision) return;
+      if (!turn.current()) return;
       await this.refresh(lease, this.#cursor);
     } catch {
-      if (!this.current(lease) || revision !== this.#revision) return;
+      if (!turn.current()) return;
       await this.refresh(lease, this.#cursor);
-
-      if (!this.current(lease)) return;
-      this.publish(
-        this.#view.kind === "ready"
+      this.#state.update(lease, (current) =>
+        current.kind === "ready"
           ? {
-              ...this.#view,
+              ...current,
               message:
                 "Änderung nicht bestätigt. Aktuellen Serverstand neu gelesen; keine automatische Wiederholung.",
             }

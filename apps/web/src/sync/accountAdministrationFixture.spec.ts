@@ -6,7 +6,8 @@ import {
   type AccountLease,
   type LeaseIssuer,
 } from "./privateAuthTransport.js";
-import type { AdministrationView } from "./accountAdministration.js";
+import { AccountAdministration, type AdministrationView } from "./accountAdministration.js";
+import { sessionAccountScope } from "./accountScope.js";
 
 export class AdministrationFixture {
   role: "user" | "admin" = "admin";
@@ -39,7 +40,10 @@ export class AdministrationFixture {
     },
     privateTransport: this.transport(),
   });
+  readonly scope = sessionAccountScope(this.session);
+  readonly administration = new AccountAdministration(this.scope);
   readonly sync = new AccountSync({
+    scope: this.scope,
     session: this.session,
     archive: () => Promise.resolve([]),
     outbox: () =>
@@ -68,7 +72,7 @@ export class AdministrationFixture {
   });
 
   constructor() {
-    this.sync.administration.subscribe((view) => {
+    this.administration.subscribe((view) => {
       this.views.push(view);
     });
   }

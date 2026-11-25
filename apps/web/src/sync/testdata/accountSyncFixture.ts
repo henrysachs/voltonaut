@@ -10,11 +10,11 @@ import { AccountSync } from "../accountSync.js";
 import { outboxKey, type AccountOutbox, type OutboxRow } from "../accountOutbox.js";
 import type { AccountSyncLease } from "../accountDataView.js";
 import type { PrivateRequestError } from "../apiRoute.js";
-import type { SessionView } from "../applicationSession.js";
 import { deletionOwnerKey, type DeletionOwner } from "../accountDeletion.js";
 import { accountExport } from "../../testdata/accountExport.js";
 import { localRide } from "./localRide.js";
-import { offlineIdentities, offlineMembership, offlineShop } from "./offlinePorts.js";
+import { offlineIdentities } from "./offlinePorts.js";
+import { ScopeDriver, testBinding } from "./scopeDriver.js";
 
 export { accountExport };
 
@@ -24,8 +24,9 @@ export const B = "00000000-0000-4000-8000-000000000002";
 export class SyncFixture {
   readonly rows = new Map<string, OutboxRow>();
   readonly uploads: string[] = [];
-  readonly listeners = new Set<(view: SessionView) => void>();
-  active: AccountSyncLease | undefined;
+  readonly scope = new ScopeDriver<AccountSyncLease>((userId, generation) =>
+    this.lease(userId, generation),
+  );
   nowMs = 100_000;
   profile: ProfileState = { status: "missing" };
   profilePending: Promise<ProfileState> | undefined;
@@ -63,9 +64,8 @@ export class SyncFixture {
     },
   };
   readonly sync = new AccountSync({
+    scope: this.scope.scope,
     session: {
-      authorize: () => this.active,
-      subscribe: (listener) => this.subscribe(listener),
       endAfterAccountDeletion: () => {
         this.sessionEnded = true;
         this.logout();
@@ -114,42 +114,22 @@ export class SyncFixture {
     return Promise.resolve();
   }
 
-  subscribe(listener: (view: SessionView) => void): () => void {
-    this.listeners.add(listener);
-    listener({ kind: "guest", message: "Gast" });
-
-    return () => {
-      this.listeners.delete(listener);
-    };
+  /** The lease the account scope currently binds. */
+  get active(): AccountSyncLease | undefined {
+    return this.scope.bound();
   }
 
   login(userId: string): AccountSyncLease {
-    const lease = this.lease(userId);
-    this.active = lease;
-
-    for (const listener of this.listeners)
-      listener({
-        kind: "authenticated",
-        persistent: true,
-        user: { id: userId, email: `${userId}@example.com`, createdAt: "2026-11-20T00:00:00.000Z" },
-      });
-
-    return lease;
+    return this.scope.signIn(userId);
   }
 
   logout(): void {
-    this.active = undefined;
-
-    for (const listener of this.listeners) listener({ kind: "guest", message: "Gast" });
+    this.scope.signOut();
   }
 
-  private lease(userId: string): AccountSyncLease {
-    const lease: AccountSyncLease = {
-      signal: new AbortController().signal,
-      userId,
-      apiOrigin: "http://localhost:3000",
-      generation: this.nowMs++,
-      current: () => this.active === lease,
+  private lease(userId: string, generation: number): AccountSyncLease {
+    return {
+      ...testBinding(userId, generation),
       profile: {
         load: () => this.profilePending ?? Promise.resolve(this.profile),
         save: (value) =>
@@ -162,11 +142,7 @@ export class SyncFixture {
       rides: this.rides(userId),
       data: this.data(),
       identities: offlineIdentities,
-      membership: offlineMembership,
-      shop: offlineShop,
     };
-
-    return lease;
   }
 
   private rides(userId: string): AccountSyncLease["rides"] {

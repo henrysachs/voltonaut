@@ -5,8 +5,9 @@ import { openAccountOutbox } from "./sync/accountOutboxDatabase.js";
 import { openRideDatabase } from "./sync/rideDatabase.js";
 import { accountDeletionIntents } from "./sync/accountDeletion.js";
 import { mountAccountDataPanel } from "./ui/accountDataPanel.js";
-import { mountAccountMembershipPanel } from "./ui/accountMembershipPanel.js";
 import type { ProgressOutbox } from "./sync/progressOutbox.js";
+import type { AccountScope } from "./sync/accountScope.js";
+import type { AccountLease } from "./sync/privateAuthTransport.js";
 
 export function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
   let resource: Promise<T> | undefined;
@@ -23,10 +24,13 @@ export function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
   };
 }
 
+interface AccountDataRoot {
+  readonly scope: AccountScope<AccountLease>;
+  readonly session: Readonly<Pick<ApplicationSession, "endAfterAccountDeletion">>;
+}
+
 export async function setupBrowserAccountData(
-  session: Readonly<
-    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
-  >,
+  root: AccountDataRoot,
   profile: () => Promise<ProfileBootstrap>,
   progressOutbox: () => Promise<Pick<ProgressOutbox, "purgeOwner">>,
 ): Promise<AccountSync> {
@@ -35,7 +39,8 @@ export async function setupBrowserAccountData(
   const archive = lazyResource(() => openRideDatabase(indexedDB));
 
   const sync = new AccountSync({
-    session,
+    scope: root.scope,
+    session: root.session,
     profile: localProfile,
     outbox,
     progressOutbox,
@@ -45,10 +50,8 @@ export async function setupBrowserAccountData(
   });
 
   mountAccountDataPanel(sync);
-  mountAccountMembershipPanel(sync.administration);
   window.addEventListener("online", () => {
     void sync.retry("resume");
-    void sync.shop.retry();
   });
 
   return sync;

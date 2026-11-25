@@ -9,6 +9,7 @@ import {
 import { GarageShop, type GarageShopView, type ShopLease } from "./garageShop.js";
 import { PrivateRequestError } from "./apiRoute.js";
 import { ShopReceiptMismatch } from "./shopPort.js";
+import { ScopeDriver, testBinding } from "./testdata/scopeDriver.js";
 
 const ACQUIRED_AT = "2026-11-25T10:00:00.000Z";
 
@@ -17,19 +18,19 @@ class ShopServer {
   owned: string[] = [];
   readonly orders: PurchaseOrder[] = [];
   failure: Error | undefined;
-  active = true;
+  /** False while the inventory read fails like an unreachable server. */
+  inventoryUp = true;
 
-  lease(userId = "rider"): ShopLease {
+  lease(userId: string, generation: number): ShopLease {
     return {
-      signal: new AbortController().signal,
-      apiOrigin: "http://localhost:3000",
-      userId,
-      generation: 1,
-      current: () => this.active,
+      ...testBinding(userId, generation),
       shop: {
         balance: () =>
           Promise.resolve(VoltsBalanceResponseSchema.parse({ voltsBalance: this.balance })),
-        inventory: () => Promise.resolve(this.inventory()),
+        inventory: () =>
+          this.inventoryUp
+            ? Promise.resolve(this.inventory())
+            : Promise.reject(new PrivateRequestError("retry")),
         purchase: (order) => this.purchase(order),
       },
     };
@@ -60,25 +61,36 @@ class ShopServer {
   }
 }
 
+function shopFor(server: Readonly<Pick<ShopServer, "lease">>) {
+  const ids = ["r1", "r2"];
+
+  const scope = new ScopeDriver<ShopLease>((userId, generation) =>
+    server.lease(userId, generation),
+  );
+
+  const shop = new GarageShop(scope.scope, () => ids.shift() ?? "unexpected");
+
+  return { scope, shop };
+}
+
 async function readyShop() {
   const server = new ShopServer();
-  const queue = ["r1", "r2"];
-  const shop = new GarageShop(() => queue.shift() ?? "unexpected");
+  const { scope, shop } = shopFor(server);
   const views: GarageShopView[] = [];
 
   shop.subscribe((view) => {
     views.push(view);
   });
-  shop.bind(server.lease());
+  scope.signIn("rider");
   await vi.waitFor(() => {
     expect(shop.view().kind).toBe("ready");
   });
 
-  return { server, shop, views };
+  return { server, scope, shop, views };
 }
 
 it("shows guests nothing to buy and loads balance plus inventory for an account", async () => {
-  const guest = new GarageShop();
+  const guest = shopFor(new ShopServer()).shop;
 
   expect(guest.view()).toEqual({ kind: "guest" });
   await guest.purchase("helmet-red", 100);
@@ -144,12 +156,11 @@ it("rereads the server after a rejected purchase and uses a new id next time", a
 });
 
 it("ignores a second purchase while one is open and results of a replaced account", async () => {
-  const { server, shop } = await readyShop();
+  const { server, scope, shop } = await readyShop();
   const first = shop.purchase("helmet-red", 120);
 
   await shop.purchase("gloves-blue", 80);
-  server.active = false;
-  shop.bind();
+  scope.signOut();
   await first;
 
   expect(server.orders.map(({ itemId }) => itemId)).toEqual(["helmet-red"]);
@@ -158,13 +169,10 @@ it("ignores a second purchase while one is open and results of a replaced accoun
 
 it("reports an unreachable shop without inventing a balance", async () => {
   const server = new ShopServer();
-  const lease = server.lease();
-  const shop = new GarageShop();
+  const { scope, shop } = shopFor(server);
 
-  shop.bind({
-    ...lease,
-    shop: { ...lease.shop, inventory: () => Promise.reject(new PrivateRequestError("retry")) },
-  });
+  server.inventoryUp = false;
+  scope.signIn("rider");
   await vi.waitFor(() => {
     expect(shop.view()).toMatchObject({ kind: "failed" });
   });
@@ -197,29 +205,17 @@ it("rereads balance and ownership when an earlier purchase stayed unconfirmed", 
   });
 });
 
-function flakyLease(server: Readonly<Pick<ShopServer, "lease">>, up: () => boolean): ShopLease {
-  const lease = server.lease();
-
-  return {
-    ...lease,
-    shop: {
-      ...lease.shop,
-      inventory: () =>
-        up() ? lease.shop.inventory() : Promise.reject(new PrivateRequestError("retry")),
-    },
-  };
-}
-
 it("rereads a failed shop on retry and ignores retry while ready", async () => {
-  let up = false;
-  const shop = new GarageShop();
+  const server = new ShopServer();
+  const { scope, shop } = shopFor(server);
 
-  shop.bind(flakyLease(new ShopServer(), () => up));
+  server.inventoryUp = false;
+  scope.signIn("rider");
   await vi.waitFor(() => {
     expect(shop.view()).toMatchObject({ kind: "failed" });
   });
 
-  up = true;
+  server.inventoryUp = true;
   await shop.retry();
 
   expect(shop.view()).toMatchObject({ kind: "ready", voltsBalance: 500 });
@@ -230,13 +226,12 @@ it("rereads a failed shop on retry and ignores retry while ready", async () => {
 });
 
 it("keeps open request ids when the same account re-authenticates", async () => {
-  const { server, shop } = await readyShop();
+  const { server, scope, shop } = await readyShop();
 
   server.failure = new PrivateRequestError("retry");
   await shop.purchase("helmet-red", 120);
-  // AccountSync unbinds while the session is busy, then binds the renewed lease.
-  shop.bind();
-  shop.bind(server.lease());
+  // The session is busy during the login handoff, then binds the renewed generation.
+  await scope.exchange("rider");
   await vi.waitFor(() => {
     expect(shop.view().kind).toBe("ready");
   });
@@ -247,12 +242,11 @@ it("keeps open request ids when the same account re-authenticates", async () => 
 });
 
 it("drops open request ids when another account signs in", async () => {
-  const { server, shop } = await readyShop();
+  const { server, scope, shop } = await readyShop();
 
   server.failure = new PrivateRequestError("retry");
   await shop.purchase("helmet-red", 120);
-  shop.bind();
-  shop.bind(server.lease("other-rider"));
+  await scope.exchange("other-rider");
   await vi.waitFor(() => {
     expect(shop.view().kind).toBe("ready");
   });

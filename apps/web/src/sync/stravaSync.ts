@@ -1,7 +1,9 @@
 import type { StravaConsent, StravaRideView, StravaStatus } from "@voltonaut/shared";
-import type { ApplicationSession } from "./applicationSession.js";
-import { connectStrava, type StravaLease } from "./stravaBridge.js";
-import type { StravaPopup } from "./stravaBridge.js";
+import type { LeaseBinding } from "./apiRoute.js";
+import { AccountLane } from "./accountLane.js";
+import type { AccountScope } from "./accountScope.js";
+import { AccountState } from "./accountState.js";
+import { connectStrava, type StravaLease, type StravaPopup } from "./stravaBridge.js";
 
 type Remote<T> =
   | { readonly kind: "loading" }
@@ -13,7 +15,6 @@ export type StravaView =
   | {
       readonly kind: "account";
       readonly userId: string;
-      readonly generation: number;
       readonly connection: Remote<StravaStatus>;
       readonly ride:
         | { readonly kind: "none" }
@@ -26,76 +27,69 @@ export type StravaView =
       readonly message: string;
     };
 
+type AccountView = Extract<StravaView, { readonly kind: "account" }>;
+
 export class StravaSync {
-  readonly #listeners = new Set<(view: StravaView) => void>();
-  #view: StravaView = { kind: "guest" };
-  #lease: StravaLease | undefined;
+  readonly #state: AccountState<StravaView, StravaLease>;
+  /** The newest ride selection wins; older status reads are dropped. */
+  readonly #selection = new AccountLane();
   #cancelFlow: (() => void) | undefined;
   #timer: ReturnType<typeof setTimeout> | undefined;
-  #selection = 0;
-  readonly #unsubscribe: () => void;
 
   constructor(
-    session: Readonly<
-      Pick<ApplicationSession, "subscribe"> & { readonly authorize: () => StravaLease | undefined }
-    >,
+    scope: AccountScope<StravaLease>,
     private readonly popup: StravaPopup,
   ) {
-    this.#unsubscribe = session.subscribe((view) => {
-      this.#cancelFlow?.();
-      this.#cancelFlow = undefined;
+    this.#state = new AccountState<StravaView, StravaLease>(
+      { kind: "guest" },
+      {
+        enter: (binding) => {
+          this.#cancelFlow?.();
+          this.#cancelFlow = undefined;
 
-      if (this.#timer !== undefined) clearTimeout(this.#timer);
-      this.#selection += 1;
-      this.#lease = view.kind === "authenticated" ? session.authorize() : undefined;
-      const lease = this.#lease;
-      this.publish(
-        lease === undefined
-          ? { kind: "guest" }
-          : {
-              kind: "account",
-              userId: lease.userId,
-              generation: lease.generation,
-              connection: { kind: "loading" },
-              ride: { kind: "none" },
-              busy: false,
-              message: "",
-            },
-      );
+          if (this.#timer !== undefined) clearTimeout(this.#timer);
 
-      if (lease !== undefined) void this.refresh();
-    });
+          return binding.kind === "signedOut"
+            ? { kind: "guest" }
+            : {
+                kind: "account",
+                userId: binding.lease.userId,
+                connection: { kind: "loading" },
+                ride: { kind: "none" },
+                busy: false,
+                message: "",
+              };
+        },
+        start: () => {
+          void this.refresh();
+        },
+      },
+    );
+    this.#state.follow(scope);
   }
 
   view(): StravaView {
-    return this.#view;
+    return this.#state.view();
   }
+
   subscribe(listener: (view: StravaView) => void): () => void {
-    this.#listeners.add(listener);
-    listener(this.#view);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
+    return this.#state.subscribe(listener);
   }
-  private publish(view: StravaView): void {
-    this.#view = view;
 
-    for (const listener of this.#listeners) listener(view);
+  /** Wraps a rendered control so it does nothing once the account it was rendered for is gone. */
+  guard(action: () => void): () => void {
+    return this.#state.guard(action);
   }
-  private patch(
-    lease: StravaLease,
-    patch: Partial<Extract<StravaView, { readonly kind: "account" }>>,
-  ): void {
-    if (lease.current() && this.#lease === lease && this.#view.kind === "account")
-      this.publish({ ...this.#view, ...patch });
+
+  private patch(step: Readonly<Pick<LeaseBinding, "current">>, patch: Partial<AccountView>): void {
+    this.#state.update(step, (view) => (view.kind === "account" ? { ...view, ...patch } : view));
   }
 
   connect(): void {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
-    if (lease === undefined || !lease.current() || this.#view.kind !== "account" || this.#view.busy)
-      return;
+    if (lease === undefined || !lease.current() || view.kind !== "account" || view.busy) return;
     this.patch(lease, { busy: true, message: "Strava-Fenster wird geöffnet …" });
     this.#cancelFlow = connectStrava(
       lease,
@@ -111,7 +105,7 @@ export class StravaSync {
   }
 
   async refresh(): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
     if (lease === undefined || !lease.current()) return;
 
@@ -124,20 +118,17 @@ export class StravaSync {
       });
     }
 
-    if (
-      this.#lease === lease &&
-      lease.current() &&
-      this.#view.kind === "account" &&
-      this.#view.ride.kind === "selected"
-    )
-      await this.select(this.#view.ride.rideId);
+    const view = this.#state.view();
+
+    if (lease.current() && view.kind === "account" && view.ride.kind === "selected")
+      await this.select(view.ride.rideId);
   }
 
   async select(rideId: string): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
     if (lease === undefined || !lease.current()) return;
-    const selection = ++this.#selection;
+    const selection = this.#selection.begin(lease);
 
     if (this.#timer !== undefined) clearTimeout(this.#timer);
     this.patch(lease, { ride: { kind: "selected", rideId, view: { kind: "loading" } } });
@@ -145,7 +136,7 @@ export class StravaSync {
     try {
       const view = await lease.strava.ride(rideId);
 
-      if (selection !== this.#selection || !lease.current() || this.#lease !== lease) return;
+      if (!selection.current()) return;
       this.patch(lease, {
         ride: { kind: "selected", rideId, view: { kind: "ready", value: view } },
       });
@@ -156,25 +147,25 @@ export class StravaSync {
         ["queued", "preparing", "submitting", "processing"].includes(view.delivery.progress.kind)
       )
         this.#timer = setTimeout(() => {
-          if (lease.current() && this.#lease === lease) void this.select(rideId);
+          if (lease.current()) void this.select(rideId);
         }, 3000);
     } catch {
-      if (selection === this.#selection)
-        this.patch(lease, {
-          ride: { kind: "selected", rideId, view: { kind: "failed" } },
-          message: "Fahrtstatus nicht bestätigt. Nur Status erneut laden, kein neuer Versand.",
-        });
+      this.patch(selection, {
+        ride: { kind: "selected", rideId, view: { kind: "failed" } },
+        message: "Fahrtstatus nicht bestätigt. Nur Status erneut laden, kein neuer Versand.",
+      });
     }
   }
 
   async upload(consent: StravaConsent): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
     if (
       lease === undefined ||
       !lease.current() ||
-      this.#view.kind !== "account" ||
-      this.#view.busy ||
+      view.kind !== "account" ||
+      view.busy ||
       !this.matchesOffer(consent)
     )
       return;
@@ -183,7 +174,7 @@ export class StravaSync {
     try {
       await lease.strava.upload(consent);
 
-      if (!lease.current() || this.#lease !== lease) return;
+      if (!lease.current()) return;
       this.patch(lease, {
         message: "Freigabe gespeichert. Erst bestätigte Strava-Verarbeitung bedeutet zugestellt.",
       });
@@ -196,11 +187,11 @@ export class StravaSync {
       this.patch(lease, { busy: false });
     }
 
-    if (lease.current() && this.#lease === lease) await this.select(consent.rideId);
+    if (lease.current()) await this.select(consent.rideId);
   }
 
   private matchesOffer(consent: StravaConsent): boolean {
-    const state = this.#view;
+    const state = this.#state.view();
 
     return (
       state.kind === "account" &&
@@ -212,10 +203,10 @@ export class StravaSync {
   }
 
   async disconnect(): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
-    if (lease === undefined || !lease.current() || this.#view.kind !== "account" || this.#view.busy)
-      return;
+    if (lease === undefined || !lease.current() || view.kind !== "account" || view.busy) return;
     this.patch(lease, { busy: true });
 
     try {
@@ -234,14 +225,13 @@ export class StravaSync {
       this.patch(lease, { busy: false });
     }
 
-    if (lease.current() && this.#lease === lease) await this.refresh();
+    if (lease.current()) await this.refresh();
   }
 
   dispose(): void {
-    this.#unsubscribe();
     this.#cancelFlow?.();
 
     if (this.#timer !== undefined) clearTimeout(this.#timer);
-    this.#listeners.clear();
+    this.#state.close();
   }
 }

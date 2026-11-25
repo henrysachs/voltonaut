@@ -1,7 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { StravaFixture, channelId } from "./stravaFixture.spec.js";
 import { StravaConsentSchema } from "@voltonaut/shared";
-import { accountAction } from "../ui/stravaPanelText.js";
 import type { StravaView } from "./stravaSync.js";
 
 function account(view: StravaView) {
@@ -118,7 +117,9 @@ it("invalidates already-rendered actions on account change and on a new generati
   const calls: string[] = [];
   await f.session.exchange("a");
 
-  const action = accountAction(f.sync, account(f.sync.view()), () => {
+  expect(account(f.sync.view()).userId).toBe("a");
+
+  const action = f.sync.guard(() => {
     calls.push("action");
   });
 

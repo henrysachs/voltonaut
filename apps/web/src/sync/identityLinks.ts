@@ -1,7 +1,8 @@
 import type { LinkedIdentity, OidcProviderChoice } from "@voltonaut/shared";
-import type { SessionView } from "./applicationSession.js";
 import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
 import type { IdentityPort } from "./identityPort.js";
+import type { AccountScope } from "./accountScope.js";
+import { AccountState } from "./accountState.js";
 
 export type IdentityLinksView =
   | { readonly kind: "hidden"; readonly message: string }
@@ -19,15 +20,10 @@ export type IdentityLinksView =
     };
 
 /** The part of an account lease this section uses. */
-export type IdentityLinksLease = Pick<LeaseBinding, "current" | "generation"> & {
-  readonly identities: IdentityPort;
-};
+export type IdentityLinksLease = LeaseBinding & { readonly identities: IdentityPort };
 
 interface IdentityLinksOptions {
-  readonly session: {
-    readonly authorize: () => IdentityLinksLease | undefined;
-    readonly subscribe: (listener: (view: SessionView) => void) => () => void;
-  };
+  readonly scope: AccountScope<IdentityLinksLease>;
   /** Login providers the server offers; empty when OIDC is not active. */
   readonly providers: () => Promise<readonly OidcProviderChoice[]>;
   /** Continues the fresh provider login in this tab. */
@@ -69,26 +65,32 @@ function failureText(error: Readonly<Error>): string {
  */
 export class IdentityLinks {
   readonly #options: IdentityLinksOptions;
-  readonly #listeners = new Set<(view: IdentityLinksView) => void>();
-  #view: IdentityLinksView = { kind: "hidden", message: "" };
+  readonly #state: AccountState<IdentityLinksView, IdentityLinksLease>;
   #pending: string | undefined;
-  #generation: number | undefined;
   #persistent = false;
 
   constructor(options: IdentityLinksOptions) {
     this.#options = options;
-    options.session.subscribe((view) => {
-      void this.#sessionChanged(view);
-    });
+    this.#state = new AccountState<IdentityLinksView, IdentityLinksLease>(
+      { kind: "hidden", message: "" },
+      {
+        enter: (binding, previous) => {
+          if (binding.kind === "signedOut") return { kind: "hidden", message: "" };
+          this.#persistent = binding.persistent;
+
+          // The section stays as it is until the new account's logins are listed.
+          return previous;
+        },
+        start: ({ lease }) => {
+          void this.#load(lease);
+        },
+      },
+    );
+    this.#state.follow(options.scope);
   }
 
   subscribe(listener: (view: IdentityLinksView) => void): () => void {
-    this.#listeners.add(listener);
-    listener(this.#view);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
+    return this.#state.subscribe(listener);
   }
 
   /** Remembers a link code from the finish page until the stored session is confirmed. */
@@ -97,19 +99,23 @@ export class IdentityLinks {
   }
 
   async connect(providerId: string): Promise<void> {
-    const lease = this.#options.session.authorize();
-    const view = this.#view;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
     if (lease === undefined || view.kind !== "ready") return;
 
     if (!view.linkable) {
       // Republishing an unchanged view would rebuild the buttons and drop keyboard focus.
-      if (view.message !== TAB_ONLY_TEXT) this.#publish({ ...view, message: TAB_ONLY_TEXT });
+      if (view.message !== TAB_ONLY_TEXT) this.#state.publish({ ...view, message: TAB_ONLY_TEXT });
 
       return;
     }
 
-    this.#publish({ ...view, busy: true, message: "Anmeldung beim Anbieter wird vorbereitet …" });
+    this.#state.publish({
+      ...view,
+      busy: true,
+      message: "Anmeldung beim Anbieter wird vorbereitet …",
+    });
 
     try {
       const started = await lease.identities.startLink(providerId);
@@ -117,7 +123,7 @@ export class IdentityLinks {
       if (lease.current()) this.#options.redirect(started.location);
     } catch (error) {
       if (lease.current() && error instanceof Error)
-        this.#publish({ ...view, busy: false, message: failureText(error) });
+        this.#state.publish({ ...view, busy: false, message: failureText(error) });
     }
   }
 
@@ -125,24 +131,10 @@ export class IdentityLinks {
   settle(): void {
     if (this.#pending === undefined) return;
     this.#pending = undefined;
-    this.#publish({ kind: "hidden", message: failureText(new PrivateRequestError("reauth")) });
-  }
-
-  async #sessionChanged(view: SessionView): Promise<void> {
-    if (view.kind !== "authenticated") {
-      if (view.kind === "guest") this.#generation = undefined;
-
-      this.#publish({ kind: "hidden", message: "" });
-
-      return;
-    }
-
-    this.#persistent = view.persistent;
-    const lease = this.#options.session.authorize();
-
-    if (lease === undefined || lease.generation === this.#generation) return;
-    this.#generation = lease.generation;
-    await this.#load(lease);
+    this.#state.publish({
+      kind: "hidden",
+      message: failureText(new PrivateRequestError("reauth")),
+    });
   }
 
   async #load(lease: IdentityLinksLease): Promise<void> {
@@ -168,7 +160,7 @@ export class IdentityLinks {
       const available = providers.filter((provider) => !linked.has(provider.id));
       const linkable = this.#persistent;
 
-      this.#publish({
+      this.#state.publish({
         kind: "ready",
         linked: listed.identities,
         available,
@@ -178,13 +170,10 @@ export class IdentityLinks {
       });
     } catch (error) {
       if (lease.current() && error instanceof Error)
-        this.#publish({ kind: "hidden", message: message === "" ? failureText(error) : message });
+        this.#state.publish({
+          kind: "hidden",
+          message: message === "" ? failureText(error) : message,
+        });
     }
-  }
-
-  #publish(view: IdentityLinksView): void {
-    this.#view = view;
-
-    for (const listener of this.#listeners) listener(view);
   }
 }
