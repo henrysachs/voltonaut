@@ -34,6 +34,8 @@ Ab E3 läuft die Engine im Dedicated Web Worker (ADR-011, Freigabe ausstehend). 
 
 Die Checkpoint-Qualität ist der terminale Batch-Zustand. Pausierte Ticks haben faktisch `timeS === 0`; `timeS`, `distanceM`, `elevationGainM` und `energyKj` sind null. Bei konstanten Eingaben je Advance bedeutet terminales `paused: false`, dass der Batch keine pausierten Ticks enthält. Finales `dataAgeS` plus Faktenzahl rekonstruiert den einzigen Frischewechsel, weil frische Trainerdaten nur im ersten Tick eines Advances zurücksetzen und danach jeder Tick 0,05 s addiert. `clockSkipped` gilt für den ganzen Batch, sobald ein abgeleientes `ride.clockSkipped` vorliegt.
 
+[E0-07](specs/E0-07-journal-codec.md): Der Fahrtjournal-Codec (`src/journal/`) übersetzt angenommene `DeviceEvent`s in Journaleinträge und spielt sie in dieselbe Engine zurück. Er entscheidet erschöpfend über jede Ereignisart und jede Taste. `powerUp` wirkt nur im nicht aufnehmbaren Fun-Modus und wird deshalb ausdrücklich nicht journalisiert (ADR-028). `PHYSICS_REVISION` (`engine-v1`) benennt die Semantik dieser Engine; neue Semantik braucht eine neue Revision (ADR-016).
+
 ## 2. Physikmodell (virtuelles Tempo aus Leistung)
 
 Kräfte am Rad (θ = atan(grade/100)):

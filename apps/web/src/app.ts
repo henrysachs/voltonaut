@@ -29,12 +29,11 @@ export interface AppDocument {
   readonly querySelector: (selector: string) => TextTarget | null;
 }
 
-/** Snapshot + connection state source the HUD renders from. */
+/** Snapshot + connection state source the HUD renders from; the ride session owns its lifetime. */
 export interface RideHudSource {
   readonly snapshot: () => RideSnapshot | undefined;
   readonly connected: () => boolean;
   readonly segments: () => SegmentHudView;
-  readonly dispose: () => void;
 }
 
 export interface StartAppOptions {
@@ -112,8 +111,6 @@ export function startApp(options: StartAppOptions): App {
     render,
     stop() {
       stopTicker();
-      options.ride.dispose();
-      renderSegmentHud(options.ride.segments(), targets);
     },
   };
 }
