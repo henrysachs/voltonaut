@@ -3,26 +3,12 @@ import { AuthModule } from "./auth/auth.module.js";
 import { ServerConfigModule } from "./config.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { APP_PROVIDERS } from "./app.providers.js";
+import { applicationModules } from "./app.modules.js";
 
 import { HealthModule } from "./health/health.module.js";
-import { AccountsModule } from "./accounts/accounts.module.js";
-import { RidesModule } from "./rides/rides.module.js";
-import { accountsTables, ridesTables, stravaTables } from "./schema.js";
-import { StravaModule } from "./strava/strava.module.js";
-
-const ridesModule = RidesModule.register(ridesTables);
-const stravaModule = StravaModule.register(stravaTables, ridesModule);
 
 @Module({
-  imports: [
-    ServerConfigModule,
-    DatabaseModule,
-    AuthModule,
-    HealthModule,
-    AccountsModule.register(accountsTables, ridesModule, stravaModule),
-    ridesModule,
-    stravaModule,
-  ],
+  imports: [ServerConfigModule, DatabaseModule, AuthModule, HealthModule, ...applicationModules],
   providers: APP_PROVIDERS,
 })
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest modules are empty decorated classes; the framework reads the decorator, not class members.

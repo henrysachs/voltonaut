@@ -26,6 +26,7 @@ const diagnostics: SceneDiagnostics = {
   cameraPosition: { x: 1, y: 1, z: 1 },
   widthPx: 800,
   heightPx: 400,
+  billboardsInView: { left: 0, right: 0 },
 };
 
 class LinkFixture {

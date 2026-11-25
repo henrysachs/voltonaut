@@ -38,7 +38,7 @@ volts_total  = min(volts_work + volts_climb + volts_pickup + volts_bonus, restbu
 Größenordnung: 1 h @ 180 W ≈ 650 kJ, 300 Hm, 8 Pickups → ≈ 650 + 450 + 80 = **≈ 1 180 Volts/h**.
 Regeln: keine Volts im Sim-Modus und ohne echten Leistungsmesser; Abfahrt ohne Treten bringt 0 kJ. Werte sind Startwerte ⚠️, nach 2–3 Wochen Nutzung nachjustieren.
 
-Das Tageslimit beträgt **3000 Volts über alle Fahrten zusammen**, nicht je Fahrt. Der Server muss das verbleibende Budget rekonstruieren. Ein reines Zahlenangebot entscheidet nicht über Quellenakzeptanz oder tatsächliche Vergabe.
+Das Tageslimit beträgt **3000 Volts über alle Fahrten zusammen**, nicht je Fahrt. Volts-Boni aus dem Season Pass zählen nicht dagegen ([E6-06](specs/E6-06-season-pass.md)). Eine spätere Erhöhung des Limits ist vorgesehen. Der Server muss das verbleibende Budget rekonstruieren. Ein reines Zahlenangebot entscheidet nicht über Quellenakzeptanz oder tatsächliche Vergabe.
 
 ### Reines Basisangebot aus E6-02
 
@@ -53,6 +53,8 @@ Jede öffentliche Rechenfunktion validiert ihre Eingaben erneut mit den eigenen 
 Die Shared-Schemas begrenzen effektive Rohwerte wie die bestehenden Fahrtverträge auf 0–2000 W und 0–200 rpm. Aktive Zeit ist auf das bestehende Aufnahmefenster von sechs Stunden begrenzt. Strecke, gesamte und aktive Höhe sowie Arbeit sind jeweils auf `10^12` in ihrer benannten Einheit begrenzt. Diese reine Zahlengrenze hält die größten Basis-XP bei `2 020 000 000 360` und Basis-Volts bei `2 500 000 000 000`, sicher unter `Number.MAX_SAFE_INTEGER`. Sie ist kein physikalischer Plausibilitätsnachweis. Aktive Höhe darf die gesamte Höhe nicht übersteigen. Ungültige Eingaben werden verworfen, nicht geklemmt.
 
 Die spätere Ermittlung tatsächlicher aktiver Fakten und die serverseitige Vergabe bleiben getrennte Aufgaben. Der letzte Snapshot und eine Batchdauer reichen dafür nicht. Weder synthetische Fakten noch Replay-Konsistenz oder BLE-Selbstauskunft autorisieren eine Buchung. Hardwareabnahme und Bereitstellung gehören nicht zu E6-02.
+
+[E6-05](specs/E6-05-volts-ledger.md) ergänzt das serverseitige SQLite-Journal. Belohnung und Abbuchung sind idempotent und atomar; Kontostand und Tagesbudget werden aus dem Journal summiert. Zusammenhängende Bereiche erhalten kumulative Fakten; das Ledger bucht die Differenz zur vorherigen kumulierten Rundung. Dadurch ergibt die Summe aller Bereiche exakt die Ganzfahrt-Rundung. Checkpoint-Freigabe, Quellenpolitik, Mitternachtsfahrten, Shop-Käufe und bestehende Fahrten bleiben ausdrücklich unverändert.
 
 ### Shop & Freischalt-Ökonomie
 
@@ -80,6 +82,8 @@ type UnlockRule =
 
 Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magnet, `04-world-3d.md` §7). Aktivierung per Play-Power-up-Taste; physikrelevant → im Ride-Upload protokolliert, serverseitig nachgerechnet; Segmentzeiten mit Power-up werden getrennt markiert. Kosten nichts, bringen keine Volts.
 
+Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.md), [ADR-028](decisions/ADR-028-ride-modes-and-fun-items.md)). Er hat eigene Item-Boxen und Items, und für ihn gilt die Protokollierung oben ausdrücklich nicht: Er erzeugt keine Belohnungen, keine Fortschritts-Checkpoints und keine Aufnahme. Wer ihn in einer Sitzung betritt, macht alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `ride_mode`), weil das Aufnahmeprotokoll keinen Modus kennt und der Server nur ohne Modus nachrechnet. Eine nachrechenbare Variante wäre ein eigener Schritt (Modus- und Item-Einträge in RecordingV2).
+
 ## XP & Level
 
 - XP pro Fahrt: **20 XP/km** + **2 XP/Hm** + **1 XP/Minute** + Boni (Segment-PB 50, Badge 100–500, erste Fahrt des Tages 25).
@@ -87,6 +91,10 @@ Seltene Pickups neben den Blitzen (Aero-Boost, Leichtgewicht, Windschatten-Magne
 - Basis-XP werden aus `activeDistanceM`, `activeElevationGainM` und `activeTimeS` berechnet. Jeder Bestandteil wird **einmal nach Aggregation der ganzen Fahrt abgerundet**, danach werden die drei Ganzzahlen summiert. Nicht pro Tick und nicht erst die ungerundete Gesamtsumme abrunden.
 - Level 1 beginnt bei **0 Gesamt-XP**. Level 0 ist ungültig. Für Level 2 bis 50 gilt `xpForLevel(n) = round(500 · n^1.6)` → Level 2 = 1516 XP, Level 10 = 19 905 XP. `levelForXp` liefert die höchste erreichte Stufe, maximal 50. Gesamt-XP müssen sichere nichtnegative Ganzzahlen sein. ⚠️ Kurve justieren.
 - Jedes Level vergibt mindestens ein Item oder Volts-Bonus (`game/data/levels.json`, Server und Client teilen die Datei).
+
+## Season Pass
+
+Spec: [E6-06](specs/E6-06-season-pass.md). Eine Saison dauert 8 bis 12 Wochen und hat mindestens 20 Stufen. Saisonpunkte entsprechen den Basis-XP derselben bestätigten Fahrtabschnitte. Pro Abschnitt zählt die Differenz der kumulierten Fahrtpunkte, damit die Rundung der ganzen Fahrt gilt. Ein Abschnitt zählt, wenn seine Fahrzeit im Zeitraum liegt (Start inklusive, Ende exklusiv). Jede Stufe vergibt ein Saison-Item (`UnlockRule` `{ kind: "season" }`) oder einen Volts-Bonus, und zwar genau einmal. Verdiente Items bleiben nach Saisonende. `season-01`: 20 Stufen zu je 1 800 Punkten ⚠️ Startwert. Bisher sind nur Schemas, Rechenlogik und Daten umgesetzt, keine Vergabe.
 
 ## Badges / Achievements (Startliste)
 

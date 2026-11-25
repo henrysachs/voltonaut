@@ -6,6 +6,8 @@ export * from "./bus.js";
 
 export * from "./events.js";
 
+export * from "./economy.js";
+
 export * from "./profile.js";
 
 export * from "./ride.js";
@@ -29,3 +31,9 @@ export * from "./rideTcx.js";
 export * from "./units.js";
 
 export * from "./rewards.js";
+
+export * from "./season.js";
+
+export * from "./funMode.js";
+
+export * from "./rideMode.js";

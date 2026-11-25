@@ -41,6 +41,7 @@ interface ItemDef {
 - `AvatarConfig` referenziert nur IDs und Farben. Besitz prüft später der Server (`inventory/`), der Client nur gegen den Cache.
 - Körpergröße aus dem Rider-Profil (`heightCm`) skaliert das Skelett. Sattelhöhe und Reach folgen daraus.
 - [E7-01](specs/E7-01-garage-shop-foundation.md) integriert den Tab „Garage / Shop" in das bestehende Fahrtmenü. Slot- und Item-Auswahl ändert die provisorische 3D-Vorschau. Preise und Freischaltbedingungen sind sichtbar. Käufe bleiben deaktiviert, weil Server-Inventar und Volts-Buchung fehlen. Die Vorschau wird weder gespeichert noch als Besitz dargestellt.
+- **Rad (E4-09):** Das Laufzeit-Rad ist prozedural (`apps/web/src/avatar/bike*.ts`). Rahmen und Laufräder sind Daten in `bikeSpecs.ts` (`FRAME_SPECS`: Geometrietabelle, Rohrquerschnitte, Reifen, Lenkerbreite, Dekor; `WHEEL_SPECS`: Felgenprofil, Speichen, Scheibe, Finish). Katalog-Items verweisen per `assetRef: procedural://bike/<frame|wheels>/<key>` darauf. Eine neue Option braucht nur einen Spec-Eintrag und ein Katalog-Item. `frameColor` färbt den Klarlack. Unbekannte Refs fallen auf Race/Alu zurück, sodass später auch GLB-Refs ohne Absturz möglich sind.
 - Hautton: direkte Hex-Farbauswahl in der Vorschau. Die bisherigen Preset-IDs bleiben als Kompatibilitätsdaten erhalten, werden aber nicht als Namen angezeigt.
 
 ## Start-Katalog (E7)

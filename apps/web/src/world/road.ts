@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
+import { createItemBoxSystem } from "./itemBoxes.js";
 import { createWaymarks } from "./waymarks.js";
 
 export interface RoadSample {
@@ -96,6 +97,8 @@ function roadsidePosts(
 
 export function createRoadSystem(): RenderSystem {
   const root = new THREE.Group();
+  // Fun-mode item boxes float over this road and follow its lifecycle (spec E9-01).
+  const itemBoxes = createItemBoxSystem();
 
   return {
     id: "road",
@@ -124,10 +127,14 @@ export function createRoadSystem(): RenderSystem {
 
       root.add(roadsidePosts(context.route, paint), createWaymarks(context.route));
       context.scene.add(root);
+      itemBoxes.init(context);
     },
-    update() {},
+    update(frame) {
+      itemBoxes.update(frame);
+    },
     setQuality() {},
     dispose() {
+      itemBoxes.dispose();
       disposeObject(root);
     },
   };

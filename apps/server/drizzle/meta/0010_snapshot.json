@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1bbd7f91-54ea-4897-8763-42736fe3a281",
-  "prevId": "a52155dd-efcd-40bf-8a9f-dbf4b629b68d",
+  "id": "701aa981-dd13-4a89-aab3-a11076344c9e",
+  "prevId": "0def8242-e741-4c6c-8b1a-e45932caf4c0",
   "tables": {
     "account_status": {
       "name": "account_status",
@@ -759,6 +759,209 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "volts_ledger": {
+      "name": "volts_ledger",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "delta_volts": {
+          "name": "delta_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ref_id": {
+          "name": "ref_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reward_day": {
+          "name": "reward_day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_tick": {
+          "name": "start_tick",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "end_tick": {
+          "name": "end_tick",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "candidate_volts": {
+          "name": "candidate_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cumulative_work_volts": {
+          "name": "cumulative_work_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cumulative_climb_volts": {
+          "name": "cumulative_climb_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cumulative_facts_json": {
+          "name": "cumulative_facts_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "volts_ledger_owner_idempotency_unique": {
+          "name": "volts_ledger_owner_idempotency_unique",
+          "columns": [
+            "user_id",
+            "idempotency_key"
+          ],
+          "isUnique": true
+        },
+        "volts_ledger_ride_start_unique": {
+          "name": "volts_ledger_ride_start_unique",
+          "columns": [
+            "ref_id",
+            "start_tick"
+          ],
+          "isUnique": true,
+          "where": "\"volts_ledger\".\"reason\" = 'ride_reward'"
+        },
+        "volts_ledger_ride_end_unique": {
+          "name": "volts_ledger_ride_end_unique",
+          "columns": [
+            "ref_id",
+            "end_tick"
+          ],
+          "isUnique": true,
+          "where": "\"volts_ledger\".\"reason\" = 'ride_reward'"
+        },
+        "volts_ledger_owner_day_reason_idx": {
+          "name": "volts_ledger_owner_day_reason_idx",
+          "columns": [
+            "user_id",
+            "reward_day",
+            "reason"
+          ],
+          "isUnique": false
+        },
+        "volts_ledger_owner_created_id_idx": {
+          "name": "volts_ledger_owner_created_id_idx",
+          "columns": [
+            "user_id",
+            "created_at",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "volts_ledger_user_id_users_id_fk": {
+          "name": "volts_ledger_user_id_users_id_fk",
+          "tableFrom": "volts_ledger",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "volts_ledger_safe_delta": {
+          "name": "volts_ledger_safe_delta",
+          "value": "typeof(\"volts_ledger\".\"delta_volts\") = 'integer' AND \"volts_ledger\".\"delta_volts\" BETWEEN -9007199254740991 AND 9007199254740991"
+        },
+        "volts_ledger_reason": {
+          "name": "volts_ledger_reason",
+          "value": "\"volts_ledger\".\"reason\" IN ('ride_reward', 'purchase')"
+        },
+        "volts_ledger_ride_reward": {
+          "name": "volts_ledger_ride_reward",
+          "value": "\"volts_ledger\".\"reason\" <> 'ride_reward' OR (\"volts_ledger\".\"reward_day\" IS NOT NULL AND \"volts_ledger\".\"start_tick\" IS NOT NULL AND \"volts_ledger\".\"end_tick\" IS NOT NULL AND \"volts_ledger\".\"candidate_volts\" IS NOT NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NOT NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NOT NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NOT NULL AND \"volts_ledger\".\"delta_volts\" >= 0)"
+        },
+        "volts_ledger_purchase": {
+          "name": "volts_ledger_purchase",
+          "value": "\"volts_ledger\".\"reason\" <> 'purchase' OR (\"volts_ledger\".\"reward_day\" IS NULL AND \"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL AND \"volts_ledger\".\"candidate_volts\" IS NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NULL AND \"volts_ledger\".\"delta_volts\" < 0)"
+        },
+        "volts_ledger_ticks": {
+          "name": "volts_ledger_ticks",
+          "value": "(\"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL) OR (typeof(\"volts_ledger\".\"start_tick\") = 'integer' AND \"volts_ledger\".\"start_tick\" BETWEEN 0 AND 9007199254740991 AND typeof(\"volts_ledger\".\"end_tick\") = 'integer' AND \"volts_ledger\".\"end_tick\" BETWEEN 0 AND 9007199254740991 AND \"volts_ledger\".\"end_tick\" > \"volts_ledger\".\"start_tick\")"
+        },
+        "volts_ledger_candidate_volts": {
+          "name": "volts_ledger_candidate_volts",
+          "value": "\"volts_ledger\".\"candidate_volts\" IS NULL OR (typeof(\"volts_ledger\".\"candidate_volts\") = 'integer' AND \"volts_ledger\".\"candidate_volts\" BETWEEN 0 AND 9007199254740991)"
+        },
+        "volts_ledger_cumulative_volts": {
+          "name": "volts_ledger_cumulative_volts",
+          "value": "(\"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL) OR (typeof(\"volts_ledger\".\"cumulative_work_volts\") = 'integer' AND \"volts_ledger\".\"cumulative_work_volts\" BETWEEN 0 AND 9007199254740991 AND typeof(\"volts_ledger\".\"cumulative_climb_volts\") = 'integer' AND \"volts_ledger\".\"cumulative_climb_volts\" BETWEEN 0 AND 9007199254740991)"
+        }
+      }
     },
     "auth_identities": {
       "name": "auth_identities",

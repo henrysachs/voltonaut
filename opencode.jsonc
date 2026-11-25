@@ -1,12 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "github-copilot/gpt-6.1-sol",
+  "model": "kiro/claude-opus-5-5",
   "agents": {
     "poteto-agent": {
-      "model": "github-copilot/gpt-6.1-sol"
+      "model": "kiro/claude-opus-5-5"
     },
     "comment-sicko": {
-      "model": "github-copilot/gpt-6.1-sol"
+      "model": "kiro/claude-opus-5-5"
     }
   }
 }

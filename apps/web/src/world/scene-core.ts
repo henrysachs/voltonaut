@@ -5,7 +5,7 @@ import { createRider } from "../avatar/rider.js";
 import { createRideCamera, type CameraMode } from "./camera.js";
 import { createEnvironmentSystem } from "./environmentSystem.js";
 import { createFrameSampler, type EnvironmentSettings, type FrameSampler } from "./frame.js";
-import { createLandscapeSystem } from "./landscape.js";
+import { billboardsInView, createLandscapeSystem } from "./landscape.js";
 import type { RenderViewport, SceneDiagnostics } from "./render-protocol.js";
 import { createRoadSystem } from "./road.js";
 import { createScheduler, QUALITY_SETTINGS } from "./scheduler.js";
@@ -84,6 +84,7 @@ class ThreeSceneCore implements SceneCore {
       },
       widthPx: this.renderer.domElement.width,
       heightPx: this.renderer.domElement.height,
+      billboardsInView: billboardsInView(this.scene, this.camera),
     };
   };
 

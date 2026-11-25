@@ -43,6 +43,7 @@ function createTargets() {
     "hud-warning": createTarget(),
     "hud-sprint": createTarget(),
     "hud-kom": createTarget(),
+    "hud-item": createTarget(),
   };
 }
 

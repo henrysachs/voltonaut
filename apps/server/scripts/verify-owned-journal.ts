@@ -67,6 +67,7 @@ function journalBoundary(
     worldPos: _position,
     headingRad: _heading,
     trainerMode: _mode,
+    mode: _rideMode,
     gear,
     hrBpm,
     ...snapshot
