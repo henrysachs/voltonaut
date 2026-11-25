@@ -27,26 +27,34 @@ interface TrainerControlPanel {
   subscribe(listener: () => void): () => void;
 }
 
+interface TrainerEngineUpdate {
+  paused: boolean;
+  commands: readonly TrainerCommand[];
+}
+
 interface TrainerControl extends TrainerControlPanel {
-  forward(commands: readonly TrainerCommand[]): void;
+  forward(update: TrainerEngineUpdate): void;
 }
 ```
 
 - `ControlOptions.clockScale`, `TrainerAdapterOptions.clockScale` und `FakeTrainerOptions.clockScale` sind Pflichtfelder. `enable()` hat keinen Parameter mehr.
 - Neues internes Modul `ftms/controlConnection.ts` mit `FtmsControlConnection` (`attach`, `detach`, `publishData`, `dispose`). Es ist nicht aus dem Paketindex exportiert. `ftms/control.ts` exportiert nur noch die Vertragstypen.
 - `publishData` ist der einzige Weg für geparste Trainer-Samples: Kadenz an die Session, gehaltenes Ziel bestätigen, dann auf den Bus. FTMS- und Sim-Adapter nutzen ihn beide.
-- `forward` merkt sich das letzte Simulationsziel und die Zeit des Batches. Auch leere Batches beweisen eine laufende Engine. Das gehaltene Ziel wird nur angeboten, solange die Engine innerhalb von `FRESH_S` geliefert hat.
-- `rideDevices.ts` verliert `commandSink` und `onSnapshot`. `ConnectSlot.trainer` ist ein `TrainerControlPanel`. `main.ts` bleibt unverändert.
+- `forward` bekommt pro Engine-Update den Pause-Zustand und die Kommandos. Der Adapter merkt sich das letzte Simulationsziel und die Zeit des Updates. Auch leere Batches beweisen eine laufende Engine. Das gehaltene Ziel wird nur angeboten, solange die Engine innerhalb von `FRESH_S` geliefert hat.
+- **Auto-Pause verwirft das gehaltene Ziel.** Ein pausiertes Update löscht es. Erst das sofortige Kommando der Engine beim Wiederanfahren setzt es neu. Der Pause-Zustand ist Engine-Zustand und keine Timing-Pflicht des Aufrufers.
+- `rideDevices.ts` verliert `commandSink` und die Entscheidung „fährt“. `onSnapshot` liest nur `snapshot.paused` und reicht ihn mit den Kommandos desselben Updates weiter (Reihenfolge Snapshot → Kommandos, wie `RideTrainerSink` aus #127). `ConnectSlot.trainer` ist ein `TrainerControlPanel`.
 
 ### Bewusst beibehalten
 
 - **Zwei Raten-Limits.** Das Engine-Limit läuft in Fahrtzeit-Ticks, ist deterministisch und wird vom Server nachgerechnet. Es begrenzt keinen BLE-Verkehr bei beschleunigter oder stockender Uhr. `SIM_INTERVAL_S` ist das Wanduhr-Limit des Transports. Beide bleiben; der Grund steht an `SIM_INTERVAL_S`.
 - **Gleiches-Ziel-Zweig in `FtmsControlSession.submit`.** Der Adapter bietet das gehaltene Ziel weiterhin bei jedem Sample erneut an. `FtmsControlSession` und `ControlProcedure` bleiben unverändert (Sicherheitskern).
-- **„Fährt“ hat eine Quelle:** frische Gerätekadenz > 0 in der Session. Die Engine-Pause braucht keine zweite Prüfung: Sie setzt Kadenz 0 voraus, und die Engine schickt beim Wiederanfahren ein sofortiges Kommando.
+- **„Tritt“ hat eine Quelle:** frische Gerätekadenz > 0 in der Session. Der Snapshot-Kadenzwert aus `commandSink` entfällt.
+- **Die Engine-Pause braucht die eigene Prüfung.** Der Worker postet auch in der Auto-Pause alle 50 ms leere Batches, also bleibt die Engine „lebendig“. Der erste Tritt erreicht den Adapter vor dem Worker. Ohne Verwerfen ginge das Ziel von vor der Pause raus und das Resume-Kommando müsste bis zu 250 ms auf den Transport-Slot warten (Befund des Zweitreviews, B1).
+- **Abweichung von `commandSink` bei kurzem Kadenzaussetzer ohne Pause:** Das gehaltene Ziel bleibt erhalten. Es geht mit dem ersten frischen Geräte-Sample raus, nicht erst mit dem nächsten Snapshot (≤ 50 ms später). Die Engine läuft in diesem Fall weiter, das Ziel ist ihr aktuelles.
 
 ### Entscheidung zur erneuten Freigabe
 
-Nach Disconnect, Timeout, Rechteverlust oder Deaktivieren bleibt die Autorität verloren. Das gehaltene Engine-Ziel wird nie ohne neue Freigabe gesendet. Nach ausdrücklichem `enable()` laufen erneut `00 → 07 → 11 neutral`. Danach sendet der Adapter das aktuelle Engine-Ziel, sofern die Engine innerhalb von 1,5 s geliefert hat und frische Kadenz > 0 vorliegt. Das entspricht dem bisherigen Verhalten von `commandSink`. Es ist kein Wiederholen eines unbestätigten Kommandos, denn ein unbestätigtes Verfahren sperrt weiterhin bis zur frischen GATT-Verbindung.
+Nach Disconnect, Timeout, Rechteverlust oder Deaktivieren bleibt die Autorität verloren. Das gehaltene Engine-Ziel wird nie ohne neue Freigabe gesendet. Nach ausdrücklichem `enable()` laufen erneut `00 → 07 → 11 neutral`. Danach sendet der Adapter das aktuelle Engine-Ziel, sofern die Engine innerhalb von 1,5 s geliefert hat, nicht pausiert ist und frische Kadenz > 0 vorliegt. Liegt die Freigabe in einer Auto-Pause, geht vor dem Resume-Kommando kein Ziel raus. Es ist kein Wiederholen eines unbestätigten Kommandos, denn ein unbestätigtes Verfahren sperrt weiterhin bis zur frischen GATT-Verbindung.
 
 ## Abnahmekriterien
 
@@ -56,19 +64,25 @@ Nach Disconnect, Timeout, Rechteverlust oder Deaktivieren bleibt die Autorität 
 - [x] AK4 – Disconnect/Reconnect: Autorität `inactive`, Ziel und ACK leer, kein Write des gecachten Ziels trotz Samples und Batches. Erst nach erneutem `enable()` folgen `00, 07, 11 neutral, 11 Ziel`.
 - [x] AK5 – Timeout eines Ziel-Writes sperrt; spätere Samples, Batches und `enable()` erzeugen keinen weiteren Write.
 - [x] AK6 – `clockScale ≠ 1` ist bei der Erzeugung festgelegt; `enable()` scheitert ohne Write (Adapter, Session-Rig, UI).
-- [x] AK7 – Keine Aufrufer-Timing-Pflichten mehr: kein `commandSink`, kein `onSnapshot` in `rideDevices`, kein `clockScale` in UI/Dialog, `FtmsControlConnection` nicht öffentlich. Bestehende Control-, Race-, Sim-, UI- und native E2E-Tests unverändert in ihrer Aussage grün.
+- [x] AK7 – Keine Aufrufer-Timing-Pflichten mehr: kein `commandSink`, keine „fährt“-Entscheidung in `rideDevices`, kein `clockScale` in UI/Dialog, `FtmsControlConnection` nicht öffentlich. Bestehende Control-, Race-, Sim-, UI- und native E2E-Tests sind auf die neue API umgestellt und grün. Sicherheitsaussagen bleiben gleich. `control.test.ts` „requires fresh cadence …“ endet jetzt mit 8 % statt 4,5 %, weil der Adapter das Ziel der laufenden Engine hält; die Grade-Folge `0, 4,5, 7, 8 %` ist ausdrücklich geprüft.
+- [x] AK8 – Auto-Pause → Wiederanfahren: kein `0x11` vor dem Resume-Update. Geprüft mit erster Freigabe in der Pause, Reconnect + Freigabe in der Pause und Tritt direkt nach Pausenbeginn. Ein kurzer Kadenzaussetzer ohne Pause behält das Ziel.
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK   | Ebene                                          | Datei                                                                           |
-| ---- | ---------------------------------------------- | ------------------------------------------------------------------------------- |
-| 1–6  | Integration über echten `createTrainerAdapter` | `packages/ble/src/ftms/adapter.control.test.ts` (`adapterTestRig.ts`)           |
-| 6    | Session-Rig                                    | `packages/ble/src/ftms/control.test.ts`                                         |
-| 6    | UI                                             | `apps/web/src/ui/connect/trainerControl.test.ts`                                |
-| 7    | Bestehende Regressionen, nativer GATT-Fake     | `packages/ble/src/ftms/control*.test.ts`, `apps/web/e2e/native-control.spec.ts` |
-| alle | Gate                                           | `E2E_PORT=5186 mise run check`                                                  |
+| AK     | Ebene                                          | Datei                                                                           |
+| ------ | ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| 1–6, 8 | Integration über echten `createTrainerAdapter` | `packages/ble/src/ftms/adapter.control.test.ts` (`adapterTestRig.ts`)           |
+| 6      | Session-Rig                                    | `packages/ble/src/ftms/control.test.ts`                                         |
+| 6      | UI                                             | `apps/web/src/ui/connect/trainerControl.test.ts`                                |
+| 7      | Bestehende Regressionen, nativer GATT-Fake     | `packages/ble/src/ftms/control*.test.ts`, `apps/web/e2e/native-control.spec.ts` |
+| alle   | Gate                                           | `E2E_PORT=5186 mise run check`                                                  |
 
-Gegenproben: Ohne Engine-Frischeprüfung, ohne Bestätigung im Sample-Pfad oder mit hartkodiertem `clockScale = 1` schlägt jeweils mindestens ein Fall in `adapter.control.test.ts` fehl.
+Gegenproben, jeweils mindestens ein roter Fall in `adapter.control.test.ts`:
+
+- ohne Engine-Frischeprüfung, ohne Bestätigung im Sample-Pfad oder mit hartkodiertem `clockScale = 1`;
+- ohne Verwerfen bei Pause: alle drei AK8-Fälle rot, mit `0, 450` bzw. `0, 450, 0, 450` vor dem Resume, wie im Review nachgestellt;
+- Pause nur aussetzen statt verwerfen: „Tritt direkt nach Pausenbeginn“ rot;
+- Verwerfen bei Kadenz 0 statt bei Pause (Review-Mutante): „kurzer Kadenzaussetzer“ rot.
 
 ## Nicht-Ziele
 

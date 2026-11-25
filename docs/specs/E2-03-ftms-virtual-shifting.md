@@ -34,7 +34,7 @@ interface TrainerControl {
 
 Gerätefähigkeit vor Worker-Erzeugung zurückgeben; UI-Mount und Sim-Connect erst nach Bus-Listenern. Vorhandenes Worker-`onCommands` erhält den konkreten Geräteempfänger. Kein neuer Broker, globaler Callback oder Engine-Eingriff.
 
-Die Engine unterdrückt unveränderte Kommandos. Seit [E0-11](E0-11-trainer-control-timing.md) hält der Trainer-Adapter selbst das letzte Engine-Simulationsziel. Aufrufer reichen jeden Engine-Batch weiter; frische eigene Gerätekadenz >0 und ein Engine-Batch innerhalb von 1,5 s bestätigen dessen weitere Gültigkeit. Wiederholte identische Ziele erzeugen keine weiteren Writes. Diese Projektion berechnet keine Physik.
+Die Engine unterdrückt unveränderte Kommandos. Seit [E0-11](E0-11-trainer-control-timing.md) hält der Trainer-Adapter selbst das letzte Engine-Simulationsziel. Aufrufer reichen jedes Engine-Update mit Pause-Zustand weiter. Frische eigene Gerätekadenz >0 und ein nicht pausiertes Engine-Update innerhalb von 1,5 s bestätigen dessen weitere Gültigkeit; die Auto-Pause verwirft es bis zum Resume-Kommando. Wiederholte identische Ziele erzeugen keine weiteren Writes. Diese Projektion berechnet keine Physik.
 
 ## Abnahmekriterien
 
