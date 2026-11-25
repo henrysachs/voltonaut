@@ -31,7 +31,7 @@ Ein angemeldeter Kontoinhaber kann alle serverseitig gespeicherten eigenen Daten
 
 ## Nicht-Ziele
 
-- Keine Einführung serverseitigen Inventars oder weiterer Progressvergabe. Das auf `main` vorhandene Volts-Ledger wird über schmale Economy-Ports exportiert und gelöscht; Inventar bleibt `not_stored`.
+- Keine Einführung serverseitigen Inventars oder weiterer Progressvergabe. Das auf `main` vorhandene Volts-Ledger wird über schmale Economy-Ports exportiert und gelöscht; Inventar blieb hier `not_stored` (seit E7-02 exportiert und gelöscht).
 - Kein Export-Streaming oder spekulativer Umbau des Browser-Downloads. Der unbegrenzte synchrone Gesamtexport bleibt ein bewusster Tradeoff für den aktuellen kleinen Nutzerkreis.
 - Keine automatische Löschung lokaler Fahrtarchive oder des gemeinsamen Gastprofils. Besitz und Nutzerentscheidung sind dort nicht accountgebunden.
 - Keine Löschung bereits an Strava übertragener Aktivitäten. Der Export und die Löschbestätigung erklären diese externen Kopien.

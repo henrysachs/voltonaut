@@ -22,7 +22,7 @@ Zwei Lücken blockieren eine echte Abnahme: Der Server kennt noch keine Level, w
 - Henry kann Kauf, Ablehnung bei zu wenig Volts und geräteübergreifenden Besitz abnehmen, ohne dass Fahrtbelohnungen freigegeben sein müssen.
 - Level-Items sind bis zur Progression früher kaufbar als vorgesehen. Bereits gekaufte Items bleiben auch nach Einführung der Prüfung im Besitz.
 - Fehlerhafte Gutschriften lassen sich nur durch eine Gegenbuchung korrigieren, nicht durch Löschen. Eine Gegenbuchung ist nicht Teil dieser Entscheidung.
-- Die Migration `0010` baut `volts_ledger` neu und kopiert alle Zeilen. `0011` legt `inventory` additiv an.
+- Die Migration `0011_volts_operator_grant` legt `inventory` additiv an, baut `volts_ledger` neu und kopiert alle Zeilen. Der Neubau entfernt die Lösch-Trigger aus `0010` (E5-11); `0011` legt sie wieder an und sichert `inventory` ebenso ab.
 - Ausrüsten nur besessener Items bleibt #65.
 
 ## Verworfene Alternativen

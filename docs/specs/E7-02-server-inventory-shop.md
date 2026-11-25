@@ -29,13 +29,14 @@ Angemeldete Fahrer kaufen Items aus dem Start-Katalog mit Volts. Der Server prü
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK      | Ebene          | Datei                                                                                                |
-| ------- | -------------- | ---------------------------------------------------------------------------------------------------- |
-| AK1     | Unit           | `packages/shared/src/api/shop.test.ts`                                                               |
-| AK2     | Unit, Mutation | `packages/rules/src/shop.test.ts`                                                                    |
-| AK3–AK6 | Integration    | `apps/server/src/inventory/*.test.ts` (SQLite, Supertest)                                            |
-| AK7     | Integration    | `apps/server/src/economy/economy.grant.test.ts`, Migrationstest, Admin                               |
-| AK8     | Unit           | `apps/web/src/sync/garageShop.test.ts`, `ui/garage/purchaseOffer.test.ts`, `e2e/garage-shop.spec.ts` |
+| AK      | Ebene          | Datei                                                                                                  |
+| ------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| AK1     | Unit           | `packages/shared/src/api/shop.test.ts`                                                                 |
+| AK2     | Unit, Mutation | `packages/rules/src/shop.test.ts`                                                                      |
+| AK3–AK6 | Integration    | `apps/server/src/inventory/*.test.ts` (SQLite, Supertest)                                              |
+| AK7     | Integration    | `apps/server/src/economy/economy.grant.test.ts`, Migrationstest, Admin                                 |
+| AK8     | Unit           | `apps/web/src/sync/garageShop.test.ts`, `ui/garage/purchaseOffer.test.ts`, `e2e/garage-shop.spec.ts`   |
+| AK9     | Integration    | `apps/server/src/database/ledger-migrations.test.ts`, `accounts/account-data.test.ts`, `admin.test.ts` |
 
 ## Nicht-Ziele
 
