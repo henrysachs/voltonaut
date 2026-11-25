@@ -1,30 +1,23 @@
-import type { EventBus, TrainerCommand } from "@voltonaut/shared";
+import type { EventBus } from "@voltonaut/shared";
 import {
-  createFakeHeartRate,
-  createFakePlay,
-  createFakeTrainer,
+  createBluetoothDeviceTransports,
   createIntervalTicker,
   createKeyboardAdapter,
-  createSimScript,
-  createTrainerAdapter,
-  createHeartRateAdapter,
-  createPlayAdapter,
   createNavigatorBluetoothCentral,
-  createWebBluetoothTransport,
+  createRideDeviceSet,
+  createSimDeviceTransports,
+  createSimScript,
+  type DeviceTransports,
   type KeyboardSource,
-  type PlayAdapterOptions,
-  type WebBluetoothCentral,
-  type TrainerControl,
-  type SimulationCommand,
 } from "@voltonaut/ble";
-import type { RideSnapshot } from "@voltonaut/engine";
-import { mountConnectDialog } from "./ui/connect/dialog.js";
+import type { RideTrainerSink } from "./game/rideSession.js";
+import { mountConnectDialog, type ConnectSlot } from "./ui/connect/dialog.js";
 
 const SIM_SAMPLES = createSimScript([
-  { powerW: 142, cadenceRpm: 88, heartRateBpm: 122, gearIndex: 0 },
-  { powerW: 176, cadenceRpm: 94, heartRateBpm: 128, gearIndex: 0 },
-  { powerW: 205, cadenceRpm: 99, heartRateBpm: 134, gearIndex: 0 },
-  { powerW: 168, cadenceRpm: 91, heartRateBpm: 130, gearIndex: 0 },
+  { powerW: 142, cadenceRpm: 88, heartRateBpm: 122 },
+  { powerW: 176, cadenceRpm: 94, heartRateBpm: 128 },
+  { powerW: 205, cadenceRpm: 99, heartRateBpm: 134 },
+  { powerW: 168, cadenceRpm: 91, heartRateBpm: 130 },
 ]);
 
 // oxlint-disable typescript/prefer-readonly-parameter-types -- DOM listener signatures include EventTarget; native KeyboardEvent values are only inspected.
@@ -96,77 +89,28 @@ export function setupKeyboard(bus: EventBus): void {
   void keyboard.connect();
 }
 
-export interface RideDevices {
+export interface RideDevices extends RideTrainerSink {
   readonly mount: () => void;
-  readonly onCommands: (commands: readonly TrainerCommand[]) => void;
-  readonly onSnapshot: (snapshot: RideSnapshot) => void;
 }
 
-/** An unchanged engine target is current only while worker snapshots and fresh cadence continue. */
-function commandSink(control: TrainerControl): Pick<RideDevices, "onCommands" | "onSnapshot"> {
-  let latest: SimulationCommand | undefined;
-  let riding = false;
+/** Where ride devices come from. Only the composition root picks one. */
+export interface DeviceSource {
+  readonly transports: DeviceTransports;
+  /** Sim peripherals need no picker and connect at mount; native devices wait for a user click. */
+  readonly connectOnMount: boolean;
+}
 
+export function simDeviceSource(clockScale: number): DeviceSource {
   return {
-    onSnapshot(snapshot) {
-      riding = !snapshot.paused && snapshot.cadenceRpm > 0;
-    },
-    onCommands(commands) {
-      for (const command of commands) if (command.type === "simulation") latest = command;
-
-      if (riding && latest !== undefined) control.submit(latest);
-    },
+    transports: createSimDeviceTransports({
+      ticker: createIntervalTicker(250 / clockScale),
+      samples: SIM_SAMPLES,
+    }),
+    connectOnMount: true,
   };
 }
 
-export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices {
-  const ticker = createIntervalTicker(250 / clockScale);
-  const clock = { nowS: (): number => performance.now() / 1000 };
-  const trainer = createFakeTrainer({ bus, clock, ticker, samples: SIM_SAMPLES });
-  const heartRate = createFakeHeartRate({ bus, clock, ticker, samples: SIM_SAMPLES });
-  const play = createFakePlay({ bus, clock });
-
-  return {
-    ...commandSink(trainer.control),
-    mount() {
-      mountConnectDialog(
-        [
-          {
-            label: "Trainer",
-            adapter: trainer,
-            select: () => trainer.connect(),
-            trainer: { control: trainer.control, clockScale },
-          },
-          { label: "Pulsgurt", adapter: heartRate, select: () => heartRate.connect() },
-        ],
-        bus,
-      );
-      void Promise.all([trainer, heartRate, play].map((device) => device.connect()));
-    },
-  };
-}
-
-function playSlots(
-  options: Omit<PlayAdapterOptions, "side" | "transport">,
-  central: WebBluetoothCentral,
-) {
-  return (["left", "right"] satisfies readonly ("left" | "right")[]).map((side) => {
-    const adapter = createPlayAdapter({
-      ...options,
-      side,
-      transport: createWebBluetoothTransport({ central }),
-    });
-
-    return {
-      label: side === "left" ? "Linker Play-Griff" : "Rechter Play-Griff",
-      adapter,
-      select: adapter.select,
-      description: adapter.description,
-    };
-  });
-}
-
-export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDevices | undefined {
+export function bluetoothDeviceSource(): DeviceSource | undefined {
   const central = createNavigatorBluetoothCentral();
 
   if (central === undefined) {
@@ -178,39 +122,41 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
     return undefined;
   }
 
-  const clock = { nowS: (): number => performance.now() / 1000 };
-  const ticker = createIntervalTicker(100);
+  return { transports: createBluetoothDeviceTransports(central), connectOnMount: false };
+}
 
-  const trainer = createTrainerAdapter({
+export function setupRideDevices(
+  bus: EventBus,
+  clockScale: number,
+  source: DeviceSource,
+): RideDevices {
+  const { trainer, heartRate, play } = createRideDeviceSet({
     bus,
-    clock,
-    ticker,
-    transport: createWebBluetoothTransport({ central }),
+    clock: { nowS: (): number => performance.now() / 1000 },
+    ticker: createIntervalTicker(100),
+    clockScale,
+    transports: source.transports,
   });
 
-  const heartRate = createHeartRateAdapter({
-    bus,
-    clock,
-    ticker,
-    transport: createWebBluetoothTransport({ central }),
-  });
+  const slots: readonly ConnectSlot[] = [
+    { label: "Trainer", adapter: trainer },
+    { label: "Pulsgurt", adapter: heartRate },
+    ...play.map((adapter) => ({
+      label: adapter.side === "left" ? "Linker Play-Griff" : "Rechter Play-Griff",
+      adapter,
+    })),
+  ];
 
   return {
-    ...commandSink(trainer.control),
+    forward(update) {
+      trainer.control.forward(update);
+    },
     mount() {
-      mountConnectDialog(
-        [
-          {
-            label: "Trainer",
-            adapter: trainer,
-            select: trainer.select,
-            trainer: { control: trainer.control, clockScale },
-          },
-          { label: "Pulsgurt", adapter: heartRate, select: heartRate.select },
-          ...playSlots({ bus, clock, ticker }, central),
-        ],
-        bus,
-      );
+      mountConnectDialog(slots, bus);
+
+      if (source.connectOnMount) {
+        void Promise.all(slots.map((slot) => slot.adapter.connect()));
+      }
     },
   };
 }

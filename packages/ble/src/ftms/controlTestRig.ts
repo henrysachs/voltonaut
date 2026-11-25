@@ -1,3 +1,4 @@
+import { createEventBus } from "@voltonaut/shared";
 import { bytesToDataView, type ReadOnlyBytes } from "../bytes.js";
 import { createManualClock } from "../sim/clock.js";
 import { createManualTicker } from "../sim/tick.js";
@@ -7,7 +8,8 @@ import {
   FITNESS_MACHINE_SERVICE,
   FITNESS_MACHINE_STATUS,
 } from "../uuids.js";
-import { createFtmsControl } from "./control.js";
+import { createFtmsControl, type FtmsControlConnection } from "./controlConnection.js";
+import type { ControlTransport } from "./controlProcedure.js";
 
 function createWriteBarrier() {
   let release: (() => void) | undefined;
@@ -45,10 +47,11 @@ export class ControlTestRig {
   private responseResult = 1;
   private writeFailure = false;
   private writeDelay: Promise<void> = Promise.resolve();
-  readonly control = createFtmsControl({
-    clock: this.clock,
-    ticker: this.ticker,
-    transport: {
+  readonly bus = createEventBus();
+  readonly control: FtmsControlConnection;
+
+  constructor(clockScale = 1) {
+    const transport: ControlTransport = {
       subscribe: (ref, listener) => {
         this.listeners.set(ref.characteristicUuid, listener);
         this.retained.push(listener);
@@ -58,10 +61,12 @@ export class ControlTestRig {
         });
       },
       write: (_ref, bytes, mode) => this.write(bytes, mode),
-    },
-  });
+    };
 
-  constructor() {
+    this.control = createFtmsControl(
+      { clock: this.clock, ticker: this.ticker, clockScale, transport },
+      this.bus,
+    );
     this.attach();
   }
 
@@ -101,6 +106,10 @@ export class ControlTestRig {
     );
   }
 
+  /** A parsed trainer sample, as the adapter publishes it. */
+  cadence(rpm: number): void {
+    this.control.publishData({ type: "trainer.data", tS: this.clock.nowS(), cadenceRpm: rpm });
+  }
   notify(bytes: readonly number[]): void {
     this.listeners.get(FITNESS_MACHINE_CONTROL_POINT)?.(bytesToDataView(Uint8Array.from(bytes)));
   }
@@ -120,6 +129,12 @@ export class ControlTestRig {
     return () => {
       barrier.release();
     };
+  }
+  /** Grade field (0.01 % units) of every written 0x11, in order. */
+  simGrades(): readonly number[] {
+    return this.writes
+      .filter((write) => write.opcode === 0x11)
+      .map((write) => bytesToDataView(write.bytes).getInt16(3, true));
   }
   lost(opcode = 0xff): void {
     this.listeners.get(FITNESS_MACHINE_STATUS)?.(bytesToDataView(Uint8Array.from([opcode])));

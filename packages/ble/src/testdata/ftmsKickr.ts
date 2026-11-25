@@ -6,6 +6,7 @@
  */
 
 import { toHex } from "../bytes.js";
+import { encodeIndoorBikeData } from "../ftms/encode.js";
 import type { BleFixture, BleLogEntry } from "../fixtureSchema.js";
 import type { DeviceEvent } from "@voltonaut/shared";
 
@@ -14,20 +15,6 @@ export interface FtmsScriptSample {
   readonly cadenceRaw: number;
   readonly powerW: number;
   readonly hrBpm: number;
-}
-
-function encodeFrame(sample: FtmsScriptSample): Uint8Array {
-  return Uint8Array.from([
-    0x44,
-    0x02,
-    sample.speedRaw & 0xff,
-    sample.speedRaw >> 8,
-    sample.cadenceRaw & 0xff,
-    sample.cadenceRaw >> 8,
-    sample.powerW & 0xff,
-    sample.powerW >> 8,
-    sample.hrBpm,
-  ]);
 }
 
 const SCRIPT: readonly FtmsScriptSample[] = [
@@ -105,7 +92,7 @@ export function createFtmsSyntheticFixture(): FtmsSyntheticData {
   const log: BleLogEntry[] = [
     FEATURE_READ,
     ...samples.map((sample, index) => {
-      const bytes = encodeFrame(sample);
+      const bytes = encodeIndoorBikeData(sample);
 
       return {
         kind: "data",

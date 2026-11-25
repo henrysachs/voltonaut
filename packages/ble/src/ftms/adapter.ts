@@ -6,7 +6,7 @@
  * docs/02-bluetooth.md section 2). Control remains inactive until explicit enable.
  */
 
-import type { DeviceEvent, EventBus } from "@voltonaut/shared";
+import type { EventBus } from "@voltonaut/shared";
 
 import {
   createReconnectingAdapter,
@@ -20,7 +20,11 @@ import type { SimClock, TickSource, Unsubscribe } from "../sim/index.js";
 import type { BleTransport, GattProfile, ScanOptions } from "../transport.js";
 import { parseFitnessMachineFeature, type FitnessMachineFeature } from "./feature.js";
 import { parseIndoorBikeData } from "./parse.js";
-import { createFtmsControl, type TrainerControl } from "./control.js";
+import {
+  createFtmsControl,
+  type FtmsControlConnection,
+  type TrainerControl,
+} from "./controlConnection.js";
 import {
   CYCLING_POWER_MEASUREMENT,
   CYCLING_POWER_SERVICE,
@@ -34,6 +38,8 @@ export interface TrainerAdapterOptions {
   readonly clock: SimClock;
   readonly ticker: TickSource;
   readonly transport: BleTransport;
+  /** Ride clock scale, fixed for the adapter's lifetime; control requires exactly 1. */
+  readonly clockScale: number;
   readonly id?: string;
 }
 
@@ -54,7 +60,7 @@ const SCAN: ScanOptions = {
 };
 
 interface TrainerSessionState {
-  readonly control: ReturnType<typeof createFtmsControl>;
+  readonly control: FtmsControlConnection;
   readonly bus: EventBus;
   readonly clock: SimClock;
   readonly transport: BleTransport;
@@ -88,18 +94,13 @@ function onIndoorBikeData(
 
   const sample = parsed.value;
 
-  if (sample.cadenceRpm !== undefined) state.control.observeCadence(sample.cadenceRpm);
-  const tS = state.clock.nowS();
-
-  const event: DeviceEvent = {
+  state.control.publishData({
     type: "trainer.data",
-    tS,
+    tS: state.clock.nowS(),
     ...(sample.powerW !== undefined && { powerW: sample.powerW }),
     ...(sample.cadenceRpm !== undefined && { cadenceRpm: sample.cadenceRpm }),
     ...(sample.speedMps !== undefined && { speedMps: sample.speedMps }),
-  };
-
-  state.bus.publish(event);
+  });
 }
 
 async function readFeatures(
@@ -196,7 +197,7 @@ async function selectSession(
 
 function createSessionState(options: TrainerAdapterOptions): TrainerSessionState {
   return {
-    control: createFtmsControl(options),
+    control: createFtmsControl(options, options.bus),
     bus: options.bus,
     clock: options.clock,
     transport: options.transport,
