@@ -59,6 +59,7 @@ export function linkIdentity(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
   link: Readonly<{ userId: string; issuer: string; subject: string }>,
+  hmacKey: string,
 ): void {
   db.transaction(
     () => {
@@ -81,7 +82,7 @@ export function linkIdentity(
         return;
       }
 
-      assertIdentityNotTombstoned(db, link.issuer, link.subject);
+      assertIdentityNotTombstoned(db, hmacKey, link.issuer, link.subject);
       db.insert(authIdentities)
         .values({ issuer: link.issuer, subject: link.subject, userId: link.userId })
         .run();

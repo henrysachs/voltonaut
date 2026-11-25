@@ -2,7 +2,8 @@ CREATE TABLE `auth_identity_tombstones` (
 	`identity_hash` text PRIMARY KEY NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE `users` ADD `deleted_email_hash` text;CREATE UNIQUE INDEX `users_deleted_email_hash_unique` ON `users` (`deleted_email_hash`) WHERE `deleted_email_hash` IS NOT NULL;
+ALTER TABLE `users` ADD `deleted_email_hash` text;--> statement-breakpoint
+CREATE UNIQUE INDEX `users_deleted_email_hash_unique` ON `users` (`deleted_email_hash`) WHERE `deleted_email_hash` IS NOT NULL;
 --> statement-breakpoint
 CREATE TRIGGER `users_reject_deleted_tombstone_update` BEFORE UPDATE ON `users`
 WHEN OLD.`deleted_at` IS NOT NULL
@@ -81,5 +82,13 @@ WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users
 BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
 --> statement-breakpoint
 CREATE TRIGGER `oidc_handoffs_reject_deleted_owner_update` BEFORE UPDATE ON `oidc_handoffs`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `volts_ledger_reject_deleted_owner_insert` BEFORE INSERT ON `volts_ledger`
+WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;
+--> statement-breakpoint
+CREATE TRIGGER `volts_ledger_reject_deleted_owner_update` BEFORE UPDATE ON `volts_ledger`
 WHEN EXISTS (SELECT 1 FROM `users` WHERE `users`.`id` = NEW.`user_id` AND `users`.`deleted_at` IS NOT NULL)
 BEGIN SELECT RAISE(ABORT, 'account is deleted'); END;

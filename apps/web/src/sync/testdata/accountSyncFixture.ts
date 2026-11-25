@@ -11,26 +11,14 @@ import { outboxKey, type AccountOutbox, type OutboxRow } from "../accountOutbox.
 import type { AccountLease, PrivateRequestError } from "../privateAuthTransport.js";
 import type { SessionView } from "../applicationSession.js";
 import { deletionOwnerKey, type DeletionOwner } from "../accountDeletion.js";
+import { accountExport } from "../../testdata/accountExport.js";
 import { localRide } from "./localRide.js";
 import { unusedStravaLease, unexpectedAccountParts } from "./unusedStravaLease.js";
 
+export { accountExport };
+
 export const A = "00000000-0000-4000-8000-000000000001";
 export const B = "00000000-0000-4000-8000-000000000002";
-
-export const accountExport: AccountExport = {
-  schemaVersion: 1,
-  exportedAt: "2026-11-20T00:00:00.000Z",
-  account: {
-    user: { id: A, email: `${A}@example.com`, createdAt: "2026-11-20T00:00:00.000Z" },
-    membership: { tier: "normal", vip: false },
-    authorization: { role: "user" },
-  },
-  profile: { status: "missing" },
-  rides: [],
-  inventory: { status: "not_stored" },
-  progression: { status: "not_stored" },
-  strava: { status: { status: "disabled" }, deliveries: [] },
-};
 
 export class SyncFixture {
   readonly rows = new Map<string, OutboxRow>();

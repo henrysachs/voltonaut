@@ -43,7 +43,7 @@ export class OidcLinkService {
     )
       throw invalidOidcLogin();
 
-    linkIdentity(this.db, handoff);
+    linkIdentity(this.db, handoff, this.config.auth.tombstoneHmacKey);
 
     return this.identities(session.userId);
   }

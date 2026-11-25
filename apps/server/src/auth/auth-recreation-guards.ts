@@ -1,32 +1,21 @@
 import { eq } from "drizzle-orm";
 import type { IdentityClaims } from "./oidc-client.js";
 import { invalidOidcLogin } from "./oidc-cookie.js";
-import { authIdentityTombstones, users } from "./auth.schema.js";
+import { authIdentityTombstones } from "./auth.schema.js";
+import { isDeletedEmail } from "./auth.service.js";
 import type { ServerDatabase } from "../database/drizzle.provider.js";
-import { hashIdentity, hashToken } from "./tokens.js";
-
-export function isDeletedEmail(
-  db: Readonly<Pick<ServerDatabase, "select">>,
-  email: string,
-): boolean {
-  return (
-    db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.deletedEmailHash, hashToken(email)))
-      .get() !== undefined
-  );
-}
+import { hashIdentity } from "./tokens.js";
 
 export function assertIdentityNotTombstoned(
   db: Readonly<Pick<ServerDatabase, "select">>,
+  hmacKey: string,
   issuer: string,
   subject: string,
 ): void {
   const tombstone = db
     .select({ identityHash: authIdentityTombstones.identityHash })
     .from(authIdentityTombstones)
-    .where(eq(authIdentityTombstones.identityHash, hashIdentity(issuer, subject)))
+    .where(eq(authIdentityTombstones.identityHash, hashIdentity(hmacKey, issuer, subject)))
     .get();
 
   if (tombstone !== undefined) throw invalidOidcLogin();
@@ -34,9 +23,10 @@ export function assertIdentityNotTombstoned(
 
 export function assertOidcIdentityAvailable(
   db: Readonly<Pick<ServerDatabase, "select">>,
+  hmacKey: string,
   identity: Readonly<IdentityClaims>,
 ): void {
-  assertIdentityNotTombstoned(db, identity.iss, identity.sub);
+  assertIdentityNotTombstoned(db, hmacKey, identity.iss, identity.sub);
 
-  if (isDeletedEmail(db, identity.email)) throw invalidOidcLogin();
+  if (isDeletedEmail(db, hmacKey, identity.email)) throw invalidOidcLogin();
 }

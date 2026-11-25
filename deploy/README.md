@@ -7,6 +7,7 @@ Die API läuft als eigenes Compose-Projekt hinter dem vorhandenen Traefik. Henry
 - Ein geprüftes Main-Release und ausdrückliche Produktionsfreigabe.
 - Der vorhandene Deploy-Nutzer, sein dedizierter SSH-Schlüssel und ein unabhängig geprüfter Hostschlüssel.
 - Eine private OIDC-Konfiguration mit kanonischer Client-Origin und exakt registriertem Callback.
+- Ein separat und dauerhaft in `deploy.env` hinterlegter `AUTH_TOMBSTONE_HMAC_KEY` aus `openssl rand -hex 32`. Der Provisionierungsworkflow erzeugt oder rotiert ihn nicht. Er darf weder ins Repository noch in Logs gelangen und muss bei Restore erhalten bleiben.
 - Bestehendes Netzwerk `financensor_default` und Certresolver `letsencrypt`. Keine Änderung an Financensor oder dessen Traefik-Grundkonfiguration.
 
 Ein externes Backup ist für diesen ausdrücklich freigegebenen Betrieb keine Startvoraussetzung. Ohne Sicherung können ein Server- oder Volumeverlust und fehlerhafte Datenänderungen dauerhaft Daten kosten. Ein Image-Rollback stellt keinen alten Datenstand wieder her.

@@ -286,7 +286,7 @@ export function mountAccountDataPanel(sync: Commands): void {
       profilePanel(view, sync),
       historyPanel(view, sync),
       localPanel(view, sync),
-      accountDataControls(view.user, sync),
+      accountDataControls(view.user, view.identities, sync),
     );
   });
 }

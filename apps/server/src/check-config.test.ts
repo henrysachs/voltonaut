@@ -15,6 +15,7 @@ const PROVIDER_LIST = {
   OIDC_CLOUDFLARE_ISSUER: "https://login.example.com/oidc",
   OIDC_CLOUDFLARE_CLIENT_ID: "synthetic-client",
   OIDC_CLOUDFLARE_CLIENT_SECRET: "synthetic-secret-must-not-print",
+  AUTH_TOMBSTONE_HMAC_KEY: "a".repeat(64),
   OIDC_CLOUDFLARE_REDIRECT_URI:
     "https://api.voltonaut.stammkneipe.dev/v1/auth/oidc/cloudflare/callback",
 };

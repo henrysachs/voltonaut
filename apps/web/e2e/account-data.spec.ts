@@ -106,7 +106,14 @@ test("confirmed deletion purges only the owner's outbox and keeps riding plus lo
   await confirmation.fill(user.email);
   await understood.check();
   await expect(deleteButton).toBeEnabled();
+
+  const requestPromise = page.waitForRequest(`${API_ORIGIN}/v1/me`);
+
   await deleteButton.click();
+  const deletionRequest = await requestPromise;
+  expect(deletionRequest.method()).toBe("DELETE");
+  expect(deletionRequest.headers()["origin"]).toBe(new URL(page.url()).origin);
+  expect(deletionRequest.postDataJSON()).toEqual({ confirmation: user.email });
   await expect(page.getByRole("tabpanel", { name: "Konto", exact: true })).toContainText(
     "Konto gelöscht",
   );

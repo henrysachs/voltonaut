@@ -76,6 +76,31 @@ it("keeps an existing identity active when its changed provider email matches a 
   ).toEqual([{ id: original.user.id }, { id: deleted.user.id }]);
 });
 
+it("rejects a pending link callback after deleting its owner without a trigger error", async () => {
+  const context = await setupProviders();
+  const server = httpServerOf(context.app);
+  setIdentity(context.authentik, "active-ak", "active@example.com");
+  const active = await loginVia(context.app, "authentik");
+  setIdentity(context.cloudflare, "new-cf", "active@example.com");
+  const flow = await beginLink(context.app, active.sessionToken, "cloudflare");
+
+  await request(server)
+    .delete("/v1/me")
+    .set(bearer(active.sessionToken))
+    .set("Origin", PROVIDERS_ORIGIN)
+    .send({ confirmation: active.user.email })
+    .expect(204);
+  expect(getDatabase(context.app).$client.prepare("SELECT * FROM oidc_transactions").all()).toEqual(
+    [],
+  );
+
+  await request(server).get(flow.callback).set("Cookie", flow.cookie).expect(401);
+  expect(getDatabase(context.app).$client.prepare("SELECT * FROM oidc_handoffs").all()).toEqual([]);
+  expect(getDatabase(context.app).$client.prepare("SELECT * FROM auth_identities").all()).toEqual(
+    [],
+  );
+});
+
 it("does not link a deleted provider identity to another account", async () => {
   const context = await setupProviders();
   const server = httpServerOf(context.app);

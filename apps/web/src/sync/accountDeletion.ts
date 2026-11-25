@@ -1,4 +1,15 @@
-import { AccountDataOwnerSchema, type AccountDataOwner } from "@voltonaut/shared";
+import { HealthResponseSchema, MeResponseSchema } from "@voltonaut/shared";
+
+const text = HealthResponseSchema.shape.version;
+
+export const AccountDataOwnerSchema = HealthResponseSchema.pick({})
+  .extend({
+    apiOrigin: text.max(512).regex(/^https?:\/\/[^\s/?#@]+$/iu),
+    userId: MeResponseSchema.shape.user.shape.id,
+  })
+  .strict();
+
+export type AccountDataOwner = (typeof AccountDataOwnerSchema)["_output"];
 
 const STORAGE_PREFIX = "voltonaut.account-deletion-cleanup:";
 

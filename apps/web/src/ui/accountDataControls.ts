@@ -1,5 +1,9 @@
-import type { AccountExport, User } from "@voltonaut/shared";
+import type { AccountExport, LinkedIdentity, User } from "@voltonaut/shared";
 import { downloadAccountExport } from "./accountExportDownload.js";
+
+type IdentityView =
+  | { readonly kind: "loading" | "failed" }
+  | { readonly kind: "ready"; readonly value: readonly LinkedIdentity[] };
 
 interface DataControls {
   readonly exportAccount: () => Promise<AccountExport | undefined>;
@@ -55,7 +59,20 @@ function exportPanel(sync: Readonly<DataControls>): HTMLElement {
   return host;
 }
 
-function deletionPanel(user: Readonly<User>, sync: Readonly<DataControls>): HTMLElement {
+function identityText(identities: IdentityView): string {
+  if (identities.kind !== "ready")
+    return "Verknüpfte Anbieter konnten noch nicht vollständig geladen werden.";
+
+  return identities.value.length === 0
+    ? "Keine externen Anbieter verknüpft."
+    : `Konkret verknüpfte Anbieter: ${identities.value.map((identity) => identity.displayName).join(", ")}.`;
+}
+
+function deletionPanel(
+  user: Readonly<User>,
+  identities: IdentityView,
+  sync: Readonly<DataControls>,
+): HTMLElement {
   const host = document.createElement("div");
   const confirmation = document.createElement("input");
   confirmation.type = "email";
@@ -86,6 +103,7 @@ function deletionPanel(user: Readonly<User>, sync: Readonly<DataControls>): HTML
   understood.addEventListener("change", updateDeleteState);
   deleteButton.disabled = true;
   host.append(
+    paragraph(identityText(identities)),
     paragraph(`Zur Bestätigung die E-Mail ${user.email} eingeben.`),
     confirmation,
     understoodLabel,
@@ -97,6 +115,7 @@ function deletionPanel(user: Readonly<User>, sync: Readonly<DataControls>): HTML
 
 export function accountDataControls(
   user: Readonly<User>,
+  identities: IdentityView,
   sync: Readonly<DataControls>,
 ): HTMLElement {
   const host = document.createElement("section");
@@ -106,16 +125,16 @@ export function accountDataControls(
   host.append(
     title,
     paragraph(
-      "Der Export enthält Profil, Mitgliedschaft, alle Serveraufnahmen mit Rohjournal, Beleg, Bewertung und vorhandenem TCX sowie Strava-Status und Aufträge. Sessions und Zugangsdaten sind ausgeschlossen. Inventar und verbindliche Progression sind serverseitig noch nicht gespeichert; der Export kennzeichnet dies ausdrücklich.",
+      "Der Export enthält Profil, Mitgliedschaft, verknüpfte Identitäten mit Issuer und Subject, alle Serveraufnahmen mit Rohjournal, Beleg, Bewertung und vorhandenem TCX, Volts-Kontostand und vollständiges Volts-Journal sowie Strava-Status und Aufträge. Sessions und Zugangsdaten sind ausgeschlossen. Inventar ist serverseitig noch nicht gespeichert; der Export kennzeichnet dies ausdrücklich.",
     ),
     exportPanel(sync),
     paragraph(
-      "Die Löschung entfernt Profil, Mitgliedschaft, alle Serveraufnahmen, Strava-Verbindung und Aufträge sowie Identitätszuordnungen und Sessions. E-Mail und externe Identität bleiben nur als pseudonyme Löschmarke gesperrt; eine stille Neuanlage ist nicht möglich.",
+      "Die Löschung entfernt Profil, Mitgliedschaft, alle Serveraufnahmen, das Volts-Journal, Strava-Verbindung und Aufträge sowie Identitätszuordnungen und Sessions. E-Mail und externe Identitäten bleiben nur als serverseitig gekeyete pseudonyme Löschmarken gesperrt; eine stille Neuanlage ist nicht möglich.",
     ),
     paragraph(
       "Lokale Fahrtarchive und das gemeinsame Gastprofil bleiben erhalten. Nur die diesem Konto zugeordneten Outbox-Einträge werden nach bestätigter Serverlöschung entfernt. Bereits an Strava übertragene Aktivitäten werden nicht gelöscht; der Anbieterzugriff ist getrennt in den Strava-Einstellungen zu prüfen.",
     ),
-    deletionPanel(user, sync),
+    deletionPanel(user, identities, sync),
   );
 
   return host;

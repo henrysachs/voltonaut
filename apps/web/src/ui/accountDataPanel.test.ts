@@ -16,6 +16,13 @@ const accountView: AccountDataView = {
   profile: { kind: "ready", value: { status: "missing" } },
   history: { kind: "ready", value: { rides: [], nextCursor: null } },
   outbox: { kind: "ready", value: [] },
+  identities: {
+    kind: "ready",
+    value: [
+      { providerId: "cloudflare", displayName: "Cloudflare Access" },
+      { providerId: "authentik", displayName: "authentik" },
+    ],
+  },
   local: [],
   message: "",
 };
@@ -106,6 +113,10 @@ it("requires the exact email and an explicit acknowledgement before deleting", (
   expect(renderedText(host)).toContain(
     "Lokale Fahrtarchive und das gemeinsame Gastprofil bleiben erhalten",
   );
+  expect(renderedText(host)).toContain(
+    "Konkret verknüpfte Anbieter: Cloudflare Access, authentik.",
+  );
+  expect(renderedText(host)).toContain("Volts-Kontostand und vollständiges Volts-Journal");
 
   publish?.({ kind: "guest", message: "Konto gelöscht. Outbox bereinigt." });
   expect(renderedText(host)).toContain("Konto gelöscht. Outbox bereinigt.");

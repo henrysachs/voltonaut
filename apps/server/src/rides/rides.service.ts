@@ -29,6 +29,20 @@ function notFound(): never {
   throw new ApiError(404, "not_found", "ride not found");
 }
 
+function ownTcx(
+  content: string | null,
+  hash: string | null,
+  version: "tcx-1" | null,
+): { readonly version: "tcx-1"; readonly hash: string; readonly content: string } | null {
+  if (content === null && hash === null && version === null) return null;
+
+  if (content === null || hash === null || version === null || sha256(content) !== hash) {
+    throw new ApiError(500, "internal_error", "stored ride export is corrupt");
+  }
+
+  return { version, hash, content };
+}
+
 export type OwnStravaSource =
   | {
       readonly kind: "blocked";
@@ -148,13 +162,7 @@ export class RidesService {
           row.summaryJson === null
             ? null
             : ReplayWindowSummarySchema.parse(JSON.parse(row.summaryJson)),
-        tcx:
-          row.exportTcx === null ||
-          row.exportHash === null ||
-          row.exportVersion === null ||
-          sha256(row.exportTcx) !== row.exportHash
-            ? null
-            : { version: row.exportVersion, hash: row.exportHash, content: row.exportTcx },
+        tcx: ownTcx(row.exportTcx, row.exportHash, row.exportVersion),
       },
     }));
   }

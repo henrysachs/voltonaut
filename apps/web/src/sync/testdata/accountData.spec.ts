@@ -29,13 +29,28 @@ export const exported = {
     user,
     membership: { tier: "normal", vip: false },
     authorization: { role: "user" },
+    identities: [{ issuer: "https://identity.example", subject: "owner-subject" }],
   },
   profile: { status: "present", profile, updatedAt: "2026-11-20T00:00:00.000Z" },
   rides: [],
   inventory: { status: "not_stored" },
-  progression: { status: "not_stored" },
+  progression: { volts: { balance: 0, journal: [] } },
   strava: { status: { status: "disabled" }, deliveries: [] },
 };
+
+async function routeExportAndIdentities(page: Page): Promise<void> {
+  await page.route(`${API_ORIGIN}/v1/me/export`, (route) => route.fulfill({ json: exported }));
+  await page.route(`${API_ORIGIN}/v1/auth/identities`, (route) =>
+    route.fulfill({
+      json: {
+        identities: [
+          { providerId: "cloudflare", displayName: "Cloudflare Access" },
+          { providerId: "authentik", displayName: "authentik" },
+        ],
+      },
+    }),
+  );
+}
 
 export async function setupAccountPage(
   page: Page,
@@ -74,7 +89,7 @@ export async function setupAccountPage(
   await page.route(`${API_ORIGIN}/v1/strava/connection`, (route) =>
     route.fulfill({ json: { status: "disabled" } }),
   );
-  await page.route(`${API_ORIGIN}/v1/me/export`, (route) => route.fulfill({ json: exported }));
+  await routeExportAndIdentities(page);
   await page.goto("/?sim=1&debug=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await page.getByRole("button", { name: "Menü", exact: true }).click();

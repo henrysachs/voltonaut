@@ -127,6 +127,7 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
           mode: "oidc",
           providers: [LEGACY_TEST_PROVIDER],
           allowLoopbackHttp: false,
+          tombstoneHmacKey: "0".repeat(64),
         },
       },
     });

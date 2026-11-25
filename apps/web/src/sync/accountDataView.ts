@@ -3,6 +3,7 @@ import {
   type ArchivedRide,
   type ProfileState,
   type RideList,
+  type LinkedIdentity,
   type User,
 } from "@voltonaut/shared";
 import type { ProfileBootstrap } from "../profileBootstrap.js";
@@ -34,6 +35,7 @@ export type AccountDataView = Immutable<
       readonly profile: Remote<ProfileState>;
       readonly history: Remote<RideList>;
       readonly outbox: Remote<readonly OutboxItem[]>;
+      readonly identities: Remote<readonly LinkedIdentity[]>;
       readonly local: readonly LocalRideItem[];
       readonly message: string;
     }
@@ -57,6 +59,7 @@ export function initialAccountData(user: Readonly<User>): AccountDataView {
     profile: { kind: "loading" },
     history: { kind: "loading" },
     outbox: { kind: "loading" },
+    identities: { kind: "loading" },
     local: [],
     message: "",
   };

@@ -56,6 +56,15 @@ export async function queueLocalProfile(
   }
 }
 
+export async function loadIdentities(lease: AccountLease, patch: PatchAccount): Promise<void> {
+  try {
+    const response = await lease.identities.list();
+    patch(lease, { identities: { kind: "ready", value: response.identities } });
+  } catch {
+    patch(lease, { identities: { kind: "failed" } });
+  }
+}
+
 export async function loadHistory(
   lease: AccountLease,
   cursor: string | null,

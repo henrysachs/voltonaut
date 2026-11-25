@@ -20,6 +20,7 @@ import {
 import {
   claimArchivedRide,
   loadHistory,
+  loadIdentities,
   loadLocalArchive,
   loadOutboxRows,
   queueLocalProfile,
@@ -118,6 +119,9 @@ export class AccountSync {
     if (lease === undefined) return;
     await Promise.all([
       this.loadProfile(lease),
+      loadIdentities(lease, (current, patch) => {
+        this.patch(current, patch);
+      }),
       loadHistory(lease, null, (current, patch) => {
         this.patch(current, patch);
       }),

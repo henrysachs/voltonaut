@@ -167,11 +167,12 @@ it("downloads a validated own export and confirms deletion only from an empty 20
       },
       membership: { tier: "normal", vip: false },
       authorization: { role: "user" },
+      identities: [],
     },
     profile: { status: "missing" },
     rides: [],
     inventory: { status: "not_stored" },
-    progression: { status: "not_stored" },
+    progression: { volts: { balance: 0, journal: [] } },
     strava: { status: { status: "disabled" }, deliveries: [] },
   };
 

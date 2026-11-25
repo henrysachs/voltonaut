@@ -1,11 +1,9 @@
-import { Module } from "@nestjs/common";
+import { Module, type DynamicModule } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module.js";
-import type { DynamicModule } from "@nestjs/common";
 
-import { ACCOUNTS_TABLES } from "./accounts.schema.js";
-import type { AccountsTables } from "./accounts.schema.js";
+import { ACCOUNTS_TABLES, type AccountsTables } from "./accounts.schema.js";
 import { AccountsController } from "./accounts.controller.js";
-import { AccountDataService, AuthAccountDataService } from "./account-data.service.js";
+import { AccountDataService } from "./account-data.service.js";
 import { AccountsService } from "./accounts.service.js";
 import { AdminUsersController } from "./admin-users.controller.js";
 import { AdminGuard } from "./admin.guard.js";
@@ -20,15 +18,15 @@ export class AccountsModule {
     tables: Readonly<AccountsTables>,
     rides: Readonly<DynamicModule>,
     strava: Readonly<DynamicModule>,
+    economy: Readonly<DynamicModule>,
   ): DynamicModule {
     return {
       module: AccountsModule,
-      imports: [AuthModule, rides, strava],
+      imports: [AuthModule, rides, strava, economy],
       controllers: [AccountsController, AdminUsersController],
       providers: [
         AccountsService,
         AccountDataService,
-        AuthAccountDataService,
         AuthDirectory,
         AdminGuard,
         AdminOriginGuard,

@@ -16,6 +16,10 @@ export function downloadAccountExport(value: Readonly<AccountExport>): void {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = accountExportFilename(parsed.account.user.id);
+  document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }

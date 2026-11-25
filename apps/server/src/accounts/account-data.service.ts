@@ -1,26 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
 
 import { AccountExportSchema, type AccountExport } from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
 import { AuthAccountDataService } from "../auth/auth-account-data.service.js";
-import { DRIZZLE } from "../database/drizzle.provider.js";
-import type { ServerDatabase } from "../database/drizzle.provider.js";
+import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
+import { EconomyAccountDataService } from "../economy/economy.account-data.js";
 import { RidesService } from "../rides/rides.service.js";
 import { StravaAccountDataService } from "../strava/strava.account-data-service.js";
 import { AccountsService } from "./accounts.service.js";
-import { ACCOUNTS_TABLES } from "./accounts.schema.js";
-import type { AccountsTables } from "./accounts.schema.js";
-
-export { AuthAccountDataService } from "../auth/auth-account-data.service.js";
 
 @Injectable()
 export class AccountDataService {
   public constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle handles contain mutable driver state; retain the ORM type.
     @Inject(DRIZZLE) private readonly db: ServerDatabase,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle tables contain mutable column metadata required by query builders.
-    @Inject(ACCOUNTS_TABLES) private readonly tables: AccountsTables,
     @Inject(AccountsService) private readonly accounts: Readonly<AccountsService>,
     @Inject(AuthAccountDataService)
     private readonly authData: Readonly<AuthAccountDataService>,
@@ -29,6 +22,8 @@ export class AccountDataService {
     >,
     @Inject(StravaAccountDataService)
     private readonly strava: Readonly<StravaAccountDataService>,
+    @Inject(EconomyAccountDataService)
+    private readonly economy: Readonly<EconomyAccountDataService>,
   ) {}
 
   public exportData(userId: string, nowMs: number): AccountExport {
@@ -44,11 +39,12 @@ export class AccountDataService {
             user,
             membership: status.membership,
             authorization: status.authorization,
+            identities: this.authData.exportOwn(userId),
           },
           profile: this.accounts.getProfile(userId),
           rides: this.rides.exportOwn(userId),
           inventory: { status: "not_stored" },
-          progression: { status: "not_stored" },
+          progression: { volts: this.economy.exportOwn(userId) },
           strava: this.strava.exportOwn(userId),
         });
       },
@@ -66,11 +62,8 @@ export class AccountDataService {
 
         this.rides.deleteOwn(userId);
         this.strava.deleteOwn(userId);
-        this.db.delete(this.tables.profiles).where(eq(this.tables.profiles.userId, userId)).run();
-        this.db
-          .delete(this.tables.accountStatus)
-          .where(eq(this.tables.accountStatus.userId, userId))
-          .run();
+        this.economy.deleteOwn(userId);
+        this.accounts.deleteOwn(userId);
         this.authData.deleteAccount(userId, nowMs);
       },
       { behavior: "immediate" },
