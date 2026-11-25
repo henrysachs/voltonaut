@@ -1,3 +1,4 @@
+/* oxlint-disable eslint/max-dependencies -- This composition root wires the existing account panels plus the independent progress sync and outbox. */
 import { ApplicationSession } from "./sync/applicationSession.js";
 import { apiOrigin, CANONICAL_AUTH_ORIGIN, isPreviewOrigin } from "./sync/authOrigin.js";
 import { handoffErrorText, takeAuthHandoff } from "./sync/authHandoff.js";
@@ -6,8 +7,12 @@ import { sessionPersistence } from "./sync/sessionPersistence.js";
 import { mountAccountPanels, resumeIdentityLink } from "./browserAccountPanels.js";
 import { privateAuthTransport } from "./sync/privateAuthTransport.js";
 import type { ProfileBootstrap } from "./profileBootstrap.js";
-import { setupBrowserAccountData } from "./browserAccountData.js";
+import { lazyResource, setupBrowserAccountData } from "./browserAccountData.js";
 import { setupBrowserStrava } from "./browserStrava.js";
+import { ProgressSync } from "./sync/progressSync.js";
+import { openProgressOutboxDatabase } from "./sync/progressOutboxDatabase.js";
+import type { ProgressOutbox } from "./sync/progressOutbox.js";
+import { mountProgressPanel } from "./ui/progressPanel.js";
 
 declare global {
   interface ImportMeta {
@@ -22,6 +27,23 @@ export interface BrowserAccount {
   readonly accounts: Readonly<
     Promise<Readonly<Awaited<ReturnType<typeof setupBrowserAccountData>>>>
   >;
+  readonly progress: ProgressSync;
+}
+
+function setupProgress(
+  session: Readonly<ApplicationSession>,
+  outbox: () => Promise<ProgressOutbox>,
+): ProgressSync {
+  const progress = new ProgressSync({ session, outbox });
+  mountProgressPanel(progress);
+  window.addEventListener("online", () => {
+    void progress.retry("resume");
+  });
+  window.addEventListener("pagehide", () => {
+    void progress.retry("resume");
+  });
+
+  return progress;
 }
 
 export function setupBrowserAccount(
@@ -56,8 +78,10 @@ export function setupBrowserAccount(
     });
 
     const links = mountAccountPanels(session, transport);
-    const accounts = setupBrowserAccountData(session, profile);
+    const progressOutbox = lazyResource(() => openProgressOutboxDatabase());
+    const accounts = setupBrowserAccountData(session, profile, progressOutbox);
     void setupBrowserStrava(session, accounts);
+    const progress = setupProgress(session, progressOutbox);
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
     else if (handoff.kind === "link") void resumeIdentityLink(session, links, handoff.code);
@@ -65,7 +89,7 @@ export function setupBrowserAccount(
     else if (handoff.kind === "error") host?.append(handoffErrorText(handoff.error));
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");
 
-    return { session, accounts };
+    return { session, accounts, progress };
   } catch {
     host?.append("Anmeldung nicht konfiguriert. Gastbetrieb bleibt verfügbar.");
 

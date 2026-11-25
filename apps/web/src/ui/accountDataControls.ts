@@ -125,11 +125,11 @@ export function accountDataControls(
   host.append(
     title,
     paragraph(
-      "Der Export enthält Profil, Mitgliedschaft, verknüpfte Identitäten mit Issuer und Subject, alle Serveraufnahmen mit Rohjournal, Beleg, Bewertung und vorhandenem TCX, Volts-Kontostand und vollständiges Volts-Journal sowie Strava-Status und Aufträge. Sessions und Zugangsdaten sind ausgeschlossen. Inventar ist serverseitig noch nicht gespeichert; der Export kennzeichnet dies ausdrücklich.",
+      "Der Export enthält Profil, Mitgliedschaft, verknüpfte Identitäten mit Issuer und Subject, alle Serveraufnahmen mit Rohjournal, Beleg, Bewertung und vorhandenem TCX, Volts-Kontostand und vollständiges Volts-Journal, Fortschrittszustimmung mit bestätigten Fortschrittsbereichen sowie Strava-Status und Aufträge. Sessions und Zugangsdaten sind ausgeschlossen. Inventar ist serverseitig noch nicht gespeichert; der Export kennzeichnet dies ausdrücklich.",
     ),
     exportPanel(sync),
     paragraph(
-      "Die Löschung entfernt Profil, Mitgliedschaft, alle Serveraufnahmen, das Volts-Journal, Strava-Verbindung und Aufträge sowie Identitätszuordnungen und Sessions. E-Mail und externe Identitäten bleiben nur als serverseitig gekeyete pseudonyme Löschmarken gesperrt; eine stille Neuanlage ist nicht möglich.",
+      "Die Löschung entfernt Profil, Mitgliedschaft, alle Serveraufnahmen, das Volts-Journal, Fortschrittszustimmung und Fortschrittsbereiche, Strava-Verbindung und Aufträge sowie Identitätszuordnungen und Sessions. E-Mail und externe Identitäten bleiben nur als serverseitig gekeyete pseudonyme Löschmarken gesperrt; eine stille Neuanlage ist nicht möglich.",
     ),
     paragraph(
       "Lokale Fahrtarchive und das gemeinsame Gastprofil bleiben erhalten. Nur die diesem Konto zugeordneten Outbox-Einträge werden nach bestätigter Serverlöschung entfernt. Bereits an Strava übertragene Aktivitäten werden nicht gelöscht; der Anbieterzugriff ist getrennt in den Strava-Einstellungen zu prüfen.",

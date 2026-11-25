@@ -35,6 +35,8 @@ export type PrivatePath =
   | "/v1/me/profile"
   | "/v1/me/export"
   | "/v1/me"
+  | "/v1/me/progress-consent"
+  | "/v1/progress/checkpoints"
   | "/v2/rides"
   | `/v2/rides?cursor=${string}`
   | `/v2/rides/${string}`
@@ -80,7 +82,7 @@ export function authorizedRequest(apiOrigin: string, authorization: LeaseAuthori
           explicitMethod ??
           (body === undefined
             ? "GET"
-            : path === "/v1/me/profile"
+            : path === "/v1/me/profile" || path === "/v1/me/progress-consent"
               ? "PUT"
               : path.startsWith("/v1/admin/users/")
                 ? "PATCH"

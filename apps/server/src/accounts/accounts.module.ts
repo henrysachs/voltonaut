@@ -10,20 +10,33 @@ import { AdminGuard } from "./admin.guard.js";
 import { AdminOriginGuard } from "./admin-origin.guard.js";
 import { AuthDirectory } from "../auth/auth-directory.js";
 
+/** Modules that own user data; account export and deletion read and purge through their ports. */
+export interface AccountDataOwnerModules {
+  readonly rides: DynamicModule;
+  readonly strava: DynamicModule;
+  readonly economy: DynamicModule;
+  readonly inventory: DynamicModule;
+  readonly progress: DynamicModule;
+}
+
 @Module({})
 // oxlint-disable-next-line typescript/no-extraneous-class -- Nest dynamic modules expose their registration factory on the decorated class.
 export class AccountsModule {
   /* oxlint-disable typescript/prefer-readonly-parameter-types -- Nest dynamic modules require their original mutable provider metadata. */
   public static register(
     tables: Readonly<AccountsTables>,
-    rides: Readonly<DynamicModule>,
-    strava: Readonly<DynamicModule>,
-    economy: Readonly<DynamicModule>,
-    inventory: Readonly<DynamicModule>,
+    owners: Readonly<AccountDataOwnerModules>,
   ): DynamicModule {
     return {
       module: AccountsModule,
-      imports: [AuthModule, rides, strava, economy, inventory],
+      imports: [
+        AuthModule,
+        owners.rides,
+        owners.strava,
+        owners.economy,
+        owners.inventory,
+        owners.progress,
+      ],
       controllers: [AccountsController, AdminUsersController],
       providers: [
         AccountsService,

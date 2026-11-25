@@ -129,6 +129,19 @@ export class AuthService {
     return { userId: row.user.id, email: row.user.email, sessionTokenHash: tokenHash };
   }
 
+  public isSessionActive(sessionTokenHash: string, nowMs: number): boolean {
+    if (this.config.auth.mode === "disabled") return false;
+
+    const row = this.db
+      .select({ expiresAt: sessions.expiresAt, deletedAt: users.deletedAt })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(eq(sessions.tokenHash, sessionTokenHash))
+      .get();
+
+    return row !== undefined && row.expiresAt > nowMs && row.deletedAt === null;
+  }
+
   /** Deletes the session row behind this token; the token is invalid afterwards. */
   public logout(sessionTokenHash: string): void {
     this.db.delete(sessions).where(eq(sessions.tokenHash, sessionTokenHash)).run();
@@ -240,5 +253,6 @@ export interface AuthServicePort {
     nowMs: number,
   ) => SessionResponse;
   readonly validateSession: (sessionToken: string, nowMs: number) => SessionPrincipal | undefined;
+  readonly isSessionActive: (sessionTokenHash: string, nowMs: number) => boolean;
   readonly logout: (sessionTokenHash: string) => void;
 }

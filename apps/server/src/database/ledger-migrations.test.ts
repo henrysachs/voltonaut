@@ -78,7 +78,7 @@ it("keeps every Volts booking when the ledger learns operator grants", () => {
     expect(next.$client.prepare(LEDGER_ROWS).all()).toEqual(before);
     expect(next.$client.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
     expect(next.$client.prepare("SELECT * FROM inventory").all()).toEqual([]);
-    expect(next.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(12);
+    expect(next.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(13);
     next.$client
       .prepare(GRANT)
       .run("c-grant", "owner", 7000, "acceptance", "operator:acceptance", "hash-c", 3);

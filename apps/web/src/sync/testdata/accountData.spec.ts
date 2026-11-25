@@ -23,7 +23,7 @@ const profile = {
 };
 
 export const exported = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   exportedAt: "2026-11-24T12:00:00.000Z",
   account: {
     user,
@@ -34,7 +34,10 @@ export const exported = {
   profile: { status: "present", profile, updatedAt: "2026-11-20T00:00:00.000Z" },
   rides: [],
   inventory: { items: [] },
-  progression: { volts: { balance: 0, journal: [] } },
+  progression: {
+    volts: { balance: 0, journal: [] },
+    progress: { consent: { status: "missing" }, journals: [], ranges: [] },
+  },
   strava: { status: { status: "disabled" }, deliveries: [] },
 };
 

@@ -33,6 +33,8 @@ export class SyncFixture {
   failure: PrivateRequestError | undefined;
   readonly applied: string[] = [];
   readonly purged: DeletionOwner[] = [];
+  readonly progressPurged: DeletionOwner[] = [];
+  progressPurgeFailure = false;
   readonly deletionConfirmations: string[] = [];
   readonly pendingDeletions = new Map<string, DeletionOwner>();
   purgeFailure = false;
@@ -71,6 +73,15 @@ export class SyncFixture {
       },
     },
     outbox: () => Promise.resolve(this.outbox),
+    progressOutbox: () =>
+      Promise.resolve({
+        purgeOwner: (owner) => {
+          if (this.progressPurgeFailure) return Promise.reject(new Error("progress storage"));
+          this.progressPurged.push(owner);
+
+          return Promise.resolve();
+        },
+      }),
     deletions: {
       load: () => [...this.pendingDeletions.values()],
       remember: (owner) => {

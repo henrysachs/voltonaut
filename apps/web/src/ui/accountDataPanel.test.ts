@@ -117,6 +117,10 @@ it("requires the exact email and an explicit acknowledgement before deleting", (
     "Konkret verknüpfte Anbieter: Cloudflare Access, authentik.",
   );
   expect(renderedText(host)).toContain("Volts-Kontostand und vollständiges Volts-Journal");
+  expect(renderedText(host)).toContain(
+    "Fortschrittszustimmung mit bestätigten Fortschrittsbereichen",
+  );
+  expect(renderedText(host)).toContain("Fortschrittszustimmung und Fortschrittsbereiche");
 
   publish?.({ kind: "guest", message: "Konto gelöscht. Outbox bereinigt." });
   expect(renderedText(host)).toContain("Konto gelöscht. Outbox bereinigt.");
