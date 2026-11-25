@@ -62,6 +62,13 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 - Die Lieferung liest höchstens zehn ausstehende Zeilen pro Seite über den Primärschlüssel-Cursor. `prepareDelivery` versiegelt den offenen Batch und entfernt quittierte Zeilen über den Statusindex, ohne den ganzen Store zu lesen. `nextRetryAt` liest den frühesten automatischen Retry über den `account-retry`-Index. Ein ausdrücklicher Consent-Widerruf liest einmal alle ausstehenden Zeilen, um sie vollständig zu blockieren.
 - Nest-Tests mit echter SQLite-Datenbank prüfen Consent, Sessionbindung, Tickfolge, Belohnungstag, atomare Volts-Buchung, Konkurrenz und identische Präfix-Wiederholungen.
 
+### Datenbankmigrationen
+
+- Upgrade-Tests nutzen ausschließlich `apps/server/src/testing/migration-harness.spec.ts` ([E0-13](specs/E0-13-migration-harness.md)). Muster: `upgradeFrom("<tag>", seed)` öffnet eine echte SQLite-Datei über `createDatabase` am benannten Tag. Danach legt der Hook den Altbestand an, `open()` migriert auf den Kopfstand und erlaubt ein erneutes Öffnen. Geprüft werden unveränderte Altzeilen und die neuen Invarianten.
+- Startpunkte sind Tags aus `drizzle/meta/_journal.json`, keine Indizes. Kopfstand und Migrationszahl liefert nur das Journal (`expectHead`); kein Test schreibt die Anzahl der Migrationen hart.
+- Eine neue Migration bekommt einen eigenen Upgrade-Test ab dem vorherigen Tag. Bestehende Upgrade-Tests bleiben unverändert. Die Tabellenliste in `database.test.ts` wird bewusst ergänzt.
+- Kontoinhaber legt `seedOwners` über die Spaltennamen des Schemas an; übrige Testzeilen nennen ihre Spalten (kein positionsabhängiges `INSERT … VALUES`). Temp-Verzeichnisse kommen aus `scratchDirectory` und werden nach jedem Test entfernt.
+
 ## 6. E2E (Playwright, Sim-Modus)
 
 Flüsse (je ein Test): App lädt → Fake-Trainer/HR/Play verbinden → Fahrt starten → 2× hoch, 1× runter (HUD-Gang korrekt, Trainer-Kommandos im Sim-Trainer korrekt) → 2 km fahren (Sim-Zeit beschleunigt) → Blitz-Pickup eingesammelt → Fahrt beenden → Zusammenfassung zeigt Volts → (ab E5, gegen lokalen Testserver) Upload bestätigt, Kontostand gestiegen → (ab E7) Item kaufen, ausrüsten.
