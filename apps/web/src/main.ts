@@ -6,21 +6,30 @@ import { createRideSession } from "./game/rideSession.js";
 import { setupProfile } from "./profileBootstrap.js";
 import { setupBrowserAccount, type BrowserAccount } from "./browserAccount.js";
 import { mountRideViews } from "./rideViews.js";
+import { wornLoadout } from "./sync/garageLoadout.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
 import { parseEnvironmentSettings } from "./world/environment.js";
 
 const FAST_CLOCK_SCALE = 20;
 const APP_ROUTE_ID = "test-loop";
 
-/** Garage purchases use the account's server shop once account data is ready; guests keep the preview. */
-async function attachGarageShop(
+/**
+ * Garage purchases and equipment use the account's server state once account data is ready; the
+ * ride wears the confirmed equipment and guests keep the default (spec E7-05 AK8).
+ */
+async function attachGarage(
   garage: ReturnType<typeof mountGameMenu>,
+  scene: ReturnType<typeof mountRideViews>,
   account: Readonly<Pick<BrowserAccount, "accounts">> | undefined,
 ): Promise<void> {
   const sync = await account?.accounts.catch(() => null);
 
-  if (garage !== undefined && sync !== undefined && sync !== null)
-    garage.attachAccount(sync.garage);
+  if (sync === undefined || sync === null) return;
+
+  garage?.attachAccount(sync.garage);
+  sync.garage.loadout.subscribe((view) => {
+    scene?.setLook?.(wornLoadout(view));
+  });
 }
 
 async function start(): Promise<void> {
@@ -47,15 +56,16 @@ async function start(): Promise<void> {
     onProgress: account?.progress.accept,
   });
 
-  mountRideViews(session, {
+  const scene = mountRideViews(session, {
     connectedLabel: simMode ? "Sim connected" : "Bluetooth connected",
     environment: parseEnvironmentSettings(params),
     debug: params.get("debug") === "1",
   });
+
   setupKeyboard(bus);
 
   devices?.mount();
-  void attachGarageShop(mountGameMenu(profile.bike.wheelCircM), account);
+  void attachGarage(mountGameMenu(profile.bike.wheelCircM), scene, account);
 }
 
 await start();

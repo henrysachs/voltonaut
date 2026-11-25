@@ -1,5 +1,7 @@
 import type { RideSnapshot } from "@voltonaut/engine";
 
+import type { AvatarConfig } from "@voltonaut/shared";
+
 import type { EnvironmentSettings } from "./environment.js";
 import { createRenderLink } from "./render-link.js";
 import { BrowserRenderPort } from "./render-port.js";
@@ -19,6 +21,8 @@ export interface RideSceneOptions {
 }
 
 export interface RideScene {
+  /** Shows the rider's equipment without interrupting the ride (spec E7-05 AK8). */
+  readonly setLook?: (look: Readonly<AvatarConfig>) => void;
   readonly dispose: () => void;
 }
 
@@ -141,6 +145,7 @@ class RideSceneBridge implements RideScene {
     this.debug.dataset["cameraZ"] = String(d.cameraPosition.z);
     this.debug.dataset["billboardsLeft"] = String(d.billboardsInView.left);
     this.debug.dataset["billboardsRight"] = String(d.billboardsInView.right);
+    this.debug.dataset["look"] = JSON.stringify(d.look);
     this.debug.dataset["frameStage"] = "after-render-task";
 
     // The browser owns visible presentation; this marks only a completed render + following task.
@@ -156,6 +161,10 @@ class RideSceneBridge implements RideScene {
 
     if (snapshot !== undefined) this.link.snapshot(snapshot);
     this.rafId = requestAnimationFrame(this.pump);
+  };
+
+  readonly setLook = (look: Readonly<AvatarConfig>): void => {
+    if (this.state.kind === "active") this.link.look(look);
   };
 
   private readonly toggleCamera = (): void => {

@@ -1,4 +1,5 @@
 import type { RideSnapshot } from "@voltonaut/engine";
+import type { AvatarConfig } from "@voltonaut/shared";
 
 import type { CameraMode } from "./camera.js";
 import type { EnvironmentSettings, WeatherKind } from "./environment.js";
@@ -43,6 +44,8 @@ export interface SceneDiagnostics {
   readonly heightPx: number;
   /** Billboards whose centre is in the camera frustum, per road side (spec E8-02). */
   readonly billboardsInView: { readonly left: number; readonly right: number };
+  /** The rider's equipment as worn in the scene (spec E7-05 AK8). */
+  readonly look: AvatarConfig;
 }
 
 export type RenderControl =
@@ -53,6 +56,7 @@ export type RenderControl =
     }
   | { readonly type: "render.resize"; readonly viewport: RenderViewport }
   | { readonly type: "render.toggleCamera" }
+  | { readonly type: "render.look"; readonly look: AvatarConfig }
   | { readonly type: "render.dispose" };
 
 export type RenderCommand =

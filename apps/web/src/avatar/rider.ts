@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import type { AvatarConfig } from "@voltonaut/shared";
 
 import { disposeObject } from "../world/resources.js";
@@ -149,6 +150,10 @@ export interface RiderView {
   readonly position: () => { readonly x: number; readonly y: number; readonly z: number };
   readonly headingRad: () => number;
   readonly crankRad: () => number;
+  /** Applies on the next update, after the deferred body exists (spec E7-05 AK8). */
+  readonly setLook: (config: Readonly<AvatarConfig>) => void;
+  /** The look the rider wears or will wear on the next update. */
+  readonly look: () => AvatarConfig;
 }
 
 export function createRiderModel(wheelCircM: number): RiderOnBike {
@@ -157,8 +162,15 @@ export function createRiderModel(wheelCircM: number): RiderOnBike {
 
 export function createRider(wheelCircM: number): RiderView {
   const rider = new RiderOnBike(wheelCircM, true);
+  let worn: AvatarConfig = DEFAULT_AVATAR_CONFIG;
+  let pending: AvatarConfig | undefined;
 
   return {
+    setLook(config) {
+      worn = config;
+      pending = config;
+    },
+    look: () => worn,
     position: () => ({
       x: rider.root.position.x,
       y: rider.root.position.y,
@@ -175,6 +187,11 @@ export function createRider(wheelCircM: number): RiderView {
       },
       update(frame) {
         rider.update(frame);
+
+        if (pending !== undefined) {
+          rider.setLook(pending);
+          pending = undefined;
+        }
       },
       setQuality() {},
       dispose() {
