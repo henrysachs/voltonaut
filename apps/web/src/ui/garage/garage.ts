@@ -1,8 +1,7 @@
-import { AVATAR_SLOTS, avatarItemsForSlot } from "@voltonaut/rules";
+import { AVATAR_SLOTS, avatarItemsForSlot, avatarColorOptions } from "@voltonaut/rules";
 import type { ItemDef } from "@voltonaut/shared";
 
 import { itemUnlockText, priceText, rarityText, slotText } from "./garageText.js";
-import { previewColorOptions } from "./palettes.js";
 import { GaragePurchase, type GarageShopSource } from "./purchase.js";
 import { createGaragePreviewView, type GaragePreviewView } from "./preview.js";
 import {
@@ -242,7 +241,7 @@ class GaragePanel {
     this.#colors.append(legend);
 
     for (const [index, selectedColor] of colors.entries()) {
-      for (const color of previewColorOptions(item.slot)) {
+      for (const color of avatarColorOptions(item.slot)) {
         const label = document.createElement("label");
         label.className = "garage__color";
         label.title = color;

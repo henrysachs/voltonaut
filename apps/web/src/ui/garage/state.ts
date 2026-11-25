@@ -1,4 +1,9 @@
-import { DEFAULT_AVATAR_CONFIG, avatarItemForSlot, previewAvatarConfig } from "@voltonaut/rules";
+import {
+  DEFAULT_AVATAR_CONFIG,
+  avatarItemForSlot,
+  previewAvatarConfig,
+  defaultAvatarColors,
+} from "@voltonaut/rules";
 import {
   AvatarColorSchema,
   GaragePreviewSelectionSchema,
@@ -10,8 +15,6 @@ import {
   type GarageSelection,
   type ItemDef,
 } from "@voltonaut/shared";
-
-import { defaultPreviewColors } from "./palettes.js";
 
 export type GarageUnavailable3dSelection = Extract<GarageSelection, { kind: "unavailable3d" }>;
 
@@ -142,7 +145,7 @@ function previewColors(
   item: Readonly<ItemDef>,
   config: Readonly<AvatarConfig>,
 ): readonly AvatarColor[] {
-  return item.slot === "skin" ? [config.rider.skinTone] : defaultPreviewColors(item);
+  return item.slot === "skin" ? [config.rider.skinTone] : defaultAvatarColors(item);
 }
 
 function updateSelection(
