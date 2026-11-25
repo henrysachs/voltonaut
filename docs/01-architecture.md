@@ -266,7 +266,7 @@ apps/
   server/         @voltonaut/server   NestJS-Module (08-backend.md), drizzle/ Migrationen
 packages/
   shared/         Typen, Einheiten, Zod-Schemas (api, ws, ride-upload), Event-Bus-Typen
-  engine/         src/{physics,gears,ride,bots,drafting,segments,trainer}/ + src/internal/ (mutierbarer RideState)
+  engine/         src/{physics,gears,ride,bots,drafting,segments,trainer,journal}/ + src/internal/ (mutierbarer RideState)
   rules/          src/{xp,economy,badges,catalog,levels}/ + data/*.json
   ble/            src/{ftms,hrs,cps,zwift-play,keyboard,sim,replay}/
 tools/oxlint/anti-slop/   scripts/   assets-src/   fixtures/{ble,rides,api}/   docs/
@@ -302,6 +302,7 @@ flowchart LR
 - Auth-Ziel laut [ADR-013](decisions/ADR-013-cloudflare-access-oidc.md): Cloudflare Access als OIDC-Broker, keine Proxy-Sperre vor Webseite oder API. Der Server besitzt stabile Accounts, Identitätszuordnungen und eigene Bearer-Sessions. Login startet nur nach Nutzerklick; anonyme Fahrt benötigt weder Storage noch Netzwerk. [E5-06](specs/E5-06-oidc-server-login.md) liefert den serverseitigen Codeflow und die browsergebundene Einmalübergabe. [E5-08](specs/E5-08-browser-oidc-session.md) ergänzt das Browserkonto. `sync` besitzt Session, HTTP und optionale Persistenz; `ui` erhält nur Status und servervalidierte Nutzer. Zusätzliche Identitätsverknüpfungen und echter Pilot bleiben offen.
 - Access-App und begrenzte Pilot-Policy sind separat eingerichtet, siehe [E5-04](specs/E5-04-access-oidc-pilot-setup.md). Das ersetzt keinen echten Anbieterpilot.
 - [E10-02](specs/E10-02-replay-consistency.md) definiert das V2-Journal ab Engine-Initialisierung. E10-04 verbindet Worker-Erfassung, API und ausdrückliche Strava-Auslieferung. Die Quellenrichtlinie bleibt standardmäßig deaktiviert. `declared_ble_v1` ist eine explizite BLE-Selbstauskunft, kein Hardwareattest und keine Belohnungsfreigabe. Die gebaute Gesamtstrecke ist gegen lokale Anbieter und native GATT-Fakes softwaregeprüft. Echte Hardware, Anbieterzustimmung und Produktion bleiben getrennte Abnahmen.
+- [E0-07](specs/E0-07-journal-codec.md): Der Fahrtjournal-Codec in `packages/engine/src/journal/` ist die einzige Übersetzung zwischen `DeviceEvent`, Journaleintrag, Engine und Replay-Snapshot. Der Worker-Recorder kodiert damit, `rides/replay` rechnet damit nach; beide nutzen `PHYSICS_REVISION`. Journal-Puffer, Fenster und Grenzbestätigung bleiben beim Worker (ADR-018), Event- und Kommandovergleich beim Server.
 - `net/` liest `RideSnapshot` (sendet eigene Distanz 2–4 Hz) und besitzt `RemoteRider[]`; world/avatar rendern Remote-Fahrer nur daraus. Für Windschatten hinter Remote-Fahrern reicht `net/` deren Distanz/Versatz als Engine-Input weiter (v2).
 - `packages/engine`, `packages/rules`, `packages/shared` enthalten Code, den Client **und** Server nutzen: Physik, Gänge, Bots/Drafting, Level-Tabelle, Badge-Prädikate, Item-Katalog, Zod-API-Schemas. So rechnet der Server Fahrten mit derselben Logik nach. So rechnet der Server Fahrten mit derselben Logik nach.
 - Details: `08-backend.md`, ADR-004, ADR-005.

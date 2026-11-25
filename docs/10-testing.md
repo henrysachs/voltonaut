@@ -47,6 +47,7 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 | rules/economy                                                           | Volts-Kontostand nie negativ bei beliebiger Folge aus Verdienst/Käufen; Ledger-Summe = Kontostand           |
 | rules/xp                                                                | XP monoton in Distanz/Höhenmetern; Level monoton in XP                                                      |
 | engine/segments                                                         | Segmentzeit ≤ Fahrzeit; Start vor Ende                                                                      |
+| engine/journal                                                          | Kodiertes Journal nachgerechnet ⇒ nach jedem Advance gleiche Snapshots, Events, Kommandos wie live (E0-07)  |
 | Seeds werden bei Fehlschlag ausgegeben und als Regressionstest fixiert. |
 
 ## 5. Contract-Tests
