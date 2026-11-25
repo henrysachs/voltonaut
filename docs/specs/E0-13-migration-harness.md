@@ -20,12 +20,12 @@ Jeder Upgrade-Test öffnet eine echte SQLite-Datei an einem benannten Migrations
 
 - [x] AK1 – `apps/server/src/testing/migration-harness.spec.ts` bietet `upgradeFrom(tag, seed)`: Datei-DB über `createDatabase` an `tag`, prüft genau die Journal-Einträge bis `tag`, führt `seed` aus, schließt; `open()` migriert auf den Kopfstand, prüft per `expectHead` alle Journal-Einträge und lässt sich erneut öffnen.
 - [x] AK2 – Unbekannte Tags werfen sofort (`test: unknown migration tag …`).
-- [x] AK3 – Temp-Verzeichnisse (`scratchDirectory`) und offene Verbindungen werden über `onTestFinished` auch bei Fehlschlag entfernt bzw. geschlossen. Vitest führt die Hooks in umgekehrter Registrierungsreihenfolge aus (`sequence.hooks: "stack"`). Deshalb wird der Close-Hook nach dem Verzeichnis registriert: Verbindungen schließen vor dem Löschen. `migration-harness.test.ts` belegt Reihenfolge, Schließen, Löschen und unbekannte Tags.
+- [x] AK3 – Temp-Verzeichnisse (`scratchDirectory`) und offene Verbindungen werden über `onTestFinished` auch bei Fehlschlag entfernt bzw. geschlossen. Vitest führt `onTestFinished`-Hooks in umgekehrter Registrierungsreihenfolge aus (fest, unabhängig von `sequence.hooks`). Deshalb wird der Close-Hook nach dem Verzeichnis registriert: Verbindungen schließen vor dem Löschen. `migration-harness.test.ts` hält im Moment des Schließens fest, ob das Verzeichnis noch existiert. Mit der alten Registrierungsreihenfolge wird der Test rot (`expected false to be true`), mit der korrigierten grün.
 - [x] AK4 – `seedOwners` legt `users` über die Spaltennamen des echten Drizzle-Schemas an und schreibt nur Spalten, die seit `0000` existieren; damit funktioniert es an jedem Tag.
 - [x] AK5 – Keine Kopie der Journal-Schneidelogik und kein `toHaveLength(<Migrationszahl>)` mehr in `apps/server/src`; kein `INSERT INTO users` außerhalb des Harness in den migrierten Dateien; positionsabhängige `INSERT … VALUES` in migrierten Dateien sind benannt.
 - [x] AK6 – Jede bisherige Upgrade-Garantie bleibt assertiert: Altzeilen byte-gleich, neue Spalten/Defaults, FKs, CHECKs, Trigger, Chiffrate entschlüsselbar, Reopen.
 - [x] AK7 – Economy-Tests (`grant`, `debit`, `indexes`, `range-validation`, `transaction`) säen den Eigentümer direkt statt per Login. Sie rufen nur `EconomyService`/`OperatorGrants` mit einer ID auf und prüfen keine Session.
-- [x] AK8 – Nachweis „eine neue Migration mit neuen Tabellen/Indizes ändert keinen alten Upgrade-Test“: siehe unten.
+- [x] AK8 – Nachweis „eine neue Migration mit neuen Tabellen/Indizes ändert keinen alten Upgrade-Test“: siehe unten. Tabellen sind per Probelauf belegt, Indizes nur per Codelektüre (kein Test liest die Indexliste vollständig).
 
 ## Nachweis AK8
 
@@ -37,11 +37,11 @@ Grenze: Neue Spalten an Tabellen, die alte Tests seeden, machen deren `SELECT *`
 
 ## Testplan (`docs/10-testing.md` §5 „Datenbankmigrationen“)
 
-| AK      | Ebene              | Datei                                                                                        |
-| ------- | ------------------ | -------------------------------------------------------------------------------------------- |
-| AK1–AK4 | Integration Server | `apps/server/src/testing/migration-harness.test.ts`, genutzt von allen Upgrade-Tests         |
-| AK6     | Integration Server | `apps/server/src/database/*-migrations.test.ts`, `database.test.ts`, `rides.upgrade.test.ts` |
-| AK7     | Integration Server | `apps/server/src/economy/economy.{grant,debit,indexes,range-validation,transaction}.test.ts` |
+| AK      | Ebene              | Datei                                                                                                                                                    |
+| ------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AK1–AK4 | Integration Server | Harness `apps/server/src/testing/migration-harness.spec.ts` (von allen Upgrade-Tests genutzt); Probe `apps/server/src/testing/migration-harness.test.ts` |
+| AK6     | Integration Server | `apps/server/src/database/*-migrations.test.ts`, `database.test.ts`, `rides.upgrade.test.ts`                                                             |
+| AK7     | Integration Server | `apps/server/src/economy/economy.{grant,debit,indexes,range-validation,transaction}.test.ts`                                                             |
 
 ## Nicht-Ziele
 
