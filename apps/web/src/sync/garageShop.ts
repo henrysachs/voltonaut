@@ -3,6 +3,7 @@ import {
   type AccountLease,
   type SyncFailure,
 } from "./privateAuthTransport.js";
+import { ShopReceiptMismatch } from "./shopLease.js";
 
 export type GarageShopView =
   | { readonly kind: "guest" }
@@ -15,6 +16,8 @@ export type GarageShopView =
       /** Item whose purchase is waiting for the server; at most one at a time. */
       readonly pendingItemId: string | null;
       readonly message: string;
+      /** Item the message is about; `null` for messages about the whole shop. */
+      readonly messageItemId: string | null;
     };
 
 type ReadyView = Extract<GarageShopView, { readonly kind: "ready" }>;
@@ -48,6 +51,7 @@ export class GarageShop {
   readonly #newRequestId: () => string;
   #view: GarageShopView = { kind: "guest" };
   #lease: AccountLease | undefined;
+  #retryUserId: string | undefined;
   #revision = 0;
 
   constructor(newRequestId: () => string = () => crypto.randomUUID()) {
@@ -56,11 +60,23 @@ export class GarageShop {
 
   bind(lease?: AccountLease): void {
     this.#lease = lease;
-    this.#retryIds.clear();
+
+    // A re-authenticated session of the same account keeps open request ids (ADR-030 §3).
+    if (lease?.userId !== this.#retryUserId) this.#retryIds.clear();
+    this.#retryUserId = lease?.userId;
     this.#revision += 1;
     this.publish({ kind: lease === undefined ? "guest" : "loading" });
 
-    if (lease !== undefined) void this.refresh(lease, "");
+    if (lease !== undefined) void this.refresh(lease, "", null);
+  }
+
+  /** Rereads a shop that could not be loaded, e.g. when the browser is back online. */
+  async retry(): Promise<void> {
+    const lease = this.#lease;
+
+    if (lease === undefined || this.#view.kind !== "failed") return;
+    this.publish({ kind: "loading" });
+    await this.refresh(lease, "", null);
   }
 
   view(): GarageShopView {
@@ -85,7 +101,12 @@ export class GarageShop {
     const requestId = this.#retryIds.get(itemId) ?? this.#newRequestId();
     const revision = ++this.#revision;
     this.#retryIds.set(itemId, requestId);
-    this.publish({ ...view, pendingItemId: itemId, message: "Kauf wird bestätigt …" });
+    this.publish({
+      ...view,
+      pendingItemId: itemId,
+      message: "Kauf wird bestätigt …",
+      messageItemId: itemId,
+    });
 
     try {
       const receipt = await lease.shop.purchase({
@@ -99,7 +120,7 @@ export class GarageShop {
 
       // An earlier unconfirmed purchase may have committed; reread instead of mixing states.
       if (this.#retryIds.size > 0) {
-        await this.refresh(lease, BOUGHT);
+        await this.refresh(lease, BOUGHT, itemId);
 
         return;
       }
@@ -110,9 +131,12 @@ export class GarageShop {
         ownedItemIds: [...new Set([...view.ownedItemIds, receipt.item.itemId])],
         pendingItemId: null,
         message: BOUGHT,
+        messageItemId: itemId,
       });
     } catch (error) {
-      const rejected = error instanceof PrivateRequestError && REJECTIONS.has(error.cause);
+      const rejected =
+        error instanceof ShopReceiptMismatch ||
+        (error instanceof PrivateRequestError && REJECTIONS.has(error.cause));
 
       if (this.current(lease, revision)) await this.failPurchase(lease, view, itemId, rejected);
     }
@@ -126,12 +150,12 @@ export class GarageShop {
   ): Promise<void> {
     if (rejected) {
       this.#retryIds.delete(itemId);
-      await this.refresh(lease, REJECTED);
+      await this.refresh(lease, REJECTED, itemId);
 
       return;
     }
 
-    this.publish({ ...view, pendingItemId: null, message: UNCONFIRMED });
+    this.publish({ ...view, pendingItemId: null, message: UNCONFIRMED, messageItemId: itemId });
   }
 
   private current(lease: AccountLease, revision: number): boolean {
@@ -144,7 +168,11 @@ export class GarageShop {
     for (const listener of this.#listeners) listener(view);
   }
 
-  private async refresh(lease: AccountLease, message: string): Promise<void> {
+  private async refresh(
+    lease: AccountLease,
+    message: string,
+    messageItemId: string | null,
+  ): Promise<void> {
     const revision = ++this.#revision;
 
     try {
@@ -164,6 +192,7 @@ export class GarageShop {
         ownedItemIds,
         pendingItemId: null,
         message,
+        messageItemId,
       });
     } catch {
       if (this.current(lease, revision)) this.publish({ kind: "failed", message: UNREACHABLE });

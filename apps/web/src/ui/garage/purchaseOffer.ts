@@ -41,18 +41,20 @@ function offline(
 export function purchaseOffer(item: Readonly<ItemDef>, view: GarageShopView): PurchaseOffer {
   if (view.kind !== "ready") return offline(item, view);
 
-  const message = view.message === "" ? "" : ` ${view.message}`;
+  const own = view.messageItemId === null || view.messageItemId === item.id;
+  const note = own ? view.message : "";
+  const message = note === "" ? "" : ` ${note}`;
 
   if (view.ownedItemIds.includes(item.id))
     return { buttonText: "Im Besitz", enabled: false, hint: `Gehört deinem Konto.${message}` };
 
   if (item.unlock.kind !== "shop" || item.priceVolts === undefined)
-    return { buttonText: "Nicht käuflich", enabled: false, hint: view.message };
+    return { buttonText: "Nicht käuflich", enabled: false, hint: note };
 
   const price = item.priceVolts;
 
   if (view.pendingItemId !== null)
-    return { buttonText: `Kaufen (${volts(price)})`, enabled: false, hint: view.message };
+    return { buttonText: `Kaufen (${volts(price)})`, enabled: false, hint: note };
 
   if (view.voltsBalance < price)
     return {

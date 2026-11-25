@@ -16,6 +16,13 @@ export interface ShopLease {
   readonly purchase: (order: Readonly<PurchaseOrder>) => Promise<PurchaseResponse>;
 }
 
+/** The server confirmed a purchase of another item than the order named; a final, non-retryable answer. */
+export class ShopReceiptMismatch extends Error {
+  constructor() {
+    super("Purchase receipt mismatch");
+  }
+}
+
 export type ShopPath = "/v1/me/volts" | "/v1/me/inventory" | "/v1/shop/purchase";
 
 interface ShopSchema<T> {
@@ -44,7 +51,7 @@ export function shopLease(request: ShopRequest): ShopLease {
         "omit",
       );
 
-      if (receipt.item.itemId !== payload.itemId) throw new Error("Purchase receipt mismatch");
+      if (receipt.item.itemId !== payload.itemId) throw new ShopReceiptMismatch();
 
       return receipt;
     },

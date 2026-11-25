@@ -4,7 +4,7 @@ import type { GarageShop, GarageShopView } from "../../sync/garageShop.js";
 import { purchaseOffer } from "./purchaseOffer.js";
 
 /** The part of the account's shop sync the garage uses. */
-export type GarageShopSource = Pick<GarageShop, "subscribe" | "purchase">;
+export type GarageShopSource = Pick<GarageShop, "subscribe" | "purchase" | "retry">;
 
 /** Purchase button and hint of the garage details; renders only server-confirmed shop state. */
 export class GaragePurchase {
@@ -42,6 +42,9 @@ export class GaragePurchase {
     this.#item = item;
     this.button.hidden = !visible;
     this.hint.hidden = !visible;
+
+    // Selecting an item after a failed load is the rider asking for the shop again.
+    if (this.#view.kind === "failed") void this.#source?.retry();
     this.#render();
   }
 

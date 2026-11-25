@@ -24,6 +24,7 @@ function ready(patch: Partial<Extract<GarageShopView, { kind: "ready" }>> = {}):
     ownedItemIds: ["jersey.classic"],
     pendingItemId: null,
     message: "",
+    messageItemId: null,
     ...patch,
   };
 }
@@ -82,4 +83,11 @@ it("appends the shop message to the balance hint", () => {
   expect(purchaseOffer(stripe, ready({ message: "Abgelehnt." })).hint).toBe(
     "Guthaben: 2.000 ⚡. Abgelehnt.",
   );
+});
+
+it("shows a purchase message only on the item it is about", () => {
+  const view = ready({ message: "Gekauft.", messageItemId: "jersey.tempo" });
+
+  expect(purchaseOffer(stripe, view).hint).toBe("Guthaben: 2.000 ⚡.");
+  expect(purchaseOffer(classic, view).hint).toBe("Gehört deinem Konto.");
 });

@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
+import { applyVoltsDelta } from "@voltonaut/rules";
 import {
+  VoltsBalanceSchema,
+  VoltsDeltaSchema,
   VoltsGrantCommandSchema,
   type VoltsGrantCommand,
   type VoltsGrantReceipt,
@@ -13,7 +16,7 @@ import { grantPayloadHash, parseStoredGrantReceipt, type LedgerRow } from "./eco
 import type { EconomyTables } from "./economy.schema.js";
 
 interface GrantContext {
-  readonly db: Readonly<Pick<ServerDatabase, "select" | "insert">>;
+  readonly db: Readonly<Pick<ServerDatabase, "select" | "insert" | "get">>;
   readonly ledger: EconomyTables["voltsLedger"];
   readonly nowMs: () => number;
 }
@@ -25,6 +28,14 @@ function findEntry(context: GrantContext, userId: string, key: string): LedgerRo
     .from(context.ledger)
     .where(and(eq(context.ledger.userId, userId), eq(context.ledger.idempotencyKey, key)))
     .get();
+}
+
+function balanceWithin(context: GrantContext, userId: string) {
+  const row = context.db.get<{ balance: number }>(
+    sql`select coalesce(sum(${context.ledger.deltaVolts}), 0) as balance from ${context.ledger} where ${context.ledger.userId} = ${userId}`,
+  );
+
+  return VoltsBalanceSchema.parse(row.balance);
 }
 
 /**
@@ -48,6 +59,8 @@ export function grantWithin(
     return parseStoredGrantReceipt(existing);
   }
 
+  // Same safe-integer guard as debits: an overflowing credit would make every later balance read fail.
+  applyVoltsDelta(balanceWithin(context, userId), VoltsDeltaSchema.parse(parsed.amountVolts));
   context.db
     .insert(context.ledger)
     .values({
@@ -89,7 +102,7 @@ export class OperatorGrants {
 
   public grant(userId: string, command: Readonly<VoltsGrantCommand>): VoltsGrantReceipt {
     return this.db.transaction(
-      (tx: Readonly<Pick<ServerDatabase, "select" | "insert">>) =>
+      (tx: Readonly<Pick<ServerDatabase, "select" | "insert" | "get">>) =>
         grantWithin(
           { db: tx, ledger: this.tables.voltsLedger, nowMs: this.clock.nowMs },
           userId,

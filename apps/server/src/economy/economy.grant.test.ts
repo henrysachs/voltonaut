@@ -137,3 +137,13 @@ it("requires the operator: key prefix", () => {
       .success,
   ).toBe(false);
 });
+
+it("rejects a credit that would push the balance past the safe integer range", async () => {
+  const { userId, economy, grants } = await grantApp();
+  const nearMax = Number.MAX_SAFE_INTEGER - 10;
+
+  grants.grant(userId, grant("edge", nearMax));
+
+  expect(() => grants.grant(userId, grant("overflow", 11))).toThrow("safe integer range");
+  expect(economy.balance(userId)).toBe(nearMax);
+});

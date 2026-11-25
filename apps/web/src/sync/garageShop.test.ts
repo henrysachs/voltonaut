@@ -8,6 +8,7 @@ import {
 
 import { GarageShop, type GarageShopView } from "./garageShop.js";
 import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
+import { ShopReceiptMismatch } from "./shopLease.js";
 import { unexpectedAccountParts, unusedStravaLease } from "./testdata/unusedStravaLease.js";
 
 const ACQUIRED_AT = "2026-11-25T10:00:00.000Z";
@@ -98,6 +99,7 @@ it("shows guests nothing to buy and loads balance plus inventory for an account"
     ownedItemIds: ["jersey-basic"],
     pendingItemId: null,
     message: "",
+    messageItemId: null,
   });
   expect(server.orders).toEqual([]);
 });
@@ -201,4 +203,62 @@ it("rereads balance and ownership when an earlier purchase stayed unconfirmed", 
     voltsBalance: 300,
     ownedItemIds: ["jersey-basic", "helmet-red", "gloves-blue"],
   });
+});
+
+function flakyLease(server: Readonly<Pick<ShopServer, "lease">>, up: () => boolean): AccountLease {
+  const lease = server.lease();
+
+  return {
+    ...lease,
+    shop: {
+      ...lease.shop,
+      inventory: () =>
+        up() ? lease.shop.inventory() : Promise.reject(new PrivateRequestError("retry")),
+    },
+  };
+}
+
+it("rereads a failed shop on retry and ignores retry while ready", async () => {
+  let up = false;
+  const shop = new GarageShop();
+
+  shop.bind(flakyLease(new ShopServer(), () => up));
+  await vi.waitFor(() => {
+    expect(shop.view()).toMatchObject({ kind: "failed" });
+  });
+
+  up = true;
+  await shop.retry();
+
+  expect(shop.view()).toMatchObject({ kind: "ready", voltsBalance: 500 });
+
+  await shop.retry();
+
+  expect(shop.view()).toMatchObject({ kind: "ready" });
+});
+
+it("keeps open request ids when the same account re-authenticates", async () => {
+  const { server, shop } = await readyShop();
+
+  server.failure = new PrivateRequestError("retry");
+  await shop.purchase("helmet-red", 120);
+  shop.bind(server.lease());
+  await vi.waitFor(() => {
+    expect(shop.view().kind).toBe("ready");
+  });
+  server.failure = undefined;
+  await shop.purchase("helmet-red", 120);
+
+  expect(server.orders.map(({ requestId }) => requestId)).toEqual(["r1", "r1"]);
+});
+
+it("treats a receipt for another item as a final rejection", async () => {
+  const { server, shop } = await readyShop();
+
+  server.failure = new ShopReceiptMismatch();
+  await shop.purchase("helmet-red", 120);
+  server.failure = undefined;
+  await shop.purchase("helmet-red", 120);
+
+  expect(server.orders.map(({ requestId }) => requestId)).toEqual(["r1", "r2"]);
 });
