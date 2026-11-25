@@ -181,3 +181,63 @@ it("applies observed lower limits and Retry-After to hints and trusted work with
     readDayLimit: 1000,
   });
 });
+
+const learnedLimits = new Headers({
+  "X-RateLimit-Limit": "100,1000",
+  "X-RateLimit-Usage": "0,0",
+  "X-ReadRateLimit-Limit": "100,1000",
+  "X-ReadRateLimit-Usage": "0,0",
+});
+
+it("releases an unsent reservation only inside the window it was taken in", () => {
+  const { a, reopen } = fixture();
+  const rates = new StravaRateStore(a.db, stravaTables);
+  rates.reserve("poll", 0);
+  rates.observe(learnedLimits, 200, 0, 0, "poll");
+  expect(rates.reserve("poll", 1000)).toEqual({ kind: "reserved" });
+  expect(rates.reserve("poll", 900001)).toEqual({ kind: "reserved" });
+  rates.release("poll", 1000, 900002);
+  expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    shortUsage: 1,
+    shortPending: 1,
+    readShortUsage: 1,
+    readShortPending: 1,
+    dayUsage: 2,
+    dayPending: 1,
+  });
+});
+
+it("keeps a new day's usage when a reservation from the previous day is released", () => {
+  const { a, reopen } = fixture();
+  const rates = new StravaRateStore(a.db, stravaTables);
+  rates.reserve("poll", 0);
+  rates.observe(learnedLimits, 200, 0, 0, "poll");
+  expect(rates.reserve("poll", 86399000)).toEqual({ kind: "reserved" });
+  expect(rates.reserve("poll", 86400001)).toEqual({ kind: "reserved" });
+  rates.release("poll", 86399000, 86400002);
+  expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    dayReset: 172800000,
+    dayUsage: 1,
+    dayPending: 1,
+    readDayUsage: 1,
+    readDayPending: 1,
+  });
+});
+
+it("keeps a peer's observed request counted when another owner releases its unsent reservation", () => {
+  const { a, b, reopen } = fixture();
+  const first = new StravaRateStore(a.db, stravaTables);
+  const second = new StravaRateStore(b.db, stravaTables);
+  first.reserve("upload", 1000);
+  first.observe(headers("1,1"), 201, 1000, 1000, "upload");
+  expect(first.reserve("upload", 1001)).toEqual({ kind: "reserved" });
+  expect(second.reserve("upload", 1001)).toEqual({ kind: "reserved" });
+  second.observe(headers("2,2"), 201, 1001, 1002, "upload");
+  first.release("upload", 1001, 1003);
+  expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    shortUsage: 2,
+    dayUsage: 2,
+    shortPending: 0,
+    dayPending: 0,
+  });
+});

@@ -77,7 +77,7 @@ it("keeps a later known upload pollable after a day of forged hints", async () =
 });
 
 it("skips a busy oldest hint and proves an eligible second connection", async () => {
-  const { a, hints, authorization, peer, grant, config } = await setup();
+  const { a, hints, step, peer, grant, config } = await setup();
   a.db.$client.exec(
     "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('other','other@example.test',0,NULL)",
   );
@@ -88,14 +88,14 @@ it("skips a busy oldest hint and proves an eligible second connection", async ()
     .run(encryptTokens(grant.tokens, config.strava.tokenKey, "other", "43"));
   hints.hint("42");
   const busy = required(a.credentials.claimWork("owner", "poll", 20000));
-  await authorization.tick(AbortSignal.timeout(2000));
+  await step.checkNextHint(AbortSignal.timeout(2000));
   expect(peer.resources.athleteCalls).toBe(1);
   expect(a.credentials.connection("owner")?.workOwner).toBe(busy.workOwner);
   expect(a.credentials.connection("other")?.authorizationCheckAfter).toBe(80000);
 });
 
 it("coalesces persistent hints, preserves cooldown under flood and lets accepted polls run first", async () => {
-  const { a, reopen, hints, authorization, peer, scheduler, time } = await setup();
+  const { a, reopen, hints, step, peer, scheduler, time } = await setup();
   const job = accepted(a, "owner", consent, 1000);
   hints.hint("42");
   hints.hint("42");
@@ -113,22 +113,22 @@ it("coalesces persistent hints, preserves cooldown under flood and lets accepted
 
   for (let index = 0; index < 100; index += 1) hints.hint("42");
   expect(hints.next(79999)).toBeUndefined();
-  await authorization.tick(AbortSignal.timeout(2000));
+  await step.checkNextHint(AbortSignal.timeout(2000));
   expect(peer.resources.athleteCalls).toBe(1);
   time.nowMs = 80000;
-  await authorization.tick(AbortSignal.timeout(2000));
+  await step.checkNextHint(AbortSignal.timeout(2000));
   expect(peer.resources.athleteCalls).toBe(2);
   expect(reopen().credentials.connection("owner")?.authorizationCheckedRevision).toBe(102);
   expect(a.jobs.own("owner", consent.rideId)?.authority).toEqual(job.authority);
 });
 
 it("acknowledges only captured revisions when a newer hint arrives during provider proof", async () => {
-  const { a, b, reopen, hints, authorization, peer } = await setup();
+  const { a, b, reopen, hints, step, peer } = await setup();
   const entered = gate();
   const resume = gate();
   peer.resources.athleteGate = { enter: entered.release, wait: resume.wait };
   hints.hint("42");
-  const pending = authorization.tick(AbortSignal.timeout(2000));
+  const pending = step.checkNextHint(AbortSignal.timeout(2000));
 
   try {
     await entered.wait;
@@ -149,9 +149,9 @@ it("acknowledges only captured revisions when a newer hint arrives during provid
 });
 
 it("does not start proof against a generation replaced between readiness and claiming its lease", async () => {
-  const { a, b, hints, authorization, peer } = await setup();
+  const { a, b, hints, step, peer } = await setup();
   hints.hint("42");
-  const pending = authorization.tick(AbortSignal.timeout(2000));
+  const pending = step.checkNextHint(AbortSignal.timeout(2000));
   b.db.$client.exec(
     "UPDATE strava_connections SET generation='generation-new', authorization_hint_revision=0, authorization_checked_revision=0, authorization_check_after=0",
   );
@@ -169,11 +169,11 @@ it("does not start proof against a generation replaced between readiness and cla
 it.each(["foreign", "http", "lost"] satisfies ("foreign" | "http" | "lost")[])(
   "defers %s proof without acknowledging or revoking and retains encrypted credentials",
   async (fault) => {
-    const { a, reopen, hints, authorization, peer } = await setup();
+    const { a, reopen, hints, step, peer } = await setup();
     const before = required(a.credentials.connection("owner"));
     peer.resources.athleteFault = fault;
     hints.hint("42");
-    await authorization.tick(AbortSignal.timeout(2000));
+    await step.checkNextHint(AbortSignal.timeout(2000));
     expect(reopen().credentials.connection("owner")).toMatchObject({
       credentialState: "available",
       encryptedTokens: before.encryptedTokens,
@@ -195,12 +195,12 @@ it.each<{
 ])(
   "coordinates refresh for expiry=$expiresAt and fault=$fault without calling a 401 a revocation",
   async ({ expiresAt, fault, checked }) => {
-    const { a, reopen, hints, authorization, peer, time } = await setup();
+    const { a, reopen, hints, step, peer, time } = await setup();
 
     a.db.$client.prepare("UPDATE strava_connections SET access_expires_at = ?").run(expiresAt);
     peer.resources.athleteFault = fault;
     hints.hint("42");
-    await authorization.tick(AbortSignal.timeout(2000));
+    await step.checkNextHint(AbortSignal.timeout(2000));
     expect(peer.resources.refreshCalls).toBe(1);
     expect(reopen().credentials.connection("owner")).toMatchObject({
       generation: "generation-a",
@@ -210,7 +210,7 @@ it.each<{
     });
     peer.resources.athleteFault = "none";
     time.nowMs = 80000;
-    await authorization.tick(AbortSignal.timeout(2000));
+    await step.checkNextHint(AbortSignal.timeout(2000));
     expect(reopen().credentials.connection("owner")?.authorizationCheckedRevision).toBe(1);
   },
 );
@@ -230,12 +230,12 @@ it.each([
 ])(
   "never treats unverified synthetic refresh wire $status/$body as confirmed deauthorization",
   async (response: { readonly status: number; readonly body: string }) => {
-    const { a, reopen, hints, authorization, peer } = await setup();
+    const { a, reopen, hints, step, peer } = await setup();
     const known = accepted(a, "owner", consent, 1000);
     a.db.$client.exec("UPDATE strava_connections SET access_expires_at = 0");
     peer.resources.refreshResponse = response;
     hints.hint("42");
-    await authorization.tick(AbortSignal.timeout(2000));
+    await step.checkNextHint(AbortSignal.timeout(2000));
     expect(reopen().credentials.connection("owner")).toMatchObject({
       credentialState: "uncertain",
       authorizationCheckedRevision: 0,
@@ -249,7 +249,7 @@ it.each([
 );
 
 it("fences late proof and late refresh failure from a newer generation and its delivery", async () => {
-  const { a, b, hints, authorization, peer } = await setup();
+  const { a, b, hints, step, peer } = await setup();
   const old = required(a.credentials.claimWork("owner", "refresh", 1000));
   b.db.$client.exec(
     "UPDATE strava_connections SET generation='generation-new', work_owner=NULL, work_kind=NULL, work_until=0, credential_state='available'",
@@ -263,7 +263,7 @@ it("fences late proof and late refresh failure from a newer generation and its d
   const resume = gate();
   peer.resources.athleteGate = { enter: entered.release, wait: resume.wait };
   hints.hint("42");
-  const pending = authorization.tick(AbortSignal.timeout(2000));
+  const pending = step.checkNextHint(AbortSignal.timeout(2000));
 
   try {
     await entered.wait;
