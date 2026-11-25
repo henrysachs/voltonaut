@@ -41,7 +41,10 @@ function ledgerChecks(table: Readonly<LedgerColumns>) {
       "volts_ledger_safe_delta",
       sql`typeof(${table.deltaVolts}) = 'integer' AND ${table.deltaVolts} BETWEEN -9007199254740991 AND 9007199254740991`,
     ),
-    check("volts_ledger_reason", sql`${table.reason} IN ('ride_reward', 'purchase')`),
+    check(
+      "volts_ledger_reason",
+      sql`${table.reason} IN ('ride_reward', 'purchase', 'operator_grant')`,
+    ),
     check(
       "volts_ledger_ride_reward",
       sql`${table.reason} <> 'ride_reward' OR (${table.rewardDay} IS NOT NULL AND ${table.startTick} IS NOT NULL AND ${table.endTick} IS NOT NULL AND ${table.candidateVolts} IS NOT NULL AND ${table.cumulativeWorkVolts} IS NOT NULL AND ${table.cumulativeClimbVolts} IS NOT NULL AND ${table.cumulativeFactsJson} IS NOT NULL AND ${table.deltaVolts} >= 0)`,
@@ -49,6 +52,10 @@ function ledgerChecks(table: Readonly<LedgerColumns>) {
     check(
       "volts_ledger_purchase",
       sql`${table.reason} <> 'purchase' OR (${table.rewardDay} IS NULL AND ${table.startTick} IS NULL AND ${table.endTick} IS NULL AND ${table.candidateVolts} IS NULL AND ${table.cumulativeWorkVolts} IS NULL AND ${table.cumulativeClimbVolts} IS NULL AND ${table.cumulativeFactsJson} IS NULL AND ${table.deltaVolts} < 0)`,
+    ),
+    check(
+      "volts_ledger_operator_grant",
+      sql`${table.reason} <> 'operator_grant' OR (${table.rewardDay} IS NULL AND ${table.startTick} IS NULL AND ${table.endTick} IS NULL AND ${table.candidateVolts} IS NULL AND ${table.cumulativeWorkVolts} IS NULL AND ${table.cumulativeClimbVolts} IS NULL AND ${table.cumulativeFactsJson} IS NULL AND ${table.deltaVolts} > 0)`,
     ),
     check(
       "volts_ledger_ticks",
@@ -75,7 +82,7 @@ export function createEconomyTables(userIdColumn: SQLiteColumn) {
         .notNull()
         .references(() => userIdColumn),
       deltaVolts: integer("delta_volts").notNull(),
-      reason: text("reason", { enum: ["ride_reward", "purchase"] }).notNull(),
+      reason: text("reason", { enum: ["ride_reward", "purchase", "operator_grant"] }).notNull(),
       refId: text("ref_id").notNull(),
       idempotencyKey: text("idempotency_key").notNull(),
       payloadHash: text("payload_hash").notNull(),

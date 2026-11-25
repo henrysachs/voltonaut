@@ -73,6 +73,18 @@ export const VoltsDebitCommandSchema = z
   .strict()
   .readonly();
 
+/** Operator credit from the admin CLI (spec E7-02 AK7); keys start with `operator:`. */
+export const VoltsGrantCommandSchema = z
+  .object({
+    idempotencyKey: VoltsIdempotencyKeySchema.refine((key) => key.startsWith("operator:"), {
+      message: "Grant idempotency key must start with operator:",
+    }),
+    refId: z.string().min(1).max(200),
+    amountVolts: VoltsDebitAmountSchema,
+  })
+  .strict()
+  .readonly();
+
 export const VoltsRideRangeReceiptSchema = z
   .object({
     entryId: z.string().uuid(),
@@ -118,6 +130,19 @@ export const VoltsDebitReceiptSchema = z
   })
   .strict()
   .readonly();
+
+export const VoltsGrantReceiptSchema = z
+  .object({
+    entryId: z.string().uuid(),
+    refId: z.string().min(1).max(200),
+    amountVolts: VoltsDebitAmountSchema,
+  })
+  .strict()
+  .readonly();
+
+export type VoltsGrantCommand = z.infer<typeof VoltsGrantCommandSchema>;
+
+export type VoltsGrantReceipt = z.infer<typeof VoltsGrantReceiptSchema>;
 
 export type VoltsBalance = z.infer<typeof VoltsBalanceSchema>;
 

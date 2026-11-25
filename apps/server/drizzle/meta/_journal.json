@@ -71,6 +71,20 @@
       "when": 1795558488748,
       "tag": "0009_volts_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1795593262219,
+      "tag": "0010_volts_operator_grant",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795593464147,
+      "tag": "0011_inventory",
+      "breakpoints": true
     }
   ]
 }

@@ -153,7 +153,7 @@ it.each([1, 2])(
             }),
           ),
         });
-        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(10);
+        expect(db.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(12);
         assertOwnedForeignKeys(db);
       } finally {
         await app.close();

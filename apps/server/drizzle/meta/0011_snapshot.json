@@ -1,0 +1,1436 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "1bd06bb0-6458-4bcb-a61a-9ecda841564f",
+  "prevId": "a703a9e7-92ab-4005-86a1-0934514d05e5",
+  "tables": {
+    "account_status": {
+      "name": "account_status",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tier": {
+          "name": "tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'normal'"
+        },
+        "vip": {
+          "name": "vip",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'user'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "account_status_user_id_users_id_fk": {
+          "name": "account_status_user_id_users_id_fk",
+          "tableFrom": "account_status",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "account_status_tier": {
+          "name": "account_status_tier",
+          "value": "\"account_status\".\"tier\" IN ('normal', 'premium', 'pro')"
+        },
+        "account_status_vip": {
+          "name": "account_status_vip",
+          "value": "\"account_status\".\"vip\" IN (0, 1)"
+        },
+        "account_status_role": {
+          "name": "account_status_role",
+          "value": "\"account_status\".\"role\" IN ('user', 'admin')"
+        }
+      }
+    },
+    "inventory": {
+      "name": "inventory",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purchase_request_id": {
+          "name": "purchase_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "acquired_at": {
+          "name": "acquired_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "inventory_owner_purchase_request_unique": {
+          "name": "inventory_owner_purchase_request_unique",
+          "columns": [
+            "user_id",
+            "purchase_request_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "inventory_user_id_users_id_fk": {
+          "name": "inventory_user_id_users_id_fk",
+          "tableFrom": "inventory",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inventory_user_id_item_id_pk": {
+          "columns": [
+            "user_id",
+            "item_id"
+          ],
+          "name": "inventory_user_id_item_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "inventory_source": {
+          "name": "inventory_source",
+          "value": "\"inventory\".\"source\" IN ('shop')"
+        },
+        "inventory_shop_request": {
+          "name": "inventory_shop_request",
+          "value": "\"inventory\".\"source\" <> 'shop' OR \"inventory\".\"purchase_request_id\" IS NOT NULL"
+        },
+        "inventory_acquired_at": {
+          "name": "inventory_acquired_at",
+          "value": "typeof(\"inventory\".\"acquired_at\") = 'integer' AND \"inventory\".\"acquired_at\" >= 0"
+        }
+      }
+    },
+    "profiles": {
+      "name": "profiles",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_json": {
+          "name": "profile_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "profiles_user_id_users_id_fk": {
+          "name": "profiles_user_id_users_id_fk",
+          "tableFrom": "profiles",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "rides": {
+      "name": "rides",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt_json": {
+          "name": "receipt_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "assessment_json": {
+          "name": "assessment_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "summary_json": {
+          "name": "summary_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "export_tcx": {
+          "name": "export_tcx",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "export_hash": {
+          "name": "export_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "export_version": {
+          "name": "export_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "uploaded_at": {
+          "name": "uploaded_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "distance_m": {
+          "name": "distance_m",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rides_owner_id_idx": {
+          "name": "rides_owner_id_idx",
+          "columns": [
+            "user_id",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "rides_user_id_users_id_fk": {
+          "name": "rides_user_id_users_id_fk",
+          "tableFrom": "rides",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "strava_connections": {
+      "name": "strava_connections",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "athlete_id": {
+          "name": "athlete_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "encrypted_tokens": {
+          "name": "encrypted_tokens",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_expires_at": {
+          "name": "access_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revoke_lease_until": {
+          "name": "revoke_lease_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "handoff_hash": {
+          "name": "handoff_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "binding_hash": {
+          "name": "binding_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirm_by": {
+          "name": "confirm_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "generation": {
+          "name": "generation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "token_revision": {
+          "name": "token_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "credential_state": {
+          "name": "credential_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'available'"
+        },
+        "work_owner": {
+          "name": "work_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "work_kind": {
+          "name": "work_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "work_until": {
+          "name": "work_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "authorization_hint_revision": {
+          "name": "authorization_hint_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "authorization_checked_revision": {
+          "name": "authorization_checked_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "authorization_check_after": {
+          "name": "authorization_check_after",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "strava_connections_athlete_unique": {
+          "name": "strava_connections_athlete_unique",
+          "columns": [
+            "athlete_id"
+          ],
+          "isUnique": true
+        },
+        "strava_connections_handoff_unique": {
+          "name": "strava_connections_handoff_unique",
+          "columns": [
+            "handoff_hash"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "strava_connections_user_id_users_id_fk": {
+          "name": "strava_connections_user_id_users_id_fk",
+          "tableFrom": "strava_connections",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "strava_connection_state": {
+          "name": "strava_connection_state",
+          "value": "(\"strava_connections\".\"status\" = 'pending' AND \"strava_connections\".\"handoff_hash\" IS NOT NULL AND \"strava_connections\".\"binding_hash\" IS NOT NULL AND \"strava_connections\".\"confirm_by\" IS NOT NULL) OR (\"strava_connections\".\"status\" IN ('connected', 'revocation_pending') AND \"strava_connections\".\"handoff_hash\" IS NULL AND \"strava_connections\".\"binding_hash\" IS NULL AND \"strava_connections\".\"confirm_by\" IS NULL)"
+        },
+        "strava_connection_scope": {
+          "name": "strava_connection_scope",
+          "value": "\"strava_connections\".\"scope\" = 'activity:write'"
+        },
+        "strava_credential_state": {
+          "name": "strava_credential_state",
+          "value": "credential_state IN ('available','refreshing','uncertain','reauthorization_required')"
+        },
+        "strava_work_kind": {
+          "name": "strava_work_kind",
+          "value": "work_kind IN ('refresh','submit','poll','revoke')"
+        }
+      }
+    },
+    "strava_deliveries": {
+      "name": "strava_deliveries",
+      "columns": {
+        "delivery_id": {
+          "name": "delivery_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ride_id": {
+          "name": "ride_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "authority": {
+          "name": "authority",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "progress": {
+          "name": "progress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "strava_deliveries_owner_ride": {
+          "name": "strava_deliveries_owner_ride",
+          "columns": [
+            "user_id",
+            "ride_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "strava_deliveries_user_id_users_id_fk": {
+          "name": "strava_deliveries_user_id_users_id_fk",
+          "tableFrom": "strava_deliveries",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "strava_delivery_authority_kind": {
+          "name": "strava_delivery_authority_kind",
+          "value": "json_valid(authority) AND COALESCE(json_extract(authority,'$.kind') IN ('consented','stopped'),0)"
+        },
+        "strava_delivery_progress_kind": {
+          "name": "strava_delivery_progress_kind",
+          "value": "json_valid(progress) AND COALESCE(json_extract(progress,'$.kind') IN ('queued','preparing','submitting','submission_unknown','processing','delivered','submission_rejected','processing_rejected'),0)"
+        },
+        "strava_delivery_own_ride": {
+          "name": "strava_delivery_own_ride",
+          "value": "COALESCE(json_extract(authority,'$.consent.rideId') = ride_id AND json_type(authority,'$.consent') = 'object',0)"
+        },
+        "strava_delivery_authority_state": {
+          "name": "strava_delivery_authority_state",
+          "value": "COALESCE(CASE json_extract(authority,'$.kind') WHEN 'consented' THEN json_type(authority,'$.consentedAtMs') = 'integer' WHEN 'stopped' THEN json_type(authority,'$.stoppedAtMs') = 'integer' AND json_extract(authority,'$.reason') IN ('disconnect','credentials','policy') END,0)"
+        },
+        "strava_delivery_progress_state": {
+          "name": "strava_delivery_progress_state",
+          "value": "COALESCE(CASE json_extract(progress,'$.kind') WHEN 'queued' THEN json_type(progress,'$.notBeforeMs') = 'integer' WHEN 'preparing' THEN json_type(progress,'$.owner') = 'text' AND json_type(progress,'$.leaseUntilMs') = 'integer' WHEN 'submitting' THEN json_type(progress,'$.attemptId') = 'text' AND json_type(progress,'$.startedAtMs') = 'integer' AND json_type(progress,'$.leaseUntilMs') = 'integer' WHEN 'submission_unknown' THEN json_type(progress,'$.attemptId') = 'text' AND json_extract(progress,'$.reason') IN ('response_lost','crash','protocol') WHEN 'processing' THEN json_type(progress,'$.nextPollAtMs') = 'integer' AND json_extract(progress,'$.issue') IN ('none','authorization','rate_limit','network','protocol') WHEN 'delivered' THEN json_type(progress,'$.activityId') = 'text' AND json_type(progress,'$.confirmedAtMs') = 'integer' WHEN 'submission_rejected' THEN json_extract(progress,'$.reason') IN ('authorization','rate_limit','file','provider') WHEN 'processing_rejected' THEN json_extract(progress,'$.reason') = 'provider_error' END,0)"
+        },
+        "strava_delivery_receipt": {
+          "name": "strava_delivery_receipt",
+          "value": "CASE WHEN json_extract(progress,'$.kind') IN ('processing','delivered','processing_rejected') THEN COALESCE(json_type(progress,'$.receipt.uploadId') = 'text' AND json_type(progress,'$.receipt.externalId') = 'text',0) ELSE 1 END"
+        }
+      }
+    },
+    "strava_rate_budget": {
+      "name": "strava_rate_budget",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "short_reset": {
+          "name": "short_reset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "day_reset": {
+          "name": "day_reset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "short_limit": {
+          "name": "short_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "day_limit": {
+          "name": "day_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "read_short_limit": {
+          "name": "read_short_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "read_day_limit": {
+          "name": "read_day_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "short_usage": {
+          "name": "short_usage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "day_usage": {
+          "name": "day_usage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "read_short_usage": {
+          "name": "read_short_usage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "read_day_usage": {
+          "name": "read_day_usage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "short_pending": {
+          "name": "short_pending",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "day_pending": {
+          "name": "day_pending",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "read_short_pending": {
+          "name": "read_short_pending",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "read_day_pending": {
+          "name": "read_day_pending",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "blocked_until": {
+          "name": "blocked_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "strava_rate_singleton": {
+          "name": "strava_rate_singleton",
+          "value": "\"strava_rate_budget\".\"id\" = 1"
+        }
+      }
+    },
+    "strava_transactions": {
+      "name": "strava_transactions",
+      "columns": {
+        "state_hash": {
+          "name": "state_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "binding_hash": {
+          "name": "binding_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        }
+      },
+      "indexes": {
+        "strava_transactions_user_unique": {
+          "name": "strava_transactions_user_unique",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "strava_transactions_user_id_users_id_fk": {
+          "name": "strava_transactions_user_id_users_id_fk",
+          "tableFrom": "strava_transactions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "volts_ledger": {
+      "name": "volts_ledger",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "delta_volts": {
+          "name": "delta_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ref_id": {
+          "name": "ref_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reward_day": {
+          "name": "reward_day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_tick": {
+          "name": "start_tick",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "end_tick": {
+          "name": "end_tick",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "candidate_volts": {
+          "name": "candidate_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cumulative_work_volts": {
+          "name": "cumulative_work_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cumulative_climb_volts": {
+          "name": "cumulative_climb_volts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cumulative_facts_json": {
+          "name": "cumulative_facts_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "volts_ledger_owner_idempotency_unique": {
+          "name": "volts_ledger_owner_idempotency_unique",
+          "columns": [
+            "user_id",
+            "idempotency_key"
+          ],
+          "isUnique": true
+        },
+        "volts_ledger_ride_start_unique": {
+          "name": "volts_ledger_ride_start_unique",
+          "columns": [
+            "ref_id",
+            "start_tick"
+          ],
+          "isUnique": true,
+          "where": "\"volts_ledger\".\"reason\" = 'ride_reward'"
+        },
+        "volts_ledger_ride_end_unique": {
+          "name": "volts_ledger_ride_end_unique",
+          "columns": [
+            "ref_id",
+            "end_tick"
+          ],
+          "isUnique": true,
+          "where": "\"volts_ledger\".\"reason\" = 'ride_reward'"
+        },
+        "volts_ledger_owner_day_reason_idx": {
+          "name": "volts_ledger_owner_day_reason_idx",
+          "columns": [
+            "user_id",
+            "reward_day",
+            "reason"
+          ],
+          "isUnique": false
+        },
+        "volts_ledger_owner_created_id_idx": {
+          "name": "volts_ledger_owner_created_id_idx",
+          "columns": [
+            "user_id",
+            "created_at",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "volts_ledger_user_id_users_id_fk": {
+          "name": "volts_ledger_user_id_users_id_fk",
+          "tableFrom": "volts_ledger",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "volts_ledger_safe_delta": {
+          "name": "volts_ledger_safe_delta",
+          "value": "typeof(\"volts_ledger\".\"delta_volts\") = 'integer' AND \"volts_ledger\".\"delta_volts\" BETWEEN -9007199254740991 AND 9007199254740991"
+        },
+        "volts_ledger_reason": {
+          "name": "volts_ledger_reason",
+          "value": "\"volts_ledger\".\"reason\" IN ('ride_reward', 'purchase', 'operator_grant')"
+        },
+        "volts_ledger_ride_reward": {
+          "name": "volts_ledger_ride_reward",
+          "value": "\"volts_ledger\".\"reason\" <> 'ride_reward' OR (\"volts_ledger\".\"reward_day\" IS NOT NULL AND \"volts_ledger\".\"start_tick\" IS NOT NULL AND \"volts_ledger\".\"end_tick\" IS NOT NULL AND \"volts_ledger\".\"candidate_volts\" IS NOT NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NOT NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NOT NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NOT NULL AND \"volts_ledger\".\"delta_volts\" >= 0)"
+        },
+        "volts_ledger_purchase": {
+          "name": "volts_ledger_purchase",
+          "value": "\"volts_ledger\".\"reason\" <> 'purchase' OR (\"volts_ledger\".\"reward_day\" IS NULL AND \"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL AND \"volts_ledger\".\"candidate_volts\" IS NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NULL AND \"volts_ledger\".\"delta_volts\" < 0)"
+        },
+        "volts_ledger_operator_grant": {
+          "name": "volts_ledger_operator_grant",
+          "value": "\"volts_ledger\".\"reason\" <> 'operator_grant' OR (\"volts_ledger\".\"reward_day\" IS NULL AND \"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL AND \"volts_ledger\".\"candidate_volts\" IS NULL AND \"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL AND \"volts_ledger\".\"cumulative_facts_json\" IS NULL AND \"volts_ledger\".\"delta_volts\" > 0)"
+        },
+        "volts_ledger_ticks": {
+          "name": "volts_ledger_ticks",
+          "value": "(\"volts_ledger\".\"start_tick\" IS NULL AND \"volts_ledger\".\"end_tick\" IS NULL) OR (typeof(\"volts_ledger\".\"start_tick\") = 'integer' AND \"volts_ledger\".\"start_tick\" BETWEEN 0 AND 9007199254740991 AND typeof(\"volts_ledger\".\"end_tick\") = 'integer' AND \"volts_ledger\".\"end_tick\" BETWEEN 0 AND 9007199254740991 AND \"volts_ledger\".\"end_tick\" > \"volts_ledger\".\"start_tick\")"
+        },
+        "volts_ledger_candidate_volts": {
+          "name": "volts_ledger_candidate_volts",
+          "value": "\"volts_ledger\".\"candidate_volts\" IS NULL OR (typeof(\"volts_ledger\".\"candidate_volts\") = 'integer' AND \"volts_ledger\".\"candidate_volts\" BETWEEN 0 AND 9007199254740991)"
+        },
+        "volts_ledger_cumulative_volts": {
+          "name": "volts_ledger_cumulative_volts",
+          "value": "(\"volts_ledger\".\"cumulative_work_volts\" IS NULL AND \"volts_ledger\".\"cumulative_climb_volts\" IS NULL) OR (typeof(\"volts_ledger\".\"cumulative_work_volts\") = 'integer' AND \"volts_ledger\".\"cumulative_work_volts\" BETWEEN 0 AND 9007199254740991 AND typeof(\"volts_ledger\".\"cumulative_climb_volts\") = 'integer' AND \"volts_ledger\".\"cumulative_climb_volts\" BETWEEN 0 AND 9007199254740991)"
+        }
+      }
+    },
+    "auth_identities": {
+      "name": "auth_identities",
+      "columns": {
+        "issuer": {
+          "name": "issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "auth_identities_user_id_users_id_fk": {
+          "name": "auth_identities_user_id_users_id_fk",
+          "tableFrom": "auth_identities",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "auth_identities_issuer_subject_pk": {
+          "columns": [
+            "issuer",
+            "subject"
+          ],
+          "name": "auth_identities_issuer_subject_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "login_tokens": {
+      "name": "login_tokens",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "oidc_handoffs": {
+      "name": "oidc_handoffs",
+      "columns": {
+        "code_hash": {
+          "name": "code_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "binding_hash": {
+          "name": "binding_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "link_issuer": {
+          "name": "link_issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_subject": {
+          "name": "link_subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_session_hash": {
+          "name": "link_session_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "oidc_handoffs_expiry": {
+          "name": "oidc_handoffs_expiry",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "oidc_handoffs_user_id_users_id_fk": {
+          "name": "oidc_handoffs_user_id_users_id_fk",
+          "tableFrom": "oidc_handoffs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "oidc_transactions": {
+      "name": "oidc_transactions",
+      "columns": {
+        "state_hash": {
+          "name": "state_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "link_user_id": {
+          "name": "link_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_session_hash": {
+          "name": "link_session_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "binding_hash": {
+          "name": "binding_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "verifier": {
+          "name": "verifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "oidc_transactions_expiry": {
+          "name": "oidc_transactions_expiry",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "sessions": {
+      "name": "sessions",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
