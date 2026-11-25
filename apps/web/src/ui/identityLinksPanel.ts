@@ -11,6 +11,8 @@ function linkedItems(view: IdentityLinksView): HTMLLIElement[] {
   });
 }
 
+const STATUS_ID = "identity-links-status";
+
 function connectButtons(
   view: IdentityLinksView,
   links: Readonly<Pick<IdentityLinks, "connect">>,
@@ -22,6 +24,14 @@ function connectButtons(
     button.type = "button";
     button.textContent = `Mit ${provider.displayName} verbinden`;
     button.disabled = view.busy;
+
+    // A tab-only session stays focusable so keyboard and screen-reader users reach the reason;
+    // `connect` refuses it before any request or navigation.
+    if (!view.linkable) {
+      button.setAttribute("aria-disabled", "true");
+      button.setAttribute("aria-describedby", STATUS_ID);
+    }
+
     button.addEventListener("click", () => {
       void links.connect(provider.id);
     });
@@ -44,6 +54,7 @@ export function mountIdentityLinksPanel(
   section.setAttribute("aria-label", "Verbundene Anmeldungen");
   actions.setAttribute("role", "group");
   actions.setAttribute("aria-label", "Weitere Anmeldung verbinden");
+  status.id = STATUS_ID;
   status.setAttribute("role", "status");
   section.hidden = true;
   status.hidden = true;
