@@ -194,6 +194,10 @@ async function verifyUpdateShortcut({ dist, page }: Fixture): Promise<void> {
 
   await publishRelease(dist);
   await page.reload();
+  // Chromium defers its own update check after a navigation; ask for it like a returning tab would.
+  await page.evaluate(() =>
+    navigator.serviceWorker.getRegistration().then((registration) => registration?.update()),
+  );
   await shortcut.waitFor({ state: "visible" });
   expect(await page.locator('meta[name="update-marker"]').count()).toBe(0);
 
@@ -201,8 +205,31 @@ async function verifyUpdateShortcut({ dist, page }: Fixture): Promise<void> {
 
   const apply = page.getByRole("button", { name: "Jetzt aktualisieren", exact: true });
 
+  const warning =
+    "Eine neue Version ist bereit. Aktualisieren lädt die Seite neu und verwirft eine laufende Aufnahme.";
+
   expect(await page.getByRole("dialog", { name: "Fahrtmenü" }).isVisible()).toBe(true);
-  expect(await apply.evaluate((element) => element === document.activeElement)).toBe(true);
+  expect(await shortcut.getAttribute("aria-haspopup")).toBe("dialog");
+  expect(
+    await page
+      .getByRole("group", { name: warning })
+      .evaluate((element) => element === document.activeElement),
+  ).toBe(true);
+  expect(await page.getByText(warning, { exact: true }).isVisible()).toBe(true);
+  // The reload button carries the recording warning as its accessible description.
+  expect(
+    await apply.evaluate((element) => {
+      const id = element.getAttribute("aria-describedby") ?? "";
+
+      return document.querySelector(`#${id}`)?.textContent ?? "";
+    }),
+  ).toBe(warning);
+
+  // A repeated Enter after the shortcut lands on the notice, not on the reload button.
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  expect(await page.locator('meta[name="update-marker"]').count()).toBe(0);
+  expect(await page.getByRole("dialog", { name: "Fahrtmenü" }).isVisible()).toBe(true);
 
   await Promise.all([page.waitForEvent("load"), apply.click()]);
   expect(await page.locator('meta[name="update-marker"]').count()).toBe(1);
