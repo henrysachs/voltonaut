@@ -243,13 +243,15 @@ Funktion:
 1. **Scan & Connect:** Button „Gerät hinzufügen" mit breiten Filtern (`acceptAllDevices: true` + lange `optionalServices`-Liste: `0x1826, 0x1818, 0x180D, 0x180F, 0x180A, 0x1816, 00000001-19ca-…, 0000fc82-…`). Zeigt Name, ID, Advertising-Daten (via `watchAdvertisements`: RSSI, manufacturerData hex, serviceData).
 2. **GATT-Explorer:** listet alle Primary Services → Characteristics mit Properties (read/write/writeWithoutResponse/notify/indicate) und Descriptors. Button pro Characteristic: Read, Subscribe, Write (Hex- oder ASCII-Eingabe).
 3. **Logger:** jede Notification/Indication/Read/Write als Zeile `{tMs (performance.now), device, service, char, dir: 'rx'|'tx', hex, ascii, decoded?}`; Filter und Pausieren; Marker-Button („Jetzt drücke ich: rechts hoch") schreibt eine Annotation in den Log.
-4. **Presets:** „Zwift-Controller-Handshake" (subscribe 02+04, write „RideOn"), „FTMS Request Control + Sim 0 %", „FTMS Sim 5 %".
+4. **Presets:** „Zwift-Controller-Handshake" (subscribe 02+04, write „RideOn"), „FTMS Request Control + Start + Sim 0 %", „FTMS Sim 5 %".
 5. **Live-Decoder:** wenn bekannter Parser vorhanden (FTMS, HRS, Zwift 0x23/0x37/0x07), dekodierte Werte daneben anzeigen; Bitmap als 32 Kästchen, die beim Drücken rot werden.
 6. **Export:** JSON-Download `{ meta: {ua, date, deviceName, firmware?}, gatt: [...], log: [...] }` → wird als Fixture unter `fixtures/ble/` eingecheckt.
 
 ### Ursprüngliche Mapping-Prozedur
 
 Die digitale Tastenvermessung in Schritten 4 und 5 ist für beide Play-Griffe abgeschlossen. Die vorhandenen Captures reichen als Regressionseingabe. Keine erneute Tastenumfrage. Firmware, physische Analogkalibrierung, Trainer und Pulsgurt bleiben getrennte Hardwarethemen.
+
+Softwarestand [E0-12](specs/E0-12-lab-control-procedure.md): FTMS-Presets laufen über dieselbe `ControlProcedure` wie die Rollenschaltung: exakter Opcode, höchstens ein offenes Verfahren, 3-s-Frist. Request Control bestätigt wie die Fahrt `00` → `07` → `11`. Fehlende oder verspätete Antworten, Fehlercodes, Status `0xFF`/`0x01`, Disconnect und Rohwrites auf `0x2AD9` sperren weitere Presets bis zur Neuverbindung. Der Mitschnitt zeichnet `0x2AD9` weiter auf. Explorer-Writes bleiben roh.
 
 Softwarestand [E1-04](specs/E1-04-multidevice-lab.md): Eine Geräteliste zeigt den Zustand jeder Verbindung. Die Detailauswahl beendet keine Hintergrundaufnahme. Firmware, Notizen und JSON-Export gehören jeweils zum ausgewählten Gerät. Eine erneute native Auswahl desselben Geräts öffnet dessen vorhandene Details, ohne erneut GATT zu verbinden. Trainer und zwei gleichnamige Griffe sind mit drei nativen Browser-Fakes geprüft. Der gleichzeitige Betrieb echter Geräte bleibt offen.
 

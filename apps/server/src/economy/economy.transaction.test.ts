@@ -5,7 +5,8 @@ import {
   VoltsRideRangeCommandSchema,
   type VoltsDebitReceipt,
 } from "@voltonaut/shared";
-import { createTestApp, getDatabase, loginTestUser } from "../testing/test-app.spec.js";
+import { createTestApp, getDatabase } from "../testing/test-app.spec.js";
+import { seedOwners } from "../testing/migration-harness.spec.js";
 import type { VoltsLedgerTransaction } from "./economy.codec.js";
 import { EconomyService } from "./economy.service.js";
 
@@ -19,7 +20,7 @@ afterEach(async () => {
 it("rolls back a debit when the transaction callback throws", async () => {
   const testApp = await createTestApp({ clock: { nowMs: () => 0 } });
   cleanup.add(() => testApp.app.close());
-  const owner = await loginTestUser(testApp.app, testApp.mail, "owner@example.com");
+  seedOwners(getDatabase(testApp.app), [{ id: "owner" }]);
   const economy = testApp.app.get<EconomyService>(EconomyService);
 
   const reward = VoltsRideRangeCommandSchema.parse({
@@ -42,22 +43,22 @@ it("rolls back a debit when the transaction callback throws", async () => {
     amountVolts: 5,
   });
 
-  economy.creditRideRange(owner.user.id, reward);
+  economy.creditRideRange("owner", reward);
   const rows = getDatabase(testApp.app).$client.prepare("SELECT * FROM volts_ledger").all();
   let receiptInside: VoltsDebitReceipt | undefined;
   let balanceInside: number | undefined;
 
   expect(() =>
     economy.transaction((tx: Readonly<VoltsLedgerTransaction>) => {
-      receiptInside = tx.debit(owner.user.id, debit);
-      balanceInside = tx.balance(owner.user.id);
+      receiptInside = tx.debit("owner", debit);
+      balanceInside = tx.balance("owner");
       throw new Error("rollback probe");
     }),
   ).toThrow("rollback probe");
 
   expect(receiptInside).toMatchObject({ refId: "item-one", amountVolts: 5 });
   expect(balanceInside).toBe(15);
-  expect(economy.balance(owner.user.id)).toBe(20);
+  expect(economy.balance("owner")).toBe(20);
   expect(getDatabase(testApp.app).$client.prepare("SELECT * FROM volts_ledger").all()).toEqual(
     rows,
   );

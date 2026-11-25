@@ -6,6 +6,7 @@ import { AccountStatusSchema, AdminUsersSchema, VoltsGrantReceiptSchema } from "
 import { buildServerProcess } from "./testing/server-process.spec.js";
 import { createDatabase } from "./database/drizzle.provider.js";
 import { testServerConfig } from "./config.js";
+import { MIGRATIONS_DIR, seedOwners } from "./testing/migration-harness.spec.js";
 import { z } from "zod";
 
 const ResultSchema = z.object({ userId: z.string(), status: AccountStatusSchema });
@@ -66,14 +67,14 @@ function cli(
 
 it("runs the compiled production entrypoint without HTTP or scheduler and grants only explicit existing IDs", async () => {
   const path = join(directory, "operator.db");
-  const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
+  const config = testServerConfig({ database: { path, migrationsDir: MIGRATIONS_DIR } });
   const db = createDatabase(config);
+  seedOwners(db, [{ id: "existing", email: "operator@example.com", createdAt: 123 }]);
   db.$client
     .prepare(
-      "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('existing','operator@example.com',123,NULL)",
+      "INSERT INTO account_status (user_id,tier,vip,role) VALUES ('existing','pro',1,'user')",
     )
     .run();
-  db.$client.prepare("INSERT INTO account_status VALUES ('existing','pro',1,'user')").run();
   db.$client.close();
   const listed = await cli(path, "admin", "list");
   expect(AdminUsersSchema.parse(JSON.parse(listed.stdout)).users).toEqual([
@@ -106,16 +107,16 @@ it("runs the compiled production entrypoint without HTTP or scheduler and grants
   reopened.$client.close();
 }, 30000);
 
-const CREDIT_USERS = `
-  INSERT INTO users (id,email,created_at) VALUES ('existing','operator@example.com',123);
-  INSERT INTO users (id,email,created_at,deleted_at) VALUES ('deleted','gone@example.com',123,456);
-`;
+const CREDIT_USERS = [
+  { id: "existing", email: "operator@example.com", createdAt: 123 },
+  { id: "deleted", email: "gone@example.com", createdAt: 123, deletedAt: 456 },
+];
 
 it("credits Volts to an existing account once per reference through the compiled CLI", async () => {
   const path = join(directory, "credit.db");
-  const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
+  const config = testServerConfig({ database: { path, migrationsDir: MIGRATIONS_DIR } });
   const db = createDatabase(config);
-  db.$client.exec(CREDIT_USERS);
+  seedOwners(db, CREDIT_USERS);
   db.$client.close();
 
   const first = CreditSchema.parse(
