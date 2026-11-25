@@ -18,7 +18,7 @@ Ein frischer Clone enthält ein vollständig geprüftes Monorepo. Der Browser ze
 - [x] AK6 – `scripts/guard.mjs` erkennt Escape-Hatches, unzulässige TS-Overrides, gelockerte Configs und nicht registrierte Abhängigkeiten.
 - [x] AK7 – Vitest, Coverage, fast-check, Stryker und Playwright sind konfiguriert. `mise run check` schließt den Chromium-E2E-Test ein.
 - [x] AK8 – `packages/shared` enthält die Kerntypen aus `docs/01-architecture.md`, eine Zod-Basis und typisierte Event-Bus-Verträge.
-- [x] AK9 – `?sim=1` verbindet FakeTrainer, FakeHeartRate und FakePlay. Die Werte ändern sich über eine injizierbare Uhr. Pfeil hoch und Pfeil runter ändern den Gang ohne Doppel- oder Randfehler.
+- [x] AK9 – `?sim=1` verbindet FakeTrainer, FakeHeartRate und FakePlay. Die Werte ändern sich über eine injizierbare Uhr. Pfeil hoch und Pfeil runter ändern den Gang ohne Doppel- oder Randfehler. Seit [E0-15](E0-15-sim-ble-transport.md) laufen Sim-Trainer und Sim-Pulsgurt als Peripherie hinter `BleTransport`; FakePlay ist entfernt, geschaltet wird per Tastatur.
 - [x] AK10 – Das minimale HUD zeigt Watt, Kadenz, Puls und Gang. Ein Playwright-Test beweist laufende Werte und beide Schaltrichtungen im echten Browser.
 - [x] AK11 – `GET /healthz` liefert `status`, `version` und `uptimeS` gemäß Zod-Schema. Ein Supertest-Test prüft die echte NestJS-App.
 - [x] AK12 – `mise run build` baut Web und Server. `pnpm --filter @voltonaut/server deploy --prod ...` erzeugt ein eigenständiges Produktionsverzeichnis.
