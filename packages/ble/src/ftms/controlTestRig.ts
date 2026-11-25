@@ -130,6 +130,12 @@ export class ControlTestRig {
       barrier.release();
     };
   }
+  /** Grade field (0.01 % units) of every written 0x11, in order. */
+  simGrades(): readonly number[] {
+    return this.writes
+      .filter((write) => write.opcode === 0x11)
+      .map((write) => bytesToDataView(write.bytes).getInt16(3, true));
+  }
   lost(opcode = 0xff): void {
     this.listeners.get(FITNESS_MACHINE_STATUS)?.(bytesToDataView(Uint8Array.from([opcode])));
   }

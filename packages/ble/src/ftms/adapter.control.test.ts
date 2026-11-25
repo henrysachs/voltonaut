@@ -18,7 +18,7 @@ async function ride(
 ): Promise<void> {
   if (samples === 0) return;
   r.bikeData(90);
-  r.adapter.control.forward([]);
+  r.adapter.control.forward({ paused: false, commands: [] });
   await r.advance(stepS);
   await ride(r, samples - 1, stepS);
 }
@@ -44,7 +44,7 @@ async function enabled(): Promise<TrainerAdapterRig> {
 it("sends one forwarded engine target exactly once, only after explicit enable", async () => {
   const r = await connected();
   r.bikeData(90);
-  r.adapter.control.forward([CLIMB]);
+  r.adapter.control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(0.5);
   expect(r.writes).toEqual([]);
   expect(r.samples.at(-1)).toMatchObject({ cadenceRpm: 90, powerW: 244 });
@@ -53,7 +53,7 @@ it("sends one forwarded engine target exactly once, only after explicit enable",
   await r.advance(0.25);
   r.bikeData(90);
   await r.advance(0.25);
-  r.adapter.control.forward([]);
+  r.adapter.control.forward({ paused: false, commands: [] });
 
   await ride(r, 8, 0.1);
 
@@ -65,10 +65,10 @@ it("reads cadence from its own bike data: stale or zero cadence never writes", a
   const r = await enabled();
   r.bikeData(90);
   await r.advance(1.6);
-  r.adapter.control.forward([CLIMB]);
+  r.adapter.control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(0.5);
   r.bikeData(0);
-  r.adapter.control.forward([{ ...CLIMB, gradePct: 6 }]);
+  r.adapter.control.forward({ paused: false, commands: [{ ...CLIMB, gradePct: 6 }] });
   await r.advance(0.5);
   expect(r.simWrites()).toEqual([0]);
 });
@@ -76,15 +76,15 @@ it("reads cadence from its own bike data: stale or zero cadence never writes", a
 it("sends the held target when pedaling resumes, but not after the engine went silent", async () => {
   const r = await enabled();
   r.bikeData(0);
-  r.adapter.control.forward([CLIMB]);
+  r.adapter.control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(1);
-  r.adapter.control.forward([]);
+  r.adapter.control.forward({ paused: false, commands: [] });
   r.bikeData(90);
   await r.advance(0.25);
   expect(r.simWrites()).toEqual([0, 450]);
 
   r.bikeData(0);
-  r.adapter.control.forward([{ ...CLIMB, gradePct: 6 }]);
+  r.adapter.control.forward({ paused: false, commands: [{ ...CLIMB, gradePct: 6 }] });
   await r.advance(1.6);
   r.bikeData(90);
   await r.advance(0.5);
@@ -94,7 +94,7 @@ it("sends the held target when pedaling resumes, but not after the engine went s
 it("refuses control for an accelerated clock fixed at creation, without writes", async () => {
   const r = await connected(20);
   r.bikeData(90);
-  r.adapter.control.forward([CLIMB]);
+  r.adapter.control.forward({ paused: false, commands: [CLIMB] });
   await r.adapter.control.enable();
   r.bikeData(90);
   await r.advance(1);
@@ -105,7 +105,7 @@ it("refuses control for an accelerated clock fixed at creation, without writes",
 it("drops authority on disconnect and never resends the cached target until re-enabled", async () => {
   const r = await enabled();
   r.bikeData(90);
-  r.adapter.control.forward([CLIMB]);
+  r.adapter.control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(0.25);
   expect(r.simWrites()).toEqual([0, 450]);
 
@@ -128,7 +128,7 @@ it("drops authority on disconnect and never resends the cached target until re-e
   await r.adapter.control.enable();
   await r.advance(0.25);
   r.bikeData(90);
-  r.adapter.control.forward([]);
+  r.adapter.control.forward({ paused: false, commands: [] });
   await r.advance(0.25);
   expect(r.writes.slice(4).map((write) => write.opcode)).toEqual([0, 7, 0x11, 0x11]);
   expect(r.simWrites()).toEqual([0, 450, 0, 450]);
@@ -138,7 +138,7 @@ it("quarantines an unacknowledged target and never resends it on later samples",
   const r = await enabled();
   r.ack(false);
   r.bikeData(90);
-  r.adapter.control.forward([CLIMB]);
+  r.adapter.control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(0.25);
   expect(r.simWrites()).toEqual([0, 450]);
   await r.advance(3);
@@ -147,10 +147,100 @@ it("quarantines an unacknowledged target and never resends it on later samples",
     reconnectRequired: true,
   });
 
-  r.adapter.control.forward([{ ...CLIMB, gradePct: 6 }]);
+  r.adapter.control.forward({ paused: false, commands: [{ ...CLIMB, gradePct: 6 }] });
   await ride(r, 8, 0.25);
 
   await r.adapter.control.enable();
   expect(r.simWrites()).toEqual([0, 450]);
   expect(r.adapter.control.view().hardware).toBe("unknown");
+});
+
+const RESUME: SimulationCommand = { ...CLIMB, gradePct: 2 };
+
+type Rig = Readonly<Pick<TrainerAdapterRig, "adapter" | "advance" | "bikeData">>;
+
+function engine(r: Rig, paused: boolean, commands: readonly SimulationCommand[] = []): void {
+  r.adapter.control.forward({ paused, commands });
+}
+
+/** Auto-paused engine: zero cadence and an empty paused batch every 250 ms. */
+async function standStill(r: Rig, samples: number): Promise<void> {
+  if (samples === 0) return;
+  r.bikeData(0);
+  engine(r, true);
+  await r.advance(0.25);
+  await standStill(r, samples - 1);
+}
+
+/** First stroke reaches the trainer before the worker; only the resume batch may write. */
+async function pedalOff(
+  r: Readonly<Pick<TrainerAdapterRig, "adapter" | "advance" | "bikeData" | "simWrites">>,
+): Promise<void> {
+  const before = r.simWrites().length;
+  r.bikeData(90);
+  engine(r, true);
+  await r.advance(0.3);
+  expect(r.simWrites()).toHaveLength(before);
+  r.bikeData(90);
+  engine(r, false, [RESUME]);
+  await r.advance(0.25);
+}
+
+it("keeps the held target through a short cadence dropout while the engine keeps running", async () => {
+  const r = await enabled();
+  r.bikeData(90);
+  engine(r, false, [CLIMB]);
+  await r.advance(0.1);
+  engine(r, false, [{ ...CLIMB, gradePct: 6 }]);
+  r.bikeData(0);
+  await r.advance(0.3);
+  expect(r.simWrites()).toEqual([0, 450]);
+  r.bikeData(90);
+  engine(r, false);
+  await r.advance(0.25);
+  expect(r.simWrites()).toEqual([0, 450, 600]);
+});
+
+it("auto-pause → pedaling right after the pause starts never writes the pre-pause target", async () => {
+  const r = await connected();
+  r.bikeData(90);
+  engine(r, false, [CLIMB]);
+  await r.advance(0.25);
+  r.bikeData(0);
+  engine(r, false);
+  await r.adapter.control.enable();
+  await r.advance(0.25);
+  r.bikeData(0);
+  engine(r, true);
+  await r.advance(0.05);
+  await pedalOff(r);
+  expect(r.simWrites()).toEqual([0, 200]);
+});
+
+it("auto-pause → resume: first enable during the pause sends no 0x11 before the resume batch", async () => {
+  const r = await connected();
+  r.bikeData(90);
+  engine(r, false, [CLIMB]);
+  await r.advance(0.25);
+  await standStill(r, 24);
+  await r.adapter.control.enable();
+  await standStill(r, 4);
+  await pedalOff(r);
+  expect(r.simWrites()).toEqual([0, 200]);
+});
+
+it("auto-pause → resume: reconnect plus enable during the pause sends no 0x11 before the resume batch", async () => {
+  const r = await enabled();
+  r.bikeData(90);
+  engine(r, false, [CLIMB]);
+  await r.advance(0.25);
+  expect(r.simWrites()).toEqual([0, 450]);
+  await standStill(r, 24);
+  r.dropLink();
+  await standStill(r, 4);
+  expect(r.adapter.status()).toBe("ready");
+  await r.adapter.control.enable();
+  await standStill(r, 4);
+  await pedalOff(r);
+  expect(r.simWrites()).toEqual([0, 450, 0, 200]);
 });

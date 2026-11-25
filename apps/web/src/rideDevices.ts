@@ -16,6 +16,7 @@ import {
   type WebBluetoothCentral,
   type TrainerControl,
 } from "@voltonaut/ble";
+import type { RideSnapshot } from "@voltonaut/engine";
 import { mountConnectDialog } from "./ui/connect/dialog.js";
 
 const SIM_SAMPLES = createSimScript([
@@ -94,15 +95,26 @@ export function setupKeyboard(bus: EventBus): void {
   void keyboard.connect();
 }
 
+/** Receives each engine update as its snapshot, then that update's commands. */
 export interface RideDevices {
   readonly mount: () => void;
-  /** Every engine update's batch goes to the trainer, which owns all control timing. */
+  readonly onSnapshot: (snapshot: RideSnapshot) => void;
   readonly onCommands: (commands: readonly TrainerCommand[]) => void;
 }
 
-function forwardTo(control: Readonly<Pick<TrainerControl, "forward">>): RideDevices["onCommands"] {
-  return (commands) => {
-    control.forward(commands);
+/** Joins one engine update for the trainer, which owns all control timing. */
+function forwardTo(
+  control: Readonly<Pick<TrainerControl, "forward">>,
+): Pick<RideDevices, "onSnapshot" | "onCommands"> {
+  let paused = true;
+
+  return {
+    onSnapshot(snapshot) {
+      ({ paused } = snapshot);
+    },
+    onCommands(commands) {
+      control.forward({ paused, commands });
+    },
   };
 }
 
@@ -114,7 +126,7 @@ export function setupSimDevices(bus: EventBus, clockScale: number): RideDevices 
   const play = createFakePlay({ bus, clock });
 
   return {
-    onCommands: forwardTo(trainer.control),
+    ...forwardTo(trainer.control),
     mount() {
       mountConnectDialog(
         [
@@ -184,7 +196,7 @@ export function setupBluetoothDevices(bus: EventBus, clockScale: number): RideDe
   });
 
   return {
-    onCommands: forwardTo(trainer.control),
+    ...forwardTo(trainer.control),
     mount() {
       mountConnectDialog(
         [

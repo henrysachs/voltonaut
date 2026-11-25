@@ -26,15 +26,18 @@ it("Sim uses the production control/ACK state machine, never implicit success on
   expect(trainer.control.view().acknowledged?.gradePct).toBe(0);
   clock.advanceS(0.25);
   ticker.tick();
-  trainer.control.forward([
-    {
-      type: "simulation",
-      gradePct: 4,
-      windMps: 0,
-      crr: 0.004,
-      cwKgPerM: 0.51,
-    },
-  ]);
+  trainer.control.forward({
+    paused: false,
+    commands: [
+      {
+        type: "simulation",
+        gradePct: 4,
+        windMps: 0,
+        crr: 0.004,
+        cwKgPerM: 0.51,
+      },
+    ],
+  });
   await settle();
   expect(trainer.control.view().acknowledged?.gradePct).toBe(4);
   await trainer.disconnect();

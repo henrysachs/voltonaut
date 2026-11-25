@@ -4,4 +4,5 @@ export type {
   TrainerControlPanel,
   TrainerAuthority,
   TrainerControlView,
+  TrainerEngineUpdate,
 } from "./controlState.js";

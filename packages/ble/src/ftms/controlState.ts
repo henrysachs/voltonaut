@@ -35,13 +35,19 @@ export interface TrainerControlPanel {
   readonly subscribe: (listener: () => void) => Unsubscribe;
 }
 
+/** The part of one engine update the trainer needs: pause state and that update's commands. */
+export interface TrainerEngineUpdate {
+  readonly paused: boolean;
+  readonly commands: readonly TrainerCommand[];
+}
+
 /**
- * Callers forward every engine update's command batch, also when it is empty: each batch
- * proves the engine is alive. The trainer holds the latest simulation target and decides
- * from its own measurements whether it is still current; no caller resubmits or gates.
+ * Callers forward every engine update, also with an empty batch: each update proves the
+ * engine is alive and carries its pause state. The trainer holds the latest simulation
+ * target and decides from its own measurements whether it is still current.
  */
 export interface TrainerControl extends TrainerControlPanel {
-  readonly forward: (commands: readonly TrainerCommand[]) => void;
+  readonly forward: (update: TrainerEngineUpdate) => void;
 }
 
 export interface ControlOptions {

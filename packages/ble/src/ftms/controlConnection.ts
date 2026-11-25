@@ -1,4 +1,4 @@
-import type { DeviceEvent, EventBus, TrainerCommand } from "@voltonaut/shared";
+import type { DeviceEvent, EventBus } from "@voltonaut/shared";
 import type { GattProfile } from "../transport.js";
 import {
   FITNESS_MACHINE_CONTROL_POINT,
@@ -12,6 +12,7 @@ import {
   type ControlOptions,
   type TrainerControl,
   type TrainerControlView,
+  type TrainerEngineUpdate,
 } from "./controlState.js";
 import { FtmsControlSession } from "./controlSession.js";
 
@@ -43,8 +44,9 @@ class FtmsControl implements FtmsControlConnection {
   private session: FtmsControlSession | undefined;
   /** Latest engine target. The engine emits only changes, so it holds until replaced. */
   private engineTarget: SimulationCommand | undefined;
-  /** Wall time of the last forwarded engine batch; a stalled engine stops confirming. */
+  /** Wall time of the last forwarded engine update; a stalled engine stops confirming. */
   private engineS = -Infinity;
+
   private readonly listeners = new Set<() => void>();
 
   constructor(
@@ -91,7 +93,7 @@ class FtmsControl implements FtmsControlConnection {
 
   /**
    * The held engine target is offered to the session while the engine is alive. The session
-   * alone decides "riding" (fresh device cadence > 0), authority and the transport rate.
+   * alone decides "pedaling" (fresh device cadence > 0), authority and the transport rate.
    */
   private confirm(): void {
     if (this.engineTarget !== undefined && this.engineAlive())
@@ -107,8 +109,13 @@ class FtmsControl implements FtmsControlConnection {
     this.bus.publish(event);
   }
 
-  forward(commands: readonly TrainerCommand[]): void {
-    for (const command of commands) if (command.type === "simulation") this.engineTarget = command;
+  forward(update: TrainerEngineUpdate): void {
+    for (const command of update.commands)
+      if (command.type === "simulation") this.engineTarget = command;
+
+    // An auto-paused engine discards the held target, so a first pedal stroke cannot write
+    // a pre-pause target before the engine resumes; the engine's resume command sets it again.
+    if (update.paused) this.engineTarget = undefined;
     this.engineS = this.options.clock.nowS();
     this.confirm();
   }

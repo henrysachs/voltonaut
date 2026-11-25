@@ -76,15 +76,18 @@ it("separates requested grade from ACK and reports neutral/Stop only after confi
   await settle();
   r.clock.advanceS(0.25);
   r.ticker.tick();
-  r.trainer.control.forward([
-    {
-      type: "simulation",
-      gradePct: 6,
-      windMps: 0,
-      crr: 0.004,
-      cwKgPerM: 0.51,
-    },
-  ]);
+  r.trainer.control.forward({
+    paused: false,
+    commands: [
+      {
+        type: "simulation",
+        gradePct: 6,
+        windMps: 0,
+        crr: 0.004,
+        cwKgPerM: 0.51,
+      },
+    ],
+  });
   expect(r.document.find("Ziel: 6.00 %")).toBeDefined();
   expect(r.document.find("ACK: 0.00 % · Neutralziel bestätigt")).toBeDefined();
   await settle();

@@ -19,7 +19,7 @@ function rig() {
 it("is read-only before enable; subscribes before synchronous ACKs; writes with response", async () => {
   const r = rig();
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await r.advance(1);
   expect(r.writes).toEqual([]);
   expect(r.retained).toEqual([]);
@@ -34,29 +34,32 @@ it("is read-only before enable; subscribes before synchronous ACKs; writes with 
 it("requires fresh cadence, coalesces latest target, limits real wall rate without an extra delay", async () => {
   const r = rig();
   await r.control.enable();
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await r.advance(0.25);
   expect(r.writes).toHaveLength(3);
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await settle();
   expect(r.writes).toHaveLength(4);
-  r.control.forward([{ ...COMMAND, gradePct: 6 }]);
-  r.control.forward([{ ...COMMAND, gradePct: 7 }]);
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 6 }] });
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 7 }] });
   await r.advance(0.24);
   expect(r.writes).toHaveLength(4);
   await r.advance(0.01);
   expect(r.control.view().acknowledged?.gradePct).toBe(7);
   r.cadence(0);
-  r.control.forward([{ ...COMMAND, gradePct: 8 }]);
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 8 }] });
   await r.advance(1);
   expect(r.writes).toHaveLength(5);
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await settle();
-  r.control.forward([{ ...COMMAND, gradePct: 9 }]);
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 9 }] });
   await r.advance(2);
   expect(r.writes).toHaveLength(6);
+  // Zero cadence blocks 8 %; the running engine's held 8 % goes out once cadence returns.
+  // 4.5 % and 9 % coalesce behind the rate slot and are stale (> 1.5 s) when it opens.
+  expect(r.simGrades()).toEqual([0, 450, 700, 800]);
   r.control.dispose();
 });
 
@@ -66,8 +69,8 @@ it("keeps exactly one procedure outstanding and distinguishes target from ACK", 
   await r.advance(0.25);
   r.ack(false);
   r.cadence(90);
-  r.control.forward([COMMAND]);
-  r.control.forward([{ ...COMMAND, gradePct: 6 }]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 6 }] });
   await r.advance(0.5);
   expect(r.writes).toHaveLength(4);
   expect(r.control.view().target?.gradePct).toBe(6);
@@ -116,7 +119,7 @@ it("permission lost drops targets without retry or stop against another owner", 
   await r.control.enable();
   r.lost();
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await r.control.disable();
   await r.advance(5);
   expect(r.control.view().authority.kind).toBe("lost");
@@ -169,7 +172,7 @@ it("disable neutralizes and stops only owned control, then rejects automatic wri
   expect(r.control.view().authority.kind).toBe("inactive");
   expect(r.control.view().hardware).toBe("stopAcknowledged");
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await r.advance(1);
   expect(r.writes).toHaveLength(5);
   r.control.dispose();
@@ -183,7 +186,7 @@ it("rejects unsupported devices and accelerated native clocks without writes", a
   r.control.dispose();
   const fast = new ControlTestRig(20);
   fast.cadence(90);
-  fast.control.forward([COMMAND]);
+  fast.control.forward({ paused: false, commands: [COMMAND] });
   await fast.control.enable();
   await fast.advance(1);
   expect(fast.writes).toEqual([]);
@@ -267,9 +270,9 @@ it("disable during an uncertain simulation drops all queued targets without stop
   await r.advance(0.25);
   r.ack(false);
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await settle();
-  r.control.forward([{ ...COMMAND, gradePct: 8 }]);
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 8 }] });
   await r.control.disable();
   r.notify([0x80, 0x11, 1]);
   await r.control.enable();

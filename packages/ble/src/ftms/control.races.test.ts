@@ -69,7 +69,7 @@ it.each([
     await r.control.enable();
     await r.control.disable();
     r.cadence(90);
-    r.control.forward([COMMAND]);
+    r.control.forward({ paused: false, commands: [COMMAND] });
     await r.advance(5);
     expect(r.control.view()).toEqual(lost);
     expect(r.control.view().available).toBe(false);
@@ -84,9 +84,9 @@ it.each([0xff, 0x01])("does not restore a target ACK after status %s", async (st
   await r.advance(0.25);
   r.ack(false);
   r.cadence(90);
-  r.control.forward([COMMAND]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
   await settle();
-  r.control.forward([{ ...COMMAND, gradePct: 9 }]);
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 9 }] });
   r.notify([0x80, 0x11, 1]);
   r.lost(status);
   const lost = r.control.view();
@@ -166,8 +166,8 @@ it("drops pending and queued targets on loss", async () => {
   const release = r.holdWrites();
 
   r.cadence(90);
-  r.control.forward([COMMAND]);
-  r.control.forward([{ ...COMMAND, gradePct: 9 }]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 9 }] });
   await settle();
 
   r.lost();
@@ -193,8 +193,8 @@ it("drops pending and queued targets on write rejection", async () => {
   r.ack(false);
   r.failWrite();
   r.cadence(90);
-  r.control.forward([COMMAND]);
-  r.control.forward([{ ...COMMAND, gradePct: 9 }]);
+  r.control.forward({ paused: false, commands: [COMMAND] });
+  r.control.forward({ paused: false, commands: [{ ...COMMAND, gradePct: 9 }] });
   await settle();
   const failed = r.control.view();
   expect(failed.authority.kind).toBe("failed");
