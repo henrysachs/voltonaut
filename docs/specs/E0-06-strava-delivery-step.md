@@ -17,9 +17,9 @@ Ein fälliger Strava-Schritt (Upload, Verarbeitungspoll, Autorisierungshinweis) 
 - [x] AK5 – Ein verlorenes, fehlerhaftes oder ungültiges POST-Ergebnis bleibt `submission_unknown` und wird von keinem Besitzer erneut versendet (ADR-018, Glossar „Unklare Strava-Auslieferung“).
 - [x] AK6 – Sagt das dauerhafte Budget „warten“, entsteht kein Versuch. Der Auftrag ist bis zum Budgetzeitpunkt zurückgestellt, die Lease frei.
 - [x] AK7 – Ein bekannter Upload wird per Poll bestätigt. Upload und Poll sind über Header abgerechnet, ohne offene Reservierung.
-- [x] AK9 – Eine nicht entschlüsselbare Hinweisverbindung erhält vor der Entschlüsselung die 60-s-Sperrfrist. Eine zweite gesunde Hinweisverbindung wird in den folgenden Takten geprüft, ohne offene Reservierung. Der Test schlägt ohne die Korrektur fehl.
-- [x] AK10 – `StravaRateStore.release` zieht nur im Fenster der Reservierung ab und lässt die beobachtete Nutzung eines anderen Besitzers stehen (Unit-Tests).
 - [x] AK8 – Bestehende Scheduler-, Hinweis-, Race- und Loopback-Anbietertests laufen unverändert in ihren Aussagen. Sie verwenden nur die neue Verdrahtung (`step.checkNextHint` statt `authorization.tick`).
+- [x] AK9 – Eine nicht entschlüsselbare Hinweisverbindung erhält vor der Entschlüsselung die 60-s-Sperrfrist. Eine zweite gesunde Hinweisverbindung wird in den folgenden Takten geprüft, ohne offene Reservierung. Der Test schlägt ohne die Korrektur fehl.
+- [x] AK10 – `StravaRateStore.release` zieht Nutzung nur im kurzen und täglichen Fenster der Reservierung ab und lässt die beobachtete Nutzung eines anderen Besitzers stehen (Unit-Tests; je ein Test schlägt fehl, wenn die Fensterprüfung für kurzes bzw. tägliches Fenster entfällt).
 
 ## Testplan (`docs/10-testing.md`)
 
@@ -28,9 +28,9 @@ Ein fälliger Strava-Schritt (Upload, Verarbeitungspoll, Autorisierungshinweis) 
 | AK1      | Typecheck, Review                                               | `strava.delivery-step.ts`, `strava.scheduler.ts`                                                  |
 | AK2      | Typtest                                                         | `strava.delivery-step.test.ts`                                                                    |
 | AK3–AK7  | Integration: SQLite-Datei, zwei Verbindungen, Loopback-Anbieter | `strava.delivery-step.test.ts`, `strava.scheduler-fixture.spec.ts`, `strava.step-fixture.spec.ts` |
+| AK5, AK8 | Integration                                                     | `strava.upload-provider.test.ts`, `strava.scheduler*.test.ts`, `strava.authorization.test.ts`     |
 | AK9      | Integration                                                     | `strava.delivery-step.test.ts`                                                                    |
 | AK10     | Unit                                                            | `strava.rate-store.test.ts`                                                                       |
-| AK5, AK8 | Integration                                                     | `strava.upload-provider.test.ts`, `strava.scheduler*.test.ts`, `strava.authorization.test.ts`     |
 
 `strava.upload-provider.test.ts` spielt die Abfolge prepare → claim → dispatch → submit → submitted nicht mehr von Hand nach. Diese Tests laufen jetzt über `StravaDeliveryStep` mit echter gespeicherter Fahrt und echtem TCX. Der Mehrbesitzer-Nachweis „nie erneut senden“ liegt in `strava.delivery-step.test.ts`.
 

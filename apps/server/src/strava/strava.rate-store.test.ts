@@ -182,21 +182,45 @@ it("applies observed lower limits and Retry-After to hints and trusted work with
   });
 });
 
+const learnedLimits = new Headers({
+  "X-RateLimit-Limit": "100,1000",
+  "X-RateLimit-Usage": "0,0",
+  "X-ReadRateLimit-Limit": "100,1000",
+  "X-ReadRateLimit-Usage": "0,0",
+});
+
 it("releases an unsent reservation only inside the window it was taken in", () => {
   const { a, reopen } = fixture();
   const rates = new StravaRateStore(a.db, stravaTables);
+  rates.reserve("poll", 0);
+  rates.observe(learnedLimits, 200, 0, 0, "poll");
   expect(rates.reserve("poll", 1000)).toEqual({ kind: "reserved" });
-  rates.release("poll", 1000, 900001);
+  expect(rates.reserve("poll", 900001)).toEqual({ kind: "reserved" });
+  rates.release("poll", 1000, 900002);
   expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
-    shortReset: 1800000,
-    shortUsage: 0,
-    readShortUsage: 0,
-    shortPending: 0,
-    readShortPending: 0,
-    dayUsage: 0,
-    readDayUsage: 0,
-    dayPending: 0,
-    readDayPending: 0,
+    shortUsage: 1,
+    shortPending: 1,
+    readShortUsage: 1,
+    readShortPending: 1,
+    dayUsage: 2,
+    dayPending: 1,
+  });
+});
+
+it("keeps a new day's usage when a reservation from the previous day is released", () => {
+  const { a, reopen } = fixture();
+  const rates = new StravaRateStore(a.db, stravaTables);
+  rates.reserve("poll", 0);
+  rates.observe(learnedLimits, 200, 0, 0, "poll");
+  expect(rates.reserve("poll", 86399000)).toEqual({ kind: "reserved" });
+  expect(rates.reserve("poll", 86400001)).toEqual({ kind: "reserved" });
+  rates.release("poll", 86399000, 86400002);
+  expect(reopen().db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    dayReset: 172800000,
+    dayUsage: 1,
+    dayPending: 1,
+    readDayUsage: 1,
+    readDayPending: 1,
   });
 });
 
