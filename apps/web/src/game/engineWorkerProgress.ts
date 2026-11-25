@@ -6,7 +6,7 @@ import {
   type RideProgressProjector,
   type RiderProfile,
 } from "@voltonaut/shared";
-import { riderParamsFromProfile } from "@voltonaut/engine";
+import { PHYSICS_REVISION, riderParamsFromProfile } from "@voltonaut/engine";
 
 export interface EngineWorkerProgress {
   readonly projector: RideProgressProjector;
@@ -32,7 +32,7 @@ export function createEngineWorkerProgress({
       journalId: newId(),
       source,
       clockScale,
-      physicsRevision: "engine-v1",
+      physicsRevision: PHYSICS_REVISION,
       routeId,
       routeRevision: "1",
       physics: riderParamsFromProfile(profile),

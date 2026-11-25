@@ -1,9 +1,11 @@
 import {
+  applyJournalEntry,
   createEngine,
   createRoute,
+  PHYSICS_REVISION,
+  projectReplaySnapshot,
   TEST_LOOP,
   type Engine,
-  type RideSnapshot,
 } from "@voltonaut/engine";
 import {
   DEFAULT_RIDER_PROFILE,
@@ -21,53 +23,6 @@ export function replayEngine(): Engine {
   return createEngine({ route: createRoute(TEST_LOOP), profile: DEFAULT_RIDER_PROFILE });
 }
 
-function claim(snapshot: RideSnapshot): ReplayObservationV2["snapshot"] {
-  const {
-    worldPos: _worldPos,
-    headingRad: _heading,
-    trainerMode: _mode,
-    mode: _rideMode,
-    gear,
-    hrBpm,
-    ...rest
-  } = snapshot;
-
-  return { ...rest, gearIndex: gear.index, gearRatio: gear.ratio, hrBpm: hrBpm ?? null };
-}
-
-interface TrainerNotification {
-  type: "trainer.data";
-  tS: number;
-  powerW?: number;
-  cadenceRpm?: number;
-  speedMps?: number;
-}
-
-function applyLive(live: Engine, entry: RecordingEntryV2, clockScale: number): void {
-  if (entry[2] === "trainer") {
-    const event: TrainerNotification = { type: "trainer.data", tS: -999 };
-
-    if (entry[3] !== null) event.powerW = entry[3];
-
-    if (entry[4] !== null) event.cadenceRpm = entry[4];
-
-    if (entry[5] !== null) event.speedMps = entry[5];
-    live.ingest(event);
-  } else if (entry[2] === "hr") {
-    live.ingest({ type: "hr.data", tS: 999, bpm: entry[3] });
-  } else if (entry[2] === "shift") {
-    live.ingest({
-      type: "controller.button",
-      tS: 0,
-      button: entry[3],
-      pressed: true,
-      source: "synthetic",
-    });
-  } else if (entry[2] === "advance") {
-    live.advance(entry[3] * clockScale);
-  }
-}
-
 export function recordReplay(entries: readonly RecordingEntryV2[], clockScale = 1): RecordingV2 {
   const live = replayEngine();
   const observations: ReplayObservationV2[] = [];
@@ -75,12 +30,12 @@ export function recordReplay(entries: readonly RecordingEntryV2[], clockScale = 
   const commands: ReplayObservationV2["commands"][number][] = [];
 
   for (const entry of entries) {
-    applyLive(live, entry, clockScale);
+    applyJournalEntry(live, entry, clockScale);
 
     if (entry[2] === "boundary") {
       observations.push({
         boundarySeq: entry[0],
-        snapshot: claim(live.snapshot()),
+        snapshot: projectReplaySnapshot(live.snapshot()),
         events: [...events],
         commands: [...commands],
         gap: false,
@@ -99,7 +54,7 @@ export function recordReplay(entries: readonly RecordingEntryV2[], clockScale = 
     rideId: "12345678-1234-4234-8234-123456789abc",
     initializedAt: "2026-11-20T12:00:00.000Z",
     initialization: {
-      physicsRevision: "engine-v1",
+      physicsRevision: PHYSICS_REVISION,
       routeId: "test-loop",
       routeRevision: "1",
       profile: DEFAULT_RIDER_PROFILE,

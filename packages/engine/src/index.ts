@@ -21,3 +21,11 @@ export * from "./trainer/commands.js";
 export * from "./fun/itemBoxes.js";
 
 export * from "./internal/engine.js";
+
+export * from "./journal/revision.js";
+
+export * from "./journal/encode.js";
+
+export * from "./journal/apply.js";
+
+export * from "./journal/replaySnapshot.js";

@@ -1,7 +1,7 @@
 import { DEFAULT_RIDE_MODE, RIDE_MODE_IDS, RIDE_MODES, type RideMode } from "@voltonaut/shared";
 
-import type { EngineLink } from "../game/engine-link.js";
 import type { CaptureView, RecordingControls } from "../game/rideCaptureProtocol.js";
+import type { RideSession } from "../game/rideSession.js";
 
 /** Menu copy per ride mode; an empty hint shows nothing. */
 export const RIDE_MODE_COPY: Readonly<
@@ -29,9 +29,13 @@ export interface RideModeView {
   readonly setHint: (text: string) => void;
 }
 
+/** The slice of the ride session the picker reads and drives. */
 export interface RideModeLink {
-  readonly setMode: EngineLink["setMode"];
-  readonly recording: Pick<RecordingControls, "state" | "subscribe">;
+  readonly mode: RideSession["mode"];
+  readonly requestMode: RideSession["requestMode"];
+  /** Fires after every worker update and recording reply. */
+  readonly subscribe: RideSession["subscribe"];
+  readonly recording: Pick<RecordingControls, "state">;
 }
 
 /** A running or unreleased recording must not contain unreplayable mode effects (ADR-028). */
@@ -44,51 +48,49 @@ function available(mode: RideMode, locked: boolean): boolean {
 }
 
 /**
- * Binds the in-ride mode picker to the engine. The ride keeps running while the
- * menu is open; the worker independently refuses unrecordable modes during a recording.
+ * Binds the in-ride mode picker to the engine, which owns the mode (ADR-028 §5).
+ * The picker shows the mode of the engine's last tick, or a request the engine has
+ * not answered yet. A request a running recording made the worker refuse is dropped.
+ * The ride keeps running while the menu is open.
  */
 export function bindRideMode(view: RideModeView, link: RideModeLink): () => void {
-  let mode: RideMode = DEFAULT_RIDE_MODE;
+  let pending: RideMode | undefined;
 
-  const refresh = (capture: CaptureView): void => {
-    const locked = recordingLocked(capture);
+  const refresh = (): void => {
+    const locked = recordingLocked(link.recording.state());
+    const actual = link.mode() ?? DEFAULT_RIDE_MODE;
 
-    // A recording that reached the worker first made it ignore the request: follow the worker.
-    if (!available(mode, locked)) {
-      mode = DEFAULT_RIDE_MODE;
-      view.select(mode);
-      link.setMode(mode);
-    }
+    if (pending === actual || (pending !== undefined && !available(pending, locked)))
+      pending = undefined;
+
+    const shown = pending ?? actual;
+
+    view.select(shown);
 
     for (const id of RIDE_MODE_IDS) view.setEnabled(id, available(id, locked));
 
-    const hint = RIDE_MODE_COPY[mode].hint;
+    const hint = RIDE_MODE_COPY[shown].hint;
     const anyLocked = RIDE_MODE_IDS.some((id) => !available(id, locked));
 
     view.setHint(hint === "" && anyLocked ? UNRECORDABLE_LOCKED_HINT : hint);
   };
 
-  view.select(mode);
-  refresh(link.recording.state());
+  refresh();
 
   const stopChanges = view.onChange((requested) => {
-    if (!available(requested, recordingLocked(link.recording.state()))) {
-      view.select(mode);
-      refresh(link.recording.state());
-
-      return;
+    if (available(requested, recordingLocked(link.recording.state()))) {
+      pending = requested;
+      link.requestMode(requested);
     }
 
-    mode = requested;
-    link.setMode(requested);
-    refresh(link.recording.state());
+    refresh();
   });
 
-  const stopRecording = link.recording.subscribe(refresh);
+  const stopUpdates = link.subscribe(refresh);
 
   return () => {
     stopChanges();
-    stopRecording();
+    stopUpdates();
   };
 }
 
@@ -154,8 +156,9 @@ function modeView(fieldset: HTMLFieldSetElement, hint: HTMLElement): RideModeVie
 
       if (input !== undefined) input.disabled = !enabled;
     },
+    // Refreshes run on every worker update; rewriting an unchanged live region could re-announce it.
     setHint: (text) => {
-      hint.textContent = text;
+      if (hint.textContent !== text) hint.textContent = text;
     },
   };
 }
