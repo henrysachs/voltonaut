@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 export async function openGameMenu(
   page: Readonly<Pick<Page, "getByRole">>,
-  tab: "Profil" | "Aufnahmen" | "Konto" | "Strava" | "Garage / Shop",
+  tab: "Profil" | "Aufnahmen" | "Konto" | "Strava" | "App" | "Garage / Shop",
 ): Promise<void> {
   const menu = page.getByRole("dialog", { name: "Fahrtmenü" });
   const visible = await menu.isVisible();
