@@ -12,6 +12,7 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 | Property-based      | **fast-check**                                              | Invarianten über Zufallseingaben                                   | `check`                                                         |
 | Contract            | Zod-Schemas `packages/shared` + `fixtures/api/*`            | Client und Server sprechen dieselbe API                            | `check`                                                         |
 | Integration Server  | `@nestjs/testing` + Supertest + echte WS + SQLite in-memory | Module zusammen, inkl. Transaktionen                               | `check`                                                         |
+| Progress            | Vitest + Nest/SQLite + Memory-IDB + Playwright              | Consent, Offline-Outbox, Checkpoint-Annahme, Idempotenz            | `check`; echte IDB-Offlineprüfung bleibt offen                  |
 | E2E                 | Playwright, Sim-Modus                                       | Nutzerflüsse im echten Browser                                     | `check` (Chromium headless)                                     |
 | Visuelle Regression | Playwright `toHaveScreenshot`                               | 3D-Szenen, HUD, Garage                                             | `check`                                                         |
 | Performance-Budget  | Playwright + `renderer.info` + Frame-Timing                 | Draw Calls, Dreiecke, Speicher, JS-Frame-Zeit                      | `check` (deterministische Teile), `mise run perf` (fps manuell) |
@@ -53,6 +54,13 @@ Grundsatz: **Was ein Agent nicht maschinell beweisen kann, gilt als nicht erledi
 - Alle Requests/Responses/WS-Nachrichten sind Zod-Schemas in `packages/shared/src/api|ws`.
 - `fixtures/api/*.json`: Beispielnachrichten pro Endpunkt. Client-Test: API-Client parst jede Fixture. Server-Test: In Tests prüft ein Interceptor **jede ausgehende Antwort** gegen ihr Schema; zusätzlich E2E-Requests gegen die Fixtures.
 - Breaking Change eines Schemas ⇒ beide Seiten rot; Versionierung über `/v1` → `/v2`.
+
+### Progress
+
+- Shared-Tests prüfen lokale Batches mit höchstens 120 Facts/6 Sekunden und Serverbereiche mit höchstens 1200 Checkpoints/1200 Facts/60 Sekunden. Der Worker liefert gerundete Unix-Zeiten in Millisekunden; die Serverprüfung lehnt worker-relative Zeiten ab.
+- Memory-IDB-Tests prüfen Kapazität, Widerruf, Retry, Quittungen und den deterministischen 1200-Append-Probelauf. Der Probelauf läuft in einem eigenen Vitest-Projekt nach den übrigen Tests, damit fremde Builds seine 25-ms-p95- und 50-ms-Max-Schwelle nicht verfälschen. Ein Append validiert den offenen Batch nur einmal an der IndexedDB-Grenze; Hash, Fortsetzung und neue Zeilen arbeiten danach mit dem bereits geprüften Batch. Ein Playwright-Test prüft Sequenzindex und Persistenz nach Reload in echter IndexedDB. Echte Offline-Reload-Prüfungen bleiben offen.
+- Die Lieferung liest höchstens zehn ausstehende Zeilen pro Seite über den Primärschlüssel-Cursor. `prepareDelivery` versiegelt den offenen Batch und entfernt quittierte Zeilen über den Statusindex, ohne den ganzen Store zu lesen. `nextRetryAt` liest den frühesten automatischen Retry über den `account-retry`-Index. Ein ausdrücklicher Consent-Widerruf liest einmal alle ausstehenden Zeilen, um sie vollständig zu blockieren.
+- Nest-Tests mit echter SQLite-Datenbank prüfen Consent, Sessionbindung, Tickfolge, Belohnungstag, atomare Volts-Buchung, Konkurrenz und identische Präfix-Wiederholungen.
 
 ## 6. E2E (Playwright, Sim-Modus)
 

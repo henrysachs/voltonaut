@@ -218,7 +218,7 @@ it("preserves existing account and sessions on email collision without auto-link
   context.provider.control.subject = "local-test-subject";
   context.provider.control.email = "other-owner@example.com";
   db.$client
-    .prepare("INSERT INTO users VALUES (?, ?, 0, NULL)")
+    .prepare("INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, ?, 0, NULL)")
     .run(crypto.randomUUID(), "other-owner@example.com");
   expect((await login(context)).user.id).toBe(original.user.id);
   expect(db.$client.prepare("SELECT * FROM users").all()).toHaveLength(2);

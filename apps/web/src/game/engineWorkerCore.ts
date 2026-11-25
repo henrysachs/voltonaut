@@ -89,8 +89,9 @@ class WorkerDriver {
     // Modes without progress post no checkpoints (ADR-028).
     const progress = RIDE_MODES[snapshot.mode.kind].progress
       ? projectEngineWorkerProgress(actor.progress, {
-          startedAtMs,
-          endedAtMs: atMs,
+          startedAtMs:
+            startedAtMs === undefined ? undefined : Math.round(this.timeOriginMs + startedAtMs),
+          endedAtMs: Math.round(this.timeOriginMs + atMs),
           facts,
           paused: snapshot.paused,
           dataAgeS: snapshot.dataAgeS,

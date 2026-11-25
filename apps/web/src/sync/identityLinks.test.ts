@@ -1,7 +1,12 @@
 import { expect, it } from "vitest";
 import type { LinkedIdentitiesResponse, OidcLinkStartResponse, User } from "@voltonaut/shared";
 import type { SessionView } from "./applicationSession.js";
-import { IdentityLinks, type IdentityLinksLease, type IdentityLinksView } from "./identityLinks.js";
+import {
+  IdentityLinks,
+  TAB_ONLY_TEXT,
+  type IdentityLinksLease,
+  type IdentityLinksView,
+} from "./identityLinks.js";
 import { PrivateRequestError } from "./privateAuthTransport.js";
 
 const user: User = {
@@ -81,9 +86,9 @@ class Harness {
     });
   }
 
-  async signIn(): Promise<void> {
+  async signIn(persistent = true): Promise<void> {
     this.signedIn = true;
-    this.listener?.({ kind: "authenticated", user, persistent: true });
+    this.listener?.({ kind: "authenticated", user, persistent });
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
     });
@@ -105,6 +110,7 @@ it("shows connected logins and offers only providers that are not connected yet"
     available: [PROVIDERS[1]],
     message: "",
     busy: false,
+    linkable: true,
   });
   expect(harness.calls).toEqual(["list"]);
 });
@@ -148,4 +154,15 @@ it("drops a link code when no session could be confirmed", () => {
   expect(harness.calls).toEqual([]);
   expect(harness.last()?.kind).toBe("hidden");
   expect(harness.last()?.message).toMatch(/nicht abgeschlossen/u);
+});
+
+it("does not leave the tab to link while the session cannot be stored", async () => {
+  const harness = new Harness();
+  await harness.signIn(false);
+
+  expect(harness.last()).toMatchObject({ kind: "ready", linkable: false, message: TAB_ONLY_TEXT });
+  await harness.links.connect("authentik");
+  expect(harness.calls).toEqual(["list"]);
+  expect(harness.redirects).toEqual([]);
+  expect(harness.last()?.message).toBe(TAB_ONLY_TEXT);
 });

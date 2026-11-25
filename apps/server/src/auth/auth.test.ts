@@ -182,10 +182,14 @@ it("slides session expiry and never authenticates deleted accounts", async () =>
   nowMs += 29 * DAY_MS;
   expect(auth.validateSession(session.sessionToken, nowMs)?.userId).toBe(session.user.id);
   expect(auth.validateSession(session.sessionToken, nowMs + 30 * DAY_MS)).toBeUndefined();
+  const sessionHash = hashToken(session.sessionToken);
+  expect(auth.isSessionActive(sessionHash, nowMs)).toBe(true);
+  expect(auth.isSessionActive(sessionHash, nowMs + 30 * DAY_MS)).toBe(false);
   getDatabase(app)
     .$client.prepare("UPDATE users SET deleted_at = ? WHERE id = ?")
     .run(nowMs, session.user.id);
   expect(auth.validateSession(session.sessionToken, nowMs)).toBeUndefined();
+  expect(auth.isSessionActive(sessionHash, nowMs)).toBe(false);
   await request(httpServerOf(app))
     .post("/v1/auth/magic-link")
     .send({ email: session.user.email })
@@ -194,6 +198,27 @@ it("slides session expiry and never authenticates deleted accounts", async () =>
     .post("/v1/auth/session")
     .send({ loginToken: tokenFor(mail, session.user.email) })
     .expect(401);
+});
+
+it("keeps magic-link delivery failures indistinguishable for deleted and unknown addresses", async () => {
+  const { app, mail, config } = await setup();
+  const server = httpServerOf(app);
+  const session = await loginTestUser(app, mail, "deleted@example.com");
+  await request(server)
+    .delete("/v1/me")
+    .set(bearer(session.sessionToken))
+    .set("Origin", config.clientOrigin)
+    .send({ confirmation: session.user.email })
+    .expect(204);
+
+  mail.failNext();
+  await request(server)
+    .post("/v1/auth/magic-link")
+    .send({ email: "unknown@example.com" })
+    .expect(503);
+  mail.failNext();
+  await request(server).post("/v1/auth/magic-link").send({ email: session.user.email }).expect(503);
+  expect(getDatabase(app).$client.prepare("SELECT * FROM login_tokens").all()).toEqual([]);
 });
 
 it("returns authenticated account and owned rides but exposes no development mailbox", async () => {

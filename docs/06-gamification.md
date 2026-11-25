@@ -10,9 +10,11 @@ Der Client zeigt die laufende Entwicklung. Der Server prüft und bestätigt aufe
 
 Die abschnittsweise Prüfung muss Bruchteile, die bestehenden Rundungsregeln und das gemeinsame Tageslimit erhalten. Sim-Fahrten erhalten keine Kontobelohnungen. Eine BLE-Selbstauskunft ist kein Hardwareattest. Numerische Fahrtfakten ersetzen keine Quellen- und Plausibilitätsprüfung.
 
-Dies ist der beauftragte Zielzustand, noch keine implementierte oder bereitgestellte Vergabe. E6-02 liefert reine Zahlenangebote. [E6-03](specs/E6-03-native-ride-facts.md) liefert die unveränderlichen nativen Tickfakten als numerische Grundlage. Upload, persönliche Freigabe, Quellenprüfung und Buchung bleiben eigene Schritte. Bestehende Aufnahmen und Strava-Zuordnungen werden nicht stillschweigend neu bewertet.
+E6-02 liefert reine Zahlenangebote. [E6-03](specs/E6-03-native-ride-facts.md) liefert die unveränderlichen nativen Tickfakten. [E6-04](specs/E6-04-ride-progress-journal.md) projiziert daraus HR-freie Checkpoints im Engine-Worker, unabhängig vom Aufnahmefenster. Der Projector besitzt keine Persistenz, kein Konto und keine Vergabepolitik. Bestehende Aufnahmen und Strava-Zuordnungen werden nicht neu bewertet.
 
-[E6-04](specs/E6-04-ride-progress-journal.md) ergänzt die HR-freie Checkpoint-Projektion genau dieser Fakten im Engine-Worker. Sie ist unabhängig vom Aufnahmefenster und behält native Tickgrenzen bei. Der Projector besitzt keine Persistenz, kein Konto und keine Vergabepolitik; automatische Kontobelohnung, Transport, Offline-Wiederholung und Bestätigung bleiben späteren Schritten vorbehalten.
+[E6-07](specs/E6-07-progress-policy.md) bis [E6-10](specs/E6-10-progress-server-intake.md) sind implementiert und softwaregeprüft. Automatische Kontobelohnung ist standardmäßig deaktiviert. Eine Aktivierung gilt erst ab der nächsten Fahrt. Ein Widerruf stoppt neue Speicherung und Uploads sofort. Die lokale Outbox speichert höchstens 1200 Batches pro Konto und API-Origin ohne stille Löschung. Sim wird weder gespeichert noch hochgeladen.
+
+Der Server bucht einen akzeptierten Bereich atomar ins Volts-Ledger. Er bestimmt den Belohnungstag aus `endedAtMs`, prüft Consent und Session in der Schreibtransaktion und erzeugt weder XP noch synthetische Fahrten. Die produktive Quellenpolitik bleibt deaktiviert. Hardwareabnahme und Bereitstellung sind separate Nachweise.
 
 ## Volts – die Ingame-Währung
 
@@ -64,6 +66,8 @@ Die spätere Ermittlung tatsächlicher aktiver Fakten und die serverseitige Verg
 | rare       | 6 000         | ~5            | Level ≥ 5             |
 | epic       | 20 000        | ~17           | Level ≥ 15            |
 | legendary  | 60 000        | ~50           | Level ≥ 30 oder Badge |
+
+> **Übergang (E7-02, ADR-031 §4):** Der Server prüft das Mindestlevel noch nicht, weil die Progression fehlt. Bis dahin sind alle Shop-Items bei genug Volts kaufbar; Volts gibt es vorerst nur per Operator-Gutschrift. Die Levelprüfung muss spätestens mit den Fahrtbelohnungen (#59) aktiv werden. Schon gekaufte Items bleiben im Besitz.
 
 - Manche Items sind **nicht kaufbar**, sondern nur über Level, Badges oder Distanz-Meilensteine erreichbar (z. B. KOM-Trikot nur per `kom-hunter`).
 - Käufe sind endgültig (kein Wiederverkauf in v1); Kauf ist eine **Server-Transaktion** (Kontostand prüfen, abbuchen, Inventar ergänzen – atomar).

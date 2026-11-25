@@ -1,19 +1,24 @@
 import { createHash } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 
 import {
   RewardFactsSchema,
   VoltsDebitReceiptSchema,
+  VoltsGrantReceiptSchema,
   VoltsRideRangeReceiptSchema,
   type BaseVoltsQuote,
   type RewardFacts,
   type VoltsBalance,
   type VoltsDebitCommand,
   type VoltsDebitReceipt,
+  type VoltsGrantCommand,
+  type VoltsGrantReceipt,
   type VoltsRideRangeCommand,
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 
 import { ApiError } from "../api-error.js";
+import type { ServerDatabase } from "../database/drizzle.provider.js";
 import type { EconomyTables } from "./economy.schema.js";
 
 export type LedgerRow = EconomyTables["voltsLedger"]["$inferSelect"];
@@ -21,6 +26,11 @@ export type LedgerRow = EconomyTables["voltsLedger"]["$inferSelect"];
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Shared Volts commands contain nested Zod primitive brands. */
 export interface VoltsLedgerTransaction {
   balance(userId: string): VoltsBalance;
+  rideRangeReceipt(
+    userId: string,
+    journalId: string,
+    startTick: number,
+  ): VoltsRideRangeReceipt | undefined;
   creditRideRange(userId: string, command: Readonly<VoltsRideRangeCommand>): VoltsRideRangeReceipt;
   debit(userId: string, command: Readonly<VoltsDebitCommand>): VoltsDebitReceipt;
 }
@@ -53,6 +63,18 @@ export function rideRangePayloadHash(command: Readonly<VoltsRideRangeCommand>): 
 export function debitPayloadHash(command: Readonly<VoltsDebitCommand>): string {
   return payloadHash(
     JSON.stringify({
+      idempotencyKey: command.idempotencyKey,
+      refId: command.refId,
+      amountVolts: command.amountVolts,
+    }),
+  );
+}
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Shared Volts commands contain nested Zod primitive brands.
+export function grantPayloadHash(command: Readonly<VoltsGrantCommand>): string {
+  return payloadHash(
+    JSON.stringify({
+      kind: "operator_grant",
       idempotencyKey: command.idempotencyKey,
       refId: command.refId,
       amountVolts: command.amountVolts,
@@ -138,5 +160,42 @@ export function parseStoredDebitReceipt(row: Readonly<LedgerRow>): VoltsDebitRec
     entryId: row.id,
     refId: row.refId,
     amountVolts: -row.deltaVolts,
+  });
+}
+
+export function findRideRangeReceipt(
+  db: Readonly<Pick<ServerDatabase, "select">>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle table metadata must retain its original column references.
+  ledger: Readonly<EconomyTables["voltsLedger"]>,
+  userId: string,
+  journalId: string,
+  startTick: number,
+): VoltsRideRangeReceipt | undefined {
+  const row = db
+    .select()
+    .from(ledger)
+    .where(
+      and(eq(ledger.userId, userId), eq(ledger.idempotencyKey, `ride:${journalId}:${startTick}`)),
+    )
+    .get();
+
+  return row === undefined ? undefined : parseStoredRangeReceipt(row);
+}
+
+export function parseStoredGrantReceipt(row: Readonly<LedgerRow>): VoltsGrantReceipt {
+  if (
+    row.reason !== "operator_grant" ||
+    row.rewardDay !== null ||
+    row.startTick !== null ||
+    row.cumulativeFactsJson !== null ||
+    row.deltaVolts <= 0
+  ) {
+    throw new ApiError(500, "internal_error", "corrupt Volts ledger entry");
+  }
+
+  return VoltsGrantReceiptSchema.parse({
+    entryId: row.id,
+    refId: row.refId,
+    amountVolts: row.deltaVolts,
   });
 }

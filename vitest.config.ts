@@ -8,6 +8,7 @@ export default defineConfig({
       "packages/rules/vitest.config.ts",
       "packages/ble/vitest.config.ts",
       "apps/web/vitest.config.ts",
+      "apps/web/performance/vitest.config.ts",
       "apps/server/vitest.config.ts",
     ],
     coverage: {

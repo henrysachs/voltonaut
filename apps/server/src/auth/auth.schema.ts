@@ -11,6 +11,7 @@ export const users = sqliteTable("users", {
   email: text("email").notNull().unique(),
   createdAt: integer("created_at").notNull(),
   deletedAt: integer("deleted_at"),
+  deletedEmailHash: text("deleted_email_hash"),
 });
 
 export const sessions = sqliteTable("sessions", {
@@ -49,6 +50,10 @@ export const authIdentities = sqliteTable(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle supplies native mutable column builders to its schema callback.
   (table) => [primaryKey({ columns: [table.issuer, table.subject] })],
 );
+
+export const authIdentityTombstones = sqliteTable("auth_identity_tombstones", {
+  identityHash: text("identity_hash").primaryKey(),
+});
 
 export const oidcTransactions = sqliteTable(
   "oidc_transactions",

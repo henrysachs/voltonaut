@@ -3,11 +3,14 @@ import {
   type ArchivedRide,
   type ProfileState,
   type RideList,
+  type LinkedIdentity,
   type User,
 } from "@voltonaut/shared";
 import type { ProfileBootstrap } from "../profileBootstrap.js";
 import type { ApplicationSession } from "./applicationSession.js";
 import type { AccountOutbox, OutboxRow } from "./accountOutbox.js";
+import type { DeletionIntents } from "./accountDeletion.js";
+import type { ProgressOutbox } from "./progressOutbox.js";
 
 type Remote<T> =
   | { readonly kind: "loading" }
@@ -26,21 +29,27 @@ type LocalRideItem = {
 };
 
 export type AccountDataView = Immutable<
-  | { readonly kind: "guest" }
+  | { readonly kind: "guest"; readonly message?: string }
   | {
       readonly kind: "account";
       readonly user: User;
       readonly profile: Remote<ProfileState>;
       readonly history: Remote<RideList>;
       readonly outbox: Remote<readonly OutboxItem[]>;
+      readonly identities: Remote<readonly LinkedIdentity[]>;
       readonly local: readonly LocalRideItem[];
       readonly message: string;
     }
 >;
 
 export interface SyncOptions {
-  readonly session: Readonly<Pick<ApplicationSession, "authorize" | "subscribe">>;
+  readonly session: Readonly<
+    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
+  >;
   readonly outbox: () => Promise<AccountOutbox>;
+  /** Progress rows of a deleted account are purged together with its account outbox rows. */
+  readonly progressOutbox: () => Promise<Pick<ProgressOutbox, "purgeOwner">>;
+  readonly deletions: DeletionIntents;
   readonly archive: () => Promise<readonly ArchivedRide[]>;
   readonly profile: Readonly<Pick<ProfileBootstrap, "saved" | "apply">>;
   readonly nowMs: () => number;
@@ -53,6 +62,7 @@ export function initialAccountData(user: Readonly<User>): AccountDataView {
     profile: { kind: "loading" },
     history: { kind: "loading" },
     outbox: { kind: "loading" },
+    identities: { kind: "loading" },
     local: [],
     message: "",
   };

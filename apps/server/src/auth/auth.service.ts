@@ -3,18 +3,13 @@ import { and, eq, gt, isNull } from "drizzle-orm/sql/expressions";
 
 import type { SessionResponse, User } from "@voltonaut/shared";
 
-import type { ServerConfig } from "../config.module.js";
-import { SERVER_CONFIG } from "../config.module.js";
+import { SERVER_CONFIG, type ServerConfig } from "../config.module.js";
 import { ApiError } from "../api-error.js";
-import { DRIZZLE } from "../database/drizzle.provider.js";
-import type { ServerDatabase } from "../database/drizzle.provider.js";
-import type { MailSender } from "../mail/mail-sender.js";
-import { MAIL_SENDER } from "../mail/mail-sender.js";
+import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
+import { MAIL_SENDER, type MailSender } from "../mail/mail-sender.js";
 import type { SessionPrincipal } from "./auth-request.js";
-import { users } from "./auth.schema.js";
-import type { UsersRow } from "./auth.schema.js";
-import { loginTokens, sessions } from "./auth.schema.js";
-import { createToken, hashToken } from "./tokens.js";
+import { loginTokens, sessions, users, type UsersRow } from "./auth.schema.js";
+import { createToken, hashDeletedEmail, hashToken } from "./tokens.js";
 
 /** Magic links stay valid for 15 minutes and work exactly once (docs/08 §Betrieb). */
 export const LOGIN_TOKEN_TTL_MS = 15 * 60_000;
@@ -29,9 +24,8 @@ export class AuthService {
   ) {}
 
   /**
-   * Creates a one-time login token and mails the magic link. Unknown addresses
-   * receive a link too: login is registration, the account row appears at the
-   * session exchange.
+   * Creates a one-time login token and mails the magic link. Unknown and deleted
+   * addresses receive the same response; a deleted address never creates an account.
    */
   public async requestMagicLink(email: string, nowMs: number): Promise<void> {
     this.requireMagicLink();
@@ -57,6 +51,12 @@ export class AuthService {
         .where(eq(loginTokens.tokenHash, hashToken(token)))
         .run();
       throw new ApiError(503, "internal_error", "mail delivery unavailable");
+    } finally {
+      if (this.deletedEmail(email))
+        this.db
+          .delete(loginTokens)
+          .where(eq(loginTokens.tokenHash, hashToken(token)))
+          .run();
     }
   }
 
@@ -129,6 +129,19 @@ export class AuthService {
     return { userId: row.user.id, email: row.user.email, sessionTokenHash: tokenHash };
   }
 
+  public isSessionActive(sessionTokenHash: string, nowMs: number): boolean {
+    if (this.config.auth.mode === "disabled") return false;
+
+    const row = this.db
+      .select({ expiresAt: sessions.expiresAt, deletedAt: users.deletedAt })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(eq(sessions.tokenHash, sessionTokenHash))
+      .get();
+
+    return row !== undefined && row.expiresAt > nowMs && row.deletedAt === null;
+  }
+
   /** Deletes the session row behind this token; the token is invalid afterwards. */
   public logout(sessionTokenHash: string): void {
     this.db.delete(sessions).where(eq(sessions.tokenHash, sessionTokenHash)).run();
@@ -175,7 +188,15 @@ export class AuthService {
       throw new ApiError(404, "not_found", "login method unavailable");
   }
 
+  private deletedEmail(email: string): boolean {
+    return isDeletedEmail(this.db, this.config.auth.tombstoneHmacKey, email);
+  }
+
   private ensureUser(email: string, nowMs: number): UsersRow {
+    if (this.deletedEmail(email)) {
+      throw new ApiError(401, "invalid_login_token", "login token is unknown, used, or expired");
+    }
+
     const existing = this.db.select().from(users).where(eq(users.email, email)).get();
 
     if (existing !== undefined) {
@@ -191,6 +212,7 @@ export class AuthService {
       email,
       createdAt: nowMs,
       deletedAt: null,
+      deletedEmailHash: null,
     };
 
     this.db.insert(users).values(created).run();
@@ -201,6 +223,21 @@ export class AuthService {
   private sessionTtlMs(): number {
     return this.config.session.ttlDays * 24 * 60 * 60_000;
   }
+}
+
+/** Whether a deleted account's keyed email tombstone blocks this address. */
+export function isDeletedEmail(
+  db: Readonly<Pick<ServerDatabase, "select">>,
+  hmacKey: string,
+  email: string,
+): boolean {
+  return (
+    db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.deletedEmailHash, hashDeletedEmail(hmacKey, email)))
+      .get() !== undefined
+  );
 }
 
 function userFromRow(row: UsersRow): User {
@@ -216,5 +253,6 @@ export interface AuthServicePort {
     nowMs: number,
   ) => SessionResponse;
   readonly validateSession: (sessionToken: string, nowMs: number) => SessionPrincipal | undefined;
+  readonly isSessionActive: (sessionTokenHash: string, nowMs: number) => boolean;
   readonly logout: (sessionTokenHash: string) => void;
 }

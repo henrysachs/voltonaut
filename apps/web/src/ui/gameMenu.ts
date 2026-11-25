@@ -1,5 +1,5 @@
 import { mountPwaPanel } from "../pwa/pwaPanel.js";
-import { mountGarage } from "./garage/garage.js";
+import { mountGarage, type GarageHandle } from "./garage/garage.js";
 
 // oxlint-disable typescript/prefer-readonly-parameter-types -- Browser-owned DOM nodes and event handles retain native mutable members; this module updates navigation attributes and focus.
 interface MenuTab {
@@ -118,13 +118,20 @@ function mountEscapeShortcut(show: () => void): void {
   });
 }
 
-export function mountGameMenu(wheelCircM?: number): void {
-  if (wheelCircM !== undefined) {
-    const garage = document.querySelector("#garage-shop");
+export function mountGameMenu(wheelCircM?: number): GarageHandle | undefined {
+  const host = document.querySelector("#garage-shop");
 
-    if (garage instanceof HTMLElement) mountGarage(garage, wheelCircM);
-  }
+  const garage =
+    wheelCircM !== undefined && host instanceof HTMLElement
+      ? mountGarage(host, wheelCircM)
+      : undefined;
 
+  mountMenuDialog();
+
+  return garage;
+}
+
+function mountMenuDialog(): void {
   const dialog = document.querySelector("#game-menu");
   const open = document.querySelector("#game-menu-open");
   const close = document.querySelector("#game-menu-close");

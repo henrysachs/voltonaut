@@ -1,5 +1,6 @@
-import type { StravaLease } from "../privateAuthTransport.js";
+import type { ProgressLease, StravaLease } from "../privateAuthTransport.js";
 import type { IdentityLease } from "../identityLease.js";
+import type { ShopLease } from "../shopLease.js";
 
 const unexpected = (): Promise<never> =>
   Promise.reject(new Error("Strava was not requested by this account test"));
@@ -25,8 +26,28 @@ export const unusedIdentityLease: IdentityLease = {
   completeLink: () => Promise.reject(new Error("unexpected identity link completion")),
 };
 
+export const unusedProgressLease: ProgressLease = {
+  status: () => Promise.reject(new Error("progress was not requested by this account test")),
+  update: () => Promise.reject(new Error("unexpected progress consent update")),
+  submit: () => Promise.reject(new Error("unexpected progress submission")),
+};
+
+export const unusedShopLease: ShopLease = {
+  balance: () => Promise.reject(new Error("Volts were not requested by this account test")),
+  inventory: () => Promise.reject(new Error("inventory was not requested by this account test")),
+  purchase: () => Promise.reject(new Error("unexpected purchase")),
+};
+
+export const unexpectedAccountData = {
+  exportAccount: () => Promise.reject(new Error("unexpected account export")),
+  deleteAccount: () => Promise.reject(new Error("unexpected account deletion")),
+};
+
 /** Account-lease members an account test does not exercise. */
 export const unexpectedAccountParts = {
   ...unexpectedMembership,
+  ...unexpectedAccountData,
   identities: unusedIdentityLease,
+  progress: unusedProgressLease,
+  shop: unusedShopLease,
 };

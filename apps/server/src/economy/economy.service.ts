@@ -29,6 +29,7 @@ import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
 import {
   createRangeReceipt,
   debitPayloadHash,
+  findRideRangeReceipt,
   parseStoredCumulativeFacts,
   parseStoredDebitReceipt,
   parseStoredRangeReceipt,
@@ -72,6 +73,8 @@ export class EconomyService {
       (tx: LedgerDb) =>
         work({
           balance: (userId) => this.balanceWithin(tx, userId),
+          rideRangeReceipt: (userId, journalId, startTick) =>
+            findRideRangeReceipt(tx, this.ledger, userId, journalId, startTick),
           creditRideRange: (userId, command) => this.rangeWithin(tx, userId, command),
           debit: (userId, command) => this.debitWithin(tx, userId, command),
         }),

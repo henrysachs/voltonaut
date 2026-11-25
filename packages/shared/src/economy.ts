@@ -73,6 +73,18 @@ export const VoltsDebitCommandSchema = z
   .strict()
   .readonly();
 
+/** Operator credit from the admin CLI (spec E7-02 AK7); keys start with `operator:`. */
+export const VoltsGrantCommandSchema = z
+  .object({
+    idempotencyKey: VoltsIdempotencyKeySchema.refine((key) => key.startsWith("operator:"), {
+      message: "Grant idempotency key must start with operator:",
+    }),
+    refId: z.string().min(1).max(200),
+    amountVolts: VoltsDebitAmountSchema,
+  })
+  .strict()
+  .readonly();
+
 export const VoltsRideRangeReceiptSchema = z
   .object({
     entryId: z.string().uuid(),
@@ -118,6 +130,89 @@ export const VoltsDebitReceiptSchema = z
   })
   .strict()
   .readonly();
+
+export const VoltsGrantReceiptSchema = z
+  .object({
+    entryId: z.string().uuid(),
+    refId: z.string().min(1).max(200),
+    amountVolts: VoltsDebitAmountSchema,
+  })
+  .strict()
+  .readonly();
+
+const VoltsLedgerEntryBaseSchema = z
+  .object({
+    id: z.string().uuid(),
+    deltaVolts: VoltsDeltaSchema,
+    refId: z.string().min(1).max(200),
+    idempotencyKey: VoltsIdempotencyKeySchema,
+    payloadHash: z.string().regex(/^[a-f0-9]{64}$/u),
+    createdAt: z.string().datetime({ precision: 3 }),
+  })
+  .strict();
+
+type ExportEntryValidation = Readonly<
+  | { reason: "ride_reward"; deltaVolts: number; startTick: number; endTick: number }
+  | { reason: "purchase"; deltaVolts: number }
+  | { reason: "operator_grant"; deltaVolts: number }
+>;
+
+function validateExportEntry(
+  entry: ExportEntryValidation,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Zod owns this callback context; validation only calls addIssue.
+  context: Readonly<z.RefinementCtx>,
+): void {
+  if (
+    entry.reason === "ride_reward" &&
+    (entry.deltaVolts < 0 || entry.endTick <= entry.startTick)
+  ) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid ride reward export" });
+  }
+
+  if (entry.reason === "purchase" && entry.deltaVolts >= 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid purchase export" });
+  }
+
+  if (entry.reason === "operator_grant" && entry.deltaVolts <= 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid operator grant export" });
+  }
+}
+
+export const VoltsLedgerExportEntrySchema = z
+  .discriminatedUnion("reason", [
+    VoltsLedgerEntryBaseSchema.extend({
+      reason: z.literal("ride_reward"),
+      rewardDay: VoltsRewardDaySchema,
+      startTick: VoltsAmountSchema,
+      endTick: VoltsAmountSchema,
+      candidateVolts: VoltsAmountSchema,
+      cumulativeWorkVolts: VoltsAmountSchema,
+      cumulativeClimbVolts: VoltsAmountSchema,
+      cumulativeFacts: RewardFactsSchema,
+    }).strict(),
+    VoltsLedgerEntryBaseSchema.extend({
+      reason: z.literal("purchase"),
+    }).strict(),
+    VoltsLedgerEntryBaseSchema.extend({
+      reason: z.literal("operator_grant"),
+    }).strict(),
+  ])
+  .superRefine(validateExportEntry)
+  .readonly();
+
+export const VoltsAccountExportSchema = z
+  .object({
+    balance: VoltsBalanceSchema,
+    journal: z.array(VoltsLedgerExportEntrySchema),
+  })
+  .strict()
+  .readonly();
+
+export type VoltsGrantCommand = z.infer<typeof VoltsGrantCommandSchema>;
+
+export type VoltsGrantReceipt = z.infer<typeof VoltsGrantReceiptSchema>;
+
+export type VoltsAccountExport = z.infer<typeof VoltsAccountExportSchema>;
 
 export type VoltsBalance = z.infer<typeof VoltsBalanceSchema>;
 

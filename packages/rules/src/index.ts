@@ -30,3 +30,5 @@ export {
 } from "./season.js";
 
 export { SEASON_AVATAR_ITEMS, SEASONS, seasonAt } from "./seasonData.js";
+
+export { decidePurchase, defaultInventoryItemIds, type PurchaseDecision } from "./shop.js";

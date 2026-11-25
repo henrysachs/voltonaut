@@ -1,19 +1,16 @@
-import { mkdtempSync, rmSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import request from "supertest";
-import type { OidcProviderConfig } from "../oidc-config.js";
 import { expect, it } from "vitest";
-import { z } from "zod";
 
+import { createTestApp, getDatabase, httpServerOf, bodyOf } from "../testing/test-app.spec.js";
 import {
-  createTestApp,
-  getDatabase,
-  httpServerOf,
-  bodyOf,
-  loginTestUser,
-  bearer,
-} from "../testing/test-app.spec.js";
+  LEGACY_TEST_PROVIDER,
+  legacyMigrations,
+  seedLegacySession,
+} from "../testing/legacy-account.js";
+import { createToken } from "../auth/tokens.js";
 import { createDatabase } from "./drizzle.provider.js";
 import { testServerConfig } from "../config.js";
 
@@ -32,10 +29,15 @@ it("creates owned tables, enforces foreign keys and closes on Nest shutdown", as
       "__drizzle_migrations",
       "account_status",
       "auth_identities",
+      "auth_identity_tombstones",
+      "inventory",
       "login_tokens",
       "oidc_handoffs",
       "oidc_transactions",
       "profiles",
+      "progress_consents",
+      "ride_progress_journals",
+      "ride_progress_ranges",
       "rides",
       "sessions",
       "strava_connections",
@@ -66,9 +68,11 @@ it("persists with WAL, creates the data directory and applies migrations idempot
     const db = getDatabase(first.app);
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     const migrations = db.$client.prepare("SELECT * FROM __drizzle_migrations").all();
-    expect(migrations).toHaveLength(10);
+    expect(migrations).toHaveLength(13);
     db.$client
-      .prepare("INSERT INTO users VALUES ('persisted', 'persist@example.com', 0, NULL)")
+      .prepare(
+        "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('persisted', 'persist@example.com', 0, NULL)",
+      )
       .run();
     await first.app.close();
     const second = await createTestApp({ config });
@@ -105,51 +109,6 @@ it("keeps health public and returns a safe 503 envelope when the database closes
   await app.close();
 });
 
-function legacyMigrations(directory: string): string {
-  const folder = join(directory, "legacy-migrations");
-  mkdirSync(join(folder, "meta"), { recursive: true });
-  const source = new URL("../../drizzle/", import.meta.url);
-
-  const journal = z
-    .object({
-      version: z.string(),
-      dialect: z.string(),
-      entries: z.array(
-        z.object({
-          idx: z.number(),
-          version: z.string(),
-          when: z.number(),
-          tag: z.string(),
-          breakpoints: z.boolean(),
-        }),
-      ),
-    })
-    .parse(JSON.parse(readFileSync(new URL("meta/_journal.json", source), "utf8")));
-
-  writeFileSync(
-    join(folder, "meta", "_journal.json"),
-    JSON.stringify({ ...journal, entries: journal.entries.slice(0, 1) }),
-  );
-  copyFileSync(
-    new URL("0000_steep_trish_tilby.sql", source),
-    join(folder, "0000_steep_trish_tilby.sql"),
-  );
-
-  return folder;
-}
-
-const LEGACY_TEST_PROVIDER: OidcProviderConfig = {
-  id: "test",
-  displayName: "Test",
-  issuer: "https://identity.example",
-  clientId: "test",
-  clientSecret: "test-secret",
-  redirectUri: "https://api.example/v1/auth/oidc/test/callback",
-  scopes: ["openid", "email"],
-  requireEmailVerified: true,
-  idTokenAlg: "RS256",
-};
-
 it("upgrades the original migration without replacing legacy users, tokens, or sessions", async () => {
   const directory = mkdtempSync(join(tmpdir(), "voltonaut-oidc-upgrade-"));
   const path = join(directory, "legacy.db");
@@ -159,10 +118,10 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
       config: { database: { path, migrationsDir: legacyMigrations(directory) } },
     });
 
-    const session = await loginTestUser(first.app, first.mail, "legacy@example.com");
-    expect(
-      getDatabase(first.app).$client.prepare("SELECT * FROM __drizzle_migrations").all(),
-    ).toHaveLength(1);
+    const sessionToken = createToken();
+    const legacyClient = getDatabase(first.app).$client;
+    seedLegacySession(legacyClient, sessionToken);
+    expect(legacyClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(1);
     await first.app.close();
 
     const next = await createTestApp({
@@ -172,18 +131,19 @@ it("upgrades the original migration without replacing legacy users, tokens, or s
           mode: "oidc",
           providers: [LEGACY_TEST_PROVIDER],
           allowLoopbackHttp: false,
+          tombstoneHmacKey: "0".repeat(64),
         },
       },
     });
 
     try {
-      const db = getDatabase(next.app).$client;
-      expect(db.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(10);
-      expect(db.prepare("SELECT id FROM users").all()).toEqual([{ id: session.user.id }]);
-      expect(db.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
+      const upgradedClient = getDatabase(next.app).$client;
+      expect(upgradedClient.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(13);
+      expect(upgradedClient.prepare("SELECT id FROM users").all()).toEqual([{ id: "legacy-user" }]);
+      expect(upgradedClient.prepare("SELECT * FROM login_tokens").all()).toHaveLength(1);
       await request(httpServerOf(next.app))
         .get("/v1/me")
-        .set(bearer(session.sessionToken))
+        .set("Authorization", `Bearer ${sessionToken}`)
         .expect(200);
     } finally {
       await next.app.close();

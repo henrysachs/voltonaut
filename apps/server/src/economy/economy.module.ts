@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common";
 
 import { EconomyController } from "./economy.controller.js";
 import { EconomyService } from "./economy.service.js";
+import { EconomyAccountDataService } from "./economy.account-data.js";
 import { ECONOMY_TABLES } from "./economy.schema.js";
 import type { EconomyTables } from "./economy.schema.js";
 
@@ -14,8 +15,12 @@ export class EconomyModule {
     return {
       module: EconomyModule,
       controllers: [EconomyController],
-      providers: [EconomyService, { provide: ECONOMY_TABLES, useValue: tables }],
-      exports: [EconomyService],
+      providers: [
+        EconomyService,
+        EconomyAccountDataService,
+        { provide: ECONOMY_TABLES, useValue: tables },
+      ],
+      exports: [EconomyService, EconomyAccountDataService],
     };
   }
 }

@@ -8,6 +8,10 @@ services:
     image: ${VOLTONAUT_IMAGE:-voltonaut-server}:${VOLTONAUT_TAG:?explicit release tag required}
     restart: unless-stopped
     env_file:
+      # AUTH_TOMBSTONE_HMAC_KEY lives apart from the provisioned deploy.env; check-config rejects a
+      # production start without it before any release switch.
+      - path: ./auth.env
+        required: false
       - path: ./strava.env
         required: false
       - path: ./strava-webhook.env

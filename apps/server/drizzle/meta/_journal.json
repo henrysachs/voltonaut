@@ -71,6 +71,27 @@
       "when": 1795558488748,
       "tag": "0009_volts_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1795599972609,
+      "tag": "0010_common_jack_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795608573277,
+      "tag": "0011_volts_operator_grant",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1795615888170,
+      "tag": "0012_progress_consent_journals",
+      "breakpoints": true
     }
   ]
 }

@@ -122,7 +122,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 - [x] [E5-10](specs/E5-10-membership-admin.md): Normal/Premium/Pro und unabhängiges VIP manuell im Konto-Overlay verwalten. Serverberechtigung bleibt getrennt. Additive Migration, Operator-CLI, Sessiongrenzen und Bestätigungsrennen sind softwaregeprüft und unabhängig geprüft. CI, Integration, Bereitstellung und Henrys erster bestätigter Adminzugang stehen noch aus. Keine Preise oder Spielsperren.
 - [ ] `rides/`: Upload (idempotent), Plausibilitätsprüfung Stufe 1–4 (`08-backend.md`), Fahrthistorie
 - [ ] Client `sync/`: Cache, Outbox mit Retry, Gastmodus, Status-Anzeige „offline / synchronisiert"
-- [ ] `@nestjs/throttler`, Daten-Export/Löschung; VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
+- [x] `@nestjs/throttler` und [E5-11](specs/E5-11-account-data-export-deletion.md): Kontodaten exportieren und löschen. Export einschließlich Identitäten und Volts-Journal, atomare Löschung, HMAC-Identitätssperren, späte Schreib-/Link-Guards, Outbox-Bereinigung und Browserfluss sind implementiert und durch fokussierte Tests belegt. Vollständiges Gate auf dem integrierten Head, erneutes unabhängiges Review, CI und Bereitstellung bleiben getrennte Nachweise.
+- [ ] VPS-Deploy aktiv (Voraussetzung: E0-opt erledigt)
 - [ ] Domänen-Metriken (ADR-010): OIDC-Login success/failed ohne Identitäts- oder Tokenlabels, Fahrt-Uploads accepted/flagged/rejected, SQLite- und Litestream-Gesundheit (Backup-Lag)
 - [ ] Tests: `@nestjs/testing` + Supertest, Golden-Fahrten auch gegen `POST /v1/rides`, Plausibilitäts-Fixtures (echte Fahrt ok, manipulierte Fahrt flagged)
       **Abnahme:** Henry meldet sich am Laptop an, fährt eine Stunde, Fahrt erscheint in der Server-Historie; Fahrt offline gefahren wird später automatisch hochgeladen; Sim-Fahrt bringt keine Belohnung.
@@ -131,13 +132,17 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 
 **Ziel:** Jede Fahrt bringt verbindlichen Fortschritt – mit Spielgefühl.
 
-Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnlicher Fahrt, unabhängig vom Aufnahme-Knopf. Der Server bestätigt Fahrtabschnitte; bestätigte Gewinne bleiben bei Abbruch erhalten. Eine laufende Vorschau allein erfüllt diesen Auftrag nicht. Die verbindliche Vergabe bleibt noch zu implementieren.
+Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnlicher Fahrt, unabhängig vom Aufnahme-Knopf. Der Server bestätigt Fahrtabschnitte; bestätigte Gewinne bleiben bei Abbruch erhalten. Die erste verbindliche Volts-Buchung ist implementiert und softwaregeprüft. Produktive Quellenfreigabe und Hardwareabnahme bleiben offen.
 
 - [ ] `progression/`: XP/Level serverseitig aus akzeptierten Fahrten; Level-Up-Effekt im Client
   - [x] [E6-02](specs/E6-02-base-reward-quotes.md): reine Basisangebote für XP, Level und Volts mit explizitem Tagesrestbudget softwaregeprüft. Keine Vergabe oder Kontobuchung.
   - [x] [E6-03](specs/E6-03-native-ride-facts.md): native Tickfakten für spätere laufende Auswertung. Gate, Mutation, Build, Basisvergleich und unabhängiges Review softwaregeprüft. Keine Uploads, Freigaben oder Belohnungsbuchungen; Deployment folgt mit dem Merge.
-  - [x] [E6-04](specs/E6-04-ride-progress-journal.md): HR-freie, unveränderliche Checkpoint-Projektion aus genau einem Advance pro Wake. Gesamtgate, Mutation, Build, Basisverhalten und unabhängiges Review softwaregeprüft. Keine Persistenz, Uploads, Freigaben, Belohnungsbuchungen oder dauerhafte Progress-UI; Merge und CI stehen noch aus.
-- [x] [E6-05](specs/E6-05-volts-ledger.md): `economy/`-Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ". Kumulative Tickbereiche, Tagesbudget und echte SQLite-Konkurrenz softwaregeprüft; automatische Vergabe, Shop-Kauf und Deployment folgen getrennt.
+  - [x] [E6-04](specs/E6-04-ride-progress-journal.md): HR-freie, unveränderliche Checkpoint-Projektion aus genau einem Advance pro Wake. Gesamtgate, Mutation, Build, Basisverhalten und unabhängiges Review softwaregeprüft. Der Projector besitzt keine Persistenz; E6-07 bis E6-10 ergänzen Outbox und Serverbuchung.
+- [x] [E6-05](specs/E6-05-volts-ledger.md): `economy/`-Volts-Ledger, Verdienformel (`06`), Tageslimit; Property-Test „Kontostand nie negativ". Kumulative Tickbereiche, Tagesbudget und echte SQLite-Konkurrenz softwaregeprüft. Automatische Progress-Buchung ist in E6-07 bis E6-10 softwaregeprüft und produktiv weiterhin gesperrt. Shop-Kauf und Hardwareabnahme bleiben getrennt.
+  - [x] [E6-07](specs/E6-07-progress-policy.md): Transport-, Quellen-, Zustimmungs- und UTC-Tagespolitik softwaregeprüft. Produktive Quellenpolitik bleibt deaktiviert.
+  - [x] [E6-08](specs/E6-08-progress-consent.md): versionierte, widerrufbare Zustimmung und globale Journal-/Sessionbindung softwaregeprüft.
+  - [x] [E6-09](specs/E6-09-progress-outbox.md): HR-freie lokale Outbox mit Offline-Status, Kapazität und idempotentem Retry softwaregeprüft. Echte Browser-IDB-Offlineprüfung bleibt offen.
+  - [x] [E6-10](specs/E6-10-progress-server-intake.md): authentifizierte Checkpoint-Annahme und atomare Volts-Buchung softwaregeprüft. Keine XP, synthetischen Fahrten oder produktive Quellenfreigabe.
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
@@ -154,6 +159,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 **Ziel:** Eigener Fahrer, eigenes Rad, Freischalten mit Volts.
 
 [E7-01](specs/E7-01-garage-shop-foundation.md) liefert den softwaregeprüften Tab „Garage / Shop" mit striktem Katalog, Slot- und Farbauswahl, provisorischer 3D-Vorschau sowie Freischaltbedingungen und Preisen. Vollständiges Gate, Mutation, Build und unabhängiges Review sind grün. Käufe, Besitz und dauerhaftes Ausrüsten bleiben deaktiviert. Die vollständigen E7-Kriterien, Merge und Bereitstellung bleiben offen.
+
+[E7-02](specs/E7-02-server-inventory-shop.md) ergänzt das Server-Inventar mit atomaren, idempotenten Käufen, die Operator-Gutschrift `admin credit` und den aktiven Kaufknopf der Garage für angemeldete Fahrer. Das Mindestlevel bleibt bis zur Progression ungeprüft (ADR-031). Stand: implementiert und softwaregeprüft (Unit, Integration, E2E im Gastmodus); Merge, Bereitstellung und Henrys Abnahme offen. Ausrüsten nur besessener Items folgt mit #65.
 
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
@@ -200,7 +207,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
 - [ ] Optionale ERG-Workouts (nutzt `ftpW`)
 - [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
-- [ ] WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe
+- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung vorgeschlagen: kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis und Freigabe offen.
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Installierbare PWA ([E10-09](specs/E10-09-installable-pwa.md), [Issue #88](https://github.com/henrysachs/voltonaut/issues/88))
   - [x] Manifest, Icons, versionierter App-Shell-Cache, kontrolliertes Update und Menü „App" am gebauten Artefakt softwaregeprüft (Offline-Reload, kein Cache für API-Daten).
