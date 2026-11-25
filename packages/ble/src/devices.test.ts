@@ -236,7 +236,7 @@ it("a dropped sim trainer reconnects without authority and never resends the old
   await r.advance(0.25);
   await control.enable();
   await r.advance(0.25);
-  control.forward([CLIMB]);
+  control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(0.25);
   expect(r.writes()).toEqual([0, 7, 0x11, 0x11]);
 
@@ -246,9 +246,9 @@ it("a dropped sim trainer reconnects without authority and never resends the old
   await r.advance(1);
   expect(r.adapter.status()).toBe("ready");
 
-  control.forward([CLIMB]);
+  control.forward({ paused: false, commands: [CLIMB] });
   await r.advance(0.25);
-  control.forward([]);
+  control.forward({ paused: false, commands: [] });
   await r.advance(0.25);
   expect(r.writes()).toEqual([0, 7, 0x11, 0x11]);
   expect(control.view()).toMatchObject({
@@ -261,7 +261,7 @@ it("a dropped sim trainer reconnects without authority and never resends the old
   // Only an explicit new grant writes again: neutral first, then the engine's current target.
   await control.enable();
   await r.advance(0.25);
-  control.forward([]);
+  control.forward({ paused: false, commands: [] });
   await r.advance(0.25);
   expect(r.writes().slice(4)).toEqual([0, 7, 0x11, 0x11]);
   expect(control.view().acknowledged?.gradePct).toBe(4);
