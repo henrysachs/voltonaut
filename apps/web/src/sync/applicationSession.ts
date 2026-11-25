@@ -2,7 +2,8 @@ import type { OidcProviderChoice, SessionResponse, User } from "@voltonaut/share
 
 import type { AuthTransport } from "./authTransport.js";
 import type { SessionPersistence } from "./sessionPersistence.js";
-import type { AccountLease, PrivateAuthTransport } from "./privateAuthTransport.js";
+import type { LeaseBinding } from "./apiRoute.js";
+import type { AccountLease, LeaseIssuer } from "./privateAuthTransport.js";
 
 export type SessionView =
   | {
@@ -24,25 +25,25 @@ type SessionState =
       readonly persistent: boolean;
     };
 
-interface SessionOptions {
+interface SessionOptions<Lease extends LeaseBinding> {
   readonly transport: AuthTransport;
   readonly persistence: SessionPersistence;
   readonly navigate: (providerId: string) => void;
-  readonly privateTransport: PrivateAuthTransport;
+  readonly privateTransport: LeaseIssuer<Lease>;
 }
 
-export class ApplicationSession {
-  readonly #options: SessionOptions;
+export class ApplicationSession<Lease extends LeaseBinding = AccountLease> {
+  readonly #options: SessionOptions<Lease>;
   readonly #listeners = new Set<(view: SessionView) => void>();
   #state: SessionState = { kind: "guest", message: "Gast. Fahren ohne Anmeldung möglich." };
   #generation = 0;
   #controller = new AbortController();
 
-  constructor(options: SessionOptions) {
+  constructor(options: SessionOptions<Lease>) {
     this.#options = options;
   }
 
-  authorize(): AccountLease | undefined {
+  authorize(): Lease | undefined {
     if (this.#state.kind !== "authenticated") return undefined;
     const generation = this.#generation;
 

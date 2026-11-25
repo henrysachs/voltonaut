@@ -11,18 +11,22 @@ import {
   type OutboxRead,
   type OutboxRow,
 } from "./accountOutbox.js";
-import type { AccountLease } from "./privateAuthTransport.js";
+import type { RidePort } from "./accountPorts.js";
+import type { IdentityPort } from "./identityPort.js";
+import type { LeaseBinding } from "./apiRoute.js";
 
 type AccountState = Extract<AccountDataView, { readonly kind: "account" }>;
 
-type PatchAccount = (lease: AccountLease, patch: Partial<AccountState>) => void;
+type PatchAccount = (lease: LeaseBinding, patch: Partial<AccountState>) => void;
+
+type QueueRow = (current: LeaseBinding, row: OutboxRow) => Promise<void>;
 
 export async function claimArchivedRide(
-  lease: AccountLease,
+  lease: LeaseBinding,
   archive: readonly ArchivedRide[],
   rideId: string,
   nowMs: () => number,
-  queue: (current: AccountLease, row: OutboxRow) => Promise<void>,
+  queue: QueueRow,
 ): Promise<void> {
   const ride = archive.find((item) => archivedRideTrack(item).rideId === rideId);
 
@@ -31,10 +35,10 @@ export async function claimArchivedRide(
 }
 
 export async function queueLocalProfile(
-  lease: AccountLease,
+  lease: LeaseBinding,
   saved: () => Promise<RiderProfile | undefined>,
   nowMs: () => number,
-  queue: (current: AccountLease, row: OutboxRow) => Promise<void>,
+  queue: QueueRow,
   patch: PatchAccount,
 ): Promise<void> {
   try {
@@ -56,7 +60,10 @@ export async function queueLocalProfile(
   }
 }
 
-export async function loadIdentities(lease: AccountLease, patch: PatchAccount): Promise<void> {
+export async function loadIdentities(
+  lease: LeaseBinding & { readonly identities: Pick<IdentityPort, "list"> },
+  patch: PatchAccount,
+): Promise<void> {
   try {
     const response = await lease.identities.list();
     patch(lease, { identities: { kind: "ready", value: response.identities } });
@@ -66,12 +73,12 @@ export async function loadIdentities(lease: AccountLease, patch: PatchAccount): 
 }
 
 export async function loadHistory(
-  lease: AccountLease,
+  lease: LeaseBinding & { readonly rides: Pick<RidePort, "history"> },
   cursor: string | null,
   patch: PatchAccount,
 ): Promise<void> {
   try {
-    const value = await lease.history(cursor);
+    const value = await lease.rides.history(cursor);
     patch(lease, { history: { kind: "ready", value } });
   } catch {
     patch(lease, { history: { kind: "failed" } });
@@ -79,7 +86,7 @@ export async function loadHistory(
 }
 
 export async function loadLocalArchive(
-  lease: AccountLease,
+  lease: LeaseBinding,
   archive: () => Promise<readonly ArchivedRide[]>,
   patch: PatchAccount,
 ): Promise<readonly ArchivedRide[] | undefined> {
@@ -100,7 +107,7 @@ export async function loadLocalArchive(
 }
 
 export async function loadOutboxRows(
-  lease: AccountLease,
+  lease: LeaseBinding,
   outbox: () => Promise<AccountOutbox>,
   patch: PatchAccount,
 ): Promise<OutboxRead> {

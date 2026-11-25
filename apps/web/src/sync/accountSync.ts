@@ -5,12 +5,13 @@ import {
   initialAccountData,
   profileApplicationMessage,
   type AccountDataView,
+  type AccountSyncLease,
   type SyncOptions,
 } from "./accountDataView.js";
 import { type AccountOutbox, type OutboxRead, type OutboxRow } from "./accountOutbox.js";
 import { deliverAccountRow } from "./accountDelivery.js";
+import type { LeaseBinding } from "./apiRoute.js";
 import { applyAccountProfile } from "./accountProfile.js";
-import type { AccountLease } from "./privateAuthTransport.js";
 import { AccountAdministration } from "./accountAdministration.js";
 import { GarageShop } from "./garageShop.js";
 import {
@@ -35,7 +36,7 @@ export class AccountSync {
   readonly #sending = new Set<number>();
   readonly #pending = new Map<number, "manual" | "resume">();
   #view: AccountDataView = { kind: "guest" };
-  #lease: AccountLease | undefined;
+  #lease: AccountSyncLease | undefined;
   #archive: readonly ArchivedRide[] = [];
   #reauth = false;
 
@@ -84,14 +85,14 @@ export class AccountSync {
 
   /** Bound so loaders can take it as their patch callback. */
   private readonly patchAccount = (
-    lease: AccountLease,
+    lease: LeaseBinding,
     patch: Partial<Extract<AccountDataView, { readonly kind: "account" }>>,
   ): void => {
     this.patch(lease, patch);
   };
 
   private patch(
-    lease: AccountLease,
+    lease: LeaseBinding,
     patch: Partial<Extract<AccountDataView, { readonly kind: "account" }>>,
   ): void {
     if (lease.current() && this.#lease === lease && this.#view.kind === "account")
@@ -137,9 +138,9 @@ export class AccountSync {
     ]);
   }
 
-  private async loadProfile(lease: AccountLease): Promise<void> {
+  private async loadProfile(lease: AccountSyncLease): Promise<void> {
     try {
-      this.patch(lease, { profile: { kind: "ready", value: await lease.profile() } });
+      this.patch(lease, { profile: { kind: "ready", value: await lease.profile.load() } });
     } catch {
       this.patch(lease, { profile: { kind: "failed" } });
     }
@@ -152,13 +153,13 @@ export class AccountSync {
     if (lease !== undefined && cursor !== null) await loadHistory(lease, cursor, this.patchAccount);
   }
 
-  private async loadLocal(lease: AccountLease): Promise<void> {
+  private async loadLocal(lease: LeaseBinding): Promise<void> {
     const archive = await loadLocalArchive(lease, this.#options.archive, this.patchAccount);
 
     if (archive !== undefined) this.#archive = archive;
   }
 
-  private loadRows(lease: AccountLease): Promise<OutboxRead> {
+  private loadRows(lease: LeaseBinding): Promise<OutboxRead> {
     return loadOutboxRows(lease, this.#options.outbox, this.patchAccount);
   }
 
@@ -184,7 +185,7 @@ export class AccountSync {
     );
   }
 
-  private async queue(lease: AccountLease, row: OutboxRow): Promise<void> {
+  private async queue(lease: LeaseBinding, row: OutboxRow): Promise<void> {
     try {
       const database = await this.#options.outbox();
 
@@ -271,7 +272,7 @@ export class AccountSync {
   }
 
   private async deliverNext(
-    lease: AccountLease,
+    lease: AccountSyncLease,
     database: AccountOutbox,
     rows: readonly OutboxRow[],
     index: number,

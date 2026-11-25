@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { DEFAULT_RIDER_PROFILE, type ProfileState, type RideReceipt } from "@voltonaut/shared";
 import { newOutboxRow, outboxKey, type OutboxRow } from "./accountOutbox.js";
-import { PrivateRequestError } from "./privateAuthTransport.js";
+import { PrivateRequestError } from "./apiRoute.js";
 import { deferred } from "./testdata/deferred.js";
 import { localRide } from "./testdata/localRide.js";
 import { journalRide } from "./testdata/journal.js";

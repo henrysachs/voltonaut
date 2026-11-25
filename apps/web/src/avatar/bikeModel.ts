@@ -139,11 +139,20 @@ export class BikeModel {
     this.materials.rim.roughness = wheel.rimRoughness;
   }
 
-  /** Crank angle φ (right pedal forward at 0) and wheel rotation, both in radians. */
-  setMotion(crankRad: number, wheelRad: number): void {
+  /**
+   * Crank angle φ (right pedal forward at 0) and wheel rotation, both in radians. Pedals stay
+   * level unless a rider's shoes pitch them (`pedalPitchRad`, toe down positive, right then left).
+   */
+  setMotion(
+    crankRad: number,
+    wheelRad: number,
+    pedalPitchRad: readonly [number, number] = [0, 0],
+  ): void {
     this.parts.crank.rotation.z = -crankRad;
 
-    for (const pedal of this.parts.pedals) pedal.rotation.z = crankRad;
+    for (const [index, pedal] of this.parts.pedals.entries()) {
+      pedal.rotation.z = crankRad - (pedalPitchRad[index] ?? 0);
+    }
 
     this.parts.frontWheel.rotation.z = -wheelRad;
     this.parts.rearWheel.rotation.z = -wheelRad;

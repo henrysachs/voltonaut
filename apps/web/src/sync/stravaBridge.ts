@@ -1,6 +1,10 @@
 import { StravaBridgeMessageSchema } from "@voltonaut/shared";
-import type { AccountLease } from "./privateAuthTransport.js";
+import type { LeaseBinding } from "./apiRoute.js";
+import type { StravaPort } from "./stravaPort.js";
 import { stravaAuthorizationUrl } from "./stravaAuthorizationUrl.js";
+
+/** Strava owns its connection and deliveries; it sees no other account capability. */
+export type StravaLease = LeaseBinding & { readonly strava: StravaPort };
 
 export interface StravaChannel {
   readonly send: (message: Parameters<typeof StravaBridgeMessageSchema.parse>[0]) => void;
@@ -18,7 +22,7 @@ export interface StravaPopup {
 }
 
 interface FlowOptions {
-  readonly lease: AccountLease;
+  readonly lease: StravaLease;
   readonly popup: StravaPopup;
   readonly report: (message: string) => void;
   readonly refresh: () => Promise<void>;
@@ -143,7 +147,7 @@ class StravaConnectionFlow {
 }
 
 export function connectStrava(
-  lease: AccountLease,
+  lease: StravaLease,
   popup: StravaPopup,
   report: (message: string) => void,
   refresh: () => Promise<void>,
