@@ -12,6 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Voltonaut</title>
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
@@ -21,6 +22,7 @@
         <div id="game-header-actions" class="ride-title__actions">
           <button
             id="game-menu-open"
+            class="btn btn--primary"
             type="button"
             aria-haspopup="dialog"
             aria-controls="game-menu"
@@ -102,7 +104,9 @@
             <p class="game-menu__eyebrow">VOLTONAUT / IN RIDE</p>
             <h1 id="game-menu-title">Fahrtmenü</h1>
           </div>
-          <button id="game-menu-close" type="button" autofocus>Zurück zur Fahrt</button>
+          <button id="game-menu-close" class="btn btn--primary" type="button" autofocus>
+            Zurück zur Fahrt
+          </button>
         </header>
         <p class="game-menu__hint">Die Fahrt läuft weiter. Escape schließt das Menü.</p>
         <fieldset id="ride-mode" class="game-menu__mode" lang="de">
@@ -295,7 +299,13 @@
               </label>
               <p class="profile__error" id="profile-error" data-testid="profile-error"></p>
               <p class="profile__status" id="profile-status" data-testid="profile-status"></p>
-              <button class="profile__save" type="submit" data-testid="profile-save">Save</button>
+              <button
+                class="btn btn--secondary profile__save"
+                type="submit"
+                data-testid="profile-save"
+              >
+                Save
+              </button>
               <p class="profile__hint">FTP and max heart rate are reserved for later stages.</p>
             </form>
           </section>
@@ -378,7 +388,9 @@
         </div>
         <footer class="game-menu__footer">
           <span>Geräte und Fahrt bleiben aktiv.</span>
-          <button id="game-menu-devices" type="button">Geräte öffnen</button>
+          <button id="game-menu-devices" class="btn btn--secondary" type="button">
+            Geräte öffnen
+          </button>
         </footer>
         <span class="game-menu__focus-guard" tabindex="0" data-menu-boundary="end"></span>
       </dialog>

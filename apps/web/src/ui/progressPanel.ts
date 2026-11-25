@@ -103,10 +103,13 @@ function renderProgressControls(
   const { status, toggle, retry } = controls;
 
   status.textContent = progressStatusText(view);
+  const busy = view.kind === "account" && view.busy;
+  toggle.setAttribute("aria-busy", String(busy));
+  retry.setAttribute("aria-busy", String(busy));
   toggle.hidden = view.kind !== "account" || view.consent.kind !== "ready";
   toggle.disabled =
     view.kind !== "account" ||
-    view.busy ||
+    busy ||
     view.consent.kind !== "ready" ||
     (view.consent.kind === "ready" && !view.consent.rewardsAvailable);
   toggle.textContent =
@@ -116,7 +119,7 @@ function renderProgressControls(
   retry.hidden = view.kind !== "account";
   retry.disabled =
     view.kind !== "account" ||
-    view.busy ||
+    busy ||
     (view.consent.kind === "ready" && (!view.consent.enabled || !view.consent.rewardsAvailable));
   retry.textContent =
     view.kind === "account" && view.consent.kind === "failed"

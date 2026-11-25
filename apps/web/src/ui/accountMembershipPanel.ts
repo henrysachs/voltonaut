@@ -61,6 +61,7 @@ function userForm(user: AdministrationUser, actions: Actions, busy: boolean): HT
   tier.disabled = busy;
   vip.disabled = busy;
   save.disabled = busy;
+  save.setAttribute("aria-busy", String(busy));
   form.addEventListener("submit", (event: Readonly<Pick<SubmitEvent, "preventDefault">>) => {
     event.preventDefault();
   });
@@ -124,6 +125,7 @@ function adminPanel(
   });
 
   refresh.disabled = view.busy;
+  refresh.setAttribute("aria-busy", String(view.busy));
   host.append(refresh);
 
   for (const user of view.directory.users) host.append(userForm(user, actions, view.busy));
@@ -134,6 +136,7 @@ function adminPanel(
     });
 
     next.disabled = view.busy;
+    next.setAttribute("aria-busy", String(view.busy));
     host.append(next);
   }
 

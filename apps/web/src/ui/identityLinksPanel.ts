@@ -22,8 +22,10 @@ function connectButtons(
   return view.available.map((provider) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.setAttribute("class", "btn btn--secondary");
     button.textContent = `Mit ${provider.displayName} verbinden`;
     button.disabled = view.busy;
+    button.setAttribute("aria-busy", String(view.busy));
 
     // A tab-only session stays focusable so keyboard and screen-reader users reach the reason;
     // `connect` refuses it before any request or navigation.

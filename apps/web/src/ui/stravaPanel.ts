@@ -2,7 +2,7 @@ import type { StravaDelivery, StravaStatus, StravaRideView } from "@voltonaut/sh
 import type { AccountSync } from "../sync/accountSync.js";
 import type { AccountDataView } from "../sync/accountDataView.js";
 import type { StravaSync, StravaView } from "../sync/stravaSync.js";
-import { stravaDeliveryText, text, button } from "./stravaPanelText.js";
+import { stravaDeliveryText, text, button, busyButton } from "./stravaPanelText.js";
 
 type AccountView = Extract<StravaView, { readonly kind: "account" }>;
 
@@ -78,6 +78,8 @@ function appendConsent(
     true,
   );
 
+  upload.setAttribute("aria-busy", String(state.busy));
+
   checkbox.addEventListener("change", () => {
     upload.disabled = !checkbox.checked || state.busy;
   });
@@ -147,7 +149,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
 
   if (status?.status === "connected") host.append(text(`Strava-Athlet ${status.athleteId}.`));
   host.append(
-    button(
+    busyButton(
       "Strava-Status laden",
       sync.guard(() => {
         void sync.refresh();
@@ -158,7 +160,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
 
   if (status?.status === "disconnected")
     host.append(
-      button(
+      busyButton(
         "Mit Strava verbinden",
         sync.guard(() => {
           sync.connect();
@@ -173,7 +175,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
 
   if (!disconnected)
     host.append(
-      button(
+      busyButton(
         "Strava trennen / Widerruf prüfen",
         sync.guard(() => {
           void sync.disconnect();
@@ -192,7 +194,7 @@ function appendHistory(
   account: AccountDataView,
 ): void {
   host.append(
-    button(
+    busyButton(
       "Eigene Kontofahrten laden",
       sync.guard(() => {
         void accounts.refresh();
@@ -206,7 +208,7 @@ function appendHistory(
 
   for (const ride of account.history.value.rides)
     host.append(
-      button(
+      busyButton(
         `Strava-Vorschau ${ride.startedAt} · ${(ride.distanceM / 1000).toFixed(2)} km`,
         sync.guard(() => {
           void sync.select(ride.rideId);
@@ -217,7 +219,7 @@ function appendHistory(
 
   if (account.history.value.nextCursor !== null)
     host.append(
-      button(
+      busyButton(
         "Weitere Kontofahrten",
         sync.guard(() => {
           void accounts.nextHistory();

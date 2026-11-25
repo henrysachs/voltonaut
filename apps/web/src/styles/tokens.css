@@ -1,0 +1,51 @@
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-md: 0.9rem;
+  --text-lg: 1.05rem;
+  --text-xl: 1.3rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.65rem;
+  --radius-lg: 1rem;
+
+  --border-subtle: #b6d2bd38;
+  --surface-glass: #0b211edb;
+  --surface-glass-filter: blur(14px) saturate(1.2);
+  --surface-solid: #102a27;
+  --surface-raised: #173a34;
+
+  --text-primary: #f4f6ed;
+  --text-muted: #bdd0c5;
+  --text-on-primary: #15291b;
+
+  --action-primary: #ffd60a;
+  --action-primary-hover: #ffea81;
+  --action-secondary: #25433d;
+  --action-secondary-hover: #35574c;
+  --action-danger: #8b2624;
+  --action-danger-hover: #a93431;
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-reduced: 0ms;
+
+  --cockpit-surface: var(--surface-solid);
+  --cockpit-border: var(--border-subtle);
+  --cockpit-muted: var(--text-muted);
+  --cockpit-accent: var(--action-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: var(--motion-reduced);
+    --motion-base: var(--motion-reduced);
+  }
+}
