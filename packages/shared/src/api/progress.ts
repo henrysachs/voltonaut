@@ -68,49 +68,71 @@ function hasSameImmutableMetadata(
   );
 }
 
+interface ContinuationIssue {
+  readonly message: string;
+  readonly path: readonly string[];
+}
+
+function continuationIssues(
+  previous: Readonly<RideProgressCheckpoint>,
+  checkpoint: Readonly<RideProgressCheckpoint>,
+): readonly ContinuationIssue[] {
+  const issues: ContinuationIssue[] = [];
+
+  if (checkpoint.journalId !== previous.journalId) {
+    issues.push({
+      message: "Progress checkpoints must belong to one journal",
+      path: ["journalId"],
+    });
+  }
+
+  if (!hasSameImmutableMetadata(previous, checkpoint)) {
+    issues.push({
+      message: "Progress checkpoint metadata must remain unchanged within a batch",
+      path: [],
+    });
+  }
+
+  if (checkpoint.sequence !== previous.sequence + 1) {
+    issues.push({
+      message: "Progress checkpoint sequence must increase by one",
+      path: ["sequence"],
+    });
+  }
+
+  if (checkpoint.startTick !== previous.endTick) {
+    issues.push({ message: "Progress checkpoints must be contiguous", path: ["startTick"] });
+  }
+
+  if (checkpoint.startedAtMs < previous.endedAtMs) {
+    issues.push({
+      message: "Progress checkpoint start time must not precede the previous end time",
+      path: ["startedAtMs"],
+    });
+  }
+
+  return issues;
+}
+
+/** True when an already parsed checkpoint directly continues its parsed predecessor in one batch. */
+export function isProgressCheckpointContinuation(
+  previous: Readonly<RideProgressCheckpoint>,
+  checkpoint: Readonly<RideProgressCheckpoint>,
+): boolean {
+  return continuationIssues(previous, checkpoint).length === 0;
+}
+
 function validateContinuation(
   previous: Readonly<RideProgressCheckpoint>,
   checkpoint: Readonly<RideProgressCheckpoint>,
   index: number,
   ctx: Pick<z.RefinementCtx, "addIssue">,
 ): void {
-  if (checkpoint.journalId !== previous.journalId) {
+  for (const issue of continuationIssues(previous, checkpoint)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Progress checkpoints must belong to one journal",
-      path: ["checkpoints", index, "journalId"],
-    });
-  }
-
-  if (!hasSameImmutableMetadata(previous, checkpoint)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Progress checkpoint metadata must remain unchanged within a batch",
-      path: ["checkpoints", index],
-    });
-  }
-
-  if (checkpoint.sequence !== previous.sequence + 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Progress checkpoint sequence must increase by one",
-      path: ["checkpoints", index, "sequence"],
-    });
-  }
-
-  if (checkpoint.startTick !== previous.endTick) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Progress checkpoints must be contiguous",
-      path: ["checkpoints", index, "startTick"],
-    });
-  }
-
-  if (checkpoint.startedAtMs < previous.endedAtMs) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Progress checkpoint start time must not precede the previous end time",
-      path: ["checkpoints", index, "startedAtMs"],
+      message: issue.message,
+      path: ["checkpoints", index, ...issue.path],
     });
   }
 }

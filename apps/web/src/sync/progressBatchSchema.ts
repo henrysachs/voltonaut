@@ -3,6 +3,7 @@ import {
   ProgressCheckpointBatchSchema,
   ProgressSessionGenerationSchema,
   RideProgressCheckpointSchema,
+  isProgressCheckpointContinuation,
   type ProgressCheckpointBatch,
   type RideProgressCheckpoint,
 } from "@voltonaut/shared";
@@ -28,20 +29,12 @@ function validateContinuation(
   let previous: RideProgressCheckpoint | undefined;
 
   for (const [index, checkpoint] of batch.checkpoints.entries()) {
-    if (previous !== undefined) {
-      const continuation = ProgressCheckpointBatchSchema.safeParse({
-        consentVersion: batch.consentVersion,
-        sessionGeneration: batch.sessionGeneration,
-        checkpoints: [previous, checkpoint],
+    if (previous !== undefined && !isProgressCheckpointContinuation(previous, checkpoint)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Progress checkpoints must be contiguous",
+        path: ["checkpoints", index],
       });
-
-      if (!continuation.success) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Progress checkpoints must be contiguous",
-          path: ["checkpoints", index],
-        });
-      }
     }
 
     previous = checkpoint;

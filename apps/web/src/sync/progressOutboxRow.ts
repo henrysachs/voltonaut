@@ -1,7 +1,7 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Row inputs are readonly contracts; Oxlint does not follow imported aliases. */
 import type { VoltsRideRangeReceipt } from "@voltonaut/shared";
 
-import { progressPayloadHash } from "./progressOutboxHash.js";
+import { hashValidatedProgressPayload, progressPayloadHash } from "./progressOutboxHash.js";
 import {
   ProgressOutboxRowSchema,
   progressRowMetadata,
@@ -9,7 +9,10 @@ import {
   type ProgressOutboxRow,
 } from "./progressOutboxSchema.js";
 
-function buildProgressOutboxRow(input: Readonly<NewProgressOutboxRowInput>): ProgressOutboxRow {
+function buildProgressOutboxRow(
+  input: Readonly<NewProgressOutboxRowInput>,
+  hash: (batch: Readonly<NewProgressOutboxRowInput["batch"]>) => string,
+): ProgressOutboxRow {
   const { owner, consentVersion, sessionGeneration, batch, phase = "sealed" } = input;
   const state = input.state ?? { kind: "queued", attempts: 0, retryAtMs: 0 };
 
@@ -21,7 +24,7 @@ function buildProgressOutboxRow(input: Readonly<NewProgressOutboxRowInput>): Pro
     sessionGeneration,
     revision: crypto.randomUUID(),
     payload: batch,
-    hash: progressPayloadHash(batch),
+    hash: hash(batch),
     phase,
     state,
     ...progressRowMetadata(owner, batch),
@@ -31,14 +34,14 @@ function buildProgressOutboxRow(input: Readonly<NewProgressOutboxRowInput>): Pro
 export function newProgressOutboxRow(
   input: Readonly<NewProgressOutboxRowInput>,
 ): ProgressOutboxRow {
-  return ProgressOutboxRowSchema.parse(buildProgressOutboxRow(input));
+  return ProgressOutboxRowSchema.parse(buildProgressOutboxRow(input, progressPayloadHash));
 }
 
-/** Creates a row from normalized inputs and an already validated local batch. */
+/** Creates a row from normalized inputs and a batch that already is a `LocalProgressBatchSchema` output. */
 export function newValidatedProgressOutboxRow(
   input: Readonly<NewProgressOutboxRowInput>,
 ): ProgressOutboxRow {
-  return buildProgressOutboxRow(input);
+  return buildProgressOutboxRow(input, hashValidatedProgressPayload);
 }
 
 export function progressOutboxKey(

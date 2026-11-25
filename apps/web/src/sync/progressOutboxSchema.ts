@@ -17,7 +17,7 @@ import {
   progressFactCount,
   progressSimulatedTimeS,
 } from "./progressBatch.js";
-import { progressPayloadHash } from "./progressOutboxHash.js";
+import { hashValidatedProgressPayload } from "./progressOutboxHash.js";
 import { rowIssue, type ProgressIssueContext } from "./progressOutboxIssue.js";
 import { progressSequenceKey, type ProgressSequenceKey } from "./progressOutboxKeys.js";
 
@@ -197,20 +197,22 @@ const journalOwnerSchema = envelope.extend({
   journalId: JournalIdSchema,
 });
 
+// Positional types only; the row refinement compares every key exactly with the parsed owner and payload.
 const sequenceKeySchema = text
   .or(integer)
   .array()
   .length(4)
   .readonly()
-  .transform((value) => {
-    const owner = journalOwnerSchema.parse({
-      apiOrigin: journalOwnerSchema.shape.apiOrigin.parse(value[0]),
-      userId: journalOwnerSchema.shape.userId.parse(value[1]),
-      journalId: journalOwnerSchema.shape.journalId.parse(value[2]),
-    });
-
-    return progressSequenceKey(owner, integer.parse(value[3]));
-  });
+  .transform((value) =>
+    progressSequenceKey(
+      {
+        apiOrigin: text.parse(value[0]),
+        userId: text.parse(value[1]),
+        journalId: text.parse(value[2]),
+      },
+      integer.parse(value[3]),
+    ),
+  );
 
 const ownership = journalOwnerSchema.extend({
   consentVersion: integer.positive(),
@@ -292,7 +294,7 @@ export const ProgressOutboxRowSchema = ownership
       ]);
     }
 
-    if (row.hash !== progressPayloadHash(row.payload)) {
+    if (row.hash !== hashValidatedProgressPayload(row.payload)) {
       rowIssue(ctx, "Progress payload hash does not match", ["hash"]);
     }
   });

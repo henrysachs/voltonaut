@@ -37,7 +37,7 @@ Berechtigte BLE-Checkpoints bleiben über Netzwerkverlust, Reload und Kontowechs
 - [x] AK7 – `queued`, `sending`, `blocked`, `stored`, offene Zeilen und verbleibende Kapazität sind im Menü sichtbar. Sim erzeugt auch bei aktivem Consent keine IDB-Zeile und keinen Progress-Request. Das Öffnen des Menüs stoppt die Engine nicht.
 - [x] AK8 – Pause, Fahrtende, UTC-Mitternacht und manuelles Synchronisieren flushen den offenen Batch. `pagehide` ist best effort. Ein Fehlschlag der IDB-Schreiboperation erzeugt keinen Scheinerfolg und verdrängt keine vorhandene Zeile.
 - [x] AK9 – Nach Widerruf werden keine neuen Checkpoints persistiert und keine Batches versandt. Bestätigte Bereiche bleiben erhalten. Unbestätigte Batches bleiben sichtbar und werden nicht automatisch gelöscht.
-- [x] AK10 – Append liest nur die eigene Journalzeile, Sequenz und Owner-Kapazität über IndexedDB-Schlüssel; ein deterministischer 1200-Checkpoint-Probelauf bleibt innerhalb des 50-ms-Wake-Budgets. Browser-Leistung wird daraus nicht behauptet.
+- [x] AK10 – Append liest nur die eigene Journalzeile, Sequenz und Owner-Kapazität über IndexedDB-Schlüssel; ein deterministischer 1200-Checkpoint-Probelauf bleibt innerhalb des 50-ms-Wake-Budgets. Der offene Batch wird pro Append nur einmal an der IndexedDB-Grenze vollständig geprüft. Lokal sinkt der Probelauf damit von etwa 3,3/7/10 ms auf 1,0/2,0/4,8 ms (Median/p95/max); in CI lag das Maximum vorher bei 52–78 ms. Browser-Leistung wird daraus nicht behauptet.
 
 ## Testplan (`docs/10-testing.md`)
 

@@ -1,7 +1,10 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Append inputs are readonly contracts; Oxlint does not follow imported aliases. */
 import type { RideProgressCheckpoint } from "@voltonaut/shared";
 
-import { appendProgressBatch, assertProgressCheckpointContinuation } from "./progressBatch.js";
+import {
+  appendValidatedProgressBatch,
+  assertProgressCheckpointContinuation,
+} from "./progressBatch.js";
 import { progressError } from "./progressOutboxFence.js";
 import type { ProgressAppendRead } from "./progressOutboxIndexedTypes.js";
 import { newValidatedProgressOutboxRow } from "./progressOutboxRow.js";
@@ -80,7 +83,7 @@ function sealedOpenRow(
 
 function appendWrites(
   open: ProgressOutboxRow | undefined,
-  update: ReturnType<typeof appendProgressBatch>,
+  update: ReturnType<typeof appendValidatedProgressBatch>,
   fence: Readonly<ProgressWriteFence>,
 ): AppendWrites {
   const puts: ProgressOutboxRow[] = [];
@@ -197,7 +200,7 @@ export function appendProgressRows(
     assertLastContinuation(last, checkpoint, fence);
   }
 
-  const update = appendProgressBatch({
+  const update = appendValidatedProgressBatch({
     open: open?.state.kind === "blocked" ? undefined : open?.payload,
     checkpoint,
     consentVersion: fence.consentVersion,

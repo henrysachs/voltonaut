@@ -86,7 +86,19 @@ function batchUpdate(
   });
 }
 
-export function appendProgressBatch({
+export function appendProgressBatch(input: ProgressBatchAppendInput): ProgressBatchUpdate {
+  return appendValidatedProgressBatch({
+    ...input,
+    open: input.open === undefined ? undefined : LocalProgressBatchSchema.parse(input.open),
+  });
+}
+
+/**
+ * Same as `appendProgressBatch` for an open batch that already is a `LocalProgressBatchSchema`
+ * output, such as the payload of a parsed outbox row. Only the new checkpoint is parsed, so one
+ * append stays independent of the open batch size; combined outputs remain schema-valid.
+ */
+export function appendValidatedProgressBatch({
   open,
   checkpoint,
   consentVersion,
@@ -104,20 +116,18 @@ export function appendProgressBatch({
 
   if (open === undefined) return batchUpdate(parsed);
 
-  const current = LocalProgressBatchSchema.parse(open);
-
-  if (current.consentVersion !== consentVersion) {
+  if (open.consentVersion !== consentVersion) {
     throw new Error("Open progress batch belongs to another consent version");
   }
 
-  const previous = current.checkpoints.at(-1);
+  const previous = open.checkpoints.at(-1);
 
   if (previous === undefined) throw new Error("Progress batch must contain a checkpoint");
   assertProgressCheckpointContinuation(previous, next, consentVersion, sessionGeneration);
 
-  if (!fits(current, next)) return batchUpdate(parsed, [current]);
+  if (!fits(open, next)) return batchUpdate(parsed, [open]);
 
-  return batchUpdate(combineBatch(current, next, parsed));
+  return batchUpdate(combineBatch(open, next, parsed));
 }
 
 export function sealProgressBatch(open: ProgressBatch | undefined): readonly ProgressBatch[] {
