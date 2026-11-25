@@ -166,7 +166,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
-- [x] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items (E7-02, E7-05; softwaregeprüft, Abnahme offen)
+- [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items (E7-02, E7-05 softwaregeprüft; Abnahme offen)
 - [ ] Garage-Showroom (Studio-Licht, Drehteller, Fotomodus), Shop mit Preisen in ⚡, gesperrte Items mit Bedingung
 - [ ] Wiegetritt/Ducken-Posen, Kurvenneigung
       **Abnahme:** Henry kauft ein Laufrad mit Volts und rüstet es aus; nach Reload/anderem Browser identisch; Kauf ohne genug Volts abgelehnt; visuelle Tests der Garage grün.
