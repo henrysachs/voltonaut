@@ -20,6 +20,7 @@
    - Erst `POST /v1/auth/identities {code}` verknüpft: mit Bearer derselben Sitzung, demselben Browsercookie und exakter Origin. Logout, abgelaufene Sitzung oder Kontowechsel scheitern hier; der Code wird beim ersten Versuch verbraucht. Login-Codes und Link-Codes sind gegenseitig nicht einlösbar.
    - Eine Identität eines anderen Kontos wird nie übernommen (`identity_in_use`, 409), Konten werden nie zusammengeführt, es gibt kein E-Mail-Linking. Unterschiedliche Anbieter-E-Mails sind unerheblich; die Kontakt-E-Mail des Kontos bleibt unverändert.
    - `GET /v1/auth/identities` liefert die verbundenen Anmeldungen (`providerId`, `displayName`, ohne Subject). Trennen wird nicht angeboten, deshalb kann keine letzte Anmeldung verloren gehen.
+   - Eine Sitzung, die nur im Tab lebt (Speicher nicht verfügbar), verbindet keine weiteren Anbieter: Die Vollnavigation zum Anbieter würde sie verlieren. Das Kontomenü sperrt und erklärt das vor jeder Navigation (#97); ein Popup-/Bridge-Ablauf bleibt eine mögliche Erweiterung.
 
 ## Folgen
 
