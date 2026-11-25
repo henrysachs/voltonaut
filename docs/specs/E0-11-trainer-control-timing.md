@@ -42,7 +42,7 @@ interface TrainerControl extends TrainerControlPanel {
 - `publishData` ist der einzige Weg für geparste Trainer-Samples: Kadenz an die Session, gehaltenes Ziel bestätigen, dann auf den Bus. FTMS- und Sim-Adapter nutzen ihn beide.
 - `forward` bekommt pro Engine-Update den Pause-Zustand und die Kommandos. Der Adapter merkt sich das letzte Simulationsziel und die Zeit des Updates. Auch leere Batches beweisen eine laufende Engine. Das gehaltene Ziel wird nur angeboten, solange die Engine innerhalb von `FRESH_S` geliefert hat.
 - **Auto-Pause verwirft das gehaltene Ziel.** Ein pausiertes Update löscht es. Erst das sofortige Kommando der Engine beim Wiederanfahren setzt es neu. Der Pause-Zustand ist Engine-Zustand und keine Timing-Pflicht des Aufrufers.
-- `rideDevices.ts` verliert `commandSink` und die Entscheidung „fährt“. `onSnapshot` liest nur `snapshot.paused` und reicht ihn mit den Kommandos desselben Updates weiter (Reihenfolge Snapshot → Kommandos, wie `RideTrainerSink` aus #127). `ConnectSlot.trainer` ist ein `TrainerControlPanel`.
+- `rideDevices.ts` verliert `commandSink` und die Entscheidung „fährt“. Pause-Zustand und Kommandos paart genau eine Stelle: `startEngine` in `apps/web/src/game/rideSession.ts` ruft pro Worker-Update `trainer.forward({ paused: snapshot.paused, commands })`. `RideTrainerSink` aus #127 ist dafür `Pick<TrainerControl, "forward">`, `RideDevices` erweitert ihn. `ConnectSlot.trainer` ist ein `TrainerControlPanel`.
 
 ### Bewusst beibehalten
 
@@ -75,14 +75,16 @@ Nach Disconnect, Timeout, Rechteverlust oder Deaktivieren bleibt die Autorität 
 | 6      | Session-Rig                                    | `packages/ble/src/ftms/control.test.ts`                                         |
 | 6      | UI                                             | `apps/web/src/ui/connect/trainerControl.test.ts`                                |
 | 7      | Bestehende Regressionen, nativer GATT-Fake     | `packages/ble/src/ftms/control*.test.ts`, `apps/web/e2e/native-control.spec.ts` |
+| 8      | Echte Worker-Engine über Loopback-Port         | `apps/web/src/game/rideSession.loopback.test.ts` (Auto-Pause → Tritt → Resume)  |
 | alle   | Gate                                           | `E2E_PORT=5186 mise run check`                                                  |
 
-Gegenproben, jeweils mindestens ein roter Fall in `adapter.control.test.ts`:
+Gegenproben, jeweils mindestens ein roter Fall in `adapter.control.test.ts` bzw. im Loopback-Test:
 
 - ohne Engine-Frischeprüfung, ohne Bestätigung im Sample-Pfad oder mit hartkodiertem `clockScale = 1`;
 - ohne Verwerfen bei Pause: alle drei AK8-Fälle rot, mit `0, 450` bzw. `0, 450, 0, 450` vor dem Resume, wie im Review nachgestellt;
 - Pause nur aussetzen statt verwerfen: „Tritt direkt nach Pausenbeginn“ rot;
 - Verwerfen bei Kadenz 0 statt bei Pause (Review-Mutante): „kurzer Kadenzaussetzer“ rot.
+- ohne Verwerfen bei Pause auch im Loopback-Fall mit echter Worker-Engine: rot, weil der erste Tritt das Ziel von vor der Pause setzt.
 
 ## Nicht-Ziele
 
