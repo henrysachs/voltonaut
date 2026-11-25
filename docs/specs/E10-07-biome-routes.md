@@ -3,7 +3,7 @@
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, Checkbox „Biome Küste,
   Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit
   Vorschau".
-- **Status:** Entwurf
+- **Status:** In Arbeit
 - **Betroffene Module:** `apps/web/src/world`, `apps/web/src/ui`,
   `packages/shared`, Web-Tests und E10-Dokumentation.
 
@@ -30,13 +30,14 @@ Aufnahmen und Zuordnungen bleiben lesbar und werden nicht neu bewertet.
 
 ## Testplan
 
-| AK  | Ebene       | Datei / Fixture                              |
-| --- | ----------- | -------------------------------------------- |
-| AK1 | E2E         | `apps/web/e2e/route-selection.spec.ts`       |
-| AK2 | Unit        | `apps/web/src/world/route.data.test.ts`      |
-| AK3 | E2E        | `apps/web/e2e/route-preview.spec.ts`         |
-| AK4 | Unit/Replay | `packages/engine/src/journal/codec.test.ts`  |
-| AK5 | Gate        | `mise run check`                             |
+| AK  | Ebene    | Datei / Fixture                             |
+| --- | -------- | -------------------------------------------- |
+| AK1 | E2E      | `apps/web/e2e/route-selection.spec.ts`      |
+| AK2 | Unit     | `packages/engine/.../data/routes.test.ts`   |
+| AK2 | Unit     | `apps/web/src/world/routeCatalog.test.ts`   |
+| AK3 | Unit     | `apps/web/src/ui/routePreview.test.ts`      |
+| AK4 | Replay   | bestehende Journal- und Replay-Tests        |
+| AK5 | Gate     | `mise run check` und `check:mutation`       |
 
 ## Nicht-Ziele
 
@@ -47,10 +48,10 @@ Aufnahmen und Zuordnungen bleiben lesbar und werden nicht neu bewertet.
 
 ## Offene Fragen
 
-- Die konkreten Dateien für Route-Daten und Streckenauswahl folgen nach
-  der Codeanalyse.
-- Die Vorschau muss ohne laufende 3D-Szene funktionieren oder eine feste
-  Standbild-Vorschau verwenden.
+- Die Route-Daten liegen in `packages/engine/src/elevation/data/`, die
+  Präsentation in `apps/web/src/world/routeCatalog.ts`, die Auswahl im
+  vorhandenen Fahrtmenü. Die Vorschau ist eine 2D-SVG-Miniatur aus der
+  Centerline und benötigt keine laufende 3D-Szene.
 
 ## Doku-Updates
 
