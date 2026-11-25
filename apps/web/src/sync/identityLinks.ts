@@ -11,6 +11,11 @@ export type IdentityLinksView =
       readonly available: readonly OidcProviderChoice[];
       readonly message: string;
       readonly busy: boolean;
+      /**
+       * False for a session that lives only in this tab: the provider login leaves the page, which
+       * would drop the only copy of the session and the link could never be completed.
+       */
+      readonly linkable: boolean;
     };
 
 /** The part of an account lease this section uses. */
@@ -28,6 +33,9 @@ interface IdentityLinksOptions {
 }
 
 const RETRY_TEXT = "Verbindung nicht bestätigt. Bitte erneut versuchen.";
+
+export const TAB_ONLY_TEXT =
+  "Weitere Anmeldungen lassen sich nur verbinden, wenn die Anmeldung im Browser gespeichert werden kann. Diese Sitzung gilt nur in diesem Tab und ginge beim Wechsel zum Anbieter verloren. Browser-Speicher für Voltonaut erlauben und neu anmelden.";
 
 function causeText(cause: SyncFailure): string {
   switch (cause) {
@@ -63,6 +71,7 @@ export class IdentityLinks {
   #view: IdentityLinksView = { kind: "hidden", message: "" };
   #pending: string | undefined;
   #generation: number | undefined;
+  #persistent = false;
 
   constructor(options: IdentityLinksOptions) {
     this.#options = options;
@@ -90,6 +99,14 @@ export class IdentityLinks {
     const view = this.#view;
 
     if (lease === undefined || view.kind !== "ready") return;
+
+    if (!view.linkable) {
+      // Republishing an unchanged view would rebuild the buttons and drop keyboard focus.
+      if (view.message !== TAB_ONLY_TEXT) this.#publish({ ...view, message: TAB_ONLY_TEXT });
+
+      return;
+    }
+
     this.#publish({ ...view, busy: true, message: "Anmeldung beim Anbieter wird vorbereitet …" });
 
     try {
@@ -118,6 +135,7 @@ export class IdentityLinks {
       return;
     }
 
+    this.#persistent = view.persistent;
     const lease = this.#options.session.authorize();
 
     if (lease === undefined || lease.generation === this.#generation) return;
@@ -146,7 +164,16 @@ export class IdentityLinks {
       if (!lease.current()) return;
       const linked = new Set(listed.identities.map((identity) => identity.providerId));
       const available = providers.filter((provider) => !linked.has(provider.id));
-      this.#publish({ kind: "ready", linked: listed.identities, available, message, busy: false });
+      const linkable = this.#persistent;
+
+      this.#publish({
+        kind: "ready",
+        linked: listed.identities,
+        available,
+        message: message === "" && !linkable && available.length > 0 ? TAB_ONLY_TEXT : message,
+        busy: false,
+        linkable,
+      });
     } catch (error) {
       if (lease.current() && error instanceof Error)
         this.#publish({ kind: "hidden", message: message === "" ? failureText(error) : message });
