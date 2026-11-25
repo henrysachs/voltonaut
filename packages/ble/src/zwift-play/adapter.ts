@@ -1,9 +1,11 @@
 import { createReconnectingAdapter, type BleDeviceAdapter } from "../adapterShell.js";
+import type { PlaySide } from "./parse.js";
 import { PlaySession, type PlaySessionOptions } from "./session.js";
 
 export type PlayAdapterOptions = PlaySessionOptions;
 
 export interface PlayAdapter extends BleDeviceAdapter {
+  readonly side: PlaySide;
   readonly description: () => string;
 }
 
@@ -27,6 +29,7 @@ export function createPlayAdapter(options: PlayAdapterOptions): PlayAdapter {
 
   return {
     ...adapter,
+    side: options.side,
     description: () =>
       session?.description() ??
       "Seite noch unbekannt. Passenden Griff auswählen; eine Taste bestätigt die Seite.",

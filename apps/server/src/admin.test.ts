@@ -108,50 +108,97 @@ it("runs the compiled production entrypoint without HTTP or scheduler and grants
 }, 30000);
 
 const CREDIT_USERS = [
-  { id: "existing", email: "operator@example.com", createdAt: 123 },
+  { id: "admin", email: "admin@example.com", createdAt: 123 },
+  { id: "existing", email: "rider@example.com", createdAt: 123 },
   { id: "deleted", email: "gone@example.com", createdAt: 123, deletedAt: 456 },
 ];
+
+/** Seeds the credit accounts; only `admin` holds the admin role and may act as operator. */
+function seedCreditUsers(db: Parameters<typeof seedOwners>[0]): void {
+  seedOwners(db, CREDIT_USERS);
+  db.$client
+    .prepare(
+      "INSERT INTO account_status (user_id,tier,vip,role) VALUES ('admin','normal',0,'admin')",
+    )
+    .run();
+}
+
+function credit(path: string, ...args: readonly string[]) {
+  return cli(path, "admin", "credit", "--operator", ...args);
+}
 
 it("credits Volts to an existing account once per reference through the compiled CLI", async () => {
   const path = join(directory, "credit.db");
   const config = testServerConfig({ database: { path, migrationsDir: MIGRATIONS_DIR } });
   const db = createDatabase(config);
-  seedOwners(db, CREDIT_USERS);
+  seedCreditUsers(db);
   db.$client.close();
 
   const first = CreditSchema.parse(
-    JSON.parse((await cli(path, "admin", "credit", "existing", "7000", "acceptance-e7")).stdout),
+    JSON.parse((await credit(path, "admin", "existing", "7000", "acceptance-e7")).stdout),
   );
 
   const again = CreditSchema.parse(
-    JSON.parse((await cli(path, "admin", "credit", "existing", "7000", "acceptance-e7")).stdout),
+    JSON.parse((await credit(path, "admin", "existing", "7000", "acceptance-e7")).stdout),
   );
 
   expect(first).toMatchObject({
     userId: "existing",
-    receipt: { refId: "acceptance-e7", amountVolts: 7000 },
+    receipt: {
+      refId: "acceptance-e7",
+      amountVolts: 7000,
+      operator: { kind: "recorded", userId: "admin" },
+    },
     voltsBalance: 7000,
   });
   expect(again).toEqual(first);
-  await expect(cli(path, "admin", "credit", "existing", "9000", "acceptance-e7")).rejects.toThrow(
+  await expect(credit(path, "admin", "existing", "9000", "acceptance-e7")).rejects.toThrow(
     "ledger conflict",
   );
-  await expect(cli(path, "admin", "credit", "missing", "10", "other")).rejects.toThrow(
+  await expect(credit(path, "admin", "missing", "10", "other")).rejects.toThrow(
     "account not found",
   );
   // A deleted account is a tombstone and never receives Volts again.
-  await expect(cli(path, "admin", "credit", "deleted", "10", "late")).rejects.toThrow(
-    "account not found",
-  );
-  await expect(cli(path, "admin", "credit", "existing", "-5", "neg")).rejects.toThrow("ZodError");
-  await expect(cli(path, "admin", "credit", "existing", "1e3", "sci")).rejects.toThrow("ZodError");
-  await expect(cli(path, "admin", "credit", "existing", "5", "bad ref")).rejects.toThrow(
-    "ZodError",
-  );
+  await expect(credit(path, "admin", "deleted", "10", "late")).rejects.toThrow("account not found");
+  await expect(credit(path, "admin", "existing", "-5", "neg")).rejects.toThrow("ZodError");
+  await expect(credit(path, "admin", "existing", "1e3", "sci")).rejects.toThrow("ZodError");
+  await expect(credit(path, "admin", "existing", "5", "bad ref")).rejects.toThrow("ZodError");
 
   const reopened = createDatabase(config);
   expect(
     reopened.$client.prepare("SELECT reason, delta_volts, ref_id FROM volts_ledger").all(),
   ).toEqual([{ reason: "operator_grant", delta_volts: 7000, ref_id: "acceptance-e7" }]);
+  expect(
+    reopened.$client
+      .prepare("SELECT operator_user_id, provenance FROM volts_grant_operators")
+      .all(),
+  ).toEqual([{ operator_user_id: "admin", provenance: "recorded" }]);
+  reopened.$client.close();
+}, 30000);
+
+it("rejects a credit without an active admin as operator", async () => {
+  const path = join(directory, "credit-operator.db");
+  const config = testServerConfig({ database: { path, migrationsDir: MIGRATIONS_DIR } });
+  const db = createDatabase(config);
+  seedCreditUsers(db);
+  db.$client.close();
+
+  await expect(cli(path, "admin", "credit", "existing", "10", "no-operator")).rejects.toThrow(
+    "ZodError",
+  );
+  await expect(credit(path, "existing", "existing", "10", "self")).rejects.toThrow(
+    "operator is not an active admin",
+  );
+  await expect(credit(path, "deleted", "existing", "10", "ghost")).rejects.toThrow(
+    "operator is not an active admin",
+  );
+  await expect(credit(path, "missing", "existing", "10", "nobody")).rejects.toThrow(
+    "operator is not an active admin",
+  );
+
+  const reopened = createDatabase(config);
+  expect(reopened.$client.prepare("SELECT COUNT(*) AS count FROM volts_ledger").get()).toEqual({
+    count: 0,
+  });
   reopened.$client.close();
 }, 30000);

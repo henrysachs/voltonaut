@@ -1,9 +1,8 @@
-/** One scripted simulator reading. gearIndex is zero-based; the HUD shows gearIndex + 1. */
+/** One scripted simulator reading, sent by the sim peripherals as GATT notifications. */
 export interface SimSample {
   readonly powerW: number;
   readonly cadenceRpm: number;
   readonly heartRateBpm: number;
-  readonly gearIndex: number;
 }
 
 export type SimScript = readonly [SimSample, ...SimSample[]];

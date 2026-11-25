@@ -17,6 +17,7 @@ export const profiles = accountsTables.profiles;
 export const accountStatus = accountsTables.accountStatus;
 export const rides = ridesTables.rides;
 export const voltsLedger = economyTables.voltsLedger;
+export const voltsGrantOperators = economyTables.voltsGrantOperators;
 export const inventory = inventoryTables.inventory;
 export const avatarLoadouts = inventoryTables.avatarLoadouts;
 export const progressConsents = progressTables.progressConsents;

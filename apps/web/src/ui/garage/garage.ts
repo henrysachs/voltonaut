@@ -3,7 +3,7 @@ import { avatarItemsForSlot, avatarColorOptions } from "@voltonaut/rules";
 import type { GarageLoadout, GarageLoadoutView } from "../../sync/garageLoadout.js";
 import type { GarageShopView } from "../../sync/garageShop.js";
 import { GarageEquip } from "./equip.js";
-import { equipOffer, ownedItemIds } from "./equipOffer.js";
+import { equipOffer, ownedItemIds, sameLoadout } from "./equipOffer.js";
 import { colorChoices, garageButton as button, itemRows, slotButtons } from "./garageItems.js";
 import { itemUnlockText, priceText, rarityText } from "./garageText.js";
 import { GaragePurchase, type GarageShopSource } from "./purchase.js";
@@ -34,7 +34,9 @@ class GaragePanel {
   readonly #purchase = new GaragePurchase();
   readonly #equip = new GarageEquip({
     equip: () => {
-      this.#saveLoadout();
+      const offer = equipOffer(this.#state, this.#shopView, this.#loadoutView);
+
+      if (offer.equipEnabled) void this.#account?.loadout.save(offer.target);
     },
     discard: () => {
       this.#dispatch({ kind: "discardPreview" });
@@ -86,17 +88,11 @@ class GaragePanel {
     source.loadout.subscribe((view) => {
       this.#loadoutView = view;
 
-      // A confirmed save or a server reread replaces the preview with the stored equipment.
-      if (view.kind === "ready" && !view.saving)
+      // Only a changed confirmed equipment replaces the preview; a failed save keeps it.
+      if (view.kind === "ready" && !sameLoadout(view.loadout, this.#state.equipped))
         this.#dispatch({ kind: "loadoutConfirmed", loadout: view.loadout });
       else this.#render();
     });
-  }
-
-  #saveLoadout(): void {
-    const offer = equipOffer(this.#state, this.#shopView, this.#loadoutView);
-
-    if (offer.equipEnabled) void this.#account?.loadout.save(offer.target);
   }
 
   mount(): void {
@@ -187,6 +183,7 @@ class GaragePanel {
       this.#price,
       this.#colors,
       this.#purchase.button,
+      this.#purchase.confirmation,
       this.#purchase.hint,
       this.#equip.root,
     );

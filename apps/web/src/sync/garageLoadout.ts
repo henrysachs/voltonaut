@@ -2,6 +2,9 @@ import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import type { AvatarConfig } from "@voltonaut/shared";
 
 import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
+import { AccountLane } from "./accountLane.js";
+import type { AccountScope } from "./accountScope.js";
+import { AccountState } from "./accountState.js";
 import type { ShopPort } from "./shopPort.js";
 
 /** Reading and saving the equipment goes through the shop port only. */
@@ -43,57 +46,60 @@ export function wornLoadout(view: GarageLoadoutView): AvatarConfig {
  * one save at a time, and a rejected save rereads the server.
  */
 export class GarageLoadout {
-  readonly #listeners = new Set<(view: GarageLoadoutView) => void>();
-  #view: GarageLoadoutView = { kind: "guest" };
-  #lease: LoadoutLease | undefined;
-  #revision = 0;
+  readonly #state: AccountState<GarageLoadoutView, LoadoutLease>;
+  /** The newest save or read wins; older answers are dropped. */
+  readonly #lane = new AccountLane();
 
-  bind(lease?: LoadoutLease): void {
-    this.#lease = lease;
-    this.#revision += 1;
-    this.publish({ kind: lease === undefined ? "guest" : "loading" });
-
-    if (lease !== undefined) void this.refresh(lease, "");
+  constructor(scope: AccountScope<LoadoutLease>) {
+    this.#state = new AccountState<GarageLoadoutView, LoadoutLease>(
+      { kind: "guest" },
+      {
+        enter: (binding) => ({ kind: binding.kind === "signedIn" ? "loading" : "guest" }),
+        start: ({ lease }) => {
+          void this.refresh(lease, "");
+        },
+      },
+    );
+    this.#state.follow(scope);
   }
 
   view(): GarageLoadoutView {
-    return this.#view;
+    return this.#state.view();
   }
 
   subscribe(listener: (view: GarageLoadoutView) => void): () => void {
-    this.#listeners.add(listener);
-    listener(this.#view);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
+    return this.#state.subscribe(listener);
   }
 
   /** Rereads equipment that could not be loaded. */
   async retry(): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
-    if (lease === undefined || this.#view.kind !== "failed") return;
-    this.publish({ kind: "loading" });
+    if (lease === undefined || this.#state.view().kind !== "failed") return;
+    this.#state.publish({ kind: "loading" });
     await this.refresh(lease, "");
   }
 
   /** Saves a complete loadout; ignored for guests and while another save is open. */
   async save(loadout: Readonly<AvatarConfig>): Promise<void> {
-    const lease = this.#lease;
-    const view = this.#view;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
     if (lease === undefined || view.kind !== "ready" || view.saving) return;
-    const revision = ++this.#revision;
-    this.publish({ ...view, saving: true, message: "Ausrüstung wird gespeichert …" });
+    const turn = this.#lane.begin(lease);
+    this.#state.publish({ ...view, saving: true, message: "Ausrüstung wird gespeichert …" });
 
     try {
       const saved = await lease.shop.saveLoadout(loadout);
 
-      if (this.current(lease, revision))
-        this.publish({ kind: "ready", loadout: saved.loadout, saving: false, message: SAVED });
+      this.#state.update(turn, () => ({
+        kind: "ready",
+        loadout: saved.loadout,
+        saving: false,
+        message: SAVED,
+      }));
     } catch (error) {
-      if (!this.current(lease, revision)) return;
+      if (!turn.current()) return;
 
       if (error instanceof PrivateRequestError && REJECTIONS.has(error.cause)) {
         await this.refresh(lease, REJECTED);
@@ -101,30 +107,19 @@ export class GarageLoadout {
         return;
       }
 
-      this.publish({ ...view, saving: false, message: UNCONFIRMED });
+      this.#state.publish({ ...view, saving: false, message: UNCONFIRMED });
     }
   }
 
-  private current(lease: LoadoutLease, revision: number): boolean {
-    return this.#lease === lease && lease.current() && revision === this.#revision;
-  }
-
-  private publish(view: GarageLoadoutView): void {
-    this.#view = view;
-
-    for (const listener of this.#listeners) listener(view);
-  }
-
   private async refresh(lease: LoadoutLease, message: string): Promise<void> {
-    const revision = ++this.#revision;
+    const turn = this.#lane.begin(lease);
 
     try {
       const { loadout } = await lease.shop.loadout();
 
-      if (this.current(lease, revision))
-        this.publish({ kind: "ready", loadout, saving: false, message });
+      this.#state.update(turn, () => ({ kind: "ready", loadout, saving: false, message }));
     } catch {
-      if (this.current(lease, revision)) this.publish({ kind: "failed", message: UNREACHABLE });
+      this.#state.update(turn, () => ({ kind: "failed", message: UNREACHABLE }));
     }
   }
 }

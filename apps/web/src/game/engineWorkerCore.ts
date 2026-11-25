@@ -1,27 +1,21 @@
-import {
-  RIDE_MODES,
-  type DeviceEvent,
-  type NativeTickFacts,
-  type RideEvent,
-  type RideMode,
-  type RideProgressCheckpoint,
-  type TrainerCommand,
+import type {
+  DeviceEvent,
+  RideEvent,
+  RideMode,
+  RideProgressCheckpoint,
+  TrainerCommand,
 } from "@voltonaut/shared";
 import type { Engine } from "@voltonaut/engine";
 import {
-  initializeActor,
-  requestedModeTraits,
-  setActorMode,
-  UNRECORDABLE_MODE_REFUSAL,
-  type Actor,
-  type ActorInit,
-} from "./engineWorkerActor.js";
-import { projectEngineWorkerProgress } from "./engineWorkerProgress.js";
+  startRecordedRide,
+  type RecordedRide,
+  type RideInit,
+  type RideUpdate,
+} from "./recordedRide.js";
 import type { CaptureCommand, CaptureResult, CaptureView } from "./rideCaptureProtocol.js";
-import { isNewCaptureRequest } from "./rideCaptureProtocol.js";
 
 export type EngineWorkerRequest =
-  | ({ readonly type: "engine.init" } & ActorInit)
+  | ({ readonly type: "engine.init"; readonly actorId: string } & RideInit)
   | { readonly type: "engine.setMode"; readonly actorId: string; readonly mode: RideMode }
   | { readonly type: "engine.ingest"; readonly actorId: string; readonly event: DeviceEvent }
   | {
@@ -64,6 +58,13 @@ export type CancelInterval = (intervalId: number) => void;
 
 export const WAKE_INTERVAL_MS = 50;
 
+interface Actor {
+  readonly actorId: string;
+  readonly ride: RecordedRide;
+  readonly intervalId: number | undefined;
+}
+
+/** Message dispatch and wake scheduling; the recorded ride owns everything else. */
 class WorkerDriver {
   private actor: Actor | undefined;
 
@@ -76,68 +77,22 @@ class WorkerDriver {
     private readonly newId: () => string,
   ) {}
 
-  private update(
-    actor: Readonly<Actor>,
-    atMs: number,
-    startedAtMs: number | undefined,
-    facts: readonly NativeTickFacts[],
-  ): void {
-    const snapshot = actor.engine.snapshot();
-    const events = actor.engine.drainEvents();
-    const commands = actor.engine.drainCommands();
-
-    // Modes without progress post no checkpoints (ADR-028).
-    const progress = RIDE_MODES[snapshot.mode.kind].progress
-      ? projectEngineWorkerProgress(actor.progress, {
-          startedAtMs:
-            startedAtMs === undefined ? undefined : Math.round(this.timeOriginMs + startedAtMs),
-          endedAtMs: Math.round(this.timeOriginMs + atMs),
-          facts,
-          paused: snapshot.paused,
-          dataAgeS: snapshot.dataAgeS,
-          clockSkipped: events.some((event) => event.type === "ride.clockSkipped"),
-        })
-      : undefined;
-
-    actor.recorder.outputs(events, commands);
-    actor.recorder.sample(atMs, snapshot);
-    this.post({
-      type: "engine.update",
-      actorId: actor.actorId,
-      snapshot,
-      events,
-      commands,
-      recording: actor.recorder.view(atMs),
-      progress,
-    });
-  }
-
   private post(message: EngineWorkerResponse): void {
     // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Dedicated worker messages have no targetOrigin.
     this.scope.postMessage(message);
   }
 
-  readonly wake = (): void => {
+  private postUpdate(actorId: string, update: RideUpdate): void {
+    this.post({ type: "engine.update", actorId, ...update });
+  }
+
+  private readonly wake = (): void => {
     const actor = this.actor;
 
     if (actor === undefined) return;
-    const atMs = this.nowMs();
+    const update = actor.ride.wake(this.nowMs());
 
-    if (actor.lastWakeMs === undefined) {
-      actor.lastWakeMs = atMs;
-      actor.recorder.arm(atMs);
-
-      return;
-    }
-
-    const previousWakeMs = actor.lastWakeMs;
-    const elapsedRealS = (atMs - previousWakeMs) / 1000;
-    actor.lastWakeMs = atMs;
-    actor.recorder.advance(atMs, elapsedRealS);
-
-    const facts = actor.engine.advance(elapsedRealS * actor.clockScale);
-
-    this.update(actor, atMs, previousWakeMs, facts);
+    if (update !== undefined) this.postUpdate(actor.actorId, update);
   };
 
   private init(message: Extract<EngineWorkerRequest, { readonly type: "engine.init" }>): void {
@@ -152,11 +107,16 @@ class WorkerDriver {
     }
 
     try {
-      const initializedWorkerMs = this.nowMs();
-      const actor = initializeActor(message, initializedWorkerMs, this.timeOriginMs, this.newId);
-      this.actor = actor;
-      actor.intervalId = this.schedule(this.wake, WAKE_INTERVAL_MS);
-      this.update(actor, initializedWorkerMs, undefined, []);
+      const { ride, update } = startRecordedRide(
+        message,
+        this.nowMs(),
+        this.timeOriginMs,
+        this.newId,
+      );
+
+      const intervalId = this.schedule(this.wake, WAKE_INTERVAL_MS);
+      this.actor = { actorId: message.actorId, ride, intervalId };
+      this.postUpdate(message.actorId, update);
     } catch (cause) {
       this.post({
         type: "engine.initFailed",
@@ -169,87 +129,61 @@ class WorkerDriver {
   handle(message: EngineWorkerRequest): void {
     if (message.type === "engine.init") {
       this.init(message);
-    } else {
-      this.handleActive(message);
-    }
-  }
 
-  private handleActive(
-    message: Exclude<EngineWorkerRequest, { readonly type: "engine.init" }>,
-  ): void {
+      return;
+    }
+
     const actor = this.actor;
 
     if (actor === undefined || message.actorId !== actor.actorId) return;
 
-    if (message.type === "engine.ingest") {
-      if (actor.intervalId === undefined) return;
-      actor.recorder.ingest(message.event, this.nowMs());
-      actor.engine.ingest(message.event);
+    switch (message.type) {
+      case "engine.ingest":
+        actor.ride.ingest(message.event, this.nowMs());
+        break;
+      case "engine.setMode":
+        actor.ride.setMode(message.mode, this.nowMs());
+        break;
+      case "recording.command":
+        this.capture(actor, message);
+        break;
+      case "engine.dispose":
+        this.dispose(actor);
+        break;
+      default: {
+        const exhaustive: never = message;
 
-      return;
+        return exhaustive;
+      }
     }
-
-    if (message.type === "engine.setMode") {
-      setActorMode(actor, message.mode, this.nowMs());
-
-      return;
-    }
-
-    if (message.type === "recording.command") {
-      const atMs = this.nowMs();
-
-      const result: CaptureResult = this.captureResult(actor, message, atMs);
-
-      if (Number.isSafeInteger(message.requestId))
-        actor.lastRequestId = Math.max(actor.lastRequestId, message.requestId);
-      this.post({
-        type: "recording.reply",
-        actorId: actor.actorId,
-        requestId: message.requestId,
-        result,
-      });
-
-      if (actor.intervalId === undefined && actor.recorder.view(atMs).kind === "idle")
-        this.actor = undefined;
-
-      return;
-    }
-
-    this.dispose();
   }
 
-  private captureResult(
-    actor: Readonly<Actor>,
+  private capture(
+    actor: Actor,
     message: Extract<EngineWorkerRequest, { readonly type: "recording.command" }>,
-    atMs: number,
-  ): CaptureResult {
-    const refusal = (text: string): CaptureResult => ({
-      kind: "failed",
-      message: text,
-      view: actor.recorder.view(atMs),
+  ): void {
+    const atMs = this.nowMs();
+    const result = actor.ride.capture(message.requestId, message.command, atMs);
+
+    this.post({
+      type: "recording.reply",
+      actorId: actor.actorId,
+      requestId: message.requestId,
+      result,
     });
-
-    if (
-      !isNewCaptureRequest(message.requestId, actor.lastRequestId) ||
-      (message.command.kind === "start" && actor.intervalId === undefined)
-    )
-      return refusal("Veralteter oder doppelter Aufnahmebefehl.");
-
-    if (message.command.kind === "start" && !requestedModeTraits(actor).recordable)
-      return refusal(UNRECORDABLE_MODE_REFUSAL);
-
-    return actor.recorder.command(message.command, atMs, actor.engine.snapshot());
+    this.release(actor, atMs);
   }
 
-  private dispose(): void {
-    const actor = this.actor;
-
-    if (actor === undefined) return;
-
+  private dispose(actor: Actor): void {
     if (actor.intervalId !== undefined) this.cancel(actor.intervalId);
-    actor.intervalId = undefined;
+    actor.ride.stop();
+    this.actor = { ...actor, intervalId: undefined };
+    this.release(actor, this.nowMs());
+  }
 
-    if (actor.recorder.view(this.nowMs()).kind === "idle") this.actor = undefined;
+  /** A stopped ride stays until its unsecured completion is released (ADR-018). */
+  private release(actor: Actor, atMs: number): void {
+    if (actor.ride.closed(atMs)) this.actor = undefined;
   }
 }
 

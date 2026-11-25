@@ -42,6 +42,7 @@ async function shop(creditVolts = 0) {
         idempotencyKey: "operator:test",
         refId: "test",
         amountVolts: creditVolts,
+        operatorUserId: owner.user.id,
       }),
     );
 

@@ -14,7 +14,7 @@ Ein angemeldeter Fahrer rüstet in der Garage besessene Items und Farben aus. De
 - **Start gegen `main` trotz offener Refactors (Auftraggeber, 25.11.2026).** #134 (Konto-Scope) und #124 (Render-Worker) sind offen und berühren dieselben Dateien. Konflikte werden beim Merge gelöst, nicht durch Warten.
 - **Eigener Branch `claude/garage-loadout-65`** (Auftraggeber, 25.11.2026), damit PR #126 nicht um dieses Feature wächst.
 - **Farben gehören zum Katalog.** Die Vorschau-Paletten ziehen von `apps/web/src/ui/garage/palettes.ts` nach `packages/rules`, damit Server und Garage dieselben Farben prüfen. `barTapeColor` hat keine Palette und wird von der Garage nicht angeboten; eine Ausrüstung mit `barTapeColor` wird abgewiesen.
-- **Migrationsnummer.** Diese Spec legt die nächste freie Migration auf `main` an. Wird PR #126 (Migration `0013_volts_grant_operators`) vorher gemergt, wird die Loadout-Migration vor dem Merge neu generiert.
+- **Migrationsnummer.** Diese Spec legt die nächste freie Migration auf `main` an. PR #126 wurde zuerst gemergt; die Loadout-Migration ist deshalb `0014_avatar_loadouts`, neu generiert auf `0013_volts_grant_operators`.
 
 ## Abnahmekriterien
 
@@ -53,4 +53,6 @@ Kein Showroom, keine Orbit-Kamera, kein Fotomodus (#122). Keine Blender-Slot-Ass
 
 - Mutation `packages/rules`: `loadout.ts` und `avatarPalettes.ts` je 100 % (Lauf mit `--force`; der inkrementelle Cache meldete zuvor veraltete Überlebende).
 - E2E `garage-loadout.spec.ts`: Der zweite Browser-Kontext lief beim ersten Versuch ins Standard-Timeout für `data-look`, solange der erste Tab parallel per Software-GPU renderte. Der Test schließt den ersten Tab jetzt vor dem zweiten Browser, wie im echten Gebrauch; Timeouts sind unverändert. Danach zweimal grün.
+- Review (zweiter Agent): Ein früh eintreffender Look baute den aufgeschobenen Fahrerkörper schon im ersten Frame (Rückschritt zu E4-10). Der Look wartet jetzt auf den Körper; `rider.look.test.ts` wird ohne die Korrektur rot. Behoben sind außerdem: Ein fehlgeschlagener Speicherversuch verwirft die Vorschau nicht mehr, und „Ausrüsten“ speichert die Vorschau über mehrere Slots, wenn alle Items besessen sind.
+- Offener Befund: Antwortet `GET /v1/me/loadout` mit 404, verliert die Garage im E2E die Meldung „Gekauft.“; Kauf und Besitz bleiben korrekt (siehe `docs/open-questions.md`).
 - Nicht geprüft: echte GPU-Bildrate mit wechselnder Ausrüstung, Abnahme durch Henry mit echten Volts.

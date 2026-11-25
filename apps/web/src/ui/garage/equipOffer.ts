@@ -1,9 +1,10 @@
 import {
+  AVATAR_SLOTS,
   avatarItemIdForSlot,
   defaultInventoryItemIds,
   previewAvatarConfig,
 } from "@voltonaut/rules";
-import type { AvatarConfig, ItemDef } from "@voltonaut/shared";
+import { AvatarConfigSchema, type AvatarConfig, type ItemDef } from "@voltonaut/shared";
 
 import type { GarageLoadoutView } from "../../sync/garageLoadout.js";
 import type { GarageShopView } from "../../sync/garageShop.js";
@@ -60,8 +61,23 @@ export interface EquipOffer {
   readonly hint: string;
 }
 
-function same(left: Readonly<AvatarConfig>, right: Readonly<AvatarConfig>): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+/** Equal loadouts; the schema fixes the key order, so the comparison does not depend on it. */
+export function sameLoadout(left: Readonly<AvatarConfig>, right: Readonly<AvatarConfig>): boolean {
+  return (
+    JSON.stringify(AvatarConfigSchema.parse(left)) ===
+    JSON.stringify(AvatarConfigSchema.parse(right))
+  );
+}
+
+const same = sameLoadout;
+
+/** What „Ausrüsten“ saves: the whole preview when every item in it is owned, else the selection. */
+function equipTarget(state: Readonly<GarageState>, owned: readonly string[]): AvatarConfig {
+  const wearable = AVATAR_SLOTS.every((slot) =>
+    owned.includes(avatarItemIdForSlot(state.config, slot)),
+  );
+
+  return wearable ? state.config : previewAvatarConfig(state.equipped, state.selection);
 }
 
 function hidden(state: Readonly<GarageState>, hint: string): EquipOffer {
@@ -97,7 +113,7 @@ export function equipOffer(
 
   const item = state.selection.item;
   const status = garageItemStatus(item, shop.ownedItemIds, state.equipped);
-  const target = previewAvatarConfig(state.equipped, state.selection);
+  const target = equipTarget(state, shop.ownedItemIds);
   const changed = !same(target, state.equipped);
   const wearable = status === "equipped" || status === "owned";
 

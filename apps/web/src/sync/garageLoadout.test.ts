@@ -10,6 +10,7 @@ import {
   type GarageLoadoutView,
   type LoadoutLease,
 } from "./garageLoadout.js";
+import { ScopeDriver, testBinding } from "./testdata/scopeDriver.js";
 
 const STRIPE: AvatarConfig = {
   ...DEFAULT_AVATAR_CONFIG,
@@ -21,15 +22,10 @@ class LoadoutServer {
   readonly saves: AvatarConfig[] = [];
   failure: Error | undefined;
   readFailure: Error | undefined;
-  active = true;
 
-  lease(): LoadoutLease {
+  lease(userId: string, generation: number): LoadoutLease {
     return {
-      signal: new AbortController().signal,
-      apiOrigin: "http://localhost:3000",
-      userId: "rider",
-      generation: 1,
-      current: () => this.active,
+      ...testBinding(userId, generation),
       shop: {
         loadout: () => this.read(),
         saveLoadout: (loadout) => this.write(loadout),
@@ -53,23 +49,31 @@ class LoadoutServer {
   }
 }
 
+function loadoutFor(server: Readonly<Pick<LoadoutServer, "lease">>) {
+  const scope = new ScopeDriver<LoadoutLease>((userId, generation) =>
+    server.lease(userId, generation),
+  );
+
+  return { scope, loadout: new GarageLoadout(scope.scope) };
+}
+
 async function readyLoadout(stored: AvatarConfig = DEFAULT_AVATAR_CONFIG) {
   const server = new LoadoutServer();
 
   server.stored = stored;
 
-  const loadout = new GarageLoadout();
+  const { scope, loadout } = loadoutFor(server);
 
-  loadout.bind(server.lease());
+  scope.signIn("rider");
   await vi.waitFor(() => {
     expect(loadout.view().kind).toBe("ready");
   });
 
-  return { server, loadout };
+  return { server, scope, loadout };
 }
 
 it("wears the default as guest and the server loadout when signed in", async () => {
-  const guest = new GarageLoadout();
+  const { loadout: guest } = loadoutFor(new LoadoutServer());
 
   expect(wornLoadout(guest.view())).toEqual(DEFAULT_AVATAR_CONFIG);
   await guest.save(STRIPE);
@@ -116,11 +120,11 @@ it("rereads the server after a rejected save and keeps the old loadout otherwise
 
 it("falls back to the default after a failed load and rereads on retry", async () => {
   const server = new LoadoutServer();
-  const loadout = new GarageLoadout();
+  const { scope, loadout } = loadoutFor(server);
 
   server.readFailure = new PrivateRequestError("retry");
   server.stored = STRIPE;
-  loadout.bind(server.lease());
+  scope.signIn("rider");
   await vi.waitFor(() => {
     expect(loadout.view().kind).toBe("failed");
   });
@@ -134,11 +138,10 @@ it("falls back to the default after a failed load and rereads on retry", async (
 });
 
 it("ignores results for a replaced account", async () => {
-  const { server, loadout } = await readyLoadout();
+  const { scope, loadout } = await readyLoadout();
   const pending = loadout.save(STRIPE);
 
-  server.active = false;
-  loadout.bind();
+  scope.signOut();
   await pending;
 
   expect(loadout.view()).toEqual({ kind: "guest" });

@@ -146,6 +146,23 @@ function seedInventoryAndGrant(
       "INSERT INTO volts_ledger (id, user_id, delta_volts, reason, ref_id, idempotency_key, payload_hash, created_at) VALUES ('30000000-0000-4000-8000-000000000003', ?, 5, 'operator_grant', 'acceptance', 'operator:acceptance', ?, ?)",
     )
     .run(ownerId, "c".repeat(64), NOW_MS);
+  // The other account issued the owner's credit; the owner's export must not reveal it (issue #116).
+  db.$client
+    .prepare(
+      "INSERT INTO volts_grant_operators (entry_id, operator_user_id, provenance, recorded_at) VALUES ('30000000-0000-4000-8000-000000000003', ?, 'recorded', ?)",
+    )
+    .run(otherId, NOW_MS);
+  // The owner issued a credit to the other account; deleting the owner must keep that audit row.
+  db.$client
+    .prepare(
+      "INSERT INTO volts_ledger (id, user_id, delta_volts, reason, ref_id, idempotency_key, payload_hash, created_at) VALUES ('30000000-0000-4000-8000-000000000004', ?, 3, 'operator_grant', 'acceptance', 'operator:acceptance', ?, ?)",
+    )
+    .run(otherId, "d".repeat(64), NOW_MS);
+  db.$client
+    .prepare(
+      "INSERT INTO volts_grant_operators (entry_id, operator_user_id, provenance, recorded_at) VALUES ('30000000-0000-4000-8000-000000000004', ?, 'recorded', ?)",
+    )
+    .run(ownerId, NOW_MS);
 }
 
 export async function accountDataFixture() {
@@ -198,7 +215,7 @@ export function assertOwnerPurged(f: Readonly<AccountDataFixture>): void {
   ).toHaveLength(1);
   expect(
     f.db.$client.prepare("SELECT user_id FROM volts_ledger WHERE user_id = ?").all(f.other.user.id),
-  ).toHaveLength(1);
+  ).toHaveLength(2);
   expect(
     f.db.$client.prepare("SELECT user_id FROM inventory WHERE user_id = ?").all(f.other.user.id),
   ).toHaveLength(1);

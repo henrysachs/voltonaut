@@ -1,4 +1,7 @@
 import { PrivateRequestError, type LeaseBinding, type SyncFailure } from "./apiRoute.js";
+import { AccountLane, type AccountTurn } from "./accountLane.js";
+import type { AccountScope } from "./accountScope.js";
+import { AccountState } from "./accountState.js";
 import { ShopReceiptMismatch, type ShopPort } from "./shopPort.js";
 
 /** The garage reads and buys through the shop port only. */
@@ -46,67 +49,68 @@ const UNCONFIRMED =
  * Owns no authoritative state: every value comes from the account's server.
  */
 export class GarageShop {
-  readonly #listeners = new Set<(view: GarageShopView) => void>();
+  readonly #state: AccountState<GarageShopView, ShopLease>;
+  /** The newest purchase or read wins; older answers are dropped. */
+  readonly #lane = new AccountLane();
   /** Unconfirmed purchases keep their request id so a retry cannot charge twice. */
   readonly #retryIds = new Map<string, string>();
   readonly #newRequestId: () => string;
-  #view: GarageShopView = { kind: "guest" };
-  #lease: ShopLease | undefined;
   #retryUserId: string | undefined;
-  #revision = 0;
 
-  constructor(newRequestId: () => string = () => crypto.randomUUID()) {
+  constructor(
+    scope: AccountScope<ShopLease>,
+    newRequestId: () => string = () => crypto.randomUUID(),
+  ) {
     this.#newRequestId = newRequestId;
-  }
+    this.#state = new AccountState<GarageShopView, ShopLease>(
+      { kind: "guest" },
+      {
+        enter: (binding) => {
+          // A re-authenticated session of the same account keeps open request ids (ADR-031 §3).
+          // The session passes through a signed-out state on the way, so only another account
+          // clears them.
+          if (binding.kind === "signedIn") {
+            if (binding.lease.userId !== this.#retryUserId) this.#retryIds.clear();
+            this.#retryUserId = binding.lease.userId;
+          }
 
-  bind(lease?: ShopLease): void {
-    this.#lease = lease;
-
-    // A re-authenticated session of the same account keeps open request ids (ADR-031 §3). The
-    // session passes through a signed-out state on the way, so only another account clears them.
-    if (lease !== undefined) {
-      if (lease.userId !== this.#retryUserId) this.#retryIds.clear();
-      this.#retryUserId = lease.userId;
-    }
-
-    this.#revision += 1;
-    this.publish({ kind: lease === undefined ? "guest" : "loading" });
-
-    if (lease !== undefined) void this.refresh(lease, "", null);
+          return { kind: binding.kind === "signedIn" ? "loading" : "guest" };
+        },
+        start: ({ lease }) => {
+          void this.refresh(lease, "", null);
+        },
+      },
+    );
+    this.#state.follow(scope);
   }
 
   /** Rereads a shop that could not be loaded, e.g. when the browser is back online. */
   async retry(): Promise<void> {
-    const lease = this.#lease;
+    const lease = this.#state.lease();
 
-    if (lease === undefined || this.#view.kind !== "failed") return;
-    this.publish({ kind: "loading" });
+    if (lease === undefined || this.#state.view().kind !== "failed") return;
+    this.#state.publish({ kind: "loading" });
     await this.refresh(lease, "", null);
   }
 
   view(): GarageShopView {
-    return this.#view;
+    return this.#state.view();
   }
 
   subscribe(listener: (view: GarageShopView) => void): () => void {
-    this.#listeners.add(listener);
-    listener(this.#view);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
+    return this.#state.subscribe(listener);
   }
 
   /** Buys one item at the price the garage shows; ignored while another purchase is open. */
   async purchase(itemId: string, priceVolts: number): Promise<void> {
-    const lease = this.#lease;
-    const view = this.#view;
+    const lease = this.#state.lease();
+    const view = this.#state.view();
 
     if (lease === undefined || view.kind !== "ready" || view.pendingItemId !== null) return;
     const requestId = this.#retryIds.get(itemId) ?? this.#newRequestId();
-    const revision = ++this.#revision;
+    const turn = this.#lane.begin(lease);
     this.#retryIds.set(itemId, requestId);
-    this.publish({
+    this.#state.publish({
       ...view,
       pendingItemId: itemId,
       message: "Kauf wird bestätigt …",
@@ -120,7 +124,7 @@ export class GarageShop {
         expectedPriceVolts: priceVolts,
       });
 
-      if (!this.current(lease, revision)) return;
+      if (!turn.current()) return;
       this.#retryIds.delete(itemId);
 
       // An earlier unconfirmed purchase may have committed; reread instead of mixing states.
@@ -130,7 +134,7 @@ export class GarageShop {
         return;
       }
 
-      this.publish({
+      this.#state.publish({
         kind: "ready",
         voltsBalance: receipt.voltsBalance,
         ownedItemIds: [...new Set([...view.ownedItemIds, receipt.item.itemId])],
@@ -143,7 +147,7 @@ export class GarageShop {
         error instanceof ShopReceiptMismatch ||
         (error instanceof PrivateRequestError && REJECTIONS.has(error.cause));
 
-      if (this.current(lease, revision)) await this.failPurchase(lease, view, itemId, rejected);
+      if (turn.current()) await this.failPurchase(lease, view, itemId, rejected);
     }
   }
 
@@ -160,17 +164,12 @@ export class GarageShop {
       return;
     }
 
-    this.publish({ ...view, pendingItemId: null, message: UNCONFIRMED, messageItemId: itemId });
-  }
-
-  private current(lease: ShopLease, revision: number): boolean {
-    return this.#lease === lease && lease.current() && revision === this.#revision;
-  }
-
-  private publish(view: GarageShopView): void {
-    this.#view = view;
-
-    for (const listener of this.#listeners) listener(view);
+    this.#state.publish({
+      ...view,
+      pendingItemId: null,
+      message: UNCONFIRMED,
+      messageItemId: itemId,
+    });
   }
 
   private async refresh(
@@ -178,7 +177,7 @@ export class GarageShop {
     message: string,
     messageItemId: string | null,
   ): Promise<void> {
-    const revision = ++this.#revision;
+    const turn: AccountTurn = this.#lane.begin(lease);
 
     try {
       const [balance, inventory] = await Promise.all([
@@ -186,12 +185,12 @@ export class GarageShop {
         lease.shop.inventory(),
       ]);
 
-      if (!this.current(lease, revision)) return;
+      if (!turn.current()) return;
 
       const ownedItemIds = inventory.items.map(({ itemId }) => itemId);
 
       for (const itemId of ownedItemIds) this.#retryIds.delete(itemId);
-      this.publish({
+      this.#state.publish({
         kind: "ready",
         voltsBalance: balance.voltsBalance,
         ownedItemIds,
@@ -200,7 +199,7 @@ export class GarageShop {
         messageItemId,
       });
     } catch {
-      if (this.current(lease, revision)) this.publish({ kind: "failed", message: UNREACHABLE });
+      this.#state.update(turn, () => ({ kind: "failed", message: UNREACHABLE }));
     }
   }
 }

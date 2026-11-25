@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d73ef5ac-bb69-404a-a9aa-5a87963698b5",
+  "id": "b222ad04-4982-4076-b246-8d583cd3c3db",
   "prevId": "1d68c705-2f2a-4ffe-b6df-1ae39e2c6d9b",
   "tables": {
     "account_status": {
@@ -69,60 +69,6 @@
         "account_status_role": {
           "name": "account_status_role",
           "value": "\"account_status\".\"role\" IN ('user', 'admin')"
-        }
-      }
-    },
-    "avatar_loadouts": {
-      "name": "avatar_loadouts",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "loadout_json": {
-          "name": "loadout_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "avatar_loadouts_user_id_users_id_fk": {
-          "name": "avatar_loadouts_user_id_users_id_fk",
-          "tableFrom": "avatar_loadouts",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "avatar_loadouts_json": {
-          "name": "avatar_loadouts_json",
-          "value": "json_valid(\"avatar_loadouts\".\"loadout_json\")"
-        },
-        "avatar_loadouts_updated_at": {
-          "name": "avatar_loadouts_updated_at",
-          "value": "typeof(\"avatar_loadouts\".\"updated_at\") = 'integer' AND \"avatar_loadouts\".\"updated_at\" >= 0"
         }
       }
     },
@@ -1380,6 +1326,84 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "volts_grant_operators": {
+      "name": "volts_grant_operators",
+      "columns": {
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "operator_user_id": {
+          "name": "operator_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provenance": {
+          "name": "provenance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "volts_grant_operators_operator_idx": {
+          "name": "volts_grant_operators_operator_idx",
+          "columns": [
+            "operator_user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "volts_grant_operators_entry_id_volts_ledger_id_fk": {
+          "name": "volts_grant_operators_entry_id_volts_ledger_id_fk",
+          "tableFrom": "volts_grant_operators",
+          "tableTo": "volts_ledger",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "volts_grant_operators_operator_user_id_users_id_fk": {
+          "name": "volts_grant_operators_operator_user_id_users_id_fk",
+          "tableFrom": "volts_grant_operators",
+          "tableTo": "users",
+          "columnsFrom": [
+            "operator_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "volts_grant_operators_provenance": {
+          "name": "volts_grant_operators_provenance",
+          "value": "(\"volts_grant_operators\".\"provenance\" = 'recorded' AND \"volts_grant_operators\".\"operator_user_id\" IS NOT NULL) OR (\"volts_grant_operators\".\"provenance\" = 'unknown_before_audit' AND \"volts_grant_operators\".\"operator_user_id\" IS NULL)"
+        }
+      }
     },
     "volts_ledger": {
       "name": "volts_ledger",

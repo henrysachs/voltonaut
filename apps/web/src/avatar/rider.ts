@@ -56,6 +56,11 @@ export class RiderOnBike implements RiderModel {
     this.pose();
   }
 
+  /** Whether the skinned body exists; the ride scene defers it past the first frame. */
+  hasBody(): boolean {
+    return this.bodyValue !== undefined;
+  }
+
   /** The skinned rider body, built on first use. */
   get body(): RiderBody {
     return this.ensureBody();
@@ -188,7 +193,8 @@ export function createRider(wheelCircM: number): RiderView {
       update(frame) {
         rider.update(frame);
 
-        if (pending !== undefined) {
+        // A look waits for the deferred body; applying it earlier would build the body in frame 1.
+        if (pending !== undefined && rider.hasBody()) {
           rider.setLook(pending);
           pending = undefined;
         }

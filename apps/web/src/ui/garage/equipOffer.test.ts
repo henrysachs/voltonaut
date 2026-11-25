@@ -9,7 +9,13 @@ import type { AvatarConfig, ItemDef } from "@voltonaut/shared";
 
 import type { GarageLoadoutView } from "../../sync/garageLoadout.js";
 import type { GarageShopView } from "../../sync/garageShop.js";
-import { equipOffer, garageItemStatus, itemStatusText, ownedItemIds } from "./equipOffer.js";
+import {
+  equipOffer,
+  garageItemStatus,
+  itemStatusText,
+  ownedItemIds,
+  sameLoadout,
+} from "./equipOffer.js";
 import { createInitialGarageState, garageReducer } from "./state.js";
 
 function item(slot: ItemDef["slot"], id: string): ItemDef {
@@ -121,4 +127,37 @@ it("returns to the confirmed equipment and keeps its colors", () => {
   );
 
   expect(discarded.config).toEqual(equipped);
+});
+
+it("saves the whole preview across slots when every item in it is owned", () => {
+  const jersey = selecting("jersey.stripe");
+
+  const helmet = garageReducer(garageReducer(jersey, { kind: "selectSlot", slot: "helmet" }), {
+    kind: "selectColor",
+    index: 0,
+    color: "#202830",
+  });
+
+  const offer = equipOffer(helmet, shop(), loadout());
+
+  expect(offer.target.rider.jerseyId).toBe("jersey.stripe");
+  expect(offer.target.rider.helmetColor).toBe("#202830");
+
+  const withLocked = garageReducer(garageReducer(helmet, { kind: "selectSlot", slot: "jersey" }), {
+    kind: "selectItem",
+    slot: "jersey",
+    item: item("jersey", "jersey.aurora"),
+  });
+
+  expect(equipOffer(withLocked, shop(), loadout()).equipEnabled).toBe(false);
+});
+
+it("compares loadouts independent of key order", () => {
+  const reordered: AvatarConfig = {
+    bike: DEFAULT_AVATAR_CONFIG.bike,
+    rider: DEFAULT_AVATAR_CONFIG.rider,
+  };
+
+  expect(sameLoadout(reordered, DEFAULT_AVATAR_CONFIG)).toBe(true);
+  expect(sameLoadout(selecting("jersey.stripe").config, DEFAULT_AVATAR_CONFIG)).toBe(false);
 });

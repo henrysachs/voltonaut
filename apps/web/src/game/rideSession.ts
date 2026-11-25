@@ -1,3 +1,4 @@
+import type { TrainerControl } from "@voltonaut/ble";
 import { TEST_ROUTES, type RideSnapshot } from "@voltonaut/engine";
 import type {
   DeviceEvent,
@@ -5,7 +6,6 @@ import type {
   RideMode,
   RideProgressCheckpoint,
   RiderProfile,
-  TrainerCommand,
 } from "@voltonaut/shared";
 
 import { createConnectionMonitor } from "./connectionMonitor.js";
@@ -22,10 +22,8 @@ export const ENGINE_INPUT_TYPES = [
   "device.status",
 ] as const satisfies readonly DeviceEvent["type"][];
 
-export interface RideTrainerSink {
-  readonly onSnapshot: (snapshot: RideSnapshot) => void;
-  readonly onCommands: (commands: readonly TrainerCommand[]) => void;
-}
+/** Receives every engine update's pause state with that update's commands; the trainer owns timing. */
+export type RideTrainerSink = Pick<TrainerControl, "forward">;
 
 export interface RideSessionOptions {
   readonly bus: EventBus;
@@ -34,7 +32,7 @@ export interface RideSessionOptions {
   readonly profile: RiderProfile;
   readonly source: "sim" | "ble";
   readonly clockScale: number;
-  /** Trainer control sink; receives every snapshot before that update's commands. */
+  /** Trainer control sink; the single place pairing an update's pause state with its commands. */
   readonly trainer?: RideTrainerSink | undefined;
   readonly onProgress?: ((checkpoint: RideProgressCheckpoint | undefined) => void) | undefined;
 }
@@ -110,9 +108,8 @@ function startEngine(
     },
     {
       onUpdate: (update) => {
-        options.trainer?.onSnapshot(update.snapshot);
         segments.consume({ events: update.events, snapshot: update.snapshot });
-        options.trainer?.onCommands(update.commands);
+        options.trainer?.forward({ paused: update.snapshot.paused, commands: update.commands });
         options.onProgress?.(update.progress);
       },
       onFailure: () => {

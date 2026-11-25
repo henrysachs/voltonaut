@@ -12,6 +12,7 @@ import {
   type VoltsDebitCommand,
   type VoltsDebitReceipt,
   type VoltsGrantCommand,
+  type VoltsGrantOperator,
   type VoltsGrantReceipt,
   type VoltsRideRangeCommand,
   type VoltsRideRangeReceipt,
@@ -182,7 +183,8 @@ export function findRideRangeReceipt(
   return row === undefined ? undefined : parseStoredRangeReceipt(row);
 }
 
-export function parseStoredGrantReceipt(row: Readonly<LedgerRow>): VoltsGrantReceipt {
+/** Shape check of a stored credit; the export uses it without revealing the operator (issue #116). */
+export function assertStoredGrant(row: Readonly<LedgerRow>): void {
   if (
     row.reason !== "operator_grant" ||
     row.rewardDay !== null ||
@@ -192,10 +194,18 @@ export function parseStoredGrantReceipt(row: Readonly<LedgerRow>): VoltsGrantRec
   ) {
     throw new ApiError(500, "internal_error", "corrupt Volts ledger entry");
   }
+}
+
+export function parseStoredGrantReceipt(
+  row: Readonly<LedgerRow>,
+  operator: Readonly<VoltsGrantOperator>,
+): VoltsGrantReceipt {
+  assertStoredGrant(row);
 
   return VoltsGrantReceiptSchema.parse({
     entryId: row.id,
     refId: row.refId,
     amountVolts: row.deltaVolts,
+    operator,
   });
 }

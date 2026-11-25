@@ -77,6 +77,20 @@ Henry prüft noch manuell:
 3. Nach den E1-Mitschnitten eine echte 1-Hz-Wattreihe mit Lücken, Spitzen und Null-Kadenz als zusätzliche Golden-Fahrt prüfen.
 4. ADR-011 und die neu angelegten Golden-Dateien freigeben. Ein späterer PR braucht für die Baselines das Label `baseline-update`.
 
+## E7-Nachtrag (2026-11-25)
+
+Stand nach #107 (gemergt) und PR #126 (offen, enthält #115 und #116).
+
+- **#65 Ausrüsten:** Das Issue nennt als Voraussetzung die Zweige `refactor/private-api-routes` und `refactor/account-scope`. Stand 25.11.2026 abends: `private-api-routes` ist als #133 gemergt (`apps/web/src/sync/apiRoute.ts`, `accountPorts.ts`). `account-scope` ist als PR #134 offen und baut die Konto-Sync-Schicht um, auf der `GarageShop` aufsetzt. #124 (aufgezeichnete Fahrt im Worker) ist gemergt (`77add9b`).
+- **Mindestlevel im Shop:** Bis zur Progression prüft der Server kein Level (ADR-031). Level-Items sind dadurch früher kaufbar als vorgesehen; gekaufte Items bleiben im Besitz.
+- **Operator-Audit (E7-04):** Die Admin-Prüfung läuft im CLI vor der Buchungstransaktion. Ein gleichzeitiges `admin revoke` des Operators wird nicht erkannt. Eine per Roh-SQL oder Restore ohne Audit-Eintrag geschriebene Gutschrift lässt eine spätere Wiederholung mit `500` scheitern.
+- **Gegenbuchung:** Fehlerhafte Gutschriften lassen sich nicht korrigieren, solange es keine Gegenbuchung gibt.
+- **Testlücken:** Kein E2E-Test prüft, dass der Fokus erhalten bleibt, wenn eine Abmeldung oder ein Ladefehler die Kaufbestätigung schließt (E7-03). Der angemeldete Kauf ist nur mit gemocktem Server, nicht gegen den echten Server im Browser geprüft.
+- **Garage bei fehlendem Loadout-Endpunkt (E7-05):** Antwortet `GET /v1/me/loadout` mit 404, etwa während eines Deploys mit neuerem Web als API, verliert die Garage im E2E-Test die Kaufmeldung „Gekauft.“ des gerade gekauften Items. Der Kauf selbst bleibt korrekt. Ursache nicht geklärt; der Test-Mock liefert den Endpunkt jetzt wie der echte Server.
+- **CI-Ausreißer:** `pwa.build.test.ts › announces a waiting release …` lief am 25.11.2026 auf PR #107 einmal ins 5-s-Timeout, der Parallellauf desselben Commits war grün. Lokal 2,04 s gegenüber 2,11 s auf `main`. Seit #108 ist der Test stabilisiert; bei erneutem Auftreten Ressourcen des Runners prüfen, nicht das Timeout.
+- **Review-Befunde zu #96 (Kontoexport und -löschung):** Am 25.11.2026 am aktuellen `main` nachgeprüft. Behoben: Export-Download widerruft die URL verzögert, die Löschung entfernt offene OIDC-Verknüpfungen, der Tombstone nutzt einen HMAC-Schlüssel. Noch offen: Die Kontolöschung löscht die Strava-Verbindung ohne Widerruf bei Strava (`strava.store.ts` `deleteOwn`), und der Export nutzt weiter das allgemeine 8-s-Timeout. Dafür eigene Issues anlegen.
+- **Abnahme durch Henry:** Ein Laufrad mit Volts kaufen, nach Reload und in einem zweiten Browser denselben Besitz sehen, ein Kauf ohne genug Volts muss scheitern. Voraussetzung: Deploy mit Migrationen bis `0013`, Admin-Rolle für Henrys Konto und eine Gutschrift per `admin credit --operator` (siehe `deploy/README.md`).
+
 ## Risiken
 
 | Risiko                                                   | Wahrscheinlichkeit      | Auswirkung                  | Gegenmaßnahme                                                          |

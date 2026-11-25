@@ -49,6 +49,7 @@ async function garage() {
       idempotencyKey: "operator:test",
       refId: "test",
       amountVolts: 5000,
+      operatorUserId: other.user.id,
     }),
   );
 

@@ -1,6 +1,11 @@
 import { createEventBus } from "@voltonaut/shared";
 
-import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
+import {
+  bluetoothDeviceSource,
+  setupKeyboard,
+  setupRideDevices,
+  simDeviceSource,
+} from "./rideDevices.js";
 
 import { createRideSession } from "./game/rideSession.js";
 import { setupProfile } from "./profileBootstrap.js";
@@ -13,21 +18,12 @@ import { parseEnvironmentSettings } from "./world/environment.js";
 const FAST_CLOCK_SCALE = 20;
 const APP_ROUTE_ID = "test-loop";
 
-/**
- * Garage purchases and equipment use the account's server state once account data is ready; the
- * ride wears the confirmed equipment and guests keep the default (spec E7-05 AK8).
- */
-async function attachGarage(
-  garage: ReturnType<typeof mountGameMenu>,
+/** The ride wears the confirmed equipment; guests and offline riders the default (spec E7-05 AK8). */
+function wearLoadout(
   scene: ReturnType<typeof mountRideViews>,
-  account: Readonly<Pick<BrowserAccount, "accounts">> | undefined,
-): Promise<void> {
-  const sync = await account?.accounts.catch(() => null);
-
-  if (sync === undefined || sync === null) return;
-
-  garage?.attachAccount(sync.garage);
-  sync.garage.loadout.subscribe((view) => {
+  loadout: Readonly<Pick<BrowserAccount["loadout"], "subscribe">> | undefined,
+): void {
+  loadout?.subscribe((view) => {
     scene?.setLook?.(wornLoadout(view));
   });
 }
@@ -40,9 +36,9 @@ async function start(): Promise<void> {
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
   const bus = createEventBus();
 
-  const devices = simMode
-    ? setupSimDevices(bus, clockScale)
-    : setupBluetoothDevices(bus, clockScale);
+  // The only sim/real decision: which transports the production adapters run on.
+  const source = simMode ? simDeviceSource(clockScale) : bluetoothDeviceSource();
+  const devices = source === undefined ? undefined : setupRideDevices(bus, clockScale, source);
 
   const { initialProfile: profile } = await profileReady;
 
@@ -65,7 +61,12 @@ async function start(): Promise<void> {
   setupKeyboard(bus);
 
   devices?.mount();
-  void attachGarage(mountGameMenu(profile.bike.wheelCircM), scene, account);
+  const garage = mountGameMenu(profile.bike.wheelCircM);
+
+  // Garage purchases and equipment use the account's server state; guests keep the preview.
+  if (garage !== undefined && account !== undefined)
+    garage.attachAccount({ shop: account.shop, loadout: account.loadout });
+  wearLoadout(scene, account?.loadout);
 }
 
 await start();

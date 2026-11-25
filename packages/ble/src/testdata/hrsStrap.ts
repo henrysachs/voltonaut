@@ -6,6 +6,7 @@
  */
 
 import { toHex } from "../bytes.js";
+import { encodeHeartRateMeasurement } from "../hrs/encode.js";
 import type { BleFixture, BleLogEntry } from "../fixtureSchema.js";
 import type { DeviceEvent } from "@voltonaut/shared";
 
@@ -13,29 +14,6 @@ export interface HrsScriptSample {
   readonly bpm: number;
   readonly energyKcal?: number;
   readonly rrRaw?: readonly number[];
-}
-
-function encodeFrame(sample: HrsScriptSample): Uint8Array {
-  const usesUint16 = sample.bpm > 0xff;
-
-  const flags =
-    (usesUint16 ? 0x01 : 0x00) |
-    (sample.energyKcal === undefined ? 0x00 : 0x08) |
-    (sample.rrRaw !== undefined && sample.rrRaw.length > 0 ? 0x10 : 0x00);
-
-  const bytes = usesUint16
-    ? [flags, sample.bpm & 0xff, sample.bpm >> 8]
-    : [flags, sample.bpm & 0xff];
-
-  if (sample.energyKcal !== undefined) {
-    bytes.push(sample.energyKcal & 0xff, sample.energyKcal >> 8);
-  }
-
-  for (const raw of sample.rrRaw ?? []) {
-    bytes.push(raw & 0xff, raw >> 8);
-  }
-
-  return Uint8Array.from(bytes);
 }
 
 const SCRIPT: readonly HrsScriptSample[] = [
@@ -83,7 +61,7 @@ export function createHrsSyntheticFixture(): HrsSyntheticData {
   const samples = strapSamples();
 
   const log: BleLogEntry[] = samples.map((sample, index) => {
-    const bytes = encodeFrame(sample);
+    const bytes = encodeHeartRateMeasurement(sample);
 
     return {
       kind: "data",

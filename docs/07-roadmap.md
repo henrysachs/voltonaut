@@ -21,7 +21,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [x] `scripts/guard.mjs` (Escape-Hatches, gelockerte Configs, geschützte Dateien ohne ADR/Label, Deps ohne `docs/dependencies.md`)
 - [x] Vitest-Workspace inkl. Coverage-Schwellen, fast-check, Stryker-Config (engine/rules), Playwright (Chromium, Sim-Modus, Screenshot-Setup im Playwright-Docker-Image)
 - [x] `packages/shared`: Typen aus `01-architecture.md`, Zod-Basis, Event-Bus-Typen
-- [x] `packages/ble/sim`: FakeTrainer (Watt/Kadenz per Slider/Skript), FakeHeartRate, FakePlay + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
+- [x] `packages/ble/sim`: Sim-Trainer und Sim-Pulsgurt als geskriptete Peripherie hinter `BleTransport` ([E0-15](specs/E0-15-sim-ble-transport.md), FakePlay entfernt) + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
 - [x] `apps/web`: Minimal-HUD (Watt, Kadenz, Puls, Gang) mit Sim-Werten; erster E2E-Test
 - [x] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
 - [x] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)
@@ -162,6 +162,9 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-02](specs/E7-02-server-inventory-shop.md) ergänzt das Server-Inventar mit atomaren, idempotenten Käufen, die Operator-Gutschrift `admin credit` und den aktiven Kaufknopf der Garage für angemeldete Fahrer. Das Mindestlevel bleibt bis zur Progression ungeprüft (ADR-031). Stand: implementiert und softwaregeprüft (Unit, Integration, E2E im Gastmodus); Merge, Bereitstellung und Henrys Abnahme offen. Ausrüsten nur besessener Items folgt mit #65.
 
+[E7-03](specs/E7-03-purchase-confirmation.md) macht den Kauf zweistufig: „Kaufen (n ⚡)“ öffnet eine Bestätigung mit Preis und Kontostand danach, der Fokus liegt auf „Abbrechen“. Stand: implementiert und softwaregeprüft (Unit, E2E angemeldet mit gemocktem Server); Merge und Bereitstellung offen.
+
+[E7-04](specs/E7-04-operator-grant-audit.md) ordnet jede Volts-Gutschrift einem aktiven Admin-Konto zu (`admin credit --operator <adminUserId> …`). Ältere Gutschriften bleiben als „Operator unbekannt (vor Einführung)“ markiert. Stand: implementiert und softwaregeprüft (Integration, Migration, CLI); Merge und Bereitstellung offen.
 [E7-05](specs/E7-05-garage-loadout.md) speichert die Ausrüstung pro Konto (`GET`/`PUT /v1/me/loadout`, nur besessene Items und Katalogfarben), zeigt in der Garage je Item „ausgerüstet“, „besessen“, „käuflich“ oder „gesperrt“ und überträgt die Ausrüstung per `render.look` an den Fahrer in der laufenden Fahrt. Stand: implementiert und softwaregeprüft; Merge, Bereitstellung und Henrys Abnahme offen.
 
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`

@@ -15,7 +15,7 @@ const SNAPSHOT = [
 ] as const;
 
 it("adds avatar loadouts without touching accounts, inventory or Volts", () => {
-  const upgrade = upgradeFrom("0012_progress_consent_journals", (old) => {
+  const upgrade = upgradeFrom("0013_volts_grant_operators", (old) => {
     seedOwners(old, [
       { id: "owner", email: "owner@example.com", createdAt: 1 },
       { id: "gone", email: "gone@example.com", createdAt: 1, deletedAt: 5 },

@@ -2,7 +2,7 @@ import { createEventBus } from "@voltonaut/shared";
 import { expect, it } from "vitest";
 import { createCpsTrainerAdapter } from "./cps/adapter.js";
 import { createHeartRateAdapter } from "./hrs/adapter.js";
-import { createTrainerAdapter } from "./ftms/adapter.js";
+import { createTrainerAdapter, type TrainerAdapterOptions } from "./ftms/adapter.js";
 import { createManualClock } from "./sim/clock.js";
 import { createManualTicker } from "./sim/tick.js";
 import { createTestCentral } from "./testdata/webCentral.js";
@@ -142,7 +142,9 @@ it("preserves terminal error after late native disconnect and allows manual reco
 interface TeardownCase {
   readonly serviceUuid: string;
   readonly characteristicUuid: string;
-  readonly createAdapter: typeof createHeartRateAdapter;
+  readonly createAdapter: (
+    options: TrainerAdapterOptions,
+  ) => ReturnType<typeof createHeartRateAdapter>;
 }
 
 it.each<TeardownCase>([
@@ -180,6 +182,7 @@ it.each<TeardownCase>([
       bus,
       clock,
       ticker,
+      clockScale: 1,
       transport: createWebBluetoothTransport({ central: fake.central }),
     };
 
@@ -253,6 +256,7 @@ it("does not let a canceled FTMS read subscribe into a newer session", async () 
     bus,
     clock,
     ticker,
+    clockScale: 1,
     transport: createWebBluetoothTransport({ central: fake.central }),
   });
 

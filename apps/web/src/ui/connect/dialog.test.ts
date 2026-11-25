@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { createEventBus, type ConnectionStatus, type DeviceAdapter } from "@voltonaut/shared";
+import { createEventBus, type ConnectionStatus } from "@voltonaut/shared";
 import { createTestDocument, type TestNodeView } from "../../testdata/dom.js";
-import { mountConnectDialog } from "./dialog.js";
+import { mountConnectDialog, type ConnectableDevice } from "./dialog.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -11,20 +11,23 @@ it("shows status transitions, opens and closes, retries failed connects", async 
   let status: ConnectionStatus = "disconnected";
   let attempts = 0;
 
-  const adapter: DeviceAdapter = {
+  const connect = (): Promise<void> => {
+    attempts += 1;
+
+    return Promise.reject(new Error("unavailable"));
+  };
+
+  const adapter: ConnectableDevice = {
     kind: "trainer",
     id: "trainer",
     status: () => status,
-    connect: () => {
-      attempts += 1;
-
-      return Promise.reject(new Error("unavailable"));
-    },
+    connect,
+    select: connect,
     disconnect: () => Promise.resolve(),
   };
 
   vi.stubGlobal("document", document);
-  mountConnectDialog([{ label: "Trainer", adapter, select: () => adapter.connect() }], bus);
+  mountConnectDialog([{ label: "Trainer", adapter }], bus);
   document.find("Geräte verbinden").click();
   expect(document.created.some((node: TestNodeView) => node.open)).toBe(true);
   document.find("Gerät wählen").click();
@@ -47,11 +50,13 @@ it("shows unconfirmed side, actionable adapter details and allows cancelling han
   let detail = "Seite noch unbekannt";
   let disconnected = false;
 
-  const adapter: DeviceAdapter = {
+  const adapter: ConnectableDevice = {
     kind: "controller",
     id: "play-left",
     status: () => "handshaking",
     connect: () => Promise.resolve(),
+    select: () => Promise.resolve(),
+    description: () => detail,
     disconnect: () => {
       disconnected = true;
 
@@ -60,17 +65,7 @@ it("shows unconfirmed side, actionable adapter details and allows cancelling han
   };
 
   vi.stubGlobal("document", document);
-  mountConnectDialog(
-    [
-      {
-        label: "Linker Play-Griff",
-        adapter,
-        select: () => adapter.connect(),
-        description: () => detail,
-      },
-    ],
-    bus,
-  );
+  mountConnectDialog([{ label: "Linker Play-Griff", adapter }], bus);
   expect(document.find("Seite noch unbekannt")).toBeDefined();
   expect(document.find("Gerät wählen").disabled).toBe(true);
   document.find("Trennen").click();

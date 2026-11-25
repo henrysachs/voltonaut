@@ -47,6 +47,7 @@ it("creates owned tables, enforces foreign keys and closes on Nest shutdown", as
       "strava_rate_budget",
       "strava_transactions",
       "users",
+      "volts_grant_operators",
       "volts_ledger",
     ].map((name) => ({ name })),
   );

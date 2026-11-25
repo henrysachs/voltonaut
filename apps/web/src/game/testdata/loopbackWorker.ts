@@ -5,7 +5,7 @@ import {
   type EngineWorkerRequest,
   type EngineWorkerResponse,
 } from "../engineWorkerCore.js";
-import { createFakeTimers, createManualClock } from "./engineWorkerHarness.js";
+import { createFakeTimers, createManualClock } from "./workerClock.js";
 
 type Delivery =
   | { readonly to: "worker"; readonly message: EngineWorkerRequest }

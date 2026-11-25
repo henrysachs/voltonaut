@@ -128,6 +128,7 @@ test("buys and equips a jersey that survives reload, a second browser and shows 
   await expect(page.getByTestId("garage-item-status-jersey.stripe")).toHaveText("1.500 ⚡");
   await expect(page.getByTestId("garage-equip")).toBeDisabled();
   await page.getByTestId("garage-purchase").click();
+  await page.getByTestId("garage-purchase-confirm").click();
   await expect(page.getByTestId("garage-item-status-jersey.stripe")).toHaveText("Im Besitz");
 
   const distanceM = Number(await lookOf(page).getAttribute("data-distance-m"));
