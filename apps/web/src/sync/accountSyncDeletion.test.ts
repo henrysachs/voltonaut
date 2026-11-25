@@ -28,6 +28,7 @@ it("invalidates the lease and purges only the deleted owner's outbox rows", asyn
   expect(f.sessionEnded).toBe(true);
   expect(f.active).toBeUndefined();
   expect(f.purged).toEqual([{ apiOrigin: lease.apiOrigin, userId: A }]);
+  expect(f.progressPurged).toEqual([{ apiOrigin: lease.apiOrigin, userId: A }]);
   expect([...f.rows.values()].map((row) => row.userId)).toEqual([B, A]);
   expect([...f.rows.values()].map((row) => row.apiOrigin)).toEqual([
     lease.apiOrigin,
@@ -48,8 +49,29 @@ it("keeps local data and the session when server deletion is not confirmed", asy
   expect(f.sessionEnded).toBe(false);
   expect(f.active).toBe(lease);
   expect(f.purged).toEqual([]);
+  expect(f.progressPurged).toEqual([]);
   expect(f.rows.size).toBe(1);
   expect(JSON.stringify(f.sync.view())).toContain("nicht bestätigt");
+});
+
+it("keeps the cleanup intent until the progress outbox is purged too", async () => {
+  const f = fixture();
+  const lease = f.login(A);
+  const owner = { apiOrigin: lease.apiOrigin, userId: A };
+  await f.sync.refresh();
+  await f.write(newOutboxRow(lease, localRide, 1000));
+  f.progressPurgeFailure = true;
+
+  await expect(f.sync.deleteAccount(`${A}@example.com`)).resolves.toBe(true);
+  expect(f.rows.size).toBe(0);
+  expect(f.progressPurged).toEqual([]);
+  expect(f.pendingDeletions.has(deletionOwnerKey(owner))).toBe(true);
+  expect(JSON.stringify(f.sync.view())).toContain("für einen späteren Versuch vermerkt");
+
+  f.progressPurgeFailure = false;
+  await f.sync.recoverDeletions();
+  expect(f.progressPurged).toEqual([owner]);
+  expect(f.pendingDeletions.size).toBe(0);
 });
 
 it("durably retries a local cleanup that failed after confirmed server deletion", async () => {

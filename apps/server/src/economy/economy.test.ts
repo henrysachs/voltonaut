@@ -19,6 +19,7 @@ import {
   loginTestUser,
 } from "../testing/test-app.spec.js";
 import type { DatabaseReader } from "../testing/test-app.spec.js";
+import type { VoltsLedgerTransaction } from "./economy.codec.js";
 import { EconomyService } from "./economy.service.js";
 
 const NOW_MS = Date.parse("2026-11-24T12:00:00.000Z");
@@ -157,8 +158,12 @@ it("telescopes contiguous cumulative components and retries the immutable first 
   });
   expect(second.cumulativeWorkVolts - first.cumulativeWorkVolts).toBe(3);
   expect(second.cumulativeClimbVolts - first.cumulativeClimbVolts).toBe(5);
-  expect(first.candidateVolts + second.candidateVolts).toBe(14);
   expect(retry).toEqual(first);
+  expect(
+    f.economy.transaction((tx: Readonly<VoltsLedgerTransaction>) =>
+      tx.rideRangeReceipt(f.owner.user.id, JOURNAL_ONE, 0),
+    ),
+  ).toEqual(first);
   expect(await readBalance(f.server, f.owner.sessionToken)).toBe(14);
   expect(
     f.db.$client
@@ -168,6 +173,18 @@ it("telescopes contiguous cumulative components and retries the immutable first 
     { id: first.entryId, idempotency_key: `ride:${JOURNAL_ONE}:0`, delta_volts: 6 },
     { id: second.entryId, idempotency_key: `ride:${JOURNAL_ONE}:1`, delta_volts: 8 },
   ]);
+});
+
+it("conserves candidate Volts across contiguous ranges", async () => {
+  const f = await fixture();
+  const first = f.economy.creditRideRange(f.owner.user.id, rangeCommand(JOURNAL_ONE, 0, 1, 2.9, 3));
+
+  const second = f.economy.creditRideRange(
+    f.owner.user.id,
+    rangeCommand(JOURNAL_ONE, 1, 2, 5.9, 6),
+  );
+
+  expect(first.candidateVolts + second.candidateVolts).toBe(14);
 });
 
 it("rejects gaps, overlaps, cumulative regressions and reward-day regressions without rows", async () => {

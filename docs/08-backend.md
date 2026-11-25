@@ -53,6 +53,7 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 | `accounts/`                                                                                                                                                                                                                                             | Rider-Profil, Anzeigename, Avatar-Config, Export/Löschung (DSGVO)                   | `profiles`                                                                                              |
 | `inventory/`                                                                                                                                                                                                                                            | freigeschaltete Items, Ausrüsten-Validierung                                        | `inventory`                                                                                             |
 | `economy/` (Volts)                                                                                                                                                                                                                                      | Volts-Ledger, Shop, Käufe (Transaktion)                                             | `volts_ledger`                                                                                          |
+| `progress/`                                                                                                                                                                                                                                             | Consent, Journalbindung, Checkpoint-Annahme, Highwater                              | `progress_consents`, `ride_progress_journals`, `ride_progress_ranges`                                   |
 | `progression/`                                                                                                                                                                                                                                          | XP, Level, Badges, PBs aus akzeptierten Fahrten (nutzt `@voltonaut/rules`)          | `progression`, `badges`, `personal_bests`                                                               |
 | `rides/`                                                                                                                                                                                                                                                | Upload, Plausibilitätsprüfung (nutzt `@voltonaut/engine` zur Nachrechnung), Vergabe | `rides`, `ride_samples`                                                                                 |
 | `live/`                                                                                                                                                                                                                                                 | `LiveGateway` (`@WebSocketGateway`, `WsAdapter`), Räume In-Memory                   | –                                                                                                       |
@@ -121,6 +122,14 @@ volts_ledger(id PK, user_id, delta_volts INT, reason TEXT /* ride_reward|purchas
              UNIQUE(user_id,idempotency_key),
              UNIQUE(ref_id,start_tick) WHERE reason='ride_reward',
              UNIQUE(ref_id,end_tick) WHERE reason='ride_reward')
+progress_consents(user_id PK, version, enabled, session_hash, session_generation, updated_at)
+ride_progress_journals(journal_id PK, user_id, session_hash, session_generation, consent_version,
+                       source, clock_scale, physics_revision, route_id, route_revision, physics_json,
+                       started_at_ms, last_sequence, last_end_tick, last_ended_at_ms, last_reward_day,
+                       cumulative_facts_json, created_at)
+ride_progress_ranges(id PK, journal_id, user_id, start_tick, end_tick, payload_hash, payload_json,
+                     cumulative_facts_json, receipt_json, created_at,
+                     UNIQUE(journal_id,start_tick), UNIQUE(journal_id,end_tick))
 progression(user_id PK, xp INT, level INT, total_distance_m, total_elev_m, total_ride_s, updated_at)
 badges(user_id, badge_id, earned_at, ride_id, PK(user_id,badge_id))
 personal_bests(user_id, segment_id, time_s REAL, avg_power_w, ride_id, at, PK(user_id,segment_id))
@@ -146,6 +155,9 @@ GET  /v1/auth/identities           (Bearer)                         → { identi
 POST /v1/auth/logout                                              → 204
 GET  /v1/me                                                       → { user, profile, progression, voltsBalance, inventory[], badges[], pbs{} }
 GET  /v1/me/volts                                                 → { voltsBalance } (E6-05, autoritativ aus dem Ledger)
+GET  /v1/me/progress-consent                                      → { version, enabled, rewardsAvailable, sessionGeneration }
+PUT  /v1/me/progress-consent                                      → { enabled, sessionGeneration } (exakter Origin, versioniert)
+POST /v1/progress/checkpoints                                    → { range } (E6-10, authentifiziert, idempotent, bucht Volts)
 PUT  /v1/me/profile             RiderProfile                      → profile          (Validierung: Bereiche wie 03 §2a)
 PUT  /v1/me/avatar              AvatarConfig                      → avatar           (nur Items aus dem Inventar)
 GET  /v1/catalog                                                  → { items[], levels[], version }   (öffentlich, cachebar)
@@ -278,6 +290,10 @@ Die Outbox enthält höchstens 20 Einträge einschließlich Profilaufträgen. Ne
 - Beim Start: Cache aus IndexedDB optional laden; Storagefehler blockieren keine Fahrt. Nur mit vorhandener Session optional `GET /v1/me` im Hintergrund. Kein automatischer Login; Gast und Sim starten ohne Authentifizierung, Storage oder Netzwerk.
 - Nach der Fahrt: `RideUpload` in **Outbox** (IndexedDB) → Upload mit Retry/Backoff; UI zeigt XP/Volts als „vorläufig" bis Server-Antwort.
 - Käufe und Ausrüstungsänderungen nur **online** (Kauf ist Server-Transaktion); Ausrüstung offline nur aus dem gecachten Inventar.
+- Automatische Progress-Checkpoints nutzen eine eigene IndexedDB `voltonaut-progress-outbox`. Sie werden nur nach ausdrücklicher Zustimmung und nur für BLE gespeichert, maximal 1200 Batches pro Konto/Origin, ohne stille Eviction. Lokale Batches haben höchstens 120 Facts/6 Sekunden; Serverbereiche höchstens 1200 Facts/1200 Checkpoints/60 Sekunden. Sim erreicht weder IDB noch Server. Bestätigte Batches werden erst nach serverseitiger Quittung gelöscht; Widerruf blockiert neue Uploads, löscht aber keine bestätigten Bereiche. Nur eine bestätigte Kontolöschung entfernt alle Progress-Zeilen dieses Kontos und API-Origins, lokal wie serverseitig; der Kontoexport enthält Consent, Journale und Bereiche ohne Session-Hashes. Consent meldet `rewardsAvailable`; deaktivierte Quellenpolitik blockiert Aktivierung. Checkpoint-Zeiten sind auf Serverzukunft plus fünf Minuten und Offline-Alter von sieben Tagen begrenzt.
+
+`GET` und `PUT /v1/me/progress-consent` sowie `POST /v1/progress/checkpoints` sind authentifizierte `no-store`-Endpunkte. Konto und `sessionTokenHash` kommen ausschließlich aus `SessionPrincipal`. `POST /v1/progress/checkpoints` akzeptiert genau `{consentVersion, sessionGeneration, checkpoints}` und antwortet mit `{range}`. Die Schreibtransaktion prüft die aktive Session, die aktuelle Consent-Zeile, Journalbindung, Tick- und Sequenzfolge sowie die Physikbeiträge. `RIDE_SOURCE_POLICY=disabled` lehnt jede Annahme ab. Nur `declared_ble_v1` erlaubt `source: "ble"`. Der Belohnungstag ist das UTC-Datum des letzten `endedAtMs`; ein Tagesrückschritt wird abgewiesen. Journal-Highwater und Volts-Beleg committen gemeinsam. Ein identischer Präfix eines größeren oder kleineren Retry-Batchings liefert denselben Beleg. Lücken, Überlappungen und geänderte Nutzlasten liefern 409 ohne Buchung. Progress erzeugt keine `rides` und keine XP-/Level-Buchung.
+
 - Konflikte: Server gewinnt; Profil-Änderungen per `updated_at` (last-write-wins).
 
 ## Live-Gruppenfahrten (WebSocket)

@@ -1,0 +1,42 @@
+{
+  "consentVersion": 1,
+  "sessionGeneration": 1,
+  "checkpoints": [
+    {
+      "schemaVersion": 1,
+      "journalId": "550e8400-e29b-41d4-a716-446655440000",
+      "sequence": 0,
+      "startTick": 0,
+      "endTick": 1,
+      "startedAtMs": 1795607999000,
+      "endedAtMs": 1795607999051,
+      "source": "ble",
+      "clockScale": 1,
+      "physicsRevision": "engine-v1",
+      "routeId": "flat-loop",
+      "routeRevision": "1",
+      "physics": {
+        "massKg": 75,
+        "bikeMassKg": 8,
+        "cdaM2": 0.32,
+        "crr": 0.004,
+        "wheelCircM": 2.105
+      },
+      "facts": [
+        {
+          "powerW": 200,
+          "cadenceRpm": 90,
+          "timeS": 0.05,
+          "distanceM": 1,
+          "elevationGainM": 0,
+          "energyKj": 0.01
+        }
+      ],
+      "quality": {
+        "paused": false,
+        "dataAgeS": 0,
+        "clockSkipped": false
+      }
+    }
+  ]
+}

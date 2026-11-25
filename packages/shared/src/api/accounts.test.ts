@@ -17,7 +17,7 @@ it("normalizes only the deletion confirmation and rejects extra ownership fields
 });
 
 const exportInput = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   exportedAt: "2026-11-24T12:00:00.000Z",
   account: {
     user: {
@@ -69,6 +69,7 @@ const exportInput = {
         },
       ],
     },
+    progress: { consent: { status: "missing" }, journals: [], ranges: [] },
   },
   strava: { status: { status: "disabled" }, deliveries: [] },
 };
@@ -87,6 +88,37 @@ it("exports the honest current server state without sessions or credentials", ()
       ...value,
       sessionToken: "not-allowed",
       strava: { ...value.strava, accessToken: "not-allowed" },
+    }).success,
+  ).toBe(false);
+});
+
+it("exports progress consent without its session binding", () => {
+  const consent = {
+    status: "present",
+    version: 2,
+    enabled: true,
+    sessionGeneration: 1,
+    updatedAt: "2026-11-24T12:00:00.000Z",
+  };
+
+  const withConsent = (value: Readonly<Record<string, string | number | boolean>>) => ({
+    ...exportInput,
+    progression: {
+      ...exportInput.progression,
+      progress: { consent: value, journals: [], ranges: [] },
+    },
+  });
+
+  expect(AccountExportSchema.parse(withConsent(consent)).progression.progress.consent).toEqual(
+    consent,
+  );
+  expect(
+    AccountExportSchema.safeParse(withConsent({ ...consent, sessionHash: "a".repeat(64) })).success,
+  ).toBe(false);
+  expect(
+    AccountExportSchema.safeParse({
+      ...exportInput,
+      progression: { volts: exportInput.progression.volts },
     }).success,
   ).toBe(false);
 });

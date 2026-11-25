@@ -1,4 +1,4 @@
-import type { StravaLease } from "../privateAuthTransport.js";
+import type { ProgressLease, StravaLease } from "../privateAuthTransport.js";
 import type { IdentityLease } from "../identityLease.js";
 import type { ShopLease } from "../shopLease.js";
 
@@ -26,6 +26,12 @@ export const unusedIdentityLease: IdentityLease = {
   completeLink: () => Promise.reject(new Error("unexpected identity link completion")),
 };
 
+export const unusedProgressLease: ProgressLease = {
+  status: () => Promise.reject(new Error("progress was not requested by this account test")),
+  update: () => Promise.reject(new Error("unexpected progress consent update")),
+  submit: () => Promise.reject(new Error("unexpected progress submission")),
+};
+
 export const unusedShopLease: ShopLease = {
   balance: () => Promise.reject(new Error("Volts were not requested by this account test")),
   inventory: () => Promise.reject(new Error("inventory was not requested by this account test")),
@@ -42,5 +48,6 @@ export const unexpectedAccountParts = {
   ...unexpectedMembership,
   ...unexpectedAccountData,
   identities: unusedIdentityLease,
+  progress: unusedProgressLease,
   shop: unusedShopLease,
 };

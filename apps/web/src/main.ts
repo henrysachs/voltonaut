@@ -1,4 +1,4 @@
-import type { DeviceEvent } from "@voltonaut/shared";
+import type { DeviceEvent, EventBus } from "@voltonaut/shared";
 import { createEventBus } from "@voltonaut/shared";
 
 import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
@@ -8,7 +8,7 @@ import { startApp } from "./app.js";
 import { createRideSession } from "./game/rideSession.js";
 import { createConnectionMonitor, type ConnectionMonitor } from "./game/connectionMonitor.js";
 import { setupProfile } from "./profileBootstrap.js";
-import { setupBrowserAccount } from "./browserAccount.js";
+import { setupBrowserAccount, type BrowserAccount } from "./browserAccount.js";
 import { setupRidePresentation } from "./ridePresentation.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
 import { parseEnvironmentSettings } from "./world/environment.js";
@@ -58,10 +58,31 @@ function startHud(
   startApp({ document: createDomDocument(document), ride, connectedLabel });
 }
 
+function withProgress(
+  callbacks: Parameters<typeof createRideSession>[1],
+  onProgress: Parameters<typeof createRideSession>[1]["onProgress"],
+): Parameters<typeof createRideSession>[1] {
+  return onProgress === undefined ? callbacks : { ...callbacks, onProgress };
+}
+
+function forwardDeviceEvents(
+  bus: Readonly<EventBus>,
+  link: Readonly<ReturnType<typeof createRideSession>["link"]>,
+): void {
+  const forwardEvent = (event: DeviceEvent): void => {
+    link.ingest(event);
+  };
+
+  bus.subscribe("trainer.data", forwardEvent);
+  bus.subscribe("hr.data", forwardEvent);
+  bus.subscribe("controller.button", forwardEvent);
+  bus.subscribe("device.status", forwardEvent);
+}
+
 /** Garage purchases use the account's server shop once account data is ready; guests keep the preview. */
 async function attachGarageShop(
   garage: ReturnType<typeof mountGameMenu>,
-  account: Readonly<ReturnType<typeof setupBrowserAccount>>,
+  account: Readonly<Pick<BrowserAccount, "accounts">> | undefined,
 ): Promise<void> {
   const sync = await account?.accounts.catch(() => null);
 
@@ -80,7 +101,11 @@ async function start(): Promise<void> {
     ? setupSimDevices(bus, clockScale)
     : setupBluetoothDevices(bus, clockScale);
 
-  const session = createRideSession(APP_ROUTE_ID, devices ?? {});
+  const session = createRideSession(
+    APP_ROUTE_ID,
+    withProgress(devices ?? {}, account?.progress.accept),
+  );
+
   const { link } = session;
   const connection = createConnectionMonitor(bus);
 
@@ -102,14 +127,7 @@ async function start(): Promise<void> {
     },
   });
 
-  const forwardEvent = (event: DeviceEvent): void => {
-    link.ingest(event);
-  };
-
-  bus.subscribe("trainer.data", forwardEvent);
-  bus.subscribe("hr.data", forwardEvent);
-  bus.subscribe("controller.button", forwardEvent);
-  bus.subscribe("device.status", forwardEvent);
+  forwardDeviceEvents(bus, link);
 
   startHud(document, session, connection, simMode ? "Sim connected" : "Bluetooth connected");
   setupKeyboard(bus);

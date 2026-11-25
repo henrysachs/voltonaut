@@ -45,6 +45,8 @@ export class AdministrationFixture {
         update: () => Promise.reject(new Error("no admin outbox")),
         purgeOwner: () => Promise.reject(new Error("no admin outbox")),
       }),
+    progressOutbox: () =>
+      Promise.resolve({ purgeOwner: () => Promise.reject(new Error("no admin progress outbox")) }),
     deletions: {
       load: () => [],
       remember: () => true,

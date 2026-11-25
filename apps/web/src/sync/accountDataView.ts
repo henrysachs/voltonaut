@@ -10,6 +10,7 @@ import type { ProfileBootstrap } from "../profileBootstrap.js";
 import type { ApplicationSession } from "./applicationSession.js";
 import type { AccountOutbox, OutboxRow } from "./accountOutbox.js";
 import type { DeletionIntents } from "./accountDeletion.js";
+import type { ProgressOutbox } from "./progressOutbox.js";
 
 type Remote<T> =
   | { readonly kind: "loading" }
@@ -46,6 +47,8 @@ export interface SyncOptions {
     Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
   >;
   readonly outbox: () => Promise<AccountOutbox>;
+  /** Progress rows of a deleted account are purged together with its account outbox rows. */
+  readonly progressOutbox: () => Promise<Pick<ProgressOutbox, "purgeOwner">>;
   readonly deletions: DeletionIntents;
   readonly archive: () => Promise<readonly ArchivedRide[]>;
   readonly profile: Readonly<Pick<ProfileBootstrap, "saved" | "apply">>;

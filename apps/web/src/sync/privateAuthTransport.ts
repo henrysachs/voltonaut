@@ -4,6 +4,10 @@ import {
   AccountExportSchema,
   ProfileInputSchema,
   ProfileStateSchema,
+  ProgressCheckpointBatchSchema,
+  ProgressConsentStateSchema,
+  ProgressConsentUpdateSchema,
+  ProgressRangeResponseSchema,
   RideDetailSchema,
   RideIdSchema,
   RideListSchema,
@@ -27,6 +31,8 @@ import {
   type Membership,
   type ProfileInput,
   type ProfileState,
+  type ProgressCheckpointBatch,
+  type ProgressConsentState,
   type RideDetail,
   type RideList,
   type RideReceipt,
@@ -36,6 +42,7 @@ import {
   type StravaRideView,
   type StravaConsent,
   type StravaDelivery,
+  type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 import type { ProfileWriteLease } from "./profile-store.js";
 import {
@@ -63,6 +70,7 @@ export interface AccountLease extends ProfileWriteLease {
   readonly exportAccount: () => Promise<AccountExport>;
   readonly deleteAccount: (confirmation: string) => Promise<void>;
   readonly strava: StravaLease;
+  readonly progress: ProgressLease;
   readonly identities: IdentityLease;
   readonly shop: ShopLease;
   readonly accountStatus: () => Promise<AccountStatus>;
@@ -71,6 +79,12 @@ export interface AccountLease extends ProfileWriteLease {
     userId: string,
     membership: Readonly<Membership>,
   ) => Promise<AccountStatus>;
+}
+
+export interface ProgressLease {
+  readonly status: () => Promise<ProgressConsentState>;
+  readonly update: (enabled: boolean) => Promise<ProgressConsentState>;
+  readonly submit: (batch: ProgressCheckpointBatch) => Promise<VoltsRideRangeReceipt>;
 }
 
 export interface StravaLease {
@@ -84,6 +98,41 @@ export interface StravaLease {
 
 export interface PrivateAuthTransport {
   readonly authorize: (authorization: LeaseAuthorization) => AccountLease;
+}
+
+function progressLease(
+  request: ReturnType<typeof authorizedRequest>,
+  generation: number,
+): ProgressLease {
+  return {
+    status: () => request("/v1/me/progress-consent", ProgressConsentStateSchema),
+    update: (enabled) =>
+      request(
+        "/v1/me/progress-consent",
+        ProgressConsentStateSchema,
+        JSON.stringify(
+          ProgressConsentUpdateSchema.parse({ enabled, sessionGeneration: generation }),
+        ),
+      ),
+    async submit(batch) {
+      const payload = ProgressCheckpointBatchSchema.parse(batch);
+
+      const response = await request(
+        "/v1/progress/checkpoints",
+        ProgressRangeResponseSchema,
+        JSON.stringify(payload),
+      );
+
+      if (
+        !payload.checkpoints.every(
+          (checkpoint) => response.range.journalId === checkpoint.journalId,
+        )
+      )
+        throw new PrivateRequestError("contract");
+
+      return response.range;
+    },
+  };
 }
 
 function stravaLease(request: ReturnType<typeof authorizedRequest>): StravaLease {
@@ -138,9 +187,7 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         generation: authorization.generation,
         signal: authorization.signal,
         current: authorization.current,
-        strava: stravaLease(request),
-        identities: identityLease(request),
-        shop: shopLease(request),
+        ...capabilityLeases(request, authorization.generation),
         ...membershipLease(request),
         profile: () => request("/v1/me/profile", ProfileStateSchema),
         saveProfile: (profile) =>
@@ -175,6 +222,18 @@ export function privateAuthTransport(apiOrigin: string): PrivateAuthTransport {
         },
       };
     },
+  };
+}
+
+function capabilityLeases(
+  request: ReturnType<typeof authorizedRequest>,
+  generation: number,
+): Pick<AccountLease, "strava" | "progress" | "identities" | "shop"> {
+  return {
+    strava: stravaLease(request),
+    progress: progressLease(request, generation),
+    identities: identityLease(request),
+    shop: shopLease(request),
   };
 }
 

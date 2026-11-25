@@ -6,8 +6,9 @@ import { openRideDatabase } from "./sync/rideDatabase.js";
 import { accountDeletionIntents } from "./sync/accountDeletion.js";
 import { mountAccountDataPanel } from "./ui/accountDataPanel.js";
 import { mountAccountMembershipPanel } from "./ui/accountMembershipPanel.js";
+import type { ProgressOutbox } from "./sync/progressOutbox.js";
 
-function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
+export function lazyResource<T>(open: () => Promise<T>): () => Promise<T> {
   let resource: Promise<T> | undefined;
 
   return () => {
@@ -27,6 +28,7 @@ export async function setupBrowserAccountData(
     Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
   >,
   profile: () => Promise<ProfileBootstrap>,
+  progressOutbox: () => Promise<Pick<ProgressOutbox, "purgeOwner">>,
 ): Promise<AccountSync> {
   const localProfile = await profile();
   const outbox = lazyResource(openAccountOutbox);
@@ -36,6 +38,7 @@ export async function setupBrowserAccountData(
     session,
     profile: localProfile,
     outbox,
+    progressOutbox,
     archive: async () => (await archive()).list(),
     deletions: accountDeletionIntents(() => window.localStorage),
     nowMs: Date.now,
