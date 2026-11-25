@@ -48,12 +48,14 @@ describe("procedural road bike structure", () => {
     expect(bike.root.getObjectByName("pedal_l")?.parent?.name).toBe("crank");
   });
 
+  // The bike alone keeps headroom below the 32 k rider + bike budget of docs/04 §11
+  // (checked in customize.test.ts), so the rider body still fits.
   it("keeps every frame and wheel combination within the triangle and mesh budget", () => {
     for (const frame of FRAME_SPECS) {
       for (const wheel of WHEEL_SPECS) {
         const bike = new BikeModel(2.105, frame, wheel);
 
-        expect(triangles(bike)).toBeLessThanOrEqual(32_000);
+        expect(triangles(bike)).toBeLessThanOrEqual(30_000);
         expect(bike.meshes().length).toBeLessThanOrEqual(26);
       }
     }
