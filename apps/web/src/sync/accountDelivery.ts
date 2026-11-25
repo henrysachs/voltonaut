@@ -4,9 +4,16 @@ import {
   type OutboxRow,
   retryState,
 } from "./accountOutbox.js";
-import { PrivateRequestError, type AccountLease } from "./privateAuthTransport.js";
+import type { ProfilePort, RidePort } from "./accountPorts.js";
+import { PrivateRequestError, type LeaseBinding } from "./apiRoute.js";
 
-type AccountReceipt = Awaited<ReturnType<AccountLease["saveProfile"] | AccountLease["upload"]>>;
+/** Delivering an outbox row writes either the profile or one ride, nothing else. */
+export type DeliveryLease = LeaseBinding & {
+  readonly profile: Pick<ProfilePort, "save">;
+  readonly rides: Pick<RidePort, "upload">;
+};
+
+type AccountReceipt = Awaited<ReturnType<ProfilePort["save"] | RidePort["upload"]>>;
 
 type DeliveryResult = "continue" | "reauth";
 
@@ -39,7 +46,7 @@ function confirmStoredRow(row: OutboxRow, receipt: AccountReceipt, attempts: num
 }
 
 export async function deliverAccountRow(
-  lease: AccountLease,
+  lease: DeliveryLease,
   database: AccountOutbox,
   row: OutboxRow,
   nowMs: () => number,
@@ -69,7 +76,9 @@ export async function deliverAccountRow(
 
   try {
     const receipt =
-      row.kind === "ride" ? await lease.upload(row.payload) : await lease.saveProfile(row.payload);
+      row.kind === "ride"
+        ? await lease.rides.upload(row.payload)
+        : await lease.profile.save(row.payload);
 
     const stored = confirmStoredRow(row, receipt, attempts);
 

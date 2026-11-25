@@ -14,6 +14,10 @@ _Vermeiden_: öffentlicher Startsnapshot als Ersatz für die Historie.
 Der vom Nutzer gewählte Abschnitt einer Spielsession, dessen Zeit und Strecke zu einer abgeschlossenen Aufnahme zählen. Die davor gefahrene Historie bleibt Vorlauf.
 _Vermeiden_: Journalanfang als Synonym für Aufnahmestart.
 
+**Fahrtjournal-Codec**:
+Die einzige Übersetzung zwischen Geräteereignissen, Fahrtjournal-Einträgen, Engine und Replay-Snapshot. Worker und Server verwenden denselben Codec; er entscheidet für jede Eingabe, ob sie ins Fahrtjournal gehört.
+_Vermeiden_: Recorder-Mapping und Replay-Mapping als getrennte Kopien.
+
 **Replay-Konsistenz**:
 Die Übereinstimmung einer Aufnahme mit der Nachrechnung ihrer vollständigen Vorgangshistorie. Sie beweist weder echte Sensoren noch eine reale Trainingsleistung.
 _Vermeiden_: hardwareverifiziert, echte Fahrt bewiesen.

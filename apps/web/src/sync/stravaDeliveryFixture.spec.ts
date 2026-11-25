@@ -10,16 +10,16 @@ import {
   type StravaStatus,
 } from "@voltonaut/shared";
 import { ApplicationSession } from "./applicationSession.js";
-import type { AccountLease, PrivateAuthTransport } from "./privateAuthTransport.js";
+import type { LeaseIssuer } from "./privateAuthTransport.js";
 import { StravaSync } from "./stravaSync.js";
-import type { StravaChannel, StravaPopup } from "./stravaBridge.js";
+import type { StravaChannel, StravaLease, StravaPopup } from "./stravaBridge.js";
 
 export const rideA = "00000000-0000-4000-8000-000000000001";
 export const rideB = "00000000-0000-4000-8000-000000000002";
 export const deliveryChannel = "00000000-0000-4000-8000-000000000003";
 
 export interface DeliveryControls {
-  readonly session: Readonly<ApplicationSession>;
+  readonly session: Readonly<ApplicationSession<StravaLease>>;
   readonly sync: Readonly<StravaSync>;
   readonly message: StravaDeliveryFixture["message"];
 }
@@ -158,20 +158,14 @@ export class StravaDeliveryFixture {
     };
   }
 
-  private transport(): PrivateAuthTransport {
+  private transport(): LeaseIssuer<StravaLease> {
     return {
-      authorize: (authorization): AccountLease => ({
-        ...unexpectedAccountParts,
+      authorize: (authorization) => ({
         apiOrigin: "http://localhost:3000",
         userId: authorization.userId,
         generation: authorization.generation,
         signal: authorization.signal,
         current: authorization.current,
-        profile: unexpected,
-        saveProfile: unexpected,
-        history: unexpected,
-        detail: unexpected,
-        upload: unexpected,
         strava: {
           status: () => {
             this.requests.push({ userId: authorization.userId, method: "status" });
@@ -205,5 +199,3 @@ export class StravaDeliveryFixture {
     };
   }
 }
-
-import { unexpectedAccountParts } from "./testdata/unusedStravaLease.js";

@@ -57,7 +57,7 @@ it("aborts an actual in-flight account-status HTTP response when ApplicationSess
   try {
     await session.exchange("a");
     const lease = session.authorize();
-    const pending = lease?.accountStatus();
+    const pending = lease?.membership.status();
     expect(pending).toBeDefined();
     await entered.promise;
     await session.logout();

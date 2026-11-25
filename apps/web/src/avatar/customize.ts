@@ -1,6 +1,5 @@
 import type { AvatarConfig } from "@voltonaut/shared";
 
-import { disposeObject } from "../world/resources.js";
 import { createRiderModel, type RiderModel } from "./rider.js";
 
 export interface AvatarPreview {
@@ -19,7 +18,7 @@ export function createAvatarPreview(wheelCircM: number): AvatarPreview {
       model.setLook(config);
     },
     dispose: () => {
-      disposeObject(model.root);
+      model.dispose();
     },
   };
 }

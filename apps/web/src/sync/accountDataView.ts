@@ -11,6 +11,7 @@ import type { ApplicationSession } from "./applicationSession.js";
 import type { AccountOutbox, OutboxRow } from "./accountOutbox.js";
 import type { DeletionIntents } from "./accountDeletion.js";
 import type { ProgressOutbox } from "./progressOutbox.js";
+import type { LeaseWith } from "./privateAuthTransport.js";
 
 type Remote<T> =
   | { readonly kind: "loading" }
@@ -42,9 +43,16 @@ export type AccountDataView = Immutable<
     }
 >;
 
+/** The account mirror, its outbox, export/deletion, plus the admin and shop sections it binds. */
+export type AccountSyncLease = LeaseWith<
+  "profile" | "rides" | "data" | "identities" | "membership" | "shop"
+>;
+
 export interface SyncOptions {
   readonly session: Readonly<
-    Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">
+    Pick<ApplicationSession, "subscribe" | "endAfterAccountDeletion"> & {
+      readonly authorize: () => AccountSyncLease | undefined;
+    }
   >;
   readonly outbox: () => Promise<AccountOutbox>;
   /** Progress rows of a deleted account are purged together with its account outbox rows. */

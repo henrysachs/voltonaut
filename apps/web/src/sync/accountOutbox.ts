@@ -9,7 +9,7 @@ import {
   type RideUpload,
 } from "@voltonaut/shared";
 
-import type { AccountLease, SyncFailure } from "./privateAuthTransport.js";
+import type { LeaseBinding, SyncFailure } from "./apiRoute.js";
 
 const text = HealthResponseSchema.shape.version;
 const integer = HealthResponseSchema.shape.uptimeS.int().max(Number.MAX_SAFE_INTEGER);
@@ -90,7 +90,7 @@ export type OutboxRead =
   | { readonly kind: "ready"; readonly rows: readonly OutboxRow[] }
   | { readonly kind: "failed" };
 
-export type OutboxOwner = Pick<AccountLease, "apiOrigin" | "userId">;
+export type OutboxOwner = Pick<LeaseBinding, "apiOrigin" | "userId">;
 
 export interface AccountOutbox {
   readonly list: (owner: OutboxOwner) => Promise<readonly OutboxRow[]>;
