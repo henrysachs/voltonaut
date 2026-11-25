@@ -6,6 +6,8 @@ export * from "./accounts.js";
 
 export * from "./economy.js";
 
+export * from "./shop.js";
+
 export * from "./rides.js";
 
 export * from "./strava.js";
