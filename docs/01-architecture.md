@@ -256,7 +256,7 @@ apps/
     src/main.ts           Composition Root (nur Verdrahtung)
     src/world/            RenderSystems: environment, terrain, scenery, crowd, pickups, effects, camera, post (ADR-008)
     src/avatar/           Fahrer-/Rad-Modelle, Animation, Customizing
-    src/game/             vorläufige XP/Volts, Segment-HUD-Logik
+    src/game/             Fahrtsitzung + Engine-Worker, vorläufige XP/Volts, Segment-HUD-Logik
     src/ui/               HUD, connect, garage, shop, profile, summary, login
     src/sync/             Cache + Outbox + API-Client (ab E5)
     src/net/              Live-Gruppenfahrt-Client (ab E9)
@@ -312,4 +312,6 @@ flowchart LR
 
 ## Composition Root
 
-`main.ts` erzeugt in dieser Reihenfolge: Bus → `sync/` (Cache optional laden, vorhandene Session optional prüfen; Storage- und Netzfehler blockieren keine Fahrt, kein automatischer Login) → Adapter (echt oder `sim/` bei `?sim=1`) → Route laden → Engine (RiderProfile aus Cache) → Game → World/Avatar (three.js) → UI → optional `net/`. Nur hier wird entschieden, ob Sim- oder Echtgeräte laufen; alle anderen Module merken keinen Unterschied.
+`main.ts` erzeugt in dieser Reihenfolge: Bus → `sync/` (Cache optional laden, vorhandene Session optional prüfen; Storage- und Netzfehler blockieren keine Fahrt, kein automatischer Login) → Adapter (echt oder `sim/` bei `?sim=1`) → RiderProfile aus Cache → Fahrtsitzung → Ansichten → Tastatur, Geräte-Dialog, Spielmenü → optional `net/`. Nur hier wird entschieden, ob Sim- oder Echtgeräte laufen; alle anderen Module merken keinen Unterschied.
+
+Die **Fahrtsitzung** `game/rideSession.ts` ([E0-14](specs/E0-14-ride-session.md)) ist die einzige Hauptthread-Seite der laufenden Fahrt. `createRideSession` erhält Bus, Route, Profil, Quelle, Uhrfaktor, Trainer-Senke und Worker-Port-Fabrik. Sie prüft die Route, bevor ein Worker entsteht. Der `engine-link` sendet `engine.init` schon beim Erzeugen; erst danach abonniert die Sitzung die Bus-Ereignisse `ENGINE_INPUT_TYPES`. Eingaben vor der Initialisierung sind damit nicht darstellbar. Die Sitzung besitzt Verbindungsmonitor, Segmentvorschau und `dispose`. Sie liefert ein Lesemodell (Snapshot, Verbindung, Segmente, tatsächlicher Modus aus `snapshot.mode`), Aufnahmesteuerung und die Modusabsicht `requestMode`. Den Modus besitzt weiter die Engine (ADR-028 §5); der Worker lehnt nicht aufnehmbare Modi während einer Aufnahme zusätzlich ab. `rideViews.ts` hängt HUD, Aufnahmepanel, Moduswahl und 3D-Szene an diese Sitzung. Tests treiben die Sitzung über einen In-Process-Loopback zum echten Worker-Treiber (`game/testdata/loopbackWorker.ts`) mit manueller Uhr.

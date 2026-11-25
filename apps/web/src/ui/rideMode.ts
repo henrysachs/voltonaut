@@ -156,8 +156,9 @@ function modeView(fieldset: HTMLFieldSetElement, hint: HTMLElement): RideModeVie
 
       if (input !== undefined) input.disabled = !enabled;
     },
+    // Refreshes run on every worker update; rewriting an unchanged live region could re-announce it.
     setHint: (text) => {
-      hint.textContent = text;
+      if (hint.textContent !== text) hint.textContent = text;
     },
   };
 }
