@@ -21,7 +21,7 @@ Jede Aufgabe = Spec in `docs/specs/` mit diesen Abnahmekriterien; Review durch z
 - [x] `scripts/guard.mjs` (Escape-Hatches, gelockerte Configs, geschützte Dateien ohne ADR/Label, Deps ohne `docs/dependencies.md`)
 - [x] Vitest-Workspace inkl. Coverage-Schwellen, fast-check, Stryker-Config (engine/rules), Playwright (Chromium, Sim-Modus, Screenshot-Setup im Playwright-Docker-Image)
 - [x] `packages/shared`: Typen aus `01-architecture.md`, Zod-Basis, Event-Bus-Typen
-- [x] `packages/ble/sim`: FakeTrainer (Watt/Kadenz per Slider/Skript), FakeHeartRate, FakePlay + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
+- [x] `packages/ble/sim`: Sim-Trainer und Sim-Pulsgurt als geskriptete Peripherie hinter `BleTransport` ([E0-15](specs/E0-15-sim-ble-transport.md), FakePlay entfernt) + Keyboard (↑/↓); `?sim=1` im Composition Root; Test-Uhr
 - [x] `apps/web`: Minimal-HUD (Watt, Kadenz, Puls, Gang) mit Sim-Werten; erster E2E-Test
 - [x] `apps/server`: NestJS-App mit `HealthModule` (`GET /healthz` → Version, Uptime), Vitest + `unplugin-swc`, Supertest-Test
 - [x] CI: `check.yml` (nur `mise run check`), `mutation.yml` (Pfadfilter + nightly), `deploy-web.yml` (Cloudflare Pages via `wrangler pages deploy`, Preview pro PR; übersprungen bis `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` gesetzt), `deploy-server.yml` (vorhanden, deaktiviert)

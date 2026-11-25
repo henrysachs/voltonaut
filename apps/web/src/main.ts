@@ -1,6 +1,11 @@
 import { createEventBus } from "@voltonaut/shared";
 
-import { setupBluetoothDevices, setupKeyboard, setupSimDevices } from "./rideDevices.js";
+import {
+  bluetoothDeviceSource,
+  setupKeyboard,
+  setupRideDevices,
+  simDeviceSource,
+} from "./rideDevices.js";
 
 import { createRideSession } from "./game/rideSession.js";
 import { setupProfile } from "./profileBootstrap.js";
@@ -30,9 +35,9 @@ async function start(): Promise<void> {
   const clockScale = params.get("clock") === "fast" ? FAST_CLOCK_SCALE : 1;
   const bus = createEventBus();
 
-  const devices = simMode
-    ? setupSimDevices(bus, clockScale)
-    : setupBluetoothDevices(bus, clockScale);
+  // The only sim/real decision: which transports the production adapters run on.
+  const source = simMode ? simDeviceSource(clockScale) : bluetoothDeviceSource();
+  const devices = source === undefined ? undefined : setupRideDevices(bus, clockScale, source);
 
   const { initialProfile: profile } = await profileReady;
 

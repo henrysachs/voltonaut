@@ -5,7 +5,13 @@
  * (tables 4.3 and 4.4, 2026-11-20).
  */
 
-import { parseFailure, type ByteReader, type ParseResult } from "../bytes.js";
+import {
+  parseFailure,
+  readOnlyBytes,
+  type ByteReader,
+  type ParseResult,
+  type ReadOnlyBytes,
+} from "../bytes.js";
 
 export type MachineFeature =
   | "averageSpeed"
@@ -109,6 +115,33 @@ function decodeBits<TName extends string>(
 
 function dwordHex(dword: number): string {
   return `0x${dword.toString(16).padStart(8, "0")}`;
+}
+
+function encodeBits<TName extends string>(
+  names: readonly TName[],
+  table: readonly (readonly [number, TName])[],
+): number {
+  let dword = 0;
+
+  for (const [bit, name] of table) {
+    if (names.includes(name)) {
+      dword |= 1 << bit;
+    }
+  }
+
+  return dword;
+}
+
+/** Inverse of parseFitnessMachineFeature; the sim trainer advertises its features with it. */
+export function encodeFitnessMachineFeature(
+  feature: Pick<FitnessMachineFeature, "machineFeatures" | "targetFeatures">,
+): ReadOnlyBytes {
+  const bytes = new Uint8Array(8);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, encodeBits(feature.machineFeatures, MACHINE_FEATURE_BITS), true);
+  view.setUint32(4, encodeBits(feature.targetFeatures, TARGET_FEATURE_BITS), true);
+
+  return readOnlyBytes(bytes);
 }
 
 /** Pure parse; never throws, shorter than 8 octets yields a failure object. */
