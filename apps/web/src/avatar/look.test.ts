@@ -23,12 +23,10 @@ describe("procedural avatar look", () => {
 
     expect(look.frame.key).toBe("race");
     expect(look.wheels.key).toBe("alloy");
-    expect(look).toMatchObject({
-      shoeColor: 0xf5ebca,
-      glassesVisible: false,
-      jerseyAccentRadiusM: 0.152,
-      jerseyAccentRoughness: 0.85,
-    });
+    expect(look.kit.jersey.key).toBe("classic");
+    expect(look.kit.helmet.key).toBe("standard");
+    expect(look.kit.shoes.key).toBe("white");
+    expect(look.kit.glasses.lens).toBeUndefined();
   });
 
   it("varies shoes and glasses", () => {
@@ -41,7 +39,10 @@ describe("procedural avatar look", () => {
       },
     });
 
-    expect(avatarLook(aero)).toMatchObject({ shoeColor: 0x18272e, glassesVisible: true });
+    const { kit } = avatarLook(aero);
+
+    expect(kit.shoes.key).toBe("carbon");
+    expect(kit.glasses.lens?.cut).toBe("shield");
   });
 });
 
@@ -53,6 +54,28 @@ const WHEEL_ITEMS = ALL_ITEMS.filter((item) => item.slot === "wheels");
 function specKeyOf(assetRef: string): string {
   return assetRef.slice(assetRef.lastIndexOf("/") + 1);
 }
+
+const RIDER_SLOTS = ["jersey", "helmet", "shoes", "glasses"] as const;
+
+const RIDER_FIELD = {
+  jersey: "jerseyId",
+  helmet: "helmetId",
+  shoes: "shoesId",
+  glasses: "glassesId",
+} as const;
+
+describe("rider kit items of the shop catalog", () => {
+  it.each(RIDER_SLOTS)("resolves every %s item to its own spec", (slot) => {
+    for (const item of ALL_ITEMS.filter((candidate) => candidate.slot === slot)) {
+      const config = AvatarConfigSchema.parse({
+        ...DEFAULT_AVATAR_CONFIG,
+        rider: { ...DEFAULT_AVATAR_CONFIG.rider, [RIDER_FIELD[slot]]: item.id },
+      });
+
+      expect(avatarLook(config).kit[slot].key).toBe(specKeyOf(item.assetRef));
+    }
+  });
+});
 
 describe("frame and wheel items of the shop catalog", () => {
   it.each(FRAME_ITEMS)("resolves $id to its own frame spec", (item) => {
