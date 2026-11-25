@@ -2,7 +2,7 @@
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E4, Checkbox „Rad + Fahrer (CC0-Basis/Blender), Kurbel synchron zur Kadenz, Beine per IK, Laufräder nach Tempo“ (Teilschritt Rad + Bein-IK); E7 Garage (Rahmen/Laufräder als Shop-Slots)
 - **Tracking:** henrysachs/voltonaut#102
-- **Status:** Review
+- **Status:** Erledigt. Gemergt als `f835541` (#105) und am 25.11.2026 bereitgestellt.
 - **Betroffene Module:** `apps/web/src/avatar/` (Rad, Posen, Look), Tests, Dokumentation. Keine neue Abhängigkeit, keine Änderung an Katalog, Schemas oder Server.
 
 ## Ziel
@@ -22,7 +22,7 @@ Spiel und Garage zeigen statt des Zylinder-Rads ein realistisches Rennrad mit ec
 
 | AK      | Ebene | Datei                                                                                      |
 | ------- | ----- | ------------------------------------------------------------------------------------------ |
-| AK1     | Unit  | `apps/web/src/avatar/bikeGeometry.test.ts`                                                 |
+| AK1     | Unit  | `apps/web/src/avatar/bikeGeometry.test.ts`, `bikeMesh.test.ts`                             |
 | AK2–AK5 | Unit  | `apps/web/src/avatar/bikeModel.test.ts`, `look.test.ts`                                    |
 | AK6     | Unit  | `apps/web/src/avatar/pose.test.ts` (Beine und Arme je Rahmen), `customize.test.ts`         |
 | AK4     | E2E   | bestehende Draw-Call-/Dreiecksbudgets in `e2e/ride-scene.spec.ts`, `e2e/game-menu.spec.ts` |
@@ -53,5 +53,5 @@ Spiel und Garage zeigen statt des Zylinder-Rads ein realistisches Rennrad mit ec
 
 - **Implementiert:** ja.
 - **Am tatsächlichen Artefakt softwaregeprüft:** Unit-Tests, Lint, Typecheck und `mise run check` (siehe PR). Dazu Renderings aller Varianten im Browser (Swiftshader) und Screenshots im Sim-Modus.
-- **An echter Hardware geprüft:** nicht relevant (reine Darstellung); Bildrate auf echter GPU nicht gemessen.
-- **Bereitgestellt:** nein.
+- **An echter Hardware geprüft:** Trainer-Hardware nicht relevant (reine Darstellung). Bildrate auf echter GPU am 25.11.2026 von Henry im Live-Stand subjektiv als passend bewertet, nicht gemessen (`mise run perf` offen).
+- **Bereitgestellt:** ja, Web und API auf `main` `f835541` am 25.11.2026.

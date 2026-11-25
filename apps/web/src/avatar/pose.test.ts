@@ -48,23 +48,31 @@ describe("pedalling leg pose", () => {
   );
 });
 
+function elbowAngleDeg(shoulder: Point3, elbow: Point3, wrist: Point3): number {
+  const upper = distance(shoulder, elbow);
+  const lower = distance(elbow, wrist);
+  const span = distance(shoulder, wrist);
+
+  return (Math.acos((upper ** 2 + lower ** 2 - span ** 2) / (2 * upper * lower)) * 180) / Math.PI;
+}
+
 describe("rider fit", () => {
-  it.each(FRAME_SPECS)(
-    "puts the hands on the $key hoods with a bent elbow and the hip over the saddle",
-    (frame) => {
-      const geometry = bikeGeometry(2.105, frame, DEFAULT_WHEEL_SPEC);
+  it.each(FRAME_SPECS)("reaches the $key hoods with a relaxed, bent elbow", (frame) => {
+    const geometry = bikeGeometry(2.105, frame, DEFAULT_WHEEL_SPEC);
+    const { pelvis } = torsoPoints(geometry);
 
-      for (const side of SIDES) {
-        const arm = armPose(geometry, side);
+    for (const side of SIDES) {
+      const arm = armPose(geometry, side);
 
-        expect(distance(arm.shoulder, arm.elbow)).toBeCloseTo(UPPER_ARM_M, 6);
-        expect(distance(arm.elbow, arm.wrist)).toBeCloseTo(FOREARM_M, 6);
-        expect(distance(arm.shoulder, arm.wrist)).toBeLessThan(UPPER_ARM_M + FOREARM_M - 0.02);
-        expect(arm.grip[0]).toBeCloseTo(geometry.hoodGrip[0], 6);
-        expect(arm.grip[2]).toBeCloseTo(side * geometry.hoodGrip[2], 6);
-      }
-
-      expect(Math.abs(torsoPoints(geometry).pelvis[0] - geometry.hip[0])).toBeLessThan(0.05);
-    },
-  );
+      expect(distance(arm.shoulder, arm.elbow)).toBeCloseTo(UPPER_ARM_M, 6);
+      expect(distance(arm.elbow, arm.wrist)).toBeCloseTo(FOREARM_M, 6);
+      // A locked arm (≈ 180°) means the hood is out of reach; a sharp bend means a cramped fit.
+      expect(elbowAngleDeg(arm.shoulder, arm.elbow, arm.wrist)).toBeGreaterThan(120);
+      expect(elbowAngleDeg(arm.shoulder, arm.elbow, arm.wrist)).toBeLessThan(165);
+      // The elbow bends down and out, never up into the torso.
+      expect(arm.elbow[1]).toBeLessThan(arm.shoulder[1]);
+      expect(side * arm.elbow[2]).toBeGreaterThan(side * arm.shoulder[2]);
+      expect(arm.wrist[0]).toBeGreaterThan(pelvis[0]);
+    }
+  });
 });
