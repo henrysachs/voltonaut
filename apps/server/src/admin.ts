@@ -23,6 +23,8 @@ const CommandSchema = z.union([
   z.tuple([z.enum(["grant", "revoke"]), AccountUserIdSchema]),
   z.tuple([
     z.literal("credit"),
+    z.literal("--operator"),
+    AccountUserIdSchema,
     AccountUserIdSchema,
     z
       .string()
@@ -38,10 +40,23 @@ export interface AdminServices {
   readonly economy: Readonly<Pick<EconomyService, "balance">>;
   readonly grants: Readonly<Pick<OperatorGrants, "grant">>;
   readonly userExists: (userId: string) => boolean;
+  /** Active (not deleted) account with the admin role; only such accounts may issue credits (issue #116). */
+  readonly isActiveAdmin: (userId: string) => boolean;
 }
 
-/** Operator credit for tests and acceptance until rides earn Volts (spec E7-02 AK7). */
-function credit(services: AdminServices, userId: string, amountVolts: number, reference: string) {
+interface CreditOrder {
+  readonly operatorUserId: string;
+  readonly userId: string;
+  readonly amountVolts: number;
+  readonly reference: string;
+}
+
+/** Operator credit for tests and acceptance until rides earn Volts (spec E7-02 AK7, issue #116). */
+function credit(services: AdminServices, order: CreditOrder) {
+  const { operatorUserId, userId, amountVolts, reference } = order;
+
+  if (!services.isActiveAdmin(operatorUserId)) throw new Error("operator is not an active admin");
+
   if (!services.userExists(userId)) throw new Error("account not found");
 
   const receipt = services.grants.grant(
@@ -50,6 +65,7 @@ function credit(services: AdminServices, userId: string, amountVolts: number, re
       idempotencyKey: `operator:${reference}`,
       refId: reference,
       amountVolts,
+      operatorUserId,
     }),
   );
 
@@ -60,7 +76,13 @@ export function runAdminCommand(args: readonly string[], services: AdminServices
   const command = CommandSchema.parse(args);
   const { accounts } = services;
 
-  if (command[0] === "credit") return credit(services, command[1], command[2], command[3]);
+  if (command[0] === "credit")
+    return credit(services, {
+      operatorUserId: command[2],
+      userId: command[3],
+      amountVolts: command[4],
+      reference: command[5],
+    });
 
   if (command[0] === "list")
     return JSON.stringify(accounts.list(AdminUsersQuerySchema.parse({ cursor: command[1] })));
@@ -85,7 +107,12 @@ export function adminMain(args: readonly string[]): void {
     const grants = new OperatorGrants(db, economyTables, clock);
     const userExists = (userId: string): boolean => existingUser(db, userId);
 
-    process.stdout.write(`${runAdminCommand(args, { accounts, economy, grants, userExists })}\n`);
+    const isActiveAdmin = (userId: string): boolean =>
+      userExists(userId) && accounts.status(userId).authorization.role === "admin";
+
+    process.stdout.write(
+      `${runAdminCommand(args, { accounts, economy, grants, userExists, isActiveAdmin })}\n`,
+    );
   } finally {
     db.$client.close();
   }

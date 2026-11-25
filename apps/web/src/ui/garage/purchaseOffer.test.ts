@@ -4,7 +4,7 @@ import { avatarItemsForSlot } from "@voltonaut/rules";
 import type { ItemDef } from "@voltonaut/shared";
 
 import type { GarageShopView } from "../../sync/garageShop.js";
-import { purchaseOffer } from "./purchaseOffer.js";
+import { purchaseConfirmation, purchaseOffer } from "./purchaseOffer.js";
 
 function jersey(id: string): ItemDef {
   const item = avatarItemsForSlot("jersey").find((candidate) => candidate.id === id);
@@ -90,4 +90,24 @@ it("shows a purchase message only on the item it is about", () => {
 
   expect(purchaseOffer(stripe, view).hint).toBe("Guthaben: 2.000 ⚡.");
   expect(purchaseOffer(classic, view).hint).toBe("Gehört deinem Konto.");
+});
+
+it("confirms only an enabled offer and names price and balance afterwards", () => {
+  expect(purchaseConfirmation(stripe, ready())).toEqual({
+    priceVolts: 1500,
+    question:
+      "„Blitzstreifen“ für 1.500 ⚡ kaufen? Kontostand danach: 500 ⚡. Käufe sind endgültig und lassen sich nicht rückgängig machen.",
+    confirmText: "Ja, für 1.500 ⚡ kaufen",
+  });
+  expect(purchaseConfirmation(stripe, ready({ voltsBalance: 1500 }))?.question).toContain(
+    "Kontostand danach: 0 ⚡.",
+  );
+});
+
+it("offers no confirmation for guests, owned, unaffordable, pending or unsellable items", () => {
+  expect(purchaseConfirmation(stripe, { kind: "guest" })).toBeNull();
+  expect(purchaseConfirmation(stripe, ready({ ownedItemIds: ["jersey.stripe"] }))).toBeNull();
+  expect(purchaseConfirmation(stripe, ready({ voltsBalance: 1499 }))).toBeNull();
+  expect(purchaseConfirmation(stripe, ready({ pendingItemId: "jersey.tempo" }))).toBeNull();
+  expect(purchaseConfirmation(classic, ready({ ownedItemIds: [] }))).toBeNull();
 });

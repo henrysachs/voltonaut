@@ -156,6 +156,7 @@ class GaragePanel {
       this.#price,
       this.#colors,
       this.#purchase.button,
+      this.#purchase.confirmation,
       this.#purchase.hint,
     );
 

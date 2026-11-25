@@ -26,5 +26,5 @@ else if (args[0] === "admin") adminMain(args.slice(1));
 else if (args[0] === "check-config") checkConfigMain(args.slice(1));
 else
   throw new Error(
-    "usage: node dist/main.js [admin list [cursor] | admin grant|revoke <userId> | admin credit <userId> <volts> <reference> | check-config]",
+    "usage: node dist/main.js [admin list [cursor] | admin grant|revoke <userId> | admin credit --operator <adminUserId> <userId> <volts> <reference> | check-config]",
   );
