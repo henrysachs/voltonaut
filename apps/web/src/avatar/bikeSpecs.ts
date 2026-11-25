@@ -173,7 +173,7 @@ const ALLOY: WheelSpec = {
   spokeCount: 24,
   rearDisc: false,
   rimColor: 0xd3dadb,
-  rimMetalness: 0.85,
+  rimMetalness: 0.55,
   rimRoughness: 0.25,
 };
 

@@ -41,6 +41,7 @@ Spiel und Garage zeigen statt des Zylinder-Rads ein realistisches Rennrad mit ec
 
 ## Offene Fragen / Risiken
 
+- Keine Umgebungs-Map: Die erste Fassung erzeugte eine prozedurale Map, deren PMREM-Umwandlung auf Software-GPUs den Seitenstart um ca. 0,8 s verlängerte. Dadurch lief `pwa.build.test.ts` in CI ins 5-s-Timeout (lokal ca. 3,5 s auf `main` gegenüber ca. 4,3 s mit der Map). Lack und Metall bekommen ihre Glanzlichter jetzt nur aus Sonne und Himmelslicht. Spiegelungen kommen mit der allgemeinen HDRI-Arbeit (henrysachs/voltonaut#66).
 - Bots und Remote-Fahrer brauchen später ein LOD, weil jedes Rad ca. 29 k Dreiecke hat.
 - Weitere Farbslots (Dekor, Lenkerband, Sattel) bräuchten ein erweitertes `AvatarConfig.bike` und damit eine Schema- und Serveränderung. Das ist hier bewusst nicht umgesetzt.
 
