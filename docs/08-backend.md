@@ -161,7 +161,6 @@ GET  /v1/me/progress-consent                                      → { version,
 PUT  /v1/me/progress-consent                                      → { enabled, sessionGeneration } (exakter Origin, versioniert)
 POST /v1/progress/checkpoints                                    → { range } (E6-10, authentifiziert, idempotent, bucht Volts)
 PUT  /v1/me/profile             RiderProfile                      → profile          (Validierung: Bereiche wie 03 §2a)
-PUT  /v1/me/avatar              AvatarConfig                      → avatar           (nur Items aus dem Inventar)
 GET  /v1/catalog                                                  → { items[], levels[], version }   (öffentlich, cachebar)
 GET  /v1/me/loadout                                               → { loadout: AvatarConfig, updatedAt: string|null } (E7-05, no-store)
 PUT  /v1/me/loadout              { loadout: AvatarConfig }          → 200 { loadout, updatedAt } | 409 not_owned | 422 validation_failed
