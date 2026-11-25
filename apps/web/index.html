@@ -107,12 +107,8 @@
           <button id="game-menu-close" class="btn btn--primary" type="button" autofocus>
             Zurück zur Fahrt
           </button>
+          <p class="game-menu__hint">Die Fahrt läuft weiter. Escape schließt das Menü.</p>
         </header>
-        <p class="game-menu__hint">Die Fahrt läuft weiter. Escape schließt das Menü.</p>
-        <fieldset id="ride-mode" class="game-menu__mode" lang="de">
-          <legend>Spielmodus</legend>
-          <p id="ride-mode-hint" class="game-menu__mode-hint" aria-live="polite"></p>
-        </fieldset>
         <div class="game-menu__tabs" role="tablist" aria-label="Fahrtmenü-Bereiche">
           <button
             id="game-tab-profile"
@@ -219,6 +215,10 @@
             tabindex="0"
           >
             <h2 class="profile__title">Rider profile</h2>
+            <fieldset id="ride-mode" class="game-menu__mode" lang="de">
+              <legend>Spielmodus</legend>
+              <p id="ride-mode-hint" class="game-menu__mode-hint" aria-live="polite"></p>
+            </fieldset>
             <form id="profile-form" data-testid="profile-form">
               <label class="profile__field">
                 Name

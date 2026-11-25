@@ -18,10 +18,16 @@ function menuTabs(): readonly MenuTab[] {
 }
 
 /** Wires the menu tabs; returns a selector by tab button id. */
-function mountTabs(): (tabId: string) => void {
+function mountTabs(content: HTMLElement | null): (tabId: string) => void {
   const tabs = menuTabs();
+  let activeTab = tabs.find((tab) => tab.button.getAttribute("aria-selected") === "true");
 
   const select = (selected: Readonly<MenuTab>): void => {
+    if (activeTab !== selected) {
+      if (content !== null) content.scrollTop = 0;
+      activeTab = selected;
+    }
+
     for (const tab of tabs) {
       const active = tab === selected;
       tab.button.setAttribute("aria-selected", String(active));
@@ -61,6 +67,22 @@ function mountTabs(): (tabId: string) => void {
 
     if (tab !== undefined) select(tab);
   };
+}
+
+function mountScrollIndicator(content: HTMLElement | null): void {
+  if (content === null) return;
+
+  const update = (): void => {
+    content.dataset["scrollable"] = String(content.scrollHeight > content.clientHeight);
+  };
+
+  update();
+
+  const observer = new ResizeObserver(update);
+
+  observer.observe(content);
+
+  for (const panel of content.querySelectorAll("[data-game-panel]")) observer.observe(panel);
 }
 
 function mountFocusLoop(dialog: HTMLDialogElement): void {
@@ -143,8 +165,10 @@ function mountMenuDialog(): void {
     close instanceof HTMLButtonElement &&
     devices instanceof HTMLButtonElement
   ) {
-    const selectTab = mountTabs();
+    const content = dialog.querySelector<HTMLElement>(".game-menu__content");
+    const selectTab = mountTabs(content);
 
+    mountScrollIndicator(content);
     mountFocusLoop(dialog);
     mountDeviceAccess(dialog, devices);
 
