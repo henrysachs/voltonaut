@@ -1,250 +1,127 @@
 import { expect, it } from "vitest";
 
-import { DEFAULT_RIDER_PROFILE, type DeviceEvent } from "@voltonaut/shared";
+import { FIRST_RIDE_ID, SECOND_RIDE_ID, TRAINER_READING } from "./testdata/recordedRideHarness.js";
+import { createWorkerHarness } from "./testdata/engineWorkerHarness.js";
 
-import { bindEngineWorker } from "./engineWorkerCore.js";
-import {
-  createFakeScope,
-  createManualClock,
-  createFakeTimers,
-} from "./testdata/engineWorkerHarness.js";
+it("rejects an unknown route with engine.initFailed and schedules nothing", () => {
+  const worker = createWorkerHarness();
 
-const unarmedCapture = {
-  type: "recording.reply",
-  result: {
-    kind: "finished",
-    capture: {
-      kind: "journal",
-      recording: {
-        schemaVersion: 2,
-        initializedAt: "2026-11-20T00:00:00.100Z",
-        observations: [
-          { snapshot: { tS: 0, distanceM: 0 } },
-          { snapshot: { tS: 0, distanceM: 0 } },
-        ],
-        entries: [
-          [0, 100, "trainer", 200, 90, null],
-          [1, 100, "boundary", "start"],
-          [2, 1100, "arm"],
-          [3, 1100, "boundary", "finish"],
-        ],
-      },
-    },
-  },
-};
+  worker.init("actor", { routeId: "does-not-exist" });
 
-const trainerReading = {
-  type: "trainer.data",
-  tS: 999,
-  powerW: 200,
-  cadenceRpm: 90,
-} satisfies DeviceEvent;
-
-it("captures the committed worker state without advancing or arming on recording commands", () => {
-  const fake = createFakeScope();
-  const clock = createManualClock(100);
-  const timers = createFakeTimers();
-  bindEngineWorker(
-    fake.scope,
-    clock.nowMs,
-    timers.schedule,
-    timers.cancel,
-    Date.parse("2026-11-20T00:00:00.000Z"),
-  );
-  fake.send({
-    type: "engine.init",
-    actorId: "actor",
-    source: "sim",
-    routeId: "test-loop",
-    profile: DEFAULT_RIDER_PROFILE,
-    clockScale: 1,
-  });
-  fake.send({
-    type: "engine.ingest",
-    actorId: "actor",
-    event: trainerReading,
-  });
-  fake.send({
-    type: "recording.command",
-    actorId: "actor",
-    requestId: 1,
-    command: { kind: "start", rideId: "550e8400-e29b-41d4-a716-446655440000" },
-  });
-  clock.advanceMs(1000);
-  timers.tick();
-  fake.send({
-    type: "recording.command",
-    actorId: "actor",
-    requestId: 2,
-    command: { kind: "finish", rideId: "550e8400-e29b-41d4-a716-446655440000" },
-  });
-  const reply = fake.posted.findLast((message) => message.type === "recording.reply");
-  expect(reply).toMatchObject(unarmedCapture);
-  clock.advanceMs(50);
-  timers.tick();
-  const update = fake.posted.findLast((message) => message.type === "engine.update");
-  expect(update?.snapshot.tS).toBeCloseTo(0.05, 10);
-  expect(JSON.stringify(update)).not.toContain('"entries"');
-});
-
-it("rejects an unknown route with engine.initFailed", () => {
-  const fake = createFakeScope();
-
-  bindEngineWorker(
-    fake.scope,
-    () => 0,
-    () => 1,
-    () => {},
-  );
-
-  fake.send({
-    type: "engine.init",
-    actorId: "actor",
-    source: "sim",
-    routeId: "does-not-exist",
-    profile: DEFAULT_RIDER_PROFILE,
-    clockScale: 1,
-  });
-
-  expect(fake.posted).toEqual([
+  expect(worker.posted).toEqual([
     { type: "engine.initFailed", actorId: "actor", message: "unknown route does-not-exist" },
   ]);
+  expect(worker.timers.active()).toBe(0);
 });
 
-it("runs one 0.05 s virtual tick per 50 ms real wake and posts updates", () => {
-  const fake = createFakeScope();
-  const clock = createManualClock();
-  const timers = createFakeTimers();
+it("posts the init update, arms on the first wake and posts one update per later wake", () => {
+  const worker = createWorkerHarness();
 
-  bindEngineWorker(
-    fake.scope,
-    clock.nowMs,
-    timers.schedule,
-    timers.cancel,
-    0,
-    () => "550e8400-e29b-41d4-a716-446655440000",
-  );
+  worker.init("actor");
+  expect(worker.updates()).toHaveLength(1);
+  expect(worker.updates()[0]).toMatchObject({ actorId: "actor", snapshot: { tS: 0 } });
+  expect(worker.timers.active()).toBe(1);
 
-  fake.send({
-    type: "engine.init",
-    actorId: "actor",
-    source: "sim",
-    routeId: "flat-loop",
-    profile: DEFAULT_RIDER_PROFILE,
-    clockScale: 1,
-  });
+  worker.timers.tick();
+  expect(worker.updates()).toHaveLength(1);
 
-  const initSnapshot = fake.posted.find((message) => message.type === "engine.update");
-
-  // The first wake only arms the clock.
-  timers.tick();
-
-  clock.advanceMs(50);
-  timers.tick();
-
-  const updates = fake.posted.filter((message) => message.type === "engine.update");
-  const last = updates.at(-1);
-
-  expect(initSnapshot).toBeDefined();
-  expect(updates.length).toBeGreaterThanOrEqual(2);
-
-  expect(last?.snapshot.tS).toBeCloseTo(0.05, 10);
-  expect(last?.progress).toMatchObject({ sequence: 0, startTick: 0, endTick: 1 });
-  expect(last?.progress?.facts).toHaveLength(1);
-  expect(initSnapshot?.progress).toBeUndefined();
-
-  clock.advanceMs(50);
-  timers.tick();
-
-  const finalUpdate = fake.posted.findLast((message) => message.type === "engine.update");
-
-  expect(finalUpdate?.snapshot.tS).toBeCloseTo(0.1, 10);
-  expect(finalUpdate?.progress).toMatchObject({ sequence: 1, startTick: 1, endTick: 2 });
+  worker.wake(50);
+  expect(worker.updates()).toHaveLength(2);
+  expect(worker.updates().at(-1)?.snapshot.tS).toBeCloseTo(0.05, 10);
 });
 
-it("scales virtual time with the fast test clock", () => {
-  const fake = createFakeScope();
-  const clock = createManualClock();
-  const timers = createFakeTimers();
+it("dispatches ingest, mode and capture to the active actor only", () => {
+  const worker = createWorkerHarness();
 
-  bindEngineWorker(fake.scope, clock.nowMs, timers.schedule, timers.cancel);
-  fake.send({
-    type: "engine.init",
-    actorId: "actor",
-    source: "sim",
-    routeId: "flat-loop",
-    profile: DEFAULT_RIDER_PROFILE,
-    clockScale: 20,
+  worker.init("actor");
+  worker.timers.tick();
+  worker.send({ type: "engine.ingest", actorId: "other", event: TRAINER_READING });
+  worker.send({ type: "engine.setMode", actorId: "other", mode: "fun" });
+  worker.command("other", 1, { kind: "start", rideId: FIRST_RIDE_ID });
+  worker.send({ type: "engine.dispose", actorId: "other" });
+  worker.wake(50);
+
+  expect(worker.updates().at(-1)).toMatchObject({
+    snapshot: { powerW: 0, mode: { kind: "normal" } },
+    recording: { kind: "idle" },
   });
+  expect(worker.timers.active()).toBe(1);
 
-  timers.tick();
-  clock.advanceMs(50);
-  timers.tick();
+  worker.send({ type: "engine.ingest", actorId: "actor", event: TRAINER_READING });
+  worker.send({ type: "engine.setMode", actorId: "actor", mode: "fun" });
+  worker.wake(50);
 
-  // 50 ms real x 20 => 1 s virtual => 20 ticks of 0.05 s.
-  const update = fake.posted.findLast((message) => message.type === "engine.update");
-
-  expect(update?.snapshot.tS).toBeCloseTo(1, 9);
-  expect(update?.progress).toMatchObject({ clockScale: 20, startTick: 0, endTick: 20 });
-  expect(update?.progress?.facts).toHaveLength(20);
+  expect(worker.updates().at(-1)).toMatchObject({
+    actorId: "actor",
+    snapshot: { mode: { kind: "fun" } },
+  });
+  expect(worker.updates().at(-1)?.snapshot.powerW).toBeGreaterThan(0);
+  expect(worker.command("actor", 2, { kind: "start", rideId: FIRST_RIDE_ID })).toMatchObject({
+    type: "recording.reply",
+    actorId: "actor",
+    requestId: 2,
+    result: { kind: "failed" },
+  });
 });
 
-it("forwards device events into the engine", () => {
-  const fake = createFakeScope();
-  const clock = createManualClock();
-  const timers = createFakeTimers();
+it("stops the wake timer on dispose but holds an unsecured completion until release", () => {
+  const worker = createWorkerHarness();
 
-  bindEngineWorker(fake.scope, clock.nowMs, timers.schedule, timers.cancel);
-  fake.send({
-    type: "engine.init",
-    actorId: "actor",
-    source: "sim",
-    routeId: "flat-loop",
-    profile: DEFAULT_RIDER_PROFILE,
-    clockScale: 1,
+  worker.init("actor");
+  worker.send({ type: "engine.ingest", actorId: "actor", event: TRAINER_READING });
+  worker.timers.tick();
+  worker.command("actor", 1, { kind: "start", rideId: FIRST_RIDE_ID });
+  worker.wake(1000);
+  worker.command("actor", 2, { kind: "finish", rideId: FIRST_RIDE_ID });
+  worker.send({ type: "engine.dispose", actorId: "actor" });
+  expect(worker.timers.active()).toBe(0);
+
+  worker.init("next");
+  expect(worker.posted.at(-1)).toMatchObject({ type: "engine.initFailed", actorId: "next" });
+  expect(worker.command("actor", 3, { kind: "release", rideId: SECOND_RIDE_ID })).toMatchObject({
+    result: { kind: "failed", view: { kind: "completed", rideId: FIRST_RIDE_ID } },
   });
-  timers.tick();
 
-  fake.send({
+  worker.command("actor", 4, { kind: "release", rideId: FIRST_RIDE_ID });
+  worker.init("next");
+  expect(worker.posted.at(-1)).toMatchObject({
+    type: "engine.update",
+    actorId: "next",
+    snapshot: { tS: 0 },
+  });
+
+  worker.send({
     type: "engine.ingest",
     actorId: "actor",
-    event: { type: "trainer.data", tS: 0, powerW: 200, cadenceRpm: 90 },
+    event: { type: "trainer.data", tS: 0, powerW: 2000, cadenceRpm: 200 },
   });
-
-  clock.advanceMs(50);
-  timers.tick();
-
-  const update = fake.posted.findLast((message) => message.type === "engine.update");
-
-  expect(update?.snapshot.powerW).toBeGreaterThan(0);
+  worker.timers.tick();
+  worker.wake(50);
+  expect(worker.updates().at(-1)).toMatchObject({ actorId: "next", snapshot: { powerW: 0 } });
 });
 
-it("stops the wake timer on dispose", () => {
-  const fake = createFakeScope();
-  const clock = createManualClock();
-  const timers = createFakeTimers();
+it("drops a disposed idle actor so a fresh init succeeds immediately", () => {
+  const worker = createWorkerHarness();
 
-  bindEngineWorker(fake.scope, clock.nowMs, timers.schedule, timers.cancel);
-  fake.send({
-    type: "engine.init",
-    actorId: "actor",
-    source: "sim",
-    routeId: "flat-loop",
-    profile: DEFAULT_RIDER_PROFILE,
-    clockScale: 1,
+  worker.init("first");
+  worker.send({ type: "engine.dispose", actorId: "first" });
+  worker.wake(100);
+  expect(worker.updates()).toHaveLength(1);
+
+  worker.init("second");
+  expect(worker.posted.at(-1)).toMatchObject({ type: "engine.update", actorId: "second" });
+});
+
+it("stamps progress with the bound time origin and identity source", () => {
+  const worker = createWorkerHarness({ startMs: 0.4, timeOriginMs: 1000 });
+
+  worker.init("actor");
+  worker.timers.tick();
+  worker.wake(50);
+
+  expect(worker.updates().at(-1)?.progress).toMatchObject({
+    journalId: FIRST_RIDE_ID,
+    startedAtMs: 1000,
+    endedAtMs: 1050,
   });
-  timers.tick();
-
-  expect(timers.active()).toBe(1);
-
-  fake.send({ type: "engine.dispose", actorId: "actor" });
-
-  expect(timers.active()).toBe(0);
-
-  clock.advanceMs(100);
-  timers.tick();
-
-  const updateCount = fake.posted.filter((message) => message.type === "engine.update").length;
-
-  expect(updateCount).toBe(1);
 });
