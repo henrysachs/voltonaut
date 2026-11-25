@@ -74,7 +74,11 @@ describe("rider fit", () => {
 
         const along = (arm.elbow[0] - arm.shoulder[0]) / (arm.wrist[0] - arm.shoulder[0]);
 
-        expect(distance(arm.grip, hood)).toBeLessThan(0.03);
+        // Hoods of different frames sit only 1–3 cm apart, so pin the hand to this frame's hood
+        // fore-aft and across; the palm rests a fixed 1.2 cm above it.
+        expect(Math.hypot(arm.grip[0] - hood[0], arm.grip[2] - hood[2])).toBeLessThan(0.005);
+        expect(arm.grip[1] - hood[1]).toBeGreaterThan(0);
+        expect(arm.grip[1] - hood[1]).toBeLessThan(0.03);
         expect(distance(arm.shoulder, arm.elbow)).toBeCloseTo(UPPER_ARM_M, 6);
         expect(distance(arm.elbow, arm.wrist)).toBeCloseTo(FOREARM_M, 6);
         // A locked arm (≈ 180°) means the hood is out of reach; a sharp bend means a cramped fit.
