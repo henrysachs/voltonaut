@@ -20,9 +20,10 @@ Für jeden wackelnden Test die echte Ursache finden und beheben, ohne Timeouts, 
 
 - **Ursache (Test-Race):** Der Test startet und beendet die Aufnahme mit dem verbundenen Sim-Trainer. Der Recorder lehnt nur Fenster unter 1000 ms ab. Unter Last liegen zwischen „starten“ und „beenden“ mehr als 1000 ms Echtzeit. Dann enthält das Fenster echte Trainerdaten und wird korrekt als Fahrt gespeichert („Lokal gespeichert …“). Kein App-Fehler: ein Fenster mit Daten ist nicht leer.
 - **Zweiter Befund (App):** Ein Fenster über 1000 ms **ohne** Trainerdaten scheiterte im Recorder an `RideTrackSchema.parse` und zeigte dem Nutzer rohes Zod-JSON statt der Meldung „leer oder ungültig“. Die Aufnahme blieb verwerfbar.
-- **Rot vorher:** lokal `--repeat-each=10` (mit fun-mode parallel, 50 % Worker): 3/10 rot, jeweils „Lokal gespeichert“. Neuer Unit-Test ohne Fix: rot mit Zod-JSON.
+- **Rot vorher:** lokal `--repeat-each=10` (mit fun-mode parallel, 50 % Worker): 3/10 rot. Unverändertes Spec von `a9fba9e` unter Last (14 × `yes`) `--repeat-each=20`: 5/20 rot, jeweils „Lokal gespeichert …“. Neuer Unit-Test ohne Recorder-Fix: rot mit Zod-JSON.
 - **Fix:** E2E trennt vor dem Start den Sim-Trainer über den Gerätedialog (`e2e/helpers/simTrainer.ts`). Damit ist das Fenster unabhängig von der Klickdauer leer. Recorder (`apps/web/src/game/rideRecorder.ts`) meldet ein Fenster ohne Trainerdaten als „Aufnahme leer oder ungültig …“. Unit-Test `recordedRide.journal.test.ts` „rejects a long window without trainer data as empty …“.
-- **Nachher:** `--repeat-each=20`: 20/20 grün. Unit-Test grün.
+- **Nachher:** `--repeat-each=20` ohne Last 20/20 grün, unter derselben Last (14 × `yes`) 20/20 grün. Unit-Test grün.
+- **Zwischenstand:** Eine erste Helper-Fassung wartete auf Sichtbarkeit des Rohstatus, der in eingeklappten Details liegt; ein Gate-Lauf scheiterte daran (30-s-Testtimeout). Korrigiert auf „attached“ mit Text.
 
 ### `apps/web/src/pwa/pwa.build.test.ts:263` „announces a waiting release …“ – Ursache bekannt, nicht behoben
 
@@ -42,9 +43,14 @@ Für jeden wackelnden Test die echte Ursache finden und beheben, ohne Timeouts, 
 - **Rot vorher:** lokal (Stand `a9fba9e`) `--repeat-each=10` zusammen mit progress-panel und garage-shop: 1/10. Fehler: `data-distance-m` stieg in 5 s nur um 0,025 m statt > 2 m.
 - **Hypothese (unbelegt):** Die Fahrt startet mit realer Uhr (ohne `clock=fast`) aus dem Stand; unter Last erreicht der Fahrer in 5 s keine 2 m, oder die Render-Diagnose liefert unter Last keine frischen Werte. Nicht verifiziert.
 
-### `apps/web/e2e/progress-panel.spec.ts:18`, `garage-shop.spec.ts:37/153` – Ursache offen
+### `apps/web/e2e/progress-panel.spec.ts:18` – Ursache offen
 
-- **Rot vorher:** lokal `--repeat-each=10` (Stand `a9fba9e`): 0/10 bzw. 0/20 rot. Nicht reproduziert; keine Aussage zur Ursache.
+- **Rot vorher:** lokal `--repeat-each=10` (Stand `a9fba9e`): 0/10. Im Gate-Lauf unter hoher Rechnerlast (Load ~50): 1 rot mit demselben Muster wie `ride-menu-dismissal.spec.ts:49` (`data-distance-m` stieg in 5 s nur um 0,008 m statt > 2 m).
+- **Hypothese (unbelegt):** gemeinsame Ursache mit `ride-menu-dismissal.spec.ts:49` (Fahrt mit realer Uhr erreicht unter Last in 5 s keine 2 m oder Diagnosewerte veralten). Nicht verifiziert.
+
+### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache offen
+
+- **Rot vorher:** lokal `--repeat-each=10` (Stand `a9fba9e`): 0/20. Nicht reproduziert; keine Aussage zur Ursache.
 
 ### Server `check-config.test.ts`, `main.shutdown.test.ts`, `admin.test.ts` – Ursache offen
 
@@ -73,5 +79,7 @@ Für jeden wackelnden Test die echte Ursache finden und beheben, ohne Timeouts, 
 Keine Änderung an Timeouts, Retries, Sim-Uhr, Vitest-/Playwright-Konfiguration oder Leitplanken.
 
 ## Nachweisstand
+
+- `E2E_PORT=5191 mise run check` auf dem Endstand: grün (1918 Unit/Integration, 81 E2E). Vorherige Gate-Läufe unter hoher Rechnerlast scheiterten an den offenen Tests (Server-Timeouts ×6; progress-panel ×1).
 
 Implementiert und softwaregeprüft: AK1, AK2. An echter Hardware geprüft: nein (nicht nötig). Bereitgestellt: nein.
