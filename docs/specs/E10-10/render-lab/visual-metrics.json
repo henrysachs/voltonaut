@@ -1,0 +1,34 @@
+{
+  "metrics": [
+    {
+      "variant": "webgl-high",
+      "width": 1280,
+      "height": 720,
+      "edgeEnergy": 56.40818551758808
+    },
+    {
+      "variant": "webgpu-high",
+      "width": 1280,
+      "height": 720,
+      "edgeEnergy": 80.9849259970015
+    },
+    {
+      "variant": "webgl-ultra",
+      "width": 1280,
+      "height": 720,
+      "edgeEnergy": 58.21418200937691
+    },
+    {
+      "variant": "webgpu-ultra",
+      "width": 1280,
+      "height": 720,
+      "edgeEnergy": 82.08367648987527
+    }
+  ],
+  "meanAbsoluteLumaDifference": {
+    "webgpuVsWebglHigh": 3.236381453994351,
+    "webgpuVsWebglUltra": 3.2226216335670324,
+    "ultraVsHighWebgl": 0.16023021059906264,
+    "ultraVsHighWebgpu": 0.22959493057271982
+  }
+}

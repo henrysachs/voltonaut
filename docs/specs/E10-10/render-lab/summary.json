@@ -1,0 +1,389 @@
+{
+  "summary": {
+    "webgl-high": {
+      "runCount": 5,
+      "samples": {
+        "median": 4,
+        "min": 4,
+        "max": 4
+      },
+      "fpsMean": {
+        "median": 120.01050091883039,
+        "min": 119.99400029998499,
+        "max": 120.01350151892089
+      },
+      "fpsP50": {
+        "median": 120.48192771082753,
+        "min": 120.48192771082753,
+        "max": 120.48192771084074
+      },
+      "fpsP5": {
+        "median": 108.69565217392594,
+        "min": 108.69565217391519,
+        "max": 109.89010989010549
+      },
+      "fpsP95": {
+        "median": 133.33333333333334,
+        "min": 131.57894736841476,
+        "max": 133.33333333333334
+      },
+      "frameTimeP50Ms": {
+        "median": 8.300000000001091,
+        "min": 8.300000000000182,
+        "max": 8.300000000001091
+      },
+      "frameTimeP95Ms": {
+        "median": 9.199999999998909,
+        "min": 9.100000000000364,
+        "max": 9.199999999999818
+      },
+      "renderCpuP50Ms": {
+        "median": 0.3999999761581421,
+        "min": 0.30000001192092896,
+        "max": 0.3999999761581421
+      },
+      "renderCpuP95Ms": {
+        "median": 0.5,
+        "min": 0.40000003576278687,
+        "max": 0.5
+      },
+      "drawCalls": {
+        "median": 133,
+        "min": 133,
+        "max": 133
+      },
+      "triangles": {
+        "median": 154558,
+        "min": 154558,
+        "max": 154558
+      },
+      "geometryMiB": {
+        "median": 3.032184600830078,
+        "min": 3.032184600830078,
+        "max": 3.032184600830078
+      },
+      "trackedMiB": null,
+      "gpuProcessRssMiB": {
+        "median": 118.453125,
+        "min": 115.765625,
+        "max": 121.25
+      },
+      "gpuProcessRssDeltaMiB": {
+        "median": 16.0625,
+        "min": 15.328125,
+        "max": 20.46875
+      },
+      "rendererProcessRssMiB": {
+        "median": 363.515625,
+        "min": 361.84375,
+        "max": 462.84375
+      },
+      "jsHeapAfterMiB": {
+        "median": 32.01929473876953,
+        "min": 31.557411193847656,
+        "max": 33.41090774536133
+      },
+      "errors": 0,
+      "memoryGrowthBytes": null
+    },
+    "webgpu-high": {
+      "runCount": 5,
+      "samples": {
+        "median": 4,
+        "min": 4,
+        "max": 4
+      },
+      "fpsMean": {
+        "median": 120.006000300015,
+        "min": 119.98950091866962,
+        "max": 120.12500000000001
+      },
+      "fpsP50": {
+        "median": 120.48192771084074,
+        "min": 120.48192771082753,
+        "max": 120.48192771084074
+      },
+      "fpsP5": {
+        "median": 108.69565217390445,
+        "min": 107.52688172043852,
+        "max": 109.89010989010549
+      },
+      "fpsP95": {
+        "median": 133.33333333333334,
+        "min": 133.33333333333334,
+        "max": 135.13513513514178
+      },
+      "frameTimeP50Ms": {
+        "median": 8.300000000000182,
+        "min": 8.300000000000182,
+        "max": 8.300000000001091
+      },
+      "frameTimeP95Ms": {
+        "median": 9.200000000000728,
+        "min": 9.100000000000364,
+        "max": 9.299999999999272
+      },
+      "renderCpuP50Ms": {
+        "median": 0.5999999642372131,
+        "min": 0.5,
+        "max": 0.6000000238418579
+      },
+      "renderCpuP95Ms": {
+        "median": 0.7999999523162842,
+        "min": 0.699999988079071,
+        "max": 0.800000011920929
+      },
+      "drawCalls": {
+        "median": 134,
+        "min": 134,
+        "max": 134
+      },
+      "triangles": {
+        "median": 154559,
+        "min": 154559,
+        "max": 154559
+      },
+      "geometryMiB": {
+        "median": 3.032184600830078,
+        "min": 3.032184600830078,
+        "max": 3.032184600830078
+      },
+      "trackedMiB": {
+        "median": 28.12272071838379,
+        "min": 28.12272071838379,
+        "max": 28.12272071838379
+      },
+      "gpuProcessRssMiB": {
+        "median": 116.609375,
+        "min": 115.125,
+        "max": 120.46875
+      },
+      "gpuProcessRssDeltaMiB": {
+        "median": 14.3125,
+        "min": 13.03125,
+        "max": 16.84375
+      },
+      "rendererProcessRssMiB": {
+        "median": 364.140625,
+        "min": 362.25,
+        "max": 376.484375
+      },
+      "jsHeapAfterMiB": {
+        "median": 21.38594913482666,
+        "min": 18.799023628234863,
+        "max": 26.88448429107666
+      },
+      "errors": 0,
+      "memoryGrowthBytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "webgl-ultra": {
+      "runCount": 5,
+      "samples": {
+        "median": 4,
+        "min": 4,
+        "max": 4
+      },
+      "fpsMean": {
+        "median": 120.00100105110367,
+        "min": 119.98950091866963,
+        "max": 120.06303309237352
+      },
+      "fpsP50": {
+        "median": 120.48192771082753,
+        "min": 120.48192771082753,
+        "max": 120.48192771084074
+      },
+      "fpsP5": {
+        "median": 108.69565217390445,
+        "min": 107.52688172043852,
+        "max": 109.89010989012691
+      },
+      "fpsP95": {
+        "median": 135.13513513510856,
+        "min": 129.9545159194454,
+        "max": 135.13513513512518
+      },
+      "frameTimeP50Ms": {
+        "median": 8.300000000001091,
+        "min": 8.300000000000182,
+        "max": 8.300000000001091
+      },
+      "frameTimeP95Ms": {
+        "median": 9.200000000000728,
+        "min": 9.099999999998591,
+        "max": 9.299999999999272
+      },
+      "renderCpuP50Ms": {
+        "median": 0.3999999761581421,
+        "min": 0.30000001192092896,
+        "max": 0.3999999761581421
+      },
+      "renderCpuP95Ms": {
+        "median": 0.5,
+        "min": 0.40000003576278687,
+        "max": 0.5
+      },
+      "drawCalls": {
+        "median": 133,
+        "min": 133,
+        "max": 133
+      },
+      "triangles": {
+        "median": 154558,
+        "min": 154558,
+        "max": 154558
+      },
+      "geometryMiB": {
+        "median": 3.032184600830078,
+        "min": 3.032184600830078,
+        "max": 3.032184600830078
+      },
+      "trackedMiB": null,
+      "gpuProcessRssMiB": {
+        "median": 121.0625,
+        "min": 115.453125,
+        "max": 122.671875
+      },
+      "gpuProcessRssDeltaMiB": {
+        "median": 19.90625,
+        "min": 15.921875,
+        "max": 20.921875
+      },
+      "rendererProcessRssMiB": {
+        "median": 361.859375,
+        "min": 361.125,
+        "max": 374.90625
+      },
+      "jsHeapAfterMiB": {
+        "median": 32.12409591674805,
+        "min": 32.02175521850586,
+        "max": 33.328834533691406
+      },
+      "errors": 0,
+      "memoryGrowthBytes": null
+    },
+    "webgpu-ultra": {
+      "runCount": 5,
+      "samples": {
+        "median": 4,
+        "min": 4,
+        "max": 4
+      },
+      "fpsMean": {
+        "median": 120.00150001875025,
+        "min": 119.98800119988002,
+        "max": 120.125
+      },
+      "fpsP50": {
+        "median": 120.48192771082753,
+        "min": 120.48192771082753,
+        "max": 120.48192771084074
+      },
+      "fpsP5": {
+        "median": 108.6956521739254,
+        "min": 107.52688172043852,
+        "max": 109.89010989012746
+      },
+      "fpsP95": {
+        "median": 133.33333333333334,
+        "min": 131.57894736841476,
+        "max": 133.33333333333334
+      },
+      "frameTimeP50Ms": {
+        "median": 8.300000000001091,
+        "min": 8.300000000000182,
+        "max": 8.300000000001091
+      },
+      "frameTimeP95Ms": {
+        "median": 9.199999999998955,
+        "min": 9.099999999998545,
+        "max": 9.299999999999272
+      },
+      "renderCpuP50Ms": {
+        "median": 0.5999999642372131,
+        "min": 0.5,
+        "max": 0.5999999642372131
+      },
+      "renderCpuP95Ms": {
+        "median": 0.7999999523162842,
+        "min": 0.699999988079071,
+        "max": 0.7999999523162842
+      },
+      "drawCalls": {
+        "median": 134,
+        "min": 134,
+        "max": 134
+      },
+      "triangles": {
+        "median": 154559,
+        "min": 154559,
+        "max": 154559
+      },
+      "geometryMiB": {
+        "median": 3.032184600830078,
+        "min": 3.032184600830078,
+        "max": 3.032184600830078
+      },
+      "trackedMiB": {
+        "median": 40.42740821838379,
+        "min": 40.42740821838379,
+        "max": 40.42740821838379
+      },
+      "gpuProcessRssMiB": {
+        "median": 116.34375,
+        "min": 114.921875,
+        "max": 117.328125
+      },
+      "gpuProcessRssDeltaMiB": {
+        "median": 14.359375,
+        "min": 12.640625,
+        "max": 16.796875
+      },
+      "rendererProcessRssMiB": {
+        "median": 362.984375,
+        "min": 361.15625,
+        "max": 379.671875
+      },
+      "jsHeapAfterMiB": {
+        "median": 27.55461597442627,
+        "min": 26.834176063537598,
+        "max": 28.16152286529541
+      },
+      "errors": 0,
+      "memoryGrowthBytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      }
+    }
+  },
+  "comparisons": {
+    "webgpuVsWebglHigh": {
+      "fpsP50Pct": 1.095756374525225e-11,
+      "fpsP5Pct": -1.9767867343032252e-11,
+      "renderCpuP50Pct": 50,
+      "gpuProcessRssPct": -1.5565228861627753
+    },
+    "webgpuVsWebglUltra": {
+      "fpsP50Pct": 0,
+      "fpsP5Pct": 1.9271055862192657e-11,
+      "renderCpuP50Pct": 50,
+      "gpuProcessRssPct": -3.8977800722767166
+    },
+    "ultraVsHighWebgl": {
+      "fpsP50Pct": 0,
+      "fpsP5Pct": -1.9767867343032252e-11,
+      "gpuProcessRssPct": 2.202875610077826
+    },
+    "ultraVsHighWebgpu": {
+      "fpsP50Pct": -1.0957563745251049e-11,
+      "fpsP5Pct": 1.9271055862192657e-11,
+      "trackedMiBPct": 43.75354583653935,
+      "gpuProcessRssPct": -0.22779043280182232
+    }
+  }
+}
