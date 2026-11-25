@@ -99,7 +99,28 @@ export function createEconomyTables(userIdColumn: SQLiteColumn) {
     (table) => [...ledgerIndexes(table), ...ledgerChecks(table)],
   );
 
-  return { voltsLedger };
+  // Operator audit for `operator_grant` entries (issue #116); cascades with the credited account's journal.
+  const voltsGrantOperators = sqliteTable(
+    "volts_grant_operators",
+    {
+      entryId: text("entry_id")
+        .primaryKey()
+        .references(() => voltsLedger.id, { onDelete: "cascade" }),
+      operatorUserId: text("operator_user_id").references(() => userIdColumn),
+      provenance: text("provenance", { enum: ["recorded", "unknown_before_audit"] }).notNull(),
+      recordedAt: integer("recorded_at").notNull(),
+    },
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle constructs constraint metadata from mutable columns.
+    (table) => [
+      index("volts_grant_operators_operator_idx").on(table.operatorUserId),
+      check(
+        "volts_grant_operators_provenance",
+        sql`(${table.provenance} = 'recorded' AND ${table.operatorUserId} IS NOT NULL) OR (${table.provenance} = 'unknown_before_audit' AND ${table.operatorUserId} IS NULL)`,
+      ),
+    ],
+  );
+
+  return { voltsLedger, voltsGrantOperators };
 }
 
 export type EconomyTables = ReturnType<typeof createEconomyTables>;

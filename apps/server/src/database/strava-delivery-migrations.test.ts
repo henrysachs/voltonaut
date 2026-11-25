@@ -59,7 +59,7 @@ it("upgrades existing encrypted Strava connections once without replacing their 
     expect(
       reopened.$client.prepare("SELECT * FROM strava_connections ORDER BY user_id").all(),
     ).toEqual(state);
-    expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(13);
+    expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(14);
     reopened.$client.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });

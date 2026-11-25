@@ -124,7 +124,7 @@ it("adds membership and authorization revisions after six actual migrations with
     next.$client.close();
     const restarted = createDatabase(config);
     expect(oldData(restarted)).toEqual(before);
-    expect(restarted.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(13);
+    expect(restarted.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(14);
     restarted.$client.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });

@@ -19,11 +19,12 @@ afterEach(async () => {
   cleanup.clear();
 });
 
-function grant(reference: string, amountVolts: number) {
+function grant(reference: string, amountVolts: number, operatorUserId: string) {
   return VoltsGrantCommandSchema.parse({
     idempotencyKey: `operator:${reference}`,
     refId: reference,
     amountVolts,
+    operatorUserId,
   });
 }
 
@@ -41,11 +42,13 @@ async function grantApp() {
   const testApp = await createTestApp({ clock: { nowMs: () => NOW_MS } });
   cleanup.add(() => testApp.app.close());
   const owner = await loginTestUser(testApp.app, testApp.mail, "owner@example.com");
+  const operator = await loginTestUser(testApp.app, testApp.mail, "operator@example.com");
 
   const db = getDatabase(testApp.app);
 
   return {
     userId: owner.user.id,
+    operatorId: operator.user.id,
     economy: testApp.app.get<EconomyService>(EconomyService),
     grants: new OperatorGrants(db, economyTables, { nowMs: () => NOW_MS }),
     db: db.$client,
@@ -53,16 +56,17 @@ async function grantApp() {
 }
 
 it("credits an operator grant once and replays it without a second booking", async () => {
-  const { userId, economy, grants, db } = await grantApp();
+  const { userId, economy, grants, db, operatorId } = await grantApp();
 
-  const receipt = grants.grant(userId, grant("acceptance-2026-11-25", 7000));
+  const receipt = grants.grant(userId, grant("acceptance-2026-11-25", 7000, operatorId));
 
   expect(receipt).toEqual({
     entryId: receipt.entryId,
     refId: "acceptance-2026-11-25",
     amountVolts: 7000,
+    operator: { kind: "recorded", userId: operatorId },
   });
-  expect(grants.grant(userId, grant("acceptance-2026-11-25", 7000))).toEqual(receipt);
+  expect(grants.grant(userId, grant("acceptance-2026-11-25", 7000, operatorId))).toEqual(receipt);
   expect(economy.balance(userId)).toBe(7000);
   expect(
     db.prepare("SELECT reason, delta_volts, idempotency_key, reward_day FROM volts_ledger").all(),
@@ -77,22 +81,22 @@ it("credits an operator grant once and replays it without a second booking", asy
 });
 
 it("rejects a different amount under the same reference without booking", async () => {
-  const { userId, economy, grants } = await grantApp();
+  const { userId, economy, grants, operatorId } = await grantApp();
 
-  grants.grant(userId, grant("acceptance", 7000));
+  grants.grant(userId, grant("acceptance", 7000, operatorId));
 
   expect(
     apiErrorCode(() => {
-      grants.grant(userId, grant("acceptance", 9000));
+      grants.grant(userId, grant("acceptance", 9000, operatorId));
     }),
   ).toBe("ledger_conflict");
   expect(economy.balance(userId)).toBe(7000);
 });
 
 it("lets granted Volts pay for a purchase", async () => {
-  const { userId, economy, grants } = await grantApp();
+  const { userId, economy, grants, operatorId } = await grantApp();
 
-  grants.grant(userId, grant("acceptance", 2000));
+  grants.grant(userId, grant("acceptance", 2000, operatorId));
   economy.debit(
     userId,
     VoltsDebitCommandSchema.parse({
@@ -133,17 +137,73 @@ it("keeps operator grants positive and free of ride fields in SQLite itself", as
 
 it("requires the operator: key prefix", () => {
   expect(
-    VoltsGrantCommandSchema.safeParse({ idempotencyKey: "purchase:x", refId: "x", amountVolts: 1 })
-      .success,
+    VoltsGrantCommandSchema.safeParse({
+      idempotencyKey: "purchase:x",
+      refId: "x",
+      amountVolts: 1,
+      operatorUserId: "admin",
+    }).success,
   ).toBe(false);
 });
 
 it("rejects a credit that would push the balance past the safe integer range", async () => {
-  const { userId, economy, grants } = await grantApp();
+  const { userId, economy, grants, operatorId } = await grantApp();
   const nearMax = Number.MAX_SAFE_INTEGER - 10;
 
-  grants.grant(userId, grant("edge", nearMax));
+  grants.grant(userId, grant("edge", nearMax, operatorId));
 
-  expect(() => grants.grant(userId, grant("overflow", 11))).toThrow("safe integer range");
+  expect(() => grants.grant(userId, grant("overflow", 11, operatorId))).toThrow(
+    "safe integer range",
+  );
   expect(economy.balance(userId)).toBe(nearMax);
+});
+
+it("records the operator and rejects a replay by another operator", async () => {
+  const { userId, grants, db, operatorId } = await grantApp();
+
+  const receipt = grants.grant(userId, grant("audited", 500, operatorId));
+
+  expect(
+    db.prepare("SELECT entry_id, operator_user_id, provenance FROM volts_grant_operators").all(),
+  ).toEqual([{ entry_id: receipt.entryId, operator_user_id: operatorId, provenance: "recorded" }]);
+  expect(
+    apiErrorCode(() => {
+      grants.grant(userId, grant("audited", 500, userId));
+    }),
+  ).toBe("ledger_conflict");
+});
+
+it("keeps the operator audit immutable and consistent in SQLite itself", async () => {
+  const { userId, grants, db, operatorId } = await grantApp();
+  const receipt = grants.grant(userId, grant("immutable", 500, operatorId));
+
+  expect(() =>
+    db.prepare("UPDATE volts_grant_operators SET operator_user_id = ?").run(userId),
+  ).toThrow("operator audit is immutable");
+  expect(() =>
+    db
+      .prepare(
+        "INSERT INTO volts_grant_operators (entry_id, operator_user_id, provenance, recorded_at) VALUES (?, NULL, 'recorded', 1)",
+      )
+      .run(receipt.entryId),
+  ).toThrow("CHECK constraint failed");
+});
+
+it("rejects a deleted operator account and cascades with the credited journal", async () => {
+  const { userId, grants, db, operatorId } = await grantApp();
+
+  grants.grant(userId, grant("cascade", 500, operatorId));
+  db.prepare("DELETE FROM volts_ledger WHERE user_id = ?").run(userId);
+
+  expect(db.prepare("SELECT COUNT(*) AS count FROM volts_grant_operators").get()).toEqual({
+    count: 0,
+  });
+
+  db.prepare("UPDATE users SET deleted_at = 1, email = 'gone@voltonaut.invalid' WHERE id = ?").run(
+    operatorId,
+  );
+
+  expect(() => grants.grant(userId, grant("late", 500, operatorId))).toThrow(
+    "operator account is deleted",
+  );
 });

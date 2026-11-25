@@ -164,6 +164,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-03](specs/E7-03-purchase-confirmation.md) macht den Kauf zweistufig: „Kaufen (n ⚡)“ öffnet eine Bestätigung mit Preis und Kontostand danach, der Fokus liegt auf „Abbrechen“. Stand: implementiert und softwaregeprüft (Unit, E2E angemeldet mit gemocktem Server); Merge und Bereitstellung offen.
 
+[E7-04](specs/E7-04-operator-grant-audit.md) ordnet jede Volts-Gutschrift einem aktiven Admin-Konto zu (`admin credit --operator <adminUserId> …`). Ältere Gutschriften bleiben als „Operator unbekannt (vor Einführung)“ markiert. Stand: implementiert und softwaregeprüft (Integration, Migration, CLI); Merge und Bereitstellung offen.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
 - [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items

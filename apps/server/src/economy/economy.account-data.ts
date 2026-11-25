@@ -5,7 +5,7 @@ import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
 import {
   parseStoredCumulativeFacts,
   parseStoredDebitReceipt,
-  parseStoredGrantReceipt,
+  assertStoredGrant,
   parseStoredRangeReceipt,
   type LedgerRow,
 } from "./economy.codec.js";
@@ -29,7 +29,7 @@ function exportRow(row: Readonly<LedgerRow>) {
   }
 
   if (row.reason === "operator_grant") {
-    parseStoredGrantReceipt(row);
+    assertStoredGrant(row);
 
     return { ...common, reason: row.reason };
   }
