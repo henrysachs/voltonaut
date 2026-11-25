@@ -1,7 +1,7 @@
 # Spec E10-10 – WebGPU und Ultra-Qualität evaluieren
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, Checkbox „WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe", [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)
-- **Status:** Erledigt. Prototyp, wiederholte Hardwaremessung, Gesamtgate und unabhängiger Review grün. ADR-030 ist durch Henry angenommen.
+- **Status:** Teilergebnis. Erste Hardwaremessung, Entscheidungsvorschlag und Messgrenzen sind dokumentiert. AK1 bleibt offen, bis eine Folgemessung das Backend pro Lauf protokolliert. Henrys Freigabe zu ADR-030 steht aus.
 - **Betroffene Module:** Dokumentation und ein isoliertes Scratch-Lab. Kein Produktionscode, keine neue Abhängigkeit, keine geschützte Konfiguration.
 
 ## Ziel
@@ -10,7 +10,7 @@ Ein messbarer Prototyp klärt, ob WebGPU einen zweiten dauerhaften Renderer oder
 
 ## Abnahmekriterien
 
-- [x] AK1 – WebGL und WebGPU rendern sequenziell dieselbe Szene, denselben Seed, dieselbe Kamerapose und dieselben Qualitätsparameter. Der tatsächlich verwendete Backend-Adapter wird protokolliert. Ein stiller WebGL-Fallback gilt als Fehler.
+- [ ] AK1 – WebGL und WebGPU rendern sequenziell dieselbe Szene, denselben Seed, dieselbe Kamerapose und dieselben Qualitätsparameter. Der tatsächlich verwendete Backend-Adapter wird protokolliert. Ein stiller WebGL-Fallback gilt als Fehler.
 - [x] AK2 – High und Ultra werden je Backend auf echter Hardware gemessen. Pro Variante gibt es fünf alternierende Läufe nach identischer Aufwärmphase. FPS p5/p50/p95, Frame-Zeit, CPU-Renderzeit, Draw Calls, Dreiecke und Speicher werden roh festgehalten.
 - [x] AK3 – Screenshots jeder Variante zeigen dieselbe Szene und Kamera. Die sichtbare Qualität wird mit den Messwerten zusammen bewertet. Schwarze Bilder, Treiber- oder Shaderfehler werden nicht als Erfolg gewertet.
 - [x] AK4 – Die ADR entscheidet getrennt, ob ein zweiter Renderer und ob Ultra sinnvoll ist. Begründung, Alternativen, Messgrenzen und Kompatibilitätskosten sind dokumentiert.
@@ -41,13 +41,9 @@ Ein messbarer Prototyp klärt, ob WebGPU einen zweiten dauerhaften Renderer oder
 
 ## Backend-Nachweis
 
-`environment.json` protokolliert die tatsächlich initialisierten Adapter. `compact-runs.json` enthält kein separates Backend-Feld pro Lauf. Die laufbezogenen Zähler schließen einen stillen WebGL-Fallback trotzdem aus:
+Die erste Messung protokolliert die initialisierten Adapter nur global in `environment.json`. `compact-runs.json` enthält kein Backend-Feld pro Lauf. Die positiven Bytezähler bei WebGPU und die `null`-Werte bei WebGL unterscheiden den `WebGPURenderer` vom klassischen `WebGLRenderer`. Sie schließen den WebGL2-Fallback des `WebGPURenderer` nicht aus, weil dieser Fallback dieselbe `Info`-Implementierung verwendet. Die erfassten `consoleErrors` decken die Fallback-Warnung über `console.warn` nicht nachweisbar ab.
 
-- Bei allen zehn WebGPU-Läufen enthalten `memoryStart` und `memoryEnd` positive Werte für `totalBytes`, `attributesBytes`, `texturesBytes` und `programsBytes`. Diese Bytezähler liefert das Lab nur mit WebGPU.
-- Bei allen zehn WebGL-Läufen sind dieselben Felder `null`.
-- Jeder Lauf endet mit `success: true` sowie ohne Render- oder Consolefehler.
-
-Die Rohdaten bleiben unverändert. Ein explizites Backend-Feld pro Lauf soll eine spätere Messung ergänzen.
+AK1 ist daher noch nicht erfüllt. Die Folgemessung muss `renderer.backend.isWebGPUBackend` und Warnungen pro Lauf erfassen. Ein WebGL2-Fallback ist dabei ein Fehler.
 
 ## Kompatibilitätsanpassung
 

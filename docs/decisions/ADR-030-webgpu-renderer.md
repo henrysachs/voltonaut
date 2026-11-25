@@ -1,6 +1,6 @@
 # ADR-030 – WebGPU ohne zweites Render-Backend, Ultra zurückgestellt
 
-- **Status:** Angenommen für [Issue #79](https://github.com/henrysachs/voltonaut/issues/79) am 25.11.2026. Die Entscheidung gilt für den aktuellen Fahr-Renderpfad, nicht für einen späteren WebGPU-Umbau.
+- **Status:** Vorgeschlagen für [Issue #79](https://github.com/henrysachs/voltonaut/issues/79). Henrys Freigabe steht aus. Die Entscheidung gilt für den aktuellen Fahr-Renderpfad, nicht für einen späteren WebGPU-Umbau.
 - **Bezug:** ADR-002, ADR-008, ADR-014, ADR-019, Spec [E10-10](../specs/E10-10-webgpu-evaluation.md).
 
 ## Kontext
@@ -13,7 +13,9 @@ Der produktive Himmel verwendet GLSL-`ShaderMaterial`. Three r187 lehnt dieses M
 
 ## Messergebnis
 
-| Variante | FPS p50 | FPS p5 | CPU Frame + Submission p50 | GPU-Prozess-RSS | WebGPU-Speicherzähler |
+Die erste Messung protokolliert den `WebGPURenderer`, aber nicht das tatsächlich initialisierte Backend pro Lauf. Die Tabellenbezeichnung „WebGPU“ bezeichnet daher die angeforderte Variante. Ein WebGL2-Fallback ist nicht ausgeschlossen. CPU- und Bildunterschiede werden erst durch die Folgemessung mit `renderer.backend.isWebGPUBackend` dem WebGPU-Backend zugeordnet.
+
+| Variante | FPS p50 | FPS p5 | CPU Frame + Submission p50 | GPU-Prozess-RSS | WebGPURenderer-Info |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | WebGL High | 120,48 | 108,70 | 0,40 ms | 118,45 MiB | nicht verfügbar |
 | WebGPU High | 120,48 | 108,70 | 0,60 ms | 116,61 MiB | 28,12 MiB |
@@ -24,7 +26,7 @@ Alle Variantenwerte sind Mediane aus fünf Läufen. Die p5-Spannen überlappen s
 
 Die CPU-Zeit für Frame-Vorbereitung und Render-Submission liegt bei WebGPU median 50 % über WebGL. Die Differenz beträgt 0,2 ms bei einer Quantisierung von 0,1 ms. Sie enthält keine GPU-Ausführungsdauer und ist kein alleiniger Beleg höherer Gesamtkosten.
 
-Der mediane GPU-Prozess-RSS ist bei High 1,6 % und bei Ultra 3,9 % niedriger. Die Spannweiten überlappen. Die Stichprobe erfasst Prozessspeicher am höchsten Gesamt-RSS des Browsers, nicht den GPU-Spitzenbedarf oder dedizierten VRAM. Der WebGPU-Speicherzähler steigt von High auf Ultra um 43,8 %. WebGL liefert keine vergleichbaren Bytegrenzen.
+Der mediane GPU-Prozess-RSS ist bei High 1,6 % und bei Ultra 3,9 % niedriger. Die Spannweiten überlappen. Die Stichprobe erfasst Prozessspeicher am höchsten Gesamt-RSS des Browsers, nicht den GPU-Spitzenbedarf oder dedizierten VRAM. Der Speicherzähler des WebGPURenderer steigt von High auf Ultra um 43,8 %. WebGL liefert keine vergleichbaren Bytegrenzen.
 
 Die Backends erzeugen trotz gleicher Szenenparameter keine pixelgleichen Bilder. Bei High liegt die Kantenstärke bei WebGPU rund 44 % über WebGL. Die mittlere Helligkeitsdifferenz zwischen den Backends beträgt 3,236 bei High und 3,223 bei Ultra auf einer 0-bis-255-Skala. Die Screenshots zeigen bei WebGPU hellere Nebel- und Hügelbereiche. Das Lab hat die Ursache nicht bestimmt. Der Unterschied ist weder ein belegter Qualitätsgewinn noch ein Beleg visueller Parität.
 

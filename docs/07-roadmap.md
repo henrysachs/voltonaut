@@ -200,7 +200,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
 - [ ] Optionale ERG-Workouts (nutzt `ftpW`)
 - [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
-- [x] WebGPU-Renderer und Ultra-Qualität evaluiert ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung: kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)).
+- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung vorgeschlagen: kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis und Freigabe offen.
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Installierbare PWA ([E10-09](specs/E10-09-installable-pwa.md), [Issue #88](https://github.com/henrysachs/voltonaut/issues/88))
   - [x] Manifest, Icons, versionierter App-Shell-Cache, kontrolliertes Update und Menü „App" am gebauten Artefakt softwaregeprüft (Offline-Reload, kein Cache für API-Daten).

@@ -22,7 +22,7 @@ Der produktive GLSL-Himmel war im WebGPU-Backend nicht kompatibel. Das Lab erset
 
 ## Backend-Zuordnung
 
-`compact-runs.json` enthält kein separates Backend-Feld. Bei allen zehn WebGPU-Läufen enthalten `memoryStart` und `memoryEnd` positive Werte für `totalBytes`, `attributesBytes`, `texturesBytes` und `programsBytes`. Bei allen zehn WebGL-Läufen sind diese Felder `null`. Das Lab liefert diese Bytezähler nur mit WebGPU. Zusammen mit `success: true` und den fehlerfreien Logs schließt das einen stillen WebGL-Fallback in jedem Lauf aus.
+Die ersten Rohdaten enthalten kein separates Backend-Feld. Die Bytezähler unterscheiden den `WebGPURenderer` vom klassischen `WebGLRenderer`, aber nicht den WebGL2-Fallback des `WebGPURenderer`. Dieser Fallback verwendet dieselbe `Info`-Implementierung. Die erste Messung erfüllt AK1 deshalb nicht. Eine Folgemessung muss `renderer.backend.isWebGPUBackend` und `console.warn` pro Lauf erfassen.
 
 ## Grenzen
 
