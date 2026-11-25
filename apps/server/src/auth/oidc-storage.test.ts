@@ -4,19 +4,18 @@ import { ErrorEnvelopeSchema } from "@voltonaut/shared";
 import { setup, start, handoff, login, noSessions, ORIGIN } from "../testing/oidc-flow.spec.js";
 import { getDatabase, httpServerOf, bodyOf, bearer } from "../testing/test-app.spec.js";
 import { hashToken } from "./tokens.js";
+import { seedOwners } from "../testing/migration-harness.spec.js";
 
 it("keeps existing legacy owner and session on an OIDC email collision", async () => {
   const context = await setup();
   const db = getDatabase(context.app);
   const userId = crypto.randomUUID();
   const sessionToken = "legacy-session";
+  seedOwners(db, [{ id: userId, email: "rider@example.com" }]);
   db.$client
     .prepare(
-      "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, 'rider@example.com', 0, NULL)",
+      "INSERT INTO sessions (token_hash,user_id,created_at,last_seen_at,expires_at,user_agent) VALUES (?, ?, 0, 0, ?, NULL)",
     )
-    .run(userId);
-  db.$client
-    .prepare("INSERT INTO sessions VALUES (?, ?, 0, 0, ?, NULL)")
     .run(hashToken(sessionToken), userId, context.time.nowMs + 86_400_000);
   const flow = await start(context);
 
@@ -38,19 +37,19 @@ it("enforces unique issuer/subject and foreign keys independently of application
   const session = await login(context);
   const client = getDatabase(context.app).$client;
   const otherId = crypto.randomUUID();
-  client
-    .prepare(
-      "INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, 'other@example.com', 0, NULL)",
-    )
-    .run(otherId);
+  seedOwners({ $client: client }, [{ id: otherId, email: "other@example.com" }]);
   expect(() =>
     client
-      .prepare("INSERT INTO auth_identities VALUES (?, 'local-test-subject', ?)")
+      .prepare(
+        "INSERT INTO auth_identities (issuer,subject,user_id) VALUES (?, 'local-test-subject', ?)",
+      )
       .run(context.provider.issuer, otherId),
   ).toThrow("UNIQUE");
   expect(() =>
     client
-      .prepare("INSERT INTO auth_identities VALUES ('https://other.example', 'sub', 'missing')")
+      .prepare(
+        "INSERT INTO auth_identities (issuer,subject,user_id) VALUES ('https://other.example', 'sub', 'missing')",
+      )
       .run(),
   ).toThrow("FOREIGN KEY");
   expect(client.prepare("SELECT user_id FROM auth_identities").all()).toEqual([

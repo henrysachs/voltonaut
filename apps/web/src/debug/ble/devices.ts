@@ -1,11 +1,14 @@
 import type { BleTransport } from "@voltonaut/ble";
-import { LabDevice, type LabChange } from "./device.js";
+import { LabDevice, type LabChange, type LabTiming } from "./device.js";
 
 export class LabDevices {
   private readonly devices: LabDevice[] = [];
   private selection: Readonly<LabDevice> | undefined;
 
-  constructor(private readonly changed: (change: LabChange, device: Readonly<LabDevice>) => void) {}
+  constructor(
+    private readonly timing: LabTiming,
+    private readonly changed: (change: LabChange, device: Readonly<LabDevice>) => void,
+  ) {}
 
   get entries(): readonly Readonly<LabDevice>[] {
     return this.devices;
@@ -21,7 +24,15 @@ export class LabDevices {
   };
 
   readonly add = (transport: BleTransport, id: string, name: string): Readonly<LabDevice> => {
-    const device = new LabDevice(this.devices.length + 1, id, name, transport, this.changed);
+    const device = new LabDevice(
+      this.devices.length + 1,
+      id,
+      name,
+      transport,
+      this.timing,
+      this.changed,
+    );
+
     this.devices.push(device);
     this.select(device);
 

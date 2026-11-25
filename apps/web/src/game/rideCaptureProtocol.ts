@@ -47,10 +47,12 @@ export interface RecordingControls {
   readonly release: (rideId: string) => Promise<void>;
 }
 
+/** Capture request ids only grow; a stale or duplicate id is refused before it reaches the journal. */
 export function isNewCaptureRequest(requestId: number, lastRequestId: number): boolean {
   return Number.isSafeInteger(requestId) && requestId > lastRequestId;
 }
 
+/** Journal side of one recorded ride; only `recordedRide` calls it, in actor order (ADR-018). */
 export interface RideRecorder {
   readonly view: (atMs: number) => CaptureView;
   readonly ingest: (event: DeviceEvent, atMs: number) => void;

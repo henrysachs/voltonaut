@@ -73,10 +73,7 @@ export function accepted(
     attempt,
     {
       kind: "known",
-      receipt: {
-        uploadId: "12345678901234567890",
-        externalId: `voltonaut-${agreement.rideId}.tcx`,
-      },
+      receipt: { uploadId: "12345678901234567890", externalId: attempt.externalId },
       state: { kind: "processing" },
     },
     nowMs,

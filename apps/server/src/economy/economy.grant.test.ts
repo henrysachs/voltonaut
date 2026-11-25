@@ -6,7 +6,8 @@ import {
   type ErrorCode,
 } from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
-import { createTestApp, getDatabase, loginTestUser } from "../testing/test-app.spec.js";
+import { createTestApp, getDatabase } from "../testing/test-app.spec.js";
+import { seedOwners } from "../testing/migration-harness.spec.js";
 import { economyTables } from "../schema.js";
 import { OperatorGrants } from "./economy.grant.js";
 import { EconomyService } from "./economy.service.js";
@@ -40,12 +41,12 @@ function apiErrorCode(action: () => void): ErrorCode | undefined {
 async function grantApp() {
   const testApp = await createTestApp({ clock: { nowMs: () => NOW_MS } });
   cleanup.add(() => testApp.app.close());
-  const owner = await loginTestUser(testApp.app, testApp.mail, "owner@example.com");
+  seedOwners(getDatabase(testApp.app), [{ id: "owner" }]);
 
   const db = getDatabase(testApp.app);
 
   return {
-    userId: owner.user.id,
+    userId: "owner",
     economy: testApp.app.get<EconomyService>(EconomyService),
     grants: new OperatorGrants(db, economyTables, { nowMs: () => NOW_MS }),
     db: db.$client,

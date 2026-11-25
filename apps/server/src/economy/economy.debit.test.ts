@@ -8,7 +8,8 @@ import {
   type VoltsDebitCommand,
 } from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
-import { createTestApp, getDatabase, loginTestUser } from "../testing/test-app.spec.js";
+import { createTestApp, getDatabase } from "../testing/test-app.spec.js";
+import { seedOwners } from "../testing/migration-harness.spec.js";
 import { EconomyService } from "./economy.service.js";
 
 const NOW_MS = Date.parse("2026-11-24T12:00:00.000Z");
@@ -65,18 +66,18 @@ function creditReward(
 it("debits atomically, preserves insufficient attempts and enforces debit idempotency", async () => {
   const testApp = await createTestApp({ clock: { nowMs: () => NOW_MS } });
   cleanup.add(() => testApp.app.close());
-  const owner = await loginTestUser(testApp.app, testApp.mail, "owner@example.com");
+  seedOwners(getDatabase(testApp.app), [{ id: "owner" }]);
   const economy = testApp.app.get<EconomyService>(EconomyService);
   const db = getDatabase(testApp.app).$client;
 
-  creditReward(economy, owner.user.id);
+  creditReward(economy, "owner");
 
   const command = debitCommand("purchase:item-one", "item-one", 8);
-  const receipt = VoltsDebitReceiptSchema.parse(economy.debit(owner.user.id, command));
+  const receipt = VoltsDebitReceiptSchema.parse(economy.debit("owner", command));
   const rows = db.prepare("SELECT * FROM volts_ledger").all();
 
   expect(receipt).toEqual({ entryId: receipt.entryId, refId: "item-one", amountVolts: 8 });
-  expect(economy.balance(owner.user.id)).toBe(12);
+  expect(economy.balance("owner")).toBe(12);
   expect(db.prepare("SELECT * FROM volts_ledger WHERE reason = 'purchase'").all()).toMatchObject([
     {
       id: receipt.entryId,
@@ -94,14 +95,14 @@ it("debits atomically, preserves insufficient attempts and enforces debit idempo
   ]);
 
   expectApiError(() => {
-    economy.debit(owner.user.id, debitCommand("purchase:item-two", "item-two", 13));
+    economy.debit("owner", debitCommand("purchase:item-two", "item-two", 13));
   }, "insufficient_volts");
-  expect(economy.balance(owner.user.id)).toBe(12);
+  expect(economy.balance("owner")).toBe(12);
   expect(db.prepare("SELECT * FROM volts_ledger").all()).toEqual(rows);
-  expect(economy.debit(owner.user.id, command)).toEqual(receipt);
+  expect(economy.debit("owner", command)).toEqual(receipt);
 
   expectApiError(() => {
-    economy.debit(owner.user.id, debitCommand("purchase:item-one", "item-one", 9));
+    economy.debit("owner", debitCommand("purchase:item-one", "item-one", 9));
   }, "ledger_conflict");
   expect(db.prepare("SELECT * FROM volts_ledger").all()).toEqual(rows);
 });

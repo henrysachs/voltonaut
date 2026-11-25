@@ -71,6 +71,19 @@ function completeReservation(row: Budget, requestedAtMs: number, read: boolean):
   };
 }
 
+function releasedReservation(row: Budget, requestedAtMs: number, read: boolean): Budget {
+  const short = row.shortReset === shortReset(requestedAtMs);
+  const day = row.dayReset === dayReset(requestedAtMs);
+
+  return {
+    ...completeReservation(row, requestedAtMs, read),
+    shortUsage: Math.max(0, row.shortUsage - Number(short)),
+    dayUsage: Math.max(0, row.dayUsage - Number(day)),
+    readShortUsage: Math.max(0, row.readShortUsage - Number(read && short)),
+    readDayUsage: Math.max(0, row.readDayUsage - Number(read && day)),
+  };
+}
+
 function waitUntil(row: Budget, purpose: StravaRatePurpose): number {
   let untilMs = row.blockedUntil;
   const read = purpose !== "upload";
@@ -217,6 +230,21 @@ export class StravaRateStore {
         });
 
         return reserved ? { kind: "reserved" } : { kind: "wait", untilMs };
+      },
+      { behavior: "immediate" },
+    );
+  }
+
+  /** Returns a reservation whose request was never sent, so it neither counts as usage nor stays pending. */
+  public release(purpose: StravaRatePurpose, requestedAtMs: number, nowMs: number): void {
+    this.db.transaction(
+      () => {
+        const row = this.budget();
+
+        if (row !== undefined)
+          this.update(
+            releasedReservation(currentBudget(row, nowMs), requestedAtMs, purpose !== "upload"),
+          );
       },
       { behavior: "immediate" },
     );

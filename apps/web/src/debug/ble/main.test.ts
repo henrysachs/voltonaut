@@ -77,11 +77,12 @@ describe("sniffer connection operations", () => {
     dom.find("FTMS Sim 5 %").click();
     await vi.advanceTimersByTimeAsync(0);
     expect(dom.querySelector("#status")?.textContent).toContain("Zuerst FTMS");
-    dom.find("FTMS Request Control + Sim 0 %").click();
-    await vi.advanceTimersByTimeAsync(1300);
+    dom.find("FTMS Request Control + Start + Sim 0 %").click();
+    await vi.advanceTimersByTimeAsync(1550);
     dom.find("FTMS Sim 5 %").click();
     await vi.advanceTimersByTimeAsync(250);
     expect(dom.querySelector("#log")?.textContent).toContain("11 00 00 f4 01 28 33");
+    expect(dom.querySelector("#log")?.textContent).toContain("Preset abgeschlossen: FTMS Sim 5 %");
     dom.querySelector("#disconnect")?.click();
     await vi.advanceTimersByTimeAsync(0);
     expect(dom.querySelector("#status")?.textContent).toBe("disconnected");
@@ -162,11 +163,11 @@ describe("sniffer multi-device ownership", () => {
     const { dom, a, b, choose, click } = await twoDevices();
     click("Read");
     await vi.advanceTimersByTimeAsync(0);
-    dom.find("FTMS Request Control + Sim 0 %").click();
+    dom.find("FTMS Request Control + Start + Sim 0 %").click();
     choose(1);
     a.finishRead();
     await vi.advanceTimersByTimeAsync(200);
-    expect(a.writes).toEqual([[0], [17, 0, 0, 0, 0, 40, 51]]);
+    expect(a.writes).toEqual([[0], [7], [17, 0, 0, 0, 0, 40, 51]]);
     expect(b.writes).toEqual([]);
   });
 

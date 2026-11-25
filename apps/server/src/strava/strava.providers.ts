@@ -6,7 +6,7 @@ import { StravaProvider } from "./strava.provider.js";
 import { StravaOriginGuard } from "./strava.browser.js";
 import { StravaDeliveryStore } from "./strava.delivery-store.js";
 import { StravaDeliveryService } from "./strava.delivery.js";
-import { StravaScheduler } from "./strava.scheduler.js";
+import { STRAVA_SCHEDULER_PROVIDERS } from "./strava.scheduler.js";
 import { StravaRateStore } from "./strava.rate-store.js";
 import { STRAVA_AUTHORIZATION_PROVIDERS } from "./strava.authorization.js";
 
@@ -16,7 +16,7 @@ export const STRAVA_PROVIDERS = [
   ...STRAVA_AUTHORIZATION_PROVIDERS,
   StravaDeliveryStore,
   StravaDeliveryService,
-  StravaScheduler,
+  ...STRAVA_SCHEDULER_PROVIDERS,
   StravaRateStore,
   StravaOriginGuard,
   {

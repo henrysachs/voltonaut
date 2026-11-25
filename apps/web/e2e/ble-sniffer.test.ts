@@ -38,6 +38,27 @@ function parseDownload(text: string): BleFixture {
   return parsed.value;
 }
 
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns its mutable page object.
+async function runFtmsPresets(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: "FTMS Request Control + Start + Sim 0 %", exact: true })
+    .click();
+  await expect(page.locator("#log")).toContainText('"hex":"00"');
+  // Each step processes one reply (00 at 1000 ms, 07 at 1250 ms, 11 at 1500 ms) and its polling tick.
+  await page.clock.runFor(600);
+  await expect(page.locator("#log")).toContainText('"hex":"07"');
+  await expect(page.locator("#log")).not.toContainText("11 00 00 00 00 28 33");
+  await page.clock.runFor(250);
+  await expect(page.locator("#log")).toContainText("11 00 00 00 00 28 33");
+  await expect(page.locator("#log")).not.toContainText("Preset abgeschlossen");
+  await page.clock.runFor(250);
+  await expect(page.locator("#log")).toContainText("Preset abgeschlossen");
+  await page.getByRole("button", { name: "FTMS Sim 5 %", exact: true }).click();
+  await expect(page.locator("#log")).toContainText("11 00 00 f4 01 28 33");
+  await page.clock.runFor(300);
+  await expect(page.locator("#log")).toContainText("Preset abgeschlossen: FTMS Sim 5 %");
+}
+
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns its mutable browser fixture.
 test("replay sniffer explores, captures, waits for preset indications and exports valid JSON", async ({
   page,
@@ -51,17 +72,7 @@ test("replay sniffer explores, captures, waits for preset indications and export
   await page.clock.runFor(500);
   await expect(page.locator("#log")).toContainText('\\"powerW\\":250');
   await expect(page.locator("#log")).toContainText('\\"bpm\\":64');
-  await page.getByRole("button", { name: "FTMS Request Control + Sim 0 %", exact: true }).click();
-  await expect(page.locator("#log")).toContainText('"hex":"00"');
-  // Process the 1000 ms response and its polling tick before the next reply at 1250 ms.
-  await page.clock.runFor(600);
-  await expect(page.locator("#log")).toContainText("11 00 00 00 00 28 33");
-  await expect(page.locator("#log")).not.toContainText("Preset abgeschlossen");
-  await page.clock.runFor(300);
-  await expect(page.locator("#log")).toContainText("Preset abgeschlossen");
-  await page.getByRole("button", { name: "FTMS Sim 5 %", exact: true }).click();
-  await expect(page.locator("#log")).toContainText("11 00 00 f4 01 28 33");
-  await page.clock.runFor(300);
+  await runFtmsPresets(page);
   await page.getByRole("button", { name: "Zwift-Controller-Handshake", exact: true }).click();
   await expect(page.locator("#log")).toContainText("52 69 64 65 4f 6e");
   await page.getByLabel("Marker", { exact: true }).fill("RS gedrückt");

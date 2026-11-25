@@ -5,6 +5,7 @@ import type { TokenFault } from "../testing/oidc-provider.spec.js";
 import { getDatabase, httpServerOf, bodyOf, bearer } from "../testing/test-app.spec.js";
 import { setup, start, handoff, login, noSessions, ORIGIN } from "../testing/oidc-flow.spec.js";
 import { OIDC_HANDOFF_TTL_MS, OIDC_TRANSACTION_TTL_MS } from "./oidc-store.js";
+import { seedOwners } from "../testing/migration-harness.spec.js";
 
 it("completes signed HTTP OIDC without advertised PKCE metadata or mail and reuses stable identity", async () => {
   const context = await setup();
@@ -217,9 +218,7 @@ it("preserves existing account and sessions on email collision without auto-link
     .expect(200);
   context.provider.control.subject = "local-test-subject";
   context.provider.control.email = "other-owner@example.com";
-  db.$client
-    .prepare("INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, ?, 0, NULL)")
-    .run(crypto.randomUUID(), "other-owner@example.com");
+  seedOwners(db, [{ id: crypto.randomUUID(), email: "other-owner@example.com" }]);
   expect((await login(context)).user.id).toBe(original.user.id);
   expect(db.$client.prepare("SELECT * FROM users").all()).toHaveLength(2);
 });

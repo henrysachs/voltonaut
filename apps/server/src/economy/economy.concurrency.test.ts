@@ -1,5 +1,3 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 
@@ -9,6 +7,7 @@ import { createDatabase } from "../database/drizzle.provider.js";
 import { economyTables } from "../schema.js";
 import type { VoltsLedgerTransaction } from "./economy.codec.js";
 import { EconomyService } from "./economy.service.js";
+import { MIGRATIONS_DIR, scratchDirectory, seedOwners } from "../testing/migration-harness.spec.js";
 
 const NOW_MS = Date.parse("2026-11-24T12:00:00.000Z");
 const USER_ID = "40000000-0000-4000-8000-000000000001";
@@ -57,15 +56,12 @@ function postWhileLocked(
 }
 
 it("returns SQLITE_BUSY from a second connection and rereads daily usage after commit", () => {
-  const directory = mkdtempSync(join(tmpdir(), "voltonaut-economy-lock-"));
-  const path = join(directory, "economy.db");
-  const config = testServerConfig({ database: { path, migrationsDir: "drizzle" } });
+  const path = join(scratchDirectory("economy-lock"), "economy.db");
+  const config = testServerConfig({ database: { path, migrationsDir: MIGRATIONS_DIR } });
   const firstDb = createDatabase(config);
 
   try {
-    firstDb.$client
-      .prepare("INSERT INTO users (id, email, created_at, deleted_at) VALUES (?, ?, ?, NULL)")
-      .run(USER_ID, "lock@example.com", NOW_MS);
+    seedOwners(firstDb, [{ id: USER_ID, email: "lock@example.com", createdAt: NOW_MS }]);
 
     const secondDb = createDatabase(config);
 
@@ -103,6 +99,5 @@ it("returns SQLITE_BUSY from a second connection and rereads daily usage after c
     }
   } finally {
     firstDb.$client.close();
-    rmSync(directory, { recursive: true, force: true });
   }
 });
