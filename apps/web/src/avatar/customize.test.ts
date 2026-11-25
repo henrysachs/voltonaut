@@ -41,10 +41,10 @@ function standardMaterial(
   throw new Error(`Missing standard material: ${mesh.name}`);
 }
 
-const PREVIEW_ITEMS = {
+const HEAVIEST_ITEMS = {
   jersey: "jersey.kom",
-  helmet: "helmet.halo",
-  glasses: "glasses.sport",
+  helmet: "helmet.aero",
+  glasses: "glasses.clear",
   shoes: "shoes.white",
 } as const;
 
@@ -152,28 +152,33 @@ function sceneTriangles(
   return count;
 }
 
+/** The heaviest rider kit (aero visor plus dual lenses, two shoe dials) on the given bike. */
+function heaviestLook(
+  frameId: string,
+  wheelsId: string,
+): ReturnType<typeof AvatarConfigSchema.parse> {
+  return AvatarConfigSchema.parse({
+    ...DEFAULT_AVATAR_CONFIG,
+    rider: {
+      ...DEFAULT_AVATAR_CONFIG.rider,
+      jerseyId: HEAVIEST_ITEMS.jersey,
+      helmetId: HEAVIEST_ITEMS.helmet,
+      glassesId: HEAVIEST_ITEMS.glasses,
+      shoesId: HEAVIEST_ITEMS.shoes,
+    },
+    bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId, wheelsId },
+  });
+}
+
 describe("avatar preview budget", () => {
-  it("keeps rider and bike within the docs/04 §11 triangle budget for every bike with the heaviest kit", () => {
+  // One test per frame: each wheelset rebuilds the bike, which is slow under coverage.
+  it.each(FRAME_ITEMS)("keeps rider and bike within the docs/04 §11 budget on $id", (frame) => {
     const preview = createAvatarPreview(2.105);
 
     try {
-      for (const frame of FRAME_ITEMS) {
-        for (const wheels of WHEEL_ITEMS) {
-          preview.setLook(
-            AvatarConfigSchema.parse({
-              ...DEFAULT_AVATAR_CONFIG,
-              rider: {
-                ...DEFAULT_AVATAR_CONFIG.rider,
-                jerseyId: PREVIEW_ITEMS.jersey,
-                helmetId: PREVIEW_ITEMS.helmet,
-                glassesId: PREVIEW_ITEMS.glasses,
-                shoesId: PREVIEW_ITEMS.shoes,
-              },
-              bike: { ...DEFAULT_AVATAR_CONFIG.bike, frameId: frame.id, wheelsId: wheels.id },
-            }),
-          );
-          expect(sceneTriangles(preview.root)).toBeLessThanOrEqual(50_000);
-        }
+      for (const wheels of WHEEL_ITEMS) {
+        preview.setLook(heaviestLook(frame.id, wheels.id));
+        expect(sceneTriangles(preview.root)).toBeLessThanOrEqual(50_000);
       }
     } finally {
       preview.dispose();
