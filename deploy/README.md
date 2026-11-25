@@ -99,6 +99,24 @@ Führe Release-Befehle seriell aus. Das Skript wählt das tatsächliche Serverim
 
 Ein fehlgeschlagener Release stellt den letzten bestätigten Tag wieder her. Ohne vorherigen Release stoppt das Skript nur den eigenen Server. Fehlversuche verändern keine bestätigten Tags. Scheitert auch die Wiederherstellung, beschreibt die State-Datei nur den letzten bestätigten Release. Datenvolumes und Images werden nicht gelöscht. Es gibt kein `--remove-orphans`, `down` oder `prune` im Releasepfad.
 
+## Admin-Rolle und Volts-Gutschrift für die Abnahme
+
+Die Operatorbefehle laufen im laufenden Server-Container. Sie starten keinen HTTP-Server und schreiben in dieselbe SQLite-Datenbank. Jeder Befehl verändert Produktionsdaten und braucht deshalb Henrys ausdrückliche Freigabe. Agenten führen sie nicht eigenmächtig aus.
+
+```bash
+admin() {
+  docker compose --env-file deploy.env -f compose.yaml exec -T server node dist/main.js admin "$@"
+}
+admin list                      # höchstens 50 aktive Konten, ID und E-Mail zur Zuordnung
+admin grant <henrysUserId>      # Admin-Rolle, nur für ein bestätigtes bestehendes Konto
+admin credit --operator <henrysUserId> <fahrerUserId> <volts> <referenz>
+```
+
+- Ab E7-04 (#116) muss `--operator` ein aktives Konto mit Rolle `admin` sein. Ohne diese Angabe wird nichts gebucht. Gutschriften vor E7-04 stehen im Audit als „Operator unbekannt (vor Einführung)“.
+- Die Referenz (`[A-Za-z0-9][A-Za-z0-9._-]{0,99}`, z. B. `abnahme-e7-2026-11-26`) macht die Gutschrift idempotent: Dieselbe Referenz mit gleichem Betrag bucht nur einmal, ein anderer Betrag oder ein anderer Operator ergibt einen Konflikt.
+- Gutschriften lassen sich nicht löschen, nur später durch eine Gegenbuchung korrigieren. Die Gegenbuchung gibt es noch nicht (ADR-031). Betrag vor dem Absenden prüfen.
+- Die Ausgabe ist JSON mit Beleg und neuem Kontostand. Sie enthält keine Secrets, aber Konto-IDs; nicht in öffentliche Kanäle kopieren.
+
 ## Backup nur bei ausdrücklicher Auswahl
 
 Für eine spätere genehmigte Sicherung steht `compose.backup.yaml` zusätzlich zur Basis bereit. Dann sind auch `litestream.yml` und gültige externe S3-Werte nötig. Dieser Modus ist kein Bestandteil des aktuellen Produktionsauftrags.
