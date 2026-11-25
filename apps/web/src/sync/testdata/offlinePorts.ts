@@ -17,4 +17,10 @@ export const offlineIdentities: IdentityPort = {
 
 export const offlineMembership: MembershipPort = { status: offline, users: offline, save: offline };
 
-export const offlineShop: ShopPort = { balance: offline, inventory: offline, purchase: offline };
+export const offlineShop: ShopPort = {
+  balance: offline,
+  inventory: offline,
+  purchase: offline,
+  loadout: offline,
+  saveLoadout: offline,
+};

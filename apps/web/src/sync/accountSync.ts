@@ -13,7 +13,7 @@ import { deliverAccountRow } from "./accountDelivery.js";
 import type { LeaseBinding } from "./apiRoute.js";
 import { applyAccountProfile } from "./accountProfile.js";
 import { AccountAdministration } from "./accountAdministration.js";
-import { GarageShop } from "./garageShop.js";
+import { GarageAccount } from "./garageAccount.js";
 import {
   deleteAccountData,
   exportAccountData,
@@ -30,7 +30,7 @@ import {
 
 export class AccountSync {
   readonly administration = new AccountAdministration();
-  readonly shop = new GarageShop();
+  readonly garage = new GarageAccount();
   readonly #options: SyncOptions;
   readonly #listeners = new Set<(view: AccountDataView) => void>();
   readonly #sending = new Set<number>();
@@ -49,7 +49,7 @@ export class AccountSync {
       const lease = view.kind === "authenticated" ? options.session.authorize() : undefined;
       this.#lease = lease;
       this.administration.bind(lease);
-      this.shop.bind(lease);
+      this.garage.bind(lease);
       this.#archive = [];
       this.#reauth = false;
 

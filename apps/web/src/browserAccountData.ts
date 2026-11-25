@@ -48,7 +48,8 @@ export async function setupBrowserAccountData(
   mountAccountMembershipPanel(sync.administration);
   window.addEventListener("online", () => {
     void sync.retry("resume");
-    void sync.shop.retry();
+    void sync.garage.shop.retry();
+    void sync.garage.loadout.retry();
   });
 
   return sync;
