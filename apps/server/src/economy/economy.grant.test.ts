@@ -189,15 +189,8 @@ it("keeps the operator audit immutable and consistent in SQLite itself", async (
   ).toThrow("CHECK constraint failed");
 });
 
-it("rejects a deleted operator account and cascades with the credited journal", async () => {
+it("rejects a deleted operator account", async () => {
   const { userId, grants, db, operatorId } = await grantApp();
-
-  grants.grant(userId, grant("cascade", 500, operatorId));
-  db.prepare("DELETE FROM volts_ledger WHERE user_id = ?").run(userId);
-
-  expect(db.prepare("SELECT COUNT(*) AS count FROM volts_grant_operators").get()).toEqual({
-    count: 0,
-  });
 
   db.prepare("UPDATE users SET deleted_at = 1, email = 'gone@voltonaut.invalid' WHERE id = ?").run(
     operatorId,
@@ -206,4 +199,32 @@ it("rejects a deleted operator account and cascades with the credited journal", 
   expect(() => grants.grant(userId, grant("late", 500, operatorId))).toThrow(
     "operator account is deleted",
   );
+});
+
+it("makes a ledger rebuild fail loudly instead of dropping the operator audit", async () => {
+  const { userId, grants, db, operatorId } = await grantApp();
+
+  grants.grant(userId, grant("rebuild", 500, operatorId));
+
+  // Migrations run with foreign keys on inside one transaction; a cascade would empty the audit here.
+  expect(() => db.transaction(() => db.exec("DROP TABLE volts_ledger"))()).toThrow(
+    "FOREIGN KEY constraint failed",
+  );
+  expect(db.prepare("SELECT COUNT(*) AS count FROM volts_grant_operators").get()).toEqual({
+    count: 1,
+  });
+});
+
+it("replays a grant from before the audit for any operator as unknown", async () => {
+  const { userId, grants, db, operatorId } = await grantApp();
+  const first = grants.grant(userId, grant("legacy", 500, operatorId));
+
+  db.prepare("DELETE FROM volts_grant_operators").run();
+  db.prepare(
+    "INSERT INTO volts_grant_operators (entry_id, operator_user_id, provenance, recorded_at) VALUES (?, NULL, 'unknown_before_audit', 1)",
+  ).run(first.entryId);
+
+  expect(grants.grant(userId, grant("legacy", 500, userId)).operator).toEqual({
+    kind: "unknown_before_audit",
+  });
 });

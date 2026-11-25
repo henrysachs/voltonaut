@@ -19,15 +19,15 @@ Der Operator ist ein **bestehendes Konto mit Rolle `admin`**, angegeben als Pfli
 - [x] AK2 – Die Tabelle `volts_grant_operators` hält je Gutschrift Operator und Herkunft fest, in derselben Transaktion wie die Buchung. SQLite erzwingt: `recorded` nur mit Operator, `unknown_before_audit` nur ohne; Einträge sind unveränderlich; ein gelöschtes Operator-Konto wird abgewiesen.
 - [x] AK3 – Wiederholt ein anderer Operator dieselbe Referenz, ist das `409 ledger_conflict`. Derselbe Operator erhält den gespeicherten Beleg mit Operator.
 - [x] AK4 – Migrationstest: Bestehende Gutschriften und Buchungen bleiben unverändert und sind als „Operator unbekannt (vor Einführung)“ (`unknown_before_audit`) markiert, nicht nachträglich erfunden.
-- [x] AK5 – Der Kontoexport des gutgeschriebenen Kontos enthält den Operator nicht. Löscht dieses Konto seine Daten, verschwinden die Audit-Einträge mit dem Journal.
+- [x] AK5 – Der Kontoexport des gutgeschriebenen Kontos enthält den Operator nicht. Löscht dieses Konto seine Daten, entfernt die Kontolöschung die Audit-Einträge vor dem Journal. Der Verweis hat keine Kaskade, damit ein künftiger Neubau von `volts_ledger` sichtbar scheitert, statt das Audit still zu leeren.
 
 ## Testplan
 
-| AK            | Ebene             | Datei                                                        |
-| ------------- | ----------------- | ------------------------------------------------------------ |
-| AK1           | Integration (CLI) | `apps/server/src/admin.test.ts`                              |
-| AK2, AK3, AK5 | Integration       | `apps/server/src/economy/economy.grant.test.ts`              |
-| AK4           | Migration         | `apps/server/src/database/grant-operator-migrations.test.ts` |
+| AK            | Ebene             | Datei                                                                                            |
+| ------------- | ----------------- | ------------------------------------------------------------------------------------------------ |
+| AK1           | Integration (CLI) | `apps/server/src/admin.test.ts`                                                                  |
+| AK2, AK3, AK5 | Integration       | `apps/server/src/economy/economy.grant.test.ts`, `apps/server/src/accounts/account-data.test.ts` |
+| AK4           | Migration         | `apps/server/src/database/grant-operator-migrations.test.ts`                                     |
 
 ## Nicht-Ziele
 

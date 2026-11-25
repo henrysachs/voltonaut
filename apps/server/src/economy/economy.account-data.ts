@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { VoltsAccountExportSchema, type VoltsAccountExport } from "@voltonaut/shared";
 import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
 import {
@@ -77,8 +77,18 @@ export class EconomyAccountDataService {
   }
 
   public deleteOwn(userId: string): void {
-    const ledger = this.tables.voltsLedger;
+    const { voltsLedger: ledger, voltsGrantOperators: operators } = this.tables;
 
+    // The audit references the journal without cascade (issue #116), so it goes first.
+    this.db
+      .delete(operators)
+      .where(
+        inArray(
+          operators.entryId,
+          this.db.select({ id: ledger.id }).from(ledger).where(eq(ledger.userId, userId)),
+        ),
+      )
+      .run();
     this.db.delete(ledger).where(eq(ledger.userId, userId)).run();
   }
 }

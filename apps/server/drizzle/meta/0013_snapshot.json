@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "17ddef45-ac33-48af-8e58-5d85328de6af",
+  "id": "b222ad04-4982-4076-b246-8d583cd3c3db",
   "prevId": "1d68c705-2f2a-4ffe-b6df-1ae39e2c6d9b",
   "tables": {
     "account_status": {
@@ -1379,7 +1379,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "volts_grant_operators_operator_user_id_users_id_fk": {

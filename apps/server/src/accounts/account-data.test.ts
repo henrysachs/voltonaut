@@ -139,6 +139,12 @@ it("exports only the owner's Volts journal and derived balance", async () => {
   expect(JSON.stringify(journal)).not.toContain("20000000-0000-4000-8000-000000000002");
 });
 
+it("does not reveal who issued a credit in the owner's export", async () => {
+  const { f, exported } = await exportOwner();
+
+  expect(JSON.stringify(exported)).not.toContain(f.other.user.id);
+});
+
 it("deletes only the confirmed owner, revokes sessions and blocks silent recreation", async () => {
   const f = await accountDataFixture();
 
@@ -154,6 +160,7 @@ it("deletes only the confirmed owner, revokes sessions and blocks silent recreat
   await request(f.server).get("/v1/me").set(bearer(f.other.sessionToken)).expect(200);
   assertOwnerPurged(f);
   assertTombstone(f);
+  expect(f.db.$client.prepare("SELECT * FROM volts_grant_operators").all()).toEqual([]);
 
   const mailCount = f.mail.readSent().length;
   await request(f.server)
