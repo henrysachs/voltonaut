@@ -97,6 +97,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 
 [E4-08](specs/E4-08-starter-blender-assets.md) liefert einen eigenen Blender-Roadbike, eine Kiefer und ein Felscluster samt Vorschauen, Manifest und Lizenznachweis. Export, Blender-Reimport, Asset-Validator, vollständiges Gate, Build und unabhängiges Review sind softwaregeprüft. Laufzeitintegration, Fahreranimation, Meshopt/KTX2 und Performance-Nachweis bleiben offen; die vollständigen E4-Checkboxen unten bleiben deshalb unverändert.
 
+[E4-09](specs/E4-09-realistic-procedural-bike.md) ersetzt das Zylinder-Rad in Spiel und Garage durch ein prozedurales Rennrad mit echter Rahmengeometrie, vollständigem Antrieb, Scheibenbremsen und Cockpit. Rahmen und Laufräder sind über `assetRef` datengetriebene, erweiterbare Specs. Die Beine treten per Zwei-Knochen-IK. Der Fahrerkörper selbst bleibt provisorisch; die Checkbox bleibt deshalb offen.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen

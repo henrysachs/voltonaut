@@ -11,7 +11,7 @@ Henry gibt am 24.11.2026 alle Provider wieder frei. Die projektweite Einschränk
 ## Abnahmekriterien
 
 - [x] AK1: `opencode.jsonc` enthält keine Providerbeschränkung.
-- [x] AK2: Standardmodell und Agentenmodelle bleiben `github-copilot/gpt-6.1-sol`.
+- [x] AK2: Standardmodell und Agentenmodelle bleiben `github-copilot/gpt-6.1-sol`. Nachtrag 25.11.2026: Das Monatskontingent ist erschöpft, deshalb hat Henry alle Modelle auf `kiro/claude-opus-5-5` umgestellt.
 - [x] AK3: `AGENTS.md` dokumentiert die Freigabe.
 - [x] AK4: JSON-Prüfung und unabhängiges Review bestehen. Henry verlangt für diese reine OpenCode-Änderung keinen Anwendungsbuild.
 
