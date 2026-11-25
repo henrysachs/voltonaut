@@ -1,7 +1,11 @@
-import { AVATAR_SLOTS, avatarItemsForSlot, avatarColorOptions } from "@voltonaut/rules";
-import type { ItemDef } from "@voltonaut/shared";
+import { avatarItemsForSlot, avatarColorOptions } from "@voltonaut/rules";
 
-import { itemUnlockText, priceText, rarityText, slotText } from "./garageText.js";
+import type { GarageLoadout, GarageLoadoutView } from "../../sync/garageLoadout.js";
+import type { GarageShopView } from "../../sync/garageShop.js";
+import { GarageEquip } from "./equip.js";
+import { equipOffer, ownedItemIds } from "./equipOffer.js";
+import { colorChoices, garageButton as button, itemRows, slotButtons } from "./garageItems.js";
+import { itemUnlockText, priceText, rarityText } from "./garageText.js";
 import { GaragePurchase, type GarageShopSource } from "./purchase.js";
 import { createGaragePreviewView, type GaragePreviewView } from "./preview.js";
 import {
@@ -11,12 +15,10 @@ import {
   type GarageState,
 } from "./state.js";
 
-function button(text: string): HTMLButtonElement {
-  const element = document.createElement("button");
-  element.type = "button";
-  element.textContent = text;
-
-  return element;
+/** The account's garage sync the panel reads and writes. */
+export interface GarageAccountSource {
+  readonly shop: GarageShopSource;
+  readonly loadout: Pick<GarageLoadout, "subscribe" | "save">;
 }
 
 class GaragePanel {
@@ -30,6 +32,17 @@ class GaragePanel {
   readonly #price = document.createElement("p");
   readonly #colors = document.createElement("fieldset");
   readonly #purchase = new GaragePurchase();
+  readonly #equip = new GarageEquip({
+    equip: () => {
+      this.#saveLoadout();
+    },
+    discard: () => {
+      this.#dispatch({ kind: "discardPreview" });
+    },
+  });
+  #shopView: GarageShopView = { kind: "guest" };
+  #loadoutView: GarageLoadoutView = { kind: "guest" };
+  #account: GarageAccountSource | undefined;
   readonly #rotateLeft = button("Links drehen");
   readonly #rotateRight = button("Rechts drehen");
   readonly #rotateToggle = button("Drehung pausieren");
@@ -63,8 +76,27 @@ class GaragePanel {
     });
   }
 
-  attachShop(source: GarageShopSource): void {
-    this.#purchase.attach(source);
+  attachAccount(source: GarageAccountSource): void {
+    this.#account = source;
+    this.#purchase.attach(source.shop);
+    source.shop.subscribe((view) => {
+      this.#shopView = view;
+      this.#render();
+    });
+    source.loadout.subscribe((view) => {
+      this.#loadoutView = view;
+
+      // A confirmed save or a server reread replaces the preview with the stored equipment.
+      if (view.kind === "ready" && !view.saving)
+        this.#dispatch({ kind: "loadoutConfirmed", loadout: view.loadout });
+      else this.#render();
+    });
+  }
+
+  #saveLoadout(): void {
+    const offer = equipOffer(this.#state, this.#shopView, this.#loadoutView);
+
+    if (offer.equipEnabled) void this.#account?.loadout.save(offer.target);
   }
 
   mount(): void {
@@ -84,7 +116,7 @@ class GaragePanel {
     status.className = "garage__status";
     status.setAttribute("role", "status");
     status.textContent =
-      "Vorschau ändert nur die Ansicht. Käufe bucht der Server; Ausrüsten folgt später.";
+      "Vorschau ändert nur die Ansicht. Käufe und Ausrüstung speichert der Server für dein Konto.";
 
     this.#root.className = "garage";
     this.#root.dataset["testid"] = "garage-shop";
@@ -156,6 +188,7 @@ class GaragePanel {
       this.#colors,
       this.#purchase.button,
       this.#purchase.hint,
+      this.#equip.root,
     );
 
     return section;
@@ -188,36 +221,22 @@ class GaragePanel {
 
   #renderSlots(): void {
     this.#slotHost.replaceChildren(
-      ...AVATAR_SLOTS.map((slot) => {
-        const element = button(slotText(slot));
-        const selected = slot === this.#state.selection.slot;
-        element.setAttribute("aria-pressed", String(selected));
-        element.dataset["garageFocus"] = `slot:${slot}`;
-        element.dataset["testid"] = `garage-slot-${slot}`;
-        element.addEventListener("click", () => {
-          this.#dispatch({ kind: "selectSlot", slot });
-        });
-
-        return element;
+      ...slotButtons(this.#state.selection.slot, (slot) => {
+        this.#dispatch({ kind: "selectSlot", slot });
       }),
     );
   }
 
   #renderItems(): void {
     this.#itemHost.replaceChildren(
-      ...avatarItemsForSlot(this.#state.selection.slot).map((item: Readonly<ItemDef>) => {
-        const row = document.createElement("li");
-        const element = button(item.name);
-        const selected = item.id === this.#state.selection.item.id;
-        element.setAttribute("aria-pressed", String(selected));
-        element.dataset["garageFocus"] = `item:${item.id}`;
-        element.dataset["testid"] = `garage-item-${item.id}`;
-        element.addEventListener("click", () => {
+      ...itemRows({
+        items: avatarItemsForSlot(this.#state.selection.slot),
+        selectedId: this.#state.selection.item.id,
+        owned: ownedItemIds(this.#shopView),
+        equipped: this.#state.equipped,
+        select: (item) => {
           this.#dispatch({ kind: "selectItem", slot: item.slot, item });
-        });
-        row.append(element);
-
-        return row;
+        },
       }),
     );
   }
@@ -240,28 +259,17 @@ class GaragePanel {
     legend.textContent = skin ? "Hautfarbe" : "Farben";
     this.#colors.append(legend);
 
-    for (const [index, selectedColor] of colors.entries()) {
-      for (const color of avatarColorOptions(item.slot)) {
-        const label = document.createElement("label");
-        label.className = "garage__color";
-        label.title = color;
-        const input = document.createElement("input");
-        const swatch = document.createElement("span");
-        input.type = "radio";
-        input.name = `garage-color-${index}`;
-        input.value = color;
-        input.checked = color === selectedColor;
-        input.setAttribute("aria-label", `Farbe ${index + 1}: ${color}`);
-        input.dataset["garageFocus"] = `color:${index}:${color}`;
-        swatch.style.backgroundColor = color;
-        swatch.setAttribute("aria-hidden", "true");
-        input.addEventListener("change", () => {
-          if (input.checked) this.#dispatch({ kind: "selectColor", index, color });
-        });
-        label.append(input, swatch);
-        this.#colors.append(label);
-      }
-    }
+    this.#colors.append(
+      ...colorChoices({
+        slot: item.slot,
+        selected: colors,
+        options: avatarColorOptions(item.slot),
+        choose: (index, color) => {
+          this.#dispatch({ kind: "selectColor", index, color });
+        },
+      }),
+    );
+    this.#equip.render(equipOffer(this.#state, this.#shopView, this.#loadoutView), true);
   }
 
   #renderControls(): void {
@@ -278,7 +286,7 @@ class GaragePanel {
   }
 }
 
-export type GarageHandle = Pick<GaragePanel, "attachShop">;
+export type GarageHandle = Pick<GaragePanel, "attachAccount">;
 
 export function mountGarage(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The panel owns the host's menu children.

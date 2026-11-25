@@ -20,7 +20,7 @@ async function attachGarageShop(
   const sync = await account?.accounts.catch(() => null);
 
   if (garage !== undefined && sync !== undefined && sync !== null)
-    garage.attachShop(sync.garage.shop);
+    garage.attachAccount(sync.garage);
 }
 
 async function start(): Promise<void> {

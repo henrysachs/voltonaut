@@ -1,6 +1,7 @@
 import {
   DEFAULT_AVATAR_CONFIG,
   avatarItemForSlot,
+  avatarItemIdForSlot,
   previewAvatarConfig,
   defaultAvatarColors,
 } from "@voltonaut/rules";
@@ -22,19 +23,25 @@ export type GarageState =
   | {
       readonly kind: "preview";
       readonly selection: GaragePreviewSelection;
+      /** What the preview shows: the equipment plus unsaved changes. */
       readonly config: AvatarConfig;
+      /** Server-confirmed equipment (spec E7-05); the default for guests. */
+      readonly equipped: AvatarConfig;
     }
   | {
       readonly kind: "unavailable3d";
       readonly selection: GarageUnavailable3dSelection;
       readonly config: AvatarConfig;
+      readonly equipped: AvatarConfig;
     };
 
 export type GarageAction =
   | { readonly kind: "selectSlot"; readonly slot: AvatarSlot }
   | { readonly kind: "selectItem"; readonly slot: AvatarSlot; readonly item: ItemDef }
   | { readonly kind: "selectColor"; readonly index: number; readonly color: string }
-  | { readonly kind: "previewUnavailable" };
+  | { readonly kind: "previewUnavailable" }
+  | { readonly kind: "loadoutConfirmed"; readonly loadout: AvatarConfig }
+  | { readonly kind: "discardPreview" };
 
 type SlotAction = Extract<GarageAction, { kind: "selectSlot" }>;
 
@@ -48,18 +55,27 @@ interface SelectionFields {
   readonly colors: readonly AvatarColor[];
 }
 
-export function createInitialGarageState(slot: AvatarSlot = "jersey"): GarageState {
-  const config: AvatarConfig = DEFAULT_AVATAR_CONFIG;
-  const item = avatarItemForSlot(config, slot);
+export function createInitialGarageState(
+  slot: AvatarSlot = "jersey",
+  equipped: Readonly<AvatarConfig> = DEFAULT_AVATAR_CONFIG,
+): GarageState {
+  const item = avatarItemForSlot(equipped, slot);
 
   const selection = GaragePreviewSelectionSchema.parse({
     kind: "preview",
     slot,
     item,
-    colors: previewColors(item, config),
+    colors: previewColors(item, equipped),
   });
 
-  return { kind: "preview", selection, config };
+  return { kind: "preview", selection, config: equipped, equipped };
+}
+
+/** Back to the equipment: after a confirmed save, a server reread or „Vorschau verwerfen“. */
+function resetTo(state: Readonly<GarageState>, equipped: Readonly<AvatarConfig>): GarageState {
+  const fresh = createInitialGarageState(state.selection.slot, equipped);
+
+  return state.kind === "unavailable3d" ? previewUnavailable(fresh) : fresh;
 }
 
 export function garageReducer(
@@ -75,6 +91,10 @@ export function garageReducer(
       return selectColor(state, action);
     case "previewUnavailable":
       return previewUnavailable(state);
+    case "loadoutConfirmed":
+      return resetTo(state, action.loadout);
+    case "discardPreview":
+      return resetTo(state, state.equipped);
     default: {
       const exhaustive: never = action;
       throw new Error(`Unsupported garage action: ${String(exhaustive)}`);
@@ -98,7 +118,7 @@ function selectItem(state: Readonly<GarageState>, action: Readonly<ItemAction>):
   return updateSelection(state, {
     slot: action.slot,
     item: action.item,
-    colors: previewColors(action.item, state.config),
+    colors: previewColors(action.item, state.equipped),
   });
 }
 
@@ -130,7 +150,7 @@ function previewUnavailable(state: Readonly<GarageState>): GarageState {
     ...selectionFields(state),
   });
 
-  return { kind: "unavailable3d", selection, config: state.config };
+  return { kind: "unavailable3d", selection, config: state.config, equipped: state.equipped };
 }
 
 function selectionFields(state: Readonly<GarageState>): SelectionFields {
@@ -141,11 +161,38 @@ function selectionFields(state: Readonly<GarageState>): SelectionFields {
   };
 }
 
+/** Colors a config gives the slot; empty for slots without colors. */
+function slotColors(config: Readonly<AvatarConfig>, slot: AvatarSlot): readonly AvatarColor[] {
+  switch (slot) {
+    case "skin":
+      return [config.rider.skinTone];
+    case "jersey":
+      return config.rider.jerseyColors;
+    case "helmet":
+      return [config.rider.helmetColor];
+    case "frame":
+      return [config.bike.frameColor];
+    case "shoes":
+    case "glasses":
+    case "wheels":
+      return [];
+    default: {
+      const exhaustive: never = slot;
+      throw new Error(`Unsupported avatar slot: ${String(exhaustive)}`);
+    }
+  }
+}
+
+/** An item worn in `config` keeps its colors; any other item starts with its palette defaults. */
 function previewColors(
   item: Readonly<ItemDef>,
   config: Readonly<AvatarConfig>,
 ): readonly AvatarColor[] {
-  return item.slot === "skin" ? [config.rider.skinTone] : defaultAvatarColors(item);
+  if (item.slot === "skin") return [config.rider.skinTone];
+
+  return avatarItemIdForSlot(config, item.slot) === item.id
+    ? slotColors(config, item.slot).slice(0, item.colorable)
+    : defaultAvatarColors(item);
 }
 
 function updateSelection(
@@ -162,8 +209,8 @@ function updateSelection(
       ...fields,
     });
 
-    return { kind: "unavailable3d", selection, config };
+    return { kind: "unavailable3d", selection, config, equipped: state.equipped };
   }
 
-  return { kind: "preview", selection: preview, config };
+  return { kind: "preview", selection: preview, config, equipped: state.equipped };
 }
