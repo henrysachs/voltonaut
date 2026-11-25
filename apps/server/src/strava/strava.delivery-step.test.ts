@@ -1,22 +1,30 @@
 import { expect, expectTypeOf, it } from "vitest";
-import { uploadFixture } from "./strava.scheduler-fixture.spec.js";
+import { schedulerFixture, uploadFixture } from "./strava.scheduler-fixture.spec.js";
+import { encryptTokens } from "./strava.crypto.js";
+import { stravaTables } from "../schema.js";
 import type { CommittedAttempt } from "./strava.delivery-store.js";
 import type { SubmittingDelivery } from "./strava.delivery-state.js";
 import type { StravaProvider } from "./strava.provider.js";
 
 const shutdown = new AbortController().signal;
 
+/** The type of `{ ...attempt, externalId }`: spread keeps public members and drops `#` fields. */
+type SpreadCopy = {
+  readonly [Key in keyof CommittedAttempt]: CommittedAttempt[Key];
+} & { readonly externalId: string };
+
 it("only accepts a store-committed attempt as provider upload input", () => {
   expectTypeOf<{
     readonly delivery: SubmittingDelivery;
     readonly externalId: string;
   }>().not.toExtend<CommittedAttempt>();
+  expectTypeOf<SpreadCopy>().not.toExtend<CommittedAttempt>();
   expectTypeOf<
     Parameters<StravaProvider["submit"]>[0]["attempt"]
   >().toEqualTypeOf<CommittedAttempt>();
 });
 
-it("releases the upload reservation when another owner stops the ride before the dispatch commit", async () => {
+it("releases the upload reservation when another owner stops the prepared ride so dispatch refuses the commit", async () => {
   const { a, b, budget, peer, step, rideId } = await uploadFixture();
   const pending = step.submitNext(shutdown);
   b.jobs.stop("owner", "policy", 20000);
@@ -31,7 +39,8 @@ it("releases the upload reservation when another owner stops the ride before the
   });
 });
 
-it("sends one POST for two racing SQLite owners and settles the reservation from headers", async () => {
+// The dispatch-commit race itself is proven in strava.delivery-store.test.ts.
+it("lets only one of two concurrently ticking SQLite owners prepare and POST, settled from headers", async () => {
   const { reopen, budget, peer, step, peerStep, rideId } = await uploadFixture();
   await Promise.all([step.submitNext(shutdown), peerStep.submitNext(shutdown)]);
   expect(peer.resources.submitCalls).toBe(1);
@@ -95,6 +104,53 @@ it("polls a known upload to delivery and settles the read reservation", async ()
     dayUsage: 2,
     readDayUsage: 2,
     dayPending: 0,
+    readDayPending: 0,
+  });
+});
+
+it("cools down an undecryptable hint so a healthy hinted connection is still checked", async () => {
+  const { a, reopen, grant, config, hints, rates, peer, step, time } = await schedulerFixture();
+  rates.reserve("poll", time.nowMs);
+  rates.observe(
+    new Headers({
+      "X-RateLimit-Limit": "100,1000",
+      "X-RateLimit-Usage": "1,1",
+      "X-ReadRateLimit-Limit": "100,1000",
+      "X-ReadRateLimit-Usage": "1,1",
+    }),
+    200,
+    time.nowMs,
+    time.nowMs,
+    "poll",
+  );
+  a.db.$client.exec(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('other','other@example.test',0,NULL)",
+  );
+  a.db.$client
+    .prepare(
+      "INSERT INTO strava_connections(user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,generation,authorization_hint_revision,authorization_check_after) VALUES ('other','43','connected',?,999999,'activity:write','other-generation',1,1)",
+    )
+    .run(encryptTokens(grant.tokens, config.strava.tokenKey, "other", "43"));
+  hints.hint("42");
+  peer.control.athleteId = 43;
+  await expect(step.checkNextHint(shutdown)).rejects.toBeInstanceOf(SyntaxError);
+  await step.checkNextHint(shutdown);
+  await step.checkNextHint(shutdown);
+  const reopened = reopen();
+  expect(peer.resources.athleteCalls).toBe(1);
+  expect(reopened.credentials.connection("other")).toMatchObject({
+    authorizationCheckedRevision: 1,
+    authorizationCheckAfter: 80000,
+  });
+  expect(reopened.credentials.connection("owner")).toMatchObject({
+    authorizationCheckedRevision: 0,
+    authorizationCheckAfter: 80000,
+    workOwner: null,
+  });
+  expect(reopened.db.select().from(stravaTables.rateBudget).get()).toMatchObject({
+    shortPending: 0,
+    dayPending: 0,
+    readShortPending: 0,
     readDayPending: 0,
   });
 });

@@ -20,7 +20,6 @@ type Reservation =
   | { readonly kind: "wait"; readonly untilMs: number }
   | {
       readonly kind: "reserved";
-      readonly requestedAtMs: number;
       readonly onHeaders: (headers: Readonly<Headers>, status: number) => void;
       readonly release: () => void;
     };
@@ -194,6 +193,8 @@ export class StravaDeliveryStep {
 
   /** Returns whether the provider rejected the access token of this lease. */
   private async verify(work: StravaConnection, signal: Readonly<AbortSignal>): Promise<boolean> {
+    // Cool down first: a hint that fails below must not stay first in `hints.next()`.
+    this.hints.defer(work, this.clock.nowMs() + HINT_COOLDOWN_MS, false);
     const accessToken = this.authorization.accessToken(work);
     const rate = this.reserve("authorization_hint");
 
@@ -202,8 +203,6 @@ export class StravaDeliveryStep {
 
       return false;
     }
-
-    this.hints.defer(work, rate.requestedAtMs + HINT_COOLDOWN_MS, false);
 
     const result = await this.provider.verifyAuthorization({
       athleteId: work.athleteId,
@@ -242,7 +241,6 @@ export class StravaDeliveryStep {
 
     return {
       kind: "reserved",
-      requestedAtMs,
       onHeaders: (headers, status) => {
         this.rates.observe(headers, status, requestedAtMs, this.clock.nowMs(), purpose);
       },
