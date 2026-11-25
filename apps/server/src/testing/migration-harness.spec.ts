@@ -112,14 +112,13 @@ export function upgradeFrom<Seeded>(
   tag: string,
   seed: (db: SeedDatabase) => Seeded,
 ): UpgradeFixture<Seeded> {
+  const directory = scratchDirectory("migration");
   const opened: ServerDatabase[] = [];
 
-  // Registered before the directory so connections close before its removal.
+  // onTestFinished runs last-registered first, so connections close before the directory is removed.
   onTestFinished(() => {
     for (const db of opened) if (db.$client.open) db.$client.close();
   });
-
-  const directory = scratchDirectory("migration");
 
   const path = join(directory, "upgrade.db");
 
