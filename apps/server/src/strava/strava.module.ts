@@ -8,6 +8,7 @@ import { STRAVA_TABLES } from "./strava.schema.js";
 import type { StravaTables } from "./strava.schema.js";
 import { StravaController } from "./strava.controller.js";
 import { STRAVA_PROVIDERS } from "./strava.providers.js";
+import { StravaAccountDataService, StravaAccountDataStore } from "./strava.account-data-service.js";
 import { StravaWebhookController } from "./strava.webhook.js";
 
 @Module({})
@@ -34,7 +35,13 @@ export class StravaModule {
         }),
       ],
       controllers: [StravaController, StravaWebhookController],
-      providers: [...STRAVA_PROVIDERS, { provide: STRAVA_TABLES, useValue: tables }],
+      providers: [
+        ...STRAVA_PROVIDERS,
+        StravaAccountDataStore,
+        StravaAccountDataService,
+        { provide: STRAVA_TABLES, useValue: tables },
+      ],
+      exports: [StravaAccountDataService],
     };
   }
 }

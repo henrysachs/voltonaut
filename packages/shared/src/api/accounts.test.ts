@@ -1,0 +1,92 @@
+import { expect, it } from "vitest";
+import { AccountDeletionRequestSchema, AccountExportSchema } from "./accounts.js";
+
+it("normalizes only the deletion confirmation and rejects extra ownership fields", () => {
+  expect(AccountDeletionRequestSchema.parse({ confirmation: " Rider@Example.com " })).toEqual({
+    confirmation: "rider@example.com",
+  });
+  expect(
+    AccountDeletionRequestSchema.safeParse({
+      confirmation: "rider@example.com",
+      userId: "00000000-0000-4000-8000-000000000001",
+    }).success,
+  ).toBe(false);
+  expect(AccountDeletionRequestSchema.safeParse({ confirmation: "not-an-email" }).success).toBe(
+    false,
+  );
+});
+
+const exportInput = {
+  schemaVersion: 1,
+  exportedAt: "2026-11-24T12:00:00.000Z",
+  account: {
+    user: {
+      id: "00000000-0000-4000-8000-000000000001",
+      email: "rider@example.com",
+      createdAt: "2026-11-20T00:00:00.000Z",
+    },
+    membership: { tier: "normal", vip: false },
+    authorization: { role: "user" },
+    identities: [{ issuer: "https://identity.example", subject: "owner-subject" }],
+  },
+  profile: { status: "missing" },
+  rides: [],
+  inventory: { status: "not_stored" },
+  progression: {
+    volts: {
+      balance: 12,
+      journal: [
+        {
+          id: "10000000-0000-4000-8000-000000000001",
+          reason: "ride_reward",
+          deltaVolts: 20,
+          refId: "20000000-0000-4000-8000-000000000001",
+          idempotencyKey: "ride:20000000-0000-4000-8000-000000000001:0",
+          payloadHash: "a".repeat(64),
+          rewardDay: "2026-11-24",
+          startTick: 0,
+          endTick: 1,
+          candidateVolts: 20,
+          cumulativeWorkVolts: 20,
+          cumulativeClimbVolts: 0,
+          cumulativeFacts: {
+            activeDistanceM: 0,
+            activeElevationGainM: 0,
+            activeTimeS: 0,
+            elevationGainM: 0,
+            energyKj: 20,
+          },
+          createdAt: "2026-11-24T12:00:00.000Z",
+        },
+        {
+          id: "10000000-0000-4000-8000-000000000002",
+          reason: "purchase",
+          deltaVolts: -8,
+          refId: "item-one",
+          idempotencyKey: "purchase:item-one",
+          payloadHash: "b".repeat(64),
+          createdAt: "2026-11-24T12:00:01.000Z",
+        },
+      ],
+    },
+  },
+  strava: { status: { status: "disabled" }, deliveries: [] },
+};
+
+it("exports the honest current server state without sessions or credentials", () => {
+  const value = AccountExportSchema.parse(exportInput);
+
+  expect(value.inventory).toEqual({ status: "not_stored" });
+  expect(value.progression.volts.balance).toBe(12);
+  expect(value.progression.volts.journal).toHaveLength(2);
+  expect(value.account.identities).toEqual([
+    { issuer: "https://identity.example", subject: "owner-subject" },
+  ]);
+  expect(
+    AccountExportSchema.safeParse({
+      ...value,
+      sessionToken: "not-allowed",
+      strava: { ...value.strava, accessToken: "not-allowed" },
+    }).success,
+  ).toBe(false);
+});

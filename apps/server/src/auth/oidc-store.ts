@@ -6,6 +6,7 @@ import { invalidOidcLogin } from "./oidc-cookie.js";
 import { users, authIdentities, oidcTransactions, oidcHandoffs } from "./auth.schema.js";
 import type { IdentityClaims } from "./oidc-client.js";
 import { hashToken } from "./tokens.js";
+import { assertOidcIdentityAvailable } from "./auth-recreation-guards.js";
 
 export const OIDC_TRANSACTION_TTL_MS = 5 * 60_000;
 export const OIDC_HANDOFF_TTL_MS = 60_000;
@@ -23,6 +24,7 @@ export function resolveIdentityUser(
   auth: Pick<AuthService, "currentUser">,
   login: Readonly<{ identity: IdentityClaims; requireEmailVerified: boolean }>,
   nowMs: number,
+  hmacKey: string,
 ): string {
   const { identity } = login;
 
@@ -44,6 +46,8 @@ export function resolveIdentityUser(
       "email_not_verified",
       "the login provider did not verify the email address",
     );
+
+  assertOidcIdentityAvailable(db, hmacKey, identity);
 
   if (db.select().from(users).where(eq(users.email, identity.email)).get() !== undefined) {
     throw new ApiError(409, "identity_conflict", "existing account ownership must be proven");
@@ -187,11 +191,12 @@ export function replaceTransactionByHandoff(
     code: string;
   }>,
   nowMs: number,
+  hmacKey: string,
 ): void {
   db.transaction(
     () => {
       consumeReservation(db, grant.transaction, nowMs);
-      const userId = resolveIdentityUser(db, auth, grant, nowMs);
+      const userId = resolveIdentityUser(db, auth, grant, nowMs, hmacKey);
       cleanupOidcRows(db, nowMs);
       db.insert(oidcHandoffs)
         .values({
@@ -222,6 +227,13 @@ export function replaceTransactionByLinkHandoff(
   if (linkUserId === null || linkSessionHash === null) throw invalidOidcLogin();
   db.transaction(
     () => {
+      const owner = db
+        .select({ deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.id, linkUserId))
+        .get();
+
+      if (owner === undefined || owner.deletedAt !== null) throw invalidOidcLogin();
       consumeReservation(db, grant.transaction, nowMs);
       cleanupOidcRows(db, nowMs);
       db.insert(oidcHandoffs)

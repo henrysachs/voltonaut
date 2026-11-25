@@ -87,9 +87,10 @@ export function accepted(
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each test owner uses an actual mutable SQLite connection.
-function owner(db: ServerDatabase) {
+function owner(db: ServerDatabase, config: ReturnType<typeof parseServerConfig>) {
   return {
     db,
+    config,
     jobs: new StravaDeliveryStore(db, stravaTables),
     credentials: new StravaCredentialStore(db, stravaTables),
   };
@@ -111,7 +112,9 @@ export function fixture() {
     for (const db of clients) db.$client.close();
     rmSync(directory, { recursive: true });
   });
-  first.$client.exec("INSERT INTO users VALUES ('owner', 'owner@example.test', 0, NULL)");
+  first.$client.exec(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('owner', 'owner@example.test', 0, NULL)",
+  );
   first.$client.exec(
     "INSERT INTO strava_connections(user_id,athlete_id,status,encrypted_tokens,access_expires_at,scope,generation) VALUES ('owner','42','connected','encrypted',999999,'activity:write','generation-a')",
   );
@@ -120,8 +123,8 @@ export function fixture() {
     const db = createDatabase(config);
     clients.push(db);
 
-    return owner(db);
+    return owner(db, config);
   };
 
-  return { a: owner(first), b: reopen(), reopen };
+  return { a: owner(first, config), b: reopen(), reopen };
 }

@@ -5,7 +5,6 @@ import { StravaService } from "./strava.service.js";
 import { StravaStore } from "./strava.store.js";
 import { StravaDeliveryService } from "./strava.delivery.js";
 import { RidesService } from "../rides/rides.service.js";
-import { parseServerConfig } from "../config.js";
 import { stravaTables, ridesTables } from "../schema.js";
 import { authorizationFixture, PolicyProvider } from "./strava.authorization-fixture.spec.js";
 
@@ -17,7 +16,7 @@ export async function schedulerFixture(authorizationTransport: "http" | "in_proc
   const provider = authorizationTransport === "in_process" ? policy : remote.provider;
 
   const config = {
-    ...parseServerConfig({ AUTH_MODE: "disabled" }, "test"),
+    ...owners.a.config,
     strava: remote.provider.enabledConfig(),
   };
 

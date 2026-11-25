@@ -5,10 +5,12 @@ import { accountsTables, economyTables, ridesTables, stravaTables } from "./sche
 import { StravaModule } from "./strava/strava.module.js";
 
 const ridesModule = RidesModule.register(ridesTables);
+const stravaModule = StravaModule.register(stravaTables, ridesModule);
+const economyModule = EconomyModule.register(economyTables);
 
 export const applicationModules = [
-  AccountsModule.register(accountsTables),
-  EconomyModule.register(economyTables),
+  AccountsModule.register(accountsTables, ridesModule, stravaModule, economyModule),
+  economyModule,
   ridesModule,
-  StravaModule.register(stravaTables, ridesModule),
+  stravaModule,
 ];

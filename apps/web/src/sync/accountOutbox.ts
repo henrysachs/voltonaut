@@ -96,6 +96,7 @@ export interface AccountOutbox {
   readonly list: (owner: OutboxOwner) => Promise<readonly OutboxRow[]>;
   readonly claim: (row: OutboxRow) => Promise<void>;
   readonly update: (row: OutboxRow) => Promise<void>;
+  readonly purgeOwner: (owner: OutboxOwner) => Promise<void>;
 }
 
 export function outboxKey(row: OutboxRow): readonly string[] {

@@ -38,7 +38,9 @@ async function pairedJobs() {
   const state = await schedulerFixture();
   const { a, grant, config } = state;
   a.db.$client
-    .prepare("INSERT INTO users VALUES ('healthy', 'healthy@example.test', 0, NULL)")
+    .prepare(
+      "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('healthy', 'healthy@example.test', 0, NULL)",
+    )
     .run();
   a.db
     .insert(stravaTables.connections)

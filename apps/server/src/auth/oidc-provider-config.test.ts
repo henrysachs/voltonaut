@@ -14,6 +14,7 @@ const BASE = {
   OIDC_AUTHENTIK_CLIENT_SECRET: "ak-secret",
   OIDC_AUTHENTIK_REDIRECT_URI: "https://api.example/v1/auth/oidc/authentik/callback",
   DATABASE_PATH: ":memory:",
+  AUTH_TOMBSTONE_HMAC_KEY: "a".repeat(64),
 };
 
 it("parses provider defaults and per-provider overrides", () => {

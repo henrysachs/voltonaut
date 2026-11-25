@@ -25,8 +25,14 @@ export const unusedIdentityLease: IdentityLease = {
   completeLink: () => Promise.reject(new Error("unexpected identity link completion")),
 };
 
+export const unexpectedAccountData = {
+  exportAccount: () => Promise.reject(new Error("unexpected account export")),
+  deleteAccount: () => Promise.reject(new Error("unexpected account deletion")),
+};
+
 /** Account-lease members an account test does not exercise. */
 export const unexpectedAccountParts = {
   ...unexpectedMembership,
+  ...unexpectedAccountData,
   identities: unusedIdentityLease,
 };

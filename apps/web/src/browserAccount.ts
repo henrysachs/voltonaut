@@ -17,7 +17,9 @@ declare global {
 
 export function setupBrowserAccount(
   profile: () => Promise<ProfileBootstrap>,
-): Readonly<Pick<ApplicationSession, "authorize" | "subscribe">> | undefined {
+):
+  | Readonly<Pick<ApplicationSession, "authorize" | "subscribe" | "endAfterAccountDeletion">>
+  | undefined {
   const handoff = takeAuthHandoff(window.location.href, (path) => {
     window.history.replaceState(null, "", path);
   });
@@ -35,7 +37,6 @@ export function setupBrowserAccount(
 
   try {
     const origin = apiOrigin(window.location.origin, import.meta.env["VITE_API_ORIGIN"]);
-
     const transport = authTransport(origin);
 
     const session = new ApplicationSession({

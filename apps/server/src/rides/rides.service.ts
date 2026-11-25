@@ -6,8 +6,10 @@ import {
   RideAssessmentSchema,
   RideReceiptSchema,
   RideSummarySchema,
+  ReplayWindowSummarySchema,
 } from "@voltonaut/shared";
 import type {
+  AccountExport,
   RideRecording,
   RideDetail,
   RideList,
@@ -25,6 +27,20 @@ import type { ServerConfig } from "../config.js";
 
 function notFound(): never {
   throw new ApiError(404, "not_found", "ride not found");
+}
+
+function ownTcx(
+  content: string | null,
+  hash: string | null,
+  version: "tcx-1" | null,
+): { readonly version: "tcx-1"; readonly hash: string; readonly content: string } | null {
+  if (content === null && hash === null && version === null) return null;
+
+  if (content === null || hash === null || version === null || sha256(content) !== hash) {
+    throw new ApiError(500, "internal_error", "stored ride export is corrupt");
+  }
+
+  return { version, hash, content };
 }
 
 export type OwnStravaSource =
@@ -109,6 +125,55 @@ export class RidesService {
     }
 
     return RideReceiptSchema.parse(JSON.parse(stored.receiptJson));
+  }
+
+  public exportOwn(userId: string): AccountExport["rides"] {
+    const rides = this.tables.rides;
+
+    const rows = this.db
+      .select({
+        payloadJson: rides.payloadJson,
+        receiptJson: rides.receiptJson,
+        assessmentJson: rides.assessmentJson,
+        uploadedAt: rides.uploadedAt,
+        durationMs: rides.durationMs,
+        distanceM: rides.distanceM,
+        source: rides.source,
+        summaryJson: rides.summaryJson,
+        exportTcx: rides.exportTcx,
+        exportHash: rides.exportHash,
+        exportVersion: rides.exportVersion,
+      })
+      .from(rides)
+      .where(eq(rides.userId, userId))
+      .orderBy(asc(rides.id))
+      .all();
+
+    return rows.map((row) => ({
+      recording: RideRecordingSchema.parse(JSON.parse(row.payloadJson)),
+      receipt: RideReceiptSchema.parse(JSON.parse(row.receiptJson)),
+      assessment: RideAssessmentSchema.parse(JSON.parse(row.assessmentJson)),
+      stored: {
+        uploadedAt: new Date(row.uploadedAt).toISOString(),
+        durationMs: row.durationMs,
+        distanceM: row.distanceM,
+        source: row.source,
+        replaySummary:
+          row.summaryJson === null
+            ? null
+            : ReplayWindowSummarySchema.parse(JSON.parse(row.summaryJson)),
+        tcx: ownTcx(row.exportTcx, row.exportHash, row.exportVersion),
+      },
+    }));
+  }
+
+  public deleteOwn(userId: string): void {
+    this.db.transaction(
+      () => {
+        this.db.delete(this.tables.rides).where(eq(this.tables.rides.userId, userId)).run();
+      },
+      { behavior: "immediate" },
+    );
   }
 
   public loadOwnStravaSource(userId: string, rideId: string): OwnStravaSource {

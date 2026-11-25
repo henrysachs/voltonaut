@@ -17,6 +17,7 @@ const PRODUCTION_OIDC = {
   OIDC_TEST_CLIENT_SECRET: "test-secret",
   OIDC_TEST_REDIRECT_URI: "https://api.example/v1/auth/oidc/test/callback",
   DATABASE_PATH: ":memory:",
+  AUTH_TOMBSTONE_HMAC_KEY: "a".repeat(64),
 };
 
 it.each(["oidc", "disabled"])(

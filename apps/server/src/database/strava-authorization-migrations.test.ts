@@ -20,7 +20,9 @@ function existingDatabase(directory: string, migrations: number) {
     testServerConfig({ database: { path, migrationsDir: legacyFolder(directory, migrations) } }),
   );
 
-  old.$client.exec("INSERT INTO users VALUES ('owner','owner@example.test',123,NULL)");
+  old.$client.exec(
+    "INSERT INTO users (id, email, created_at, deleted_at) VALUES ('owner','owner@example.test',123,NULL)",
+  );
   old.$client.exec(
     "INSERT INTO sessions VALUES ('existing-session','owner',1,2,999999,'original-agent')",
   );
@@ -93,7 +95,7 @@ it.each([6, 7])(
         authorization_checked_revision: 1,
         authorization_check_after: 60000,
       });
-      expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(10);
+      expect(reopened.$client.prepare("SELECT * FROM __drizzle_migrations").all()).toHaveLength(11);
       reopened.$client.close();
     } finally {
       rmSync(directory, { recursive: true, force: true });
