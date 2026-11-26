@@ -209,7 +209,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 ## E10 – Mehr Spiel: Inhalte & Extras
 
-- [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
+- [x] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
