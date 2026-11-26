@@ -170,6 +170,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-05](specs/E7-05-garage-loadout.md) speichert die Ausrüstung pro Konto (`GET`/`PUT /v1/me/loadout`, nur besessene Items und Katalogfarben), zeigt in der Garage je Item „ausgerüstet“, „besessen“, „käuflich“ oder „gesperrt“ und überträgt die Ausrüstung per `render.look` an den Fahrer in der laufenden Fahrt. Stand: implementiert und softwaregeprüft; Merge, Bereitstellung und Henrys Abnahme offen.
 
+[E7-06](specs/E7-06-garage-showroom.md) ergänzt Studio-Licht, Boden und Drehteller, eine begrenzte Orbit-Kamera für Maus, Touch und Tastatur sowie Reduced-Motion-Verhalten. Der Fotomodus blendet das Fahrtmenü zur Bühne um und lädt nur den Preview-Canvas als PNG. Stand: implementiert und softwaregeprüft mit 57 Garage-Unit-Tests, 16 gezielten E2Es und 65 zusätzlichen Garage-, Kauf-, Menü- und Layout-Regressionen. Screenshots und das decodierte PNG sind Test-Anhänge. Henrys Sichtprüfung, vollständiges Gate, Review, Merge und Bereitstellung bleiben offen. Die vollständige E7-Checkbox bleibt deshalb unverändert.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
 - [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items (E7-02, E7-05 softwaregeprüft; Abnahme offen)
