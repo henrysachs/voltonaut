@@ -21,7 +21,9 @@ Beleg aus PR #144: gleiche Last, nur WebGL auf Main abgeschaltet, 10/10 grün st
 
 ## Konsequenzen
 
-- Natives GL-Warten der Garage gehört nicht mehr dem Main Thread. Ein zweiter Worker läuft nur, solange das Garage-Panel existiert.
+- Natives GL-Warten der Garage gehört nicht mehr dem Main Thread.
+- Die Zahl der GL-Kontexte bleibt gleich: Vorher besaß Main einen Garage-Kontext, jetzt besitzt ihn der Preview-Worker. Zusätzlich kostet nur der Worker-Thread. Das Garage-Panel wird beim Start montiert und lebt die ganze Sitzung, also auch der Worker.
+- `dispose` wird in Produktion nicht aufgerufen. Das galt schon vor dieser Änderung. Ein Aufrufer (z. B. bei `pagehide` oder beim Abbau des Menüs) ist ein Folgeschritt.
 - Die Fehlererkennung ist asynchron. Die Garage wechselt nach einem Worker-Fehler nachträglich in `unavailable3d`.
 - E2E-Fehlerinjektionen müssen den Worker treffen (`previewWorkerPrelude`), nicht `HTMLCanvasElement.getContext` auf Main.
 - Wie bei ADR-019 verschiebt der Worker das Warten, er entfernt es nicht. Kein FPS- oder Hardwarenachweis.
