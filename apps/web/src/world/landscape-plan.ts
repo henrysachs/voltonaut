@@ -44,6 +44,12 @@ export function offsetPosition(route: EngineRoute, distanceM: number, lateralM: 
 
 const TURN_WINDOW_M = 20;
 
+/** Asphalt and shoulder reach this far from the centre line (road.ts). */
+const ROAD_HALF_WIDTH_M = 4;
+
+/** Relief starts this far beyond the shoulder, so a pinched row cannot lift the road edge. */
+const SHOULDER_MARGIN_M = 2;
+
 /** Up to two terrain rows (10 m each, see terrain.ts) on either side. */
 const RELIEF_NEIGHBOURS_M = [-20, -10, 10, 20];
 const MIN_TURN_RAD = 0.2;
@@ -92,15 +98,22 @@ function insideTurn(route: EngineRoute, distanceM: number, lateralM: number): bo
 
 /**
  * On the inside of a sharp turn the rows fold back over road already ridden; on a climb that
- * road is lower than the row. The inner side therefore rests on the lowest neighbouring road
- * height. The road's own centre line keeps its height.
+ * road is lower than the row. A vertex folds back by about its offset times tan(turn / 2), so it
+ * rests on the road height that far back when that is lower. Deeper lowering would open a gap
+ * under the road edge. The road's own centre line keeps its height.
  */
-function cornerBaseY(route: EngineRoute, distanceM: number, roadY: number): number {
-  return Math.min(
-    roadY,
-    route.worldPos(distanceM - TURN_WINDOW_M / 2).y,
-    route.worldPos(distanceM + TURN_WINDOW_M / 2).y,
+function cornerBaseY(
+  route: EngineRoute,
+  distanceM: number,
+  lateralM: number,
+  roadY: number,
+): number {
+  const foldM = Math.min(
+    TURN_WINDOW_M / 2,
+    Math.abs(lateralM) * Math.tan(Math.abs(turnAt(route, distanceM)) / 2),
   );
+
+  return Math.min(roadY, route.worldPos(distanceM - foldM).y);
 }
 
 export function lakeRadius(lake: Lake, position: WorldPos): number {
@@ -131,14 +144,17 @@ export function terrainPosition(
 
   const inside = insideTurn(plan.route, distanceM, lateralM);
   // Folded inner rows get no relief; a raised vertex there would cover the road.
-  const clearanceM = inside ? 0 : Math.max(0, reachM - 4);
+  const clearanceM = inside ? 0 : Math.max(0, reachM - ROAD_HALF_WIDTH_M - SHOULDER_MARGIN_M);
   const blend = Math.min(1, clearanceM / 32);
   const phase = (distanceM / plan.route.lengthM) * Math.PI * 2;
 
   const reliefM =
     3 + 5 * Math.sin(phase * 20 + lateralM / 37) + 3 * Math.cos(phase * 11 - lateralM / 23);
 
-  const baseY = inside ? cornerBaseY(plan.route, distanceM, position.y) : position.y;
+  const baseY = inside
+    ? cornerBaseY(plan.route, distanceM, effectiveLateralM, position.y)
+    : position.y;
+
   let y = baseY - 0.06 + blend * reliefM;
 
   const radius = lakeRadius(plan.lake, position);

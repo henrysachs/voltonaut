@@ -9,11 +9,17 @@ import {
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
-import { createLandscapePlan, offsetPosition } from "./landscape-plan.js";
+import { createLandscapePlan, offsetPosition, terrainPosition } from "./landscape-plan.js";
 import { disposeObject } from "./resources.js";
 import { createTerrain } from "./terrain.js";
 
 const CELL_M = 20;
+
+/** Asphalt and shoulder reach 4 m from the centre line (road.ts). */
+const ROAD_HALF_WIDTH_M = 4;
+
+/** The asphalt sits this far above the route height; terrain must stay below it. */
+const ASPHALT_LIFT_M = 0.025;
 
 interface Point {
   readonly x: number;
@@ -101,7 +107,7 @@ function buriedRoad(
   const buried: string[] = [];
 
   for (let distanceM = 0; distanceM < route.lengthM; distanceM += 5) {
-    for (const lateralM of [-3.5, 0, 3.5]) {
+    for (const lateralM of [-ROAD_HALF_WIDTH_M, -3.5, 0, 3.5, ROAD_HALF_WIDTH_M]) {
       const road = offsetPosition(route, distanceM, lateralM);
       const key = `${Math.floor(road.x / CELL_M)}:${Math.floor(road.z / CELL_M)}`;
 
@@ -111,8 +117,8 @@ function buriedRoad(
 
       const highest = Math.max(-Infinity, ...heights);
 
-      if (highest > road.y + 0.05)
-        buried.push(`${distanceM}:${lateralM}:${(highest - road.y).toFixed(1)}`);
+      if (highest > road.y + ASPHALT_LIFT_M)
+        buried.push(`${distanceM}:${lateralM}:${(highest - road.y).toFixed(3)}`);
     }
   }
 
@@ -134,3 +140,15 @@ it.each([
     disposeObject(terrain);
   },
 );
+
+it("sees the 45° turn at the alpine lap line from both sides of the seam", () => {
+  const route = createRoute(ALPINE_PASS);
+  const plan = createLandscapePlan(route, 42, false);
+  const center = route.worldPos(0);
+  const atStart = terrainPosition(plan, 0, 100);
+  const atEnd = terrainPosition(plan, route.lengthM, 100);
+
+  // Without wrapping, the window at 0 m sees only the first leg and keeps the full 100 m offset.
+  expect(Math.hypot(atStart.x - center.x, atStart.z - center.z)).toBeLessThan(80);
+  expect(atStart).toEqual(atEnd);
+});
