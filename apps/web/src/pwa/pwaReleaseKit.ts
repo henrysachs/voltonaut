@@ -33,7 +33,7 @@ const WARNING =
  * the worker, so the app boots once and already controlled; the app's own registration of
  * the same script is covered by "registers the worker" in pwa.build.test.ts.
  */
-async function installShell(browser: Browser, dist: string): Promise<InstalledShell> {
+export async function installShell(browser: Browser, dist: string): Promise<InstalledShell> {
   const next = new Map<string, ReleasedFile>();
   const serve = serveDist(dist);
 
@@ -68,33 +68,9 @@ async function installShell(browser: Browser, dist: string): Promise<InstalledSh
   return { dist, app, context, page, next };
 }
 
-async function removeShell(shell: InstalledShell): Promise<void> {
+export async function removeShell(shell: InstalledShell): Promise<void> {
   await shell.context.close();
   await stop(shell.app);
-}
-
-/** One independent shell per update step; the later steps start with the release announced. */
-export interface ReleaseShells {
-  readonly fresh: InstalledShell;
-  readonly forNotice: InstalledShell;
-  readonly forApply: InstalledShell;
-}
-
-export async function installReleaseShells(browser: Browser, dist: string): Promise<ReleaseShells> {
-  const fresh = await installShell(browser, dist);
-  const forNotice = await installShell(browser, dist);
-  const forApply = await installShell(browser, dist);
-
-  await announceRelease(forNotice);
-  await announceRelease(forApply);
-
-  return { fresh, forNotice, forApply };
-}
-
-export async function removeReleaseShells(shells: ReleaseShells): Promise<void> {
-  await removeShell(shells.fresh);
-  await removeShell(shells.forNotice);
-  await removeShell(shells.forApply);
 }
 
 /** A new release: changed shell bytes and a changed worker script, as a real deploy produces. */
@@ -133,7 +109,7 @@ async function checkForUpdate(page: Page): Promise<void> {
 }
 
 /** Setup for the steps after the announcement: a published release the page has found. */
-async function announceRelease(shell: InstalledShell): Promise<void> {
+export async function announceRelease(shell: InstalledShell): Promise<void> {
   await publishRelease(shell);
   await checkForUpdate(shell.page);
 }
@@ -188,9 +164,14 @@ export async function verifyNotice({ page }: InstalledShell): Promise<void> {
   expect(await menuVisible(page)).toBe(true);
 }
 
+/** Setup for the apply step: the announced release with its notice open, as "opens …" checks. */
+export async function openUpdateNotice(shell: InstalledShell): Promise<void> {
+  await announceRelease(shell);
+  await pointerClick(updateShortcut(shell.page));
+  await applyButton(shell.page).waitFor({ state: "visible" });
+}
+
 export async function verifyApply({ page }: InstalledShell): Promise<void> {
-  await pointerClick(updateShortcut(page));
-  await applyButton(page).waitFor({ state: "visible" });
   await Promise.all([page.waitForEvent("load"), pointerClick(applyButton(page))]);
   expect(await updateMarkers(page)).toBe(1);
 }

@@ -5,13 +5,15 @@ import type { Browser, Page } from "@playwright/test";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
-  installReleaseShells,
-  removeReleaseShells,
+  announceRelease,
+  installShell,
+  openUpdateNotice,
+  removeShell,
   verifyAnnouncement,
   verifyApply,
   verifyNotice,
 } from "./pwaReleaseKit.js";
-import type { ReleaseShells } from "./pwaReleaseKit.js";
+import type { InstalledShell } from "./pwaReleaseKit.js";
 import {
   buildProduction,
   cacheContents,
@@ -215,29 +217,55 @@ describe("built PWA", () => {
   });
 });
 
-// One update step per test, each on its own installed shell and origin. As one test the
-// steps took 4–7 s under load, past the 5 s timeout (docs/specs/E0-16-flaky-tests.md).
-// Installing a shell boots the app like the build above, so it belongs to setup.
-function describeReleaseUpdate(built: () => Fixture): void {
-  let shells: ReleaseShells;
+type ShellStep = (shell: InstalledShell) => Promise<void>;
+
+/**
+ * Installs one shell for one update step and reaches the step's starting state in setup,
+ * so the test holds only the step. Each shell has its own origin and lives only for its step.
+ */
+function shellFor(built: () => Fixture, setup: ShellStep): () => InstalledShell {
+  let shell: InstalledShell | undefined;
 
   beforeAll(async () => {
-    shells = await installReleaseShells(built().browser, built().dist);
+    shell = await installShell(built().browser, built().dist);
+    await setup(shell);
   }, 120_000);
 
   afterAll(async () => {
-    await removeReleaseShells(shells);
+    if (shell !== undefined) await removeShell(shell);
   });
 
-  it("announces a waiting release next to the menu and keeps the old version", async () => {
-    await expect(verifyAnnouncement(shells.fresh)).resolves.toBeUndefined();
+  return () => {
+    if (shell === undefined) throw new Error("shell setup did not run");
+
+    return shell;
+  };
+}
+
+// As one test the update steps took 4–7 s under load, past the 5 s timeout
+// (docs/specs/E0-16-flaky-tests.md), so each step is its own test.
+function describeReleaseUpdate(built: () => Fixture): void {
+  describe("before the announcement", () => {
+    const shell = shellFor(built, () => Promise.resolve());
+
+    it("announces a waiting release next to the menu and keeps the old version", async () => {
+      await expect(verifyAnnouncement(shell())).resolves.toBeUndefined();
+    });
   });
 
-  it("opens the focused warning notice from the shortcut, safe against repeated Enter", async () => {
-    await expect(verifyNotice(shells.forNotice)).resolves.toBeUndefined();
+  describe("after the announcement", () => {
+    const shell = shellFor(built, announceRelease);
+
+    it("opens the focused warning notice from the shortcut, safe against repeated Enter", async () => {
+      await expect(verifyNotice(shell())).resolves.toBeUndefined();
+    });
   });
 
-  it("applies the waiting release on request and reloads onto it", async () => {
-    await expect(verifyApply(shells.forApply)).resolves.toBeUndefined();
+  describe("with the notice open", () => {
+    const shell = shellFor(built, openUpdateNotice);
+
+    it("applies the waiting release on request and reloads onto it", async () => {
+      await expect(verifyApply(shell())).resolves.toBeUndefined();
+    });
   });
 }
