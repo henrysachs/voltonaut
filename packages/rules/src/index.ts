@@ -32,3 +32,7 @@ export {
 export { SEASON_AVATAR_ITEMS, SEASONS, seasonAt } from "./seasonData.js";
 
 export { decidePurchase, defaultInventoryItemIds, type PurchaseDecision } from "./shop.js";
+
+export { avatarColorOptions, defaultAvatarColors, isAvatarColorOption } from "./avatarPalettes.js";
+
+export { decideLoadout, type LoadoutDecision } from "./loadout.js";

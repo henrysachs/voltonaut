@@ -1,9 +1,13 @@
 import {
   InventoryResponseSchema,
+  LoadoutResponseSchema,
+  LoadoutUpdateSchema,
   PurchaseRequestSchema,
   PurchaseResponseSchema,
   VoltsBalanceResponseSchema,
+  type AvatarConfig,
   type InventoryResponse,
+  type LoadoutResponse,
   type PurchaseOrder,
   type PurchaseResponse,
   type VoltsBalanceResponse,
@@ -15,6 +19,9 @@ export interface ShopPort {
   readonly balance: () => Promise<VoltsBalanceResponse>;
   readonly inventory: () => Promise<InventoryResponse>;
   readonly purchase: (order: Readonly<PurchaseOrder>) => Promise<PurchaseResponse>;
+  /** Stored equipment or the default (spec E7-05). */
+  readonly loadout: () => Promise<LoadoutResponse>;
+  readonly saveLoadout: (loadout: Readonly<AvatarConfig>) => Promise<LoadoutResponse>;
 }
 
 /** The server confirmed a purchase of another item than the order named; a final, non-retryable answer. */
@@ -44,12 +51,28 @@ export const shopRoutes = {
     response: PurchaseResponseSchema,
     credentials: "omit",
   }),
+  loadout: privateRoute({
+    method: "GET",
+    path: () => "/v1/me/loadout",
+    response: LoadoutResponseSchema,
+    credentials: "omit",
+  }),
+  saveLoadout: privateRoute({
+    method: "PUT",
+    path: () => "/v1/me/loadout",
+    body: (loadout: Readonly<AvatarConfig>) =>
+      JSON.stringify(LoadoutUpdateSchema.parse({ loadout })),
+    response: LoadoutResponseSchema,
+    credentials: "omit",
+  }),
 };
 
 export function shopPort(send: PrivateSend): ShopPort {
   return {
     balance: () => send(shopRoutes.balance, null),
     inventory: () => send(shopRoutes.inventory, null),
+    loadout: () => send(shopRoutes.loadout, null),
+    saveLoadout: (loadout) => send(shopRoutes.saveLoadout, loadout),
     async purchase(order) {
       const payload = PurchaseRequestSchema.parse(order);
       const receipt = await send(shopRoutes.purchase, payload);

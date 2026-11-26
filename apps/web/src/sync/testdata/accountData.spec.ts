@@ -1,3 +1,4 @@
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import { expect, type Page } from "@playwright/test";
 
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright pages and IndexedDB fixtures are mutable browser handles. */
@@ -23,7 +24,7 @@ const profile = {
 };
 
 export const exported = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   exportedAt: "2026-11-24T12:00:00.000Z",
   account: {
     user,
@@ -33,7 +34,7 @@ export const exported = {
   },
   profile: { status: "present", profile, updatedAt: "2026-11-20T00:00:00.000Z" },
   rides: [],
-  inventory: { items: [] },
+  inventory: { items: [], loadout: { loadout: DEFAULT_AVATAR_CONFIG, updatedAt: null } },
   progression: {
     volts: { balance: 0, journal: [] },
     progress: { consent: { status: "missing" }, journals: [], ranges: [] },

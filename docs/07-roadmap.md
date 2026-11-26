@@ -166,9 +166,11 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-04](specs/E7-04-operator-grant-audit.md) ordnet jede Volts-Gutschrift einem aktiven Admin-Konto zu (`admin credit --operator <adminUserId> …`). Ältere Gutschriften bleiben als „Operator unbekannt (vor Einführung)“ markiert. Stand: implementiert und softwaregeprüft (Integration, Migration, CLI); Merge und Bereitstellung offen.
 
+[E7-05](specs/E7-05-garage-loadout.md) speichert die Ausrüstung pro Konto (`GET`/`PUT /v1/me/loadout`, nur besessene Items und Katalogfarben), zeigt in der Garage je Item „ausgerüstet“, „besessen“, „käuflich“ oder „gesperrt“ und überträgt die Ausrüstung per `render.look` an den Fahrer in der laufenden Fahrt. Stand: implementiert und softwaregeprüft; Merge, Bereitstellung und Henrys Abnahme offen.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
-- [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items
+- [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items (E7-02, E7-05 softwaregeprüft; Abnahme offen)
 - [ ] Garage-Showroom (Studio-Licht, Drehteller, Fotomodus), Shop mit Preisen in ⚡, gesperrte Items mit Bedingung
 - [ ] Wiegetritt/Ducken-Posen, Kurvenneigung
       **Abnahme:** Henry kauft ein Laufrad mit Volts und rüstet es aus; nach Reload/anderem Browser identisch; Kauf ohne genug Volts abgelehnt; visuelle Tests der Garage grün.

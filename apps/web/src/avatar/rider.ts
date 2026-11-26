@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import type { AvatarConfig } from "@voltonaut/shared";
 
 import { disposeObject } from "../world/resources.js";
@@ -53,6 +54,11 @@ export class RiderOnBike implements RiderModel {
     if (!deferBody) this.ensureBody();
 
     this.pose();
+  }
+
+  /** Whether the skinned body exists; the ride scene defers it past the first frame. */
+  hasBody(): boolean {
+    return this.bodyValue !== undefined;
   }
 
   /** The skinned rider body, built on first use. */
@@ -149,6 +155,10 @@ export interface RiderView {
   readonly position: () => { readonly x: number; readonly y: number; readonly z: number };
   readonly headingRad: () => number;
   readonly crankRad: () => number;
+  /** Applies on the next update, after the deferred body exists (spec E7-05 AK8). */
+  readonly setLook: (config: Readonly<AvatarConfig>) => void;
+  /** The look the rider body wears; a requested look counts only once it is applied. */
+  readonly look: () => AvatarConfig;
 }
 
 export function createRiderModel(wheelCircM: number): RiderOnBike {
@@ -157,8 +167,14 @@ export function createRiderModel(wheelCircM: number): RiderOnBike {
 
 export function createRider(wheelCircM: number): RiderView {
   const rider = new RiderOnBike(wheelCircM, true);
+  let worn: AvatarConfig = DEFAULT_AVATAR_CONFIG;
+  let pending: AvatarConfig | undefined;
 
   return {
+    setLook(config) {
+      pending = config;
+    },
+    look: () => worn,
     position: () => ({
       x: rider.root.position.x,
       y: rider.root.position.y,
@@ -175,6 +191,13 @@ export function createRider(wheelCircM: number): RiderView {
       },
       update(frame) {
         rider.update(frame);
+
+        // A look waits for the deferred body; applying it earlier would build the body in frame 1.
+        if (pending !== undefined && rider.hasBody()) {
+          rider.setLook(pending);
+          worn = pending;
+          pending = undefined;
+        }
       },
       setQuality() {},
       dispose() {

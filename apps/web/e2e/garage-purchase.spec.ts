@@ -1,5 +1,6 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright owns the mutable browser page and routes. */
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import { PurchaseRequestSchema } from "@voltonaut/shared";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
@@ -60,6 +61,10 @@ async function signedInGarage(page: Page): Promise<ShopServer> {
     route.fulfill({
       json: { items: [{ itemId: "jersey.classic", source: "default", acquiredAt: null }] },
     }),
+  );
+  // The server always answers the loadout read since E7-05; the default loadout keeps the garage ready.
+  await page.route(`${API}/v1/me/loadout`, (route) =>
+    route.fulfill({ json: { loadout: DEFAULT_AVATAR_CONFIG, updatedAt: null } }),
   );
   await page.route(`${API}/v1/shop/purchase`, (route) => fulfillPurchase(route, server));
   await page.goto("/?sim=1");

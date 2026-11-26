@@ -19,6 +19,7 @@ export const rides = ridesTables.rides;
 export const voltsLedger = economyTables.voltsLedger;
 export const voltsGrantOperators = economyTables.voltsGrantOperators;
 export const inventory = inventoryTables.inventory;
+export const avatarLoadouts = inventoryTables.avatarLoadouts;
 export const progressConsents = progressTables.progressConsents;
 export const rideProgressJournals = progressTables.rideProgressJournals;
 export const rideProgressRanges = progressTables.rideProgressRanges;

@@ -53,6 +53,7 @@ export type PrivatePath =
   | `/v1/auth/oidc/${string}/link`
   | "/v1/me/volts"
   | "/v1/me/inventory"
+  | "/v1/me/loadout"
   | "/v1/shop/purchase"
   | `/v1/strava/rides/${string}`;
 

@@ -62,5 +62,7 @@ it("never sends shop calls with browser cookies", () => {
     "omit",
     "omit",
     "omit",
+    "omit",
+    "omit",
   ]);
 });

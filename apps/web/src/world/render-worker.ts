@@ -41,6 +41,7 @@ function initialize(
       render: owned.render,
       resize: owned.resize,
       toggleCamera: owned.toggleCamera,
+      setLook: owned.setLook,
       dispose() {
         command.canvas.removeEventListener("webglcontextlost", onLost);
         owned.dispose();
@@ -53,6 +54,41 @@ function initialize(
       if (!context.isContextLost()) renderer.forceContextLoss();
     } else core.dispose();
     throw error;
+  }
+}
+
+type RenderLoop = ReturnType<typeof createRenderLoop>;
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The init message owns a transferred native canvas; the loop is the worker's own mutable state.
+function handleCommand(loop: RenderLoop, data: RenderCommand): void {
+  switch (data.type) {
+    case "render.init":
+      loop.start(() =>
+        initialize(data, () => {
+          loop.fail("context-lost");
+        }),
+      );
+
+      return;
+    case "render.snapshot":
+      loop.snapshot(data.sequence, data.snapshot);
+
+      return;
+    case "render.resize":
+      loop.resize(data.viewport);
+
+      return;
+    case "render.toggleCamera":
+      loop.toggleCamera();
+
+      return;
+    case "render.look":
+      loop.look(data.look);
+
+      return;
+    case "render.dispose":
+      loop.dispose();
+      break;
   }
 }
 
@@ -77,31 +113,7 @@ export function startRenderWorker(scope: RenderScope): void {
 
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The init message owns a transferred native canvas; other messages are read-only.
   scope.addEventListener("message", ({ data }) => {
-    switch (data.type) {
-      case "render.init":
-        loop.start(() =>
-          initialize(data, () => {
-            loop.fail("context-lost");
-          }),
-        );
-
-        return;
-      case "render.snapshot":
-        loop.snapshot(data.sequence, data.snapshot);
-
-        return;
-      case "render.resize":
-        loop.resize(data.viewport);
-
-        return;
-      case "render.toggleCamera":
-        loop.toggleCamera();
-
-        return;
-      case "render.dispose":
-        loop.dispose();
-        break;
-    }
+    handleCommand(loop, data);
   });
 }
 

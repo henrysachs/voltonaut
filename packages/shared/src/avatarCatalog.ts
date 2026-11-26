@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { SeasonIdSchema } from "./season.js";
 
-const itemId = z.string().trim().min(1).max(120);
+/** Catalog item id; shared by the catalog, inventory, shop and loadout contracts. */
+export const ItemIdSchema = z.string().trim().min(1).max(120);
+
+const itemId = ItemIdSchema;
 const assetRef = z.string().trim().min(1).max(200);
 const badgeId = z.string().trim().min(1).max(120);
 
