@@ -14,6 +14,7 @@ import { expect, it } from "vitest";
 import type { CaptureView } from "./rideCaptureProtocol.js";
 import { createRideSession } from "./rideSession.js";
 import { createLoopbackWorker } from "./testdata/loopbackWorker.js";
+import { TEST_LOOP_PATH } from "./testdata/recordedRideHarness.js";
 
 const SAMPLES = createSimScript([{ powerW: 250, cadenceRpm: 90, heartRateBpm: 130 }]);
 
@@ -119,7 +120,7 @@ async function ride() {
   const session = createRideSession(
     {
       bus,
-      routeId: "test-loop",
+      worldPath: TEST_LOOP_PATH,
       profile: DEFAULT_RIDER_PROFILE,
       source: "sim",
       clockScale: 1,

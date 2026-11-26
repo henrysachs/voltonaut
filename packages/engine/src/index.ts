@@ -20,6 +20,8 @@ export * from "./world/world.js";
 
 export * from "./world/singleRouteWorld.js";
 
+export * from "./world/registry.js";
+
 export * from "./world/data/index.js";
 
 export * from "./trainer/gradeMap.js";

@@ -12,11 +12,12 @@ import { createEngineLink } from "./engine-link.js";
 import { localRide } from "../sync/testdata/localRide.js";
 import type { CaptureView } from "./rideCaptureProtocol.js";
 import { createFakePort } from "./testdata/enginePort.js";
+import { TEST_LOOP_PATH } from "./testdata/recordedRideHarness.js";
 
 const profile = DEFAULT_RIDER_PROFILE;
 const snapshot = createEngine({ route: createRoute(FLAT_LOOP), profile }).snapshot();
 const idle = { kind: "idle", availability: { kind: "journal" } } satisfies CaptureView;
-const init = { routeId: "test-loop", profile, source: "sim" } satisfies EngineLinkInit;
+const init = { worldPath: TEST_LOOP_PATH, profile, source: "sim" } satisfies EngineLinkInit;
 
 const progress = {
   schemaVersion: 1,
@@ -29,8 +30,9 @@ const progress = {
   source: "sim",
   clockScale: 1,
   physicsRevision: "engine-v1",
-  routeId: "test-loop",
-  routeRevision: "1",
+  worldId: "test-loop",
+  worldRevision: "1",
+  pathId: "test-loop",
   physics: { massKg: 75, bikeMassKg: 8, cdaM2: 0.32, crr: 0.004, wheelCircM: 2.105 },
   facts: [
     { powerW: 200, cadenceRpm: 90, timeS: 0.05, distanceM: 1, elevationGainM: 0, energyKj: 0.01 },
@@ -90,7 +92,7 @@ it("sends frozen initialization and ignores stale actor snapshots", () => {
     type: "engine.init",
     actorId: "id-1",
     source: "sim",
-    routeId: "test-loop",
+    worldPath: TEST_LOOP_PATH,
     profile,
     clockScale: 1,
   });

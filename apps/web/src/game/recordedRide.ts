@@ -1,5 +1,7 @@
 import {
+  describeRideReference,
   RIDE_MODES,
+  rideReferenceOf,
   RiderProfileSchema,
   type DeviceEvent,
   type NativeTickFacts,
@@ -8,12 +10,14 @@ import {
   type RideProgressCheckpoint,
   type RiderProfile,
   type TrainerCommand,
+  type WorldPathReference,
 } from "@voltonaut/shared";
 import {
   createEngine,
   createRoute,
   PHYSICS_REVISION,
-  TEST_ROUTES,
+  TEST_WORLDS,
+  worldPathRoute,
   type Engine,
   type RideSnapshot,
 } from "@voltonaut/engine";
@@ -36,7 +40,8 @@ const UNRECORDABLE_MODE_REFUSAL = "In diesem Spielmodus gibt es keine Aufnahme."
 
 export interface RideInit {
   readonly source: "sim" | "ble";
-  readonly routeId: string;
+  /** The driven world path; the tick gets its route and recordings name it (ADR-033 §3, §7). */
+  readonly worldPath: WorldPathReference;
   readonly profile: RiderProfile;
   readonly clockScale: number;
 }
@@ -208,9 +213,10 @@ export function startRecordedRide(
   timeOriginMs: number,
   newId: () => string,
 ): StartedRide {
-  const routeData = TEST_ROUTES[init.routeId];
+  const routeData = worldPathRoute(TEST_WORLDS, init.worldPath);
 
-  if (routeData === undefined) throw new Error(`unknown route ${init.routeId}`);
+  if (routeData === undefined)
+    throw new Error(`unknown world path: ${describeRideReference(init.worldPath)}`);
 
   if (!Number.isFinite(init.clockScale) || init.clockScale < 1 || init.clockScale > 20)
     throw new Error("Invalid engine clock scale");
@@ -220,7 +226,7 @@ export function startRecordedRide(
   const progress = createEngineWorkerProgress({
     source: init.source,
     clockScale: init.clockScale,
-    routeId: init.routeId,
+    worldPath: init.worldPath,
     profile,
     newId,
   });
@@ -229,8 +235,7 @@ export function startRecordedRide(
     initializedAt: new Date(timeOriginMs + atMs).toISOString(),
     initialization: {
       physicsRevision: PHYSICS_REVISION,
-      routeId: init.routeId,
-      routeRevision: "1",
+      ...rideReferenceOf(init.worldPath),
       profile,
       source: init.source,
       clockScale: init.clockScale,

@@ -6,6 +6,7 @@ import {
   ProgressCheckpointBatchSchema,
   RewardEffortSchema,
   RewardFactsSchema,
+  rideReferenceOf,
   VoltsRewardDaySchema,
   type ErrorCode,
   type JournalId,
@@ -13,10 +14,12 @@ import {
   type RewardFacts,
   type RideProgressCheckpoint,
   type RideProgressMetadata,
+  type RideReference,
   type VoltsRewardDay,
 } from "@voltonaut/shared";
 
 import { ApiError } from "../api-error.js";
+import { hasSameMetadata } from "./progress.metadata.js";
 
 const MAX_FACT_COUNT = 1200;
 const MAX_DATA_AGE_S = 2.5;
@@ -25,12 +28,13 @@ const MAX_FUTURE_INTAKE_MS = 5 * 60_000;
 const MAX_LATE_INTAKE_MS = 7 * 24 * 60 * 60_000;
 
 export type ValidatedProgressMetadata = Readonly<
-  Omit<RideProgressMetadata, "journalId" | "source" | "clockScale"> & {
+  Pick<RideProgressMetadata, "physicsRevision" | "physics"> & {
     journalId: JournalId;
     source: "ble";
     clockScale: 1;
   }
->;
+> &
+  RideReference;
 
 export type ValidatedProgressRange = Readonly<{
   metadata: ValidatedProgressMetadata;
@@ -74,42 +78,13 @@ function sourceRejected(message: string): never {
   throw progressError(422, "progress_source_rejected", message);
 }
 
-function hasSamePhysics(
-  left: Readonly<RideProgressMetadata["physics"]>,
-  right: Readonly<RideProgressMetadata["physics"]>,
-): boolean {
-  return (
-    left.massKg === right.massKg &&
-    left.bikeMassKg === right.bikeMassKg &&
-    left.cdaM2 === right.cdaM2 &&
-    left.crr === right.crr &&
-    left.wheelCircM === right.wheelCircM
-  );
-}
-
-function hasSameMetadata(
-  left: Readonly<RideProgressMetadata>,
-  right: Readonly<RideProgressMetadata>,
-): boolean {
-  return (
-    left.journalId === right.journalId &&
-    left.source === right.source &&
-    left.clockScale === right.clockScale &&
-    left.physicsRevision === right.physicsRevision &&
-    left.routeId === right.routeId &&
-    left.routeRevision === right.routeRevision &&
-    hasSamePhysics(left.physics, right.physics)
-  );
-}
-
 function metadataFrom(first: Readonly<RideProgressCheckpoint>): ValidatedProgressMetadata {
   return {
     journalId: JournalIdSchema.parse(first.journalId),
     source: "ble",
     clockScale: 1,
     physicsRevision: first.physicsRevision,
-    routeId: first.routeId,
-    routeRevision: first.routeRevision,
+    ...rideReferenceOf(first),
     physics: first.physics,
   };
 }

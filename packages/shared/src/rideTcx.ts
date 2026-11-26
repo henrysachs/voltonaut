@@ -1,4 +1,5 @@
 import type { RideTrack, LocalRidePoint } from "./localRide.js";
+import { describeRideReference } from "./rideReference.js";
 
 const TCX_NS = "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2";
 const ACTIVITY_NS = "http://www.garmin.com/xmlschemas/ActivityExtension/v2";
@@ -63,7 +64,7 @@ export function serializeRideTcx(ride: RideTrack): string {
       : "Voltonaut indoor recording. Sensor data not server verified.";
 
   const notes = escapeXml(
-    `${source} Virtual distance from game physics, not GPS. Real elapsed recording time, independent of physics clock scale ${ride.metadata.physicsClockScale}. Calories 0 means unavailable. Route ${ride.metadata.routeId}, revision ${ride.metadata.routeRevision}. Ride ${ride.rideId}. Gaps at elapsed ms: ${gaps.join(", ") || "none"}. Missing sensors omitted; no interpolated samples.`,
+    `${source} Virtual distance from game physics, not GPS. Real elapsed recording time, independent of physics clock scale ${ride.metadata.physicsClockScale}. Calories 0 means unavailable. ${describeRideReference(ride.metadata)}. Ride ${ride.rideId}. Gaps at elapsed ms: ${gaps.join(", ") || "none"}. Missing sensors omitted; no interpolated samples.`,
   );
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<TrainingCenterDatabase xmlns="${TCX_NS}" xmlns:ax="${ACTIVITY_NS}"><Activities><Activity Sport="Biking"><Id>${ride.startedAt}</Id><Lap StartTime="${ride.startedAt}"><TotalTimeSeconds>${last.elapsedMs / 1000}</TotalTimeSeconds><DistanceMeters>${last.distanceM}</DistanceMeters><Calories>0</Calories><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod>${tracks.join("")}</Lap><Notes>${notes}</Notes></Activity></Activities></TrainingCenterDatabase>\n`;

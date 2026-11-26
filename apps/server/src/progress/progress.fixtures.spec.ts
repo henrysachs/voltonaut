@@ -8,6 +8,7 @@ import type {
   ProgressCheckpointBatch,
   RideProgressCheckpoint,
   RideProgressMetadata,
+  RideReference,
 } from "@voltonaut/shared";
 
 import { ApiError } from "../api-error.js";
@@ -32,13 +33,22 @@ export const OTHER_JOURNAL_ID = "50000000-0000-4000-8000-000000000002";
 export const SESSION_GENERATION = 1;
 export const CONSENT_VERSION = 1;
 
+/** The world path every new client journal references (ADR-033 §7). */
+export const WORLD_PATH = {
+  worldId: "test-loop",
+  worldRevision: "1",
+  pathId: "test-loop",
+} as const;
+
+/** The single-route reference of journals stored before worlds (ADR-033 §8). */
+export const STORED_ROUTE = { routeId: "test-loop", routeRevision: "1" } as const;
+
 export const metadata = {
   journalId: JOURNAL_ID,
   source: "ble",
   clockScale: 1,
   physicsRevision: "engine-v1",
-  routeId: "test-loop",
-  routeRevision: "1",
+  ...WORLD_PATH,
   physics: {
     massKg: 75,
     bikeMassKg: 8,
@@ -73,8 +83,7 @@ export interface CheckpointOptions {
   readonly source?: RideProgressMetadata["source"];
   readonly clockScale?: number;
   readonly physicsRevision?: string;
-  readonly routeId?: string;
-  readonly routeRevision?: string;
+  readonly reference?: RideReference;
   readonly physics?: RideProgressMetadata["physics"];
   readonly quality?: RideProgressCheckpoint["quality"];
   readonly facts?: readonly NativeTickFacts[];
@@ -141,13 +150,11 @@ export function checkpoint(options: CheckpointOptions = {}): RideProgressCheckpo
 
   return RideProgressCheckpointSchema.parse({
     schemaVersion: 1,
-    ...metadata,
     journalId: options.journalId ?? metadata.journalId,
     source: options.source ?? metadata.source,
     clockScale: options.clockScale ?? metadata.clockScale,
     physicsRevision: options.physicsRevision ?? metadata.physicsRevision,
-    routeId: options.routeId ?? metadata.routeId,
-    routeRevision: options.routeRevision ?? metadata.routeRevision,
+    ...(options.reference ?? WORLD_PATH),
     physics: options.physics ?? metadata.physics,
     quality: options.quality ?? quality,
     sequence: options.sequence ?? 0,

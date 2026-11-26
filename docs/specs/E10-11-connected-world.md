@@ -53,7 +53,7 @@ ADR-033 Schritt 1: Datentypen `World`, Abschnitt, Knoten, Weg und Region in `pac
 - **Alpenpass aus PR #138 hat Knicke:** Geprüft gegen den Stand `3fdfe7d` von `feat/issue-75-biomes`. `alpine-pass` dreht an jeder Kehre um 90° (erster Knick an Punkt 150) und würde unter AK3 abgewiesen. Vor Schritt 3 müssen die Kehren als Bögen mit kurzen Sehnen vorliegen. `coast-loop` (größte Drehung 0,080 rad, kürzeste Sehne 12,5 m) und `night-city` (0,073 rad, 12,5 m) halten die Grenze ein.
 - **Mittellinie als Sehnen:** Bögen liegen als Polylinie vor, die AK3 einhält. Analytische Bögen würden `worldPos`/`headingRad` und damit die Golden-Fahrten ändern.
 - **Region nur als Biom:** Die Fläche einer Region, ihre Atmosphäre und ihr Render-Budget folgen in Schritt 3 (`apps/web/src/world`, ADR-033 §9).
-- **Revision je Welt:** Wie alte Weltrevisionen für die Server-Nachrechnung abgelegt werden, klärt Schritt 4.
+- **Revision je Welt:** Wie alte Weltrevisionen für die Server-Nachrechnung abgelegt werden, klärt Schritt 4 ([E10-13](E10-13-world-recording-contract.md)): Der Server hält eine Freigabeliste nachrechenbarer Weltrevisionen.
 
 ## Nachweisstand
 

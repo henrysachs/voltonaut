@@ -40,8 +40,9 @@ export function journalFixture() {
     initializedAt: "2026-11-20T12:00:00.000Z",
     initialization: {
       physicsRevision: PHYSICS_REVISION,
-      routeId: "test-loop",
-      routeRevision: "1",
+      worldId: "test-loop",
+      worldRevision: "1",
+      pathId: "test-loop",
       profile: DEFAULT_RIDER_PROFILE,
       source: "ble",
       clockScale: 1,

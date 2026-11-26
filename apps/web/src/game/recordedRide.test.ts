@@ -141,7 +141,9 @@ it("freezes initialization metadata independently of later caller profile edits"
         initialization: {
           profile: DEFAULT_RIDER_PROFILE,
           source: "sim",
-          routeId: "test-loop",
+          worldId: "test-loop",
+          worldRevision: "1",
+          pathId: "test-loop",
           clockScale: 1,
         },
       },

@@ -1,10 +1,12 @@
 import {
   createRideProgressProjector,
+  rideReferenceOf,
   type NativeTickFacts,
   type RideProgressCheckpoint,
   type RideProgressMetadata,
   type RideProgressProjector,
   type RiderProfile,
+  type WorldPathReference,
 } from "@voltonaut/shared";
 import { PHYSICS_REVISION, riderParamsFromProfile } from "@voltonaut/engine";
 
@@ -16,13 +18,13 @@ export interface EngineWorkerProgress {
 export function createEngineWorkerProgress({
   source,
   clockScale,
-  routeId,
+  worldPath,
   profile,
   newId,
 }: {
   readonly source: "sim" | "ble";
   readonly clockScale: number;
-  readonly routeId: string;
+  readonly worldPath: WorldPathReference;
   readonly profile: RiderProfile;
   readonly newId: () => string;
 }): EngineWorkerProgress {
@@ -33,8 +35,7 @@ export function createEngineWorkerProgress({
       source,
       clockScale,
       physicsRevision: PHYSICS_REVISION,
-      routeId,
-      routeRevision: "1",
+      ...rideReferenceOf(worldPath),
       physics: riderParamsFromProfile(profile),
     },
   };

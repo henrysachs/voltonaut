@@ -34,8 +34,9 @@ function checkpoint(paused = false): RideProgressCheckpoint {
     source: "ble",
     clockScale: 1,
     physicsRevision: "engine-v1",
-    routeId: "flat-loop",
-    routeRevision: "1",
+    worldId: "flat-loop",
+    worldRevision: "1",
+    pathId: "flat-loop",
     physics: {
       massKg: 75,
       bikeMassKg: 8,
