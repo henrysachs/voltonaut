@@ -7,7 +7,7 @@ import {
 
 import type { CaptureView, RecordingControls } from "../game/rideCaptureProtocol.js";
 
-import { button } from "./stravaPanelText.js";
+import { button } from "./button.js";
 
 interface RecordingArchive {
   readonly list: () => Promise<readonly ArchivedRide[]>;

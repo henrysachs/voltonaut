@@ -15,12 +15,14 @@
   --radius-sm: 0.5rem;
   --radius-md: 0.65rem;
   --radius-lg: 1rem;
+  --radius-pill: 999px;
 
   --border-subtle: #b6d2bd38;
   --surface-glass: #0b211edb;
   --surface-glass-filter: blur(14px) saturate(1.2);
   --surface-solid: #102a27;
   --surface-raised: #173a34;
+  --surface-backdrop: #0415102e;
 
   --text-primary: #f4f6ed;
   --text-muted: #bdd0c5;

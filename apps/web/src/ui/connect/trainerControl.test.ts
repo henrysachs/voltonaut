@@ -49,6 +49,10 @@ function rig(clockScale = 1) {
 it("keeps explicit control in the device overlay and shows acquisition before real Sim ACKs", async () => {
   const r = rig();
   expect(r.document.body.children).toHaveLength(2);
+  expect(r.document.find("Widerstand aktivieren").getAttribute("class")).toBe("btn btn--secondary");
+  expect(r.document.find("Widerstand deaktivieren").getAttribute("class")).toBe(
+    "btn btn--secondary",
+  );
   expect(r.document.find("Widerstand aktivieren").disabled).toBe(true);
   await r.trainer.connect();
   await settle();

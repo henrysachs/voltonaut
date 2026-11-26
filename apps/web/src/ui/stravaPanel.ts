@@ -2,7 +2,8 @@ import type { StravaDelivery, StravaStatus, StravaRideView } from "@voltonaut/sh
 import type { AccountSync } from "../sync/accountSync.js";
 import type { AccountDataView } from "../sync/accountDataView.js";
 import type { StravaSync, StravaView } from "../sync/stravaSync.js";
-import { stravaDeliveryText, text, button, busyButton } from "./stravaPanelText.js";
+import { busyButton, button } from "./button.js";
+import { stravaDeliveryText, text } from "./stravaPanelText.js";
 
 type AccountView = Extract<StravaView, { readonly kind: "account" }>;
 

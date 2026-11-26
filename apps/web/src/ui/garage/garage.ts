@@ -1,6 +1,7 @@
 import { AVATAR_SLOTS, avatarItemsForSlot } from "@voltonaut/rules";
 import type { ItemDef } from "@voltonaut/shared";
 
+import { button as createButton } from "../button.js";
 import { itemUnlockText, priceText, rarityText, slotText } from "./garageText.js";
 import { previewColorOptions } from "./palettes.js";
 import { GaragePurchase, type GarageShopSource } from "./purchase.js";
@@ -13,9 +14,8 @@ import {
 } from "./state.js";
 
 function button(text: string): HTMLButtonElement {
-  const element = document.createElement("button");
-  element.type = "button";
-  element.textContent = text;
+  const element = createButton(text);
+  element.setAttribute("class", "btn btn--secondary");
 
   return element;
 }

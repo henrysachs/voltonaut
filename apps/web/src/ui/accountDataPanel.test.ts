@@ -1,6 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
 import type { AccountDataView } from "../sync/accountDataView.js";
-import { deferred } from "../sync/testdata/deferred.js";
 import { createTestDocument } from "../testdata/dom.js";
 import type { TestElement } from "../testdata/dom.js";
 import { mountAccountDataPanel } from "./accountDataPanel.js";
@@ -131,8 +130,14 @@ it("requires the exact email and an explicit acknowledgement before deleting", (
 
 it("marks account export and deletion as busy only while their requests are pending", async () => {
   const { dom, input, checkbox, button, deleteAccount } = setupPanel();
-  const deletionPending = deferred<boolean>();
-  deleteAccount.mockReturnValueOnce(deletionPending.promise);
+
+  let finishDeletion: ((value: boolean) => void) | undefined;
+
+  const deletionPending = new Promise<boolean>((resolve) => {
+    finishDeletion = resolve;
+  });
+
+  deleteAccount.mockReturnValueOnce(deletionPending);
 
   const exportButton = dom.find("Datenexport herunterladen");
   expect(exportButton.getAttribute("aria-busy")).toBe("false");
@@ -152,7 +157,7 @@ it("marks account export and deletion as busy only while their requests are pend
   button.click();
   expect(button.disabled).toBe(true);
   expect(button.getAttribute("aria-busy")).toBe("true");
-  deletionPending.resolve(true);
-  await deletionPending.promise;
+  finishDeletion?.(true);
+  await deletionPending;
   expect(button.getAttribute("aria-busy")).toBe("false");
 });

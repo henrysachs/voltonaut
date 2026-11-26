@@ -1,5 +1,6 @@
 import type { ConnectionStatus, DeviceAdapter, EventBus } from "@voltonaut/shared";
 import type { TrainerControlPanel } from "@voltonaut/ble";
+import { button } from "../button.js";
 import { renderTrainerControl } from "./trainerControl.js";
 
 /** The device surface the dialog uses; every BLE adapter (real or sim transport) provides it. */
@@ -36,14 +37,22 @@ interface SlotElements {
   readonly diagnosticBody: HTMLElement;
 }
 
+function deviceButton(label: string): HTMLButtonElement {
+  const node = button(label);
+  node.setAttribute("class", "btn btn--secondary");
+  node.setAttribute("aria-busy", "false");
+
+  return node;
+}
+
 function slotElements(slot: ConnectSlot): SlotElements {
   const row = document.createElement("section");
   const heading = document.createElement("h3");
   const status = document.createElement("output");
   const rawStatus = document.createElement("output");
-  const choose = document.createElement("button");
-  const retry = document.createElement("button");
-  const disconnect = document.createElement("button");
+  const choose = deviceButton("Gerät wählen");
+  const retry = deviceButton("Erneut verbinden");
+  const disconnect = deviceButton("Trennen");
   const description = document.createElement("p");
   const actions = document.createElement("div");
   const diagnostics = document.createElement("details");
@@ -57,9 +66,6 @@ function slotElements(slot: ConnectSlot): SlotElements {
   status.setAttribute("aria-label", `${slot.label} Verbindung`);
   status.setAttribute("aria-live", "polite");
   rawStatus.setAttribute("aria-label", `${slot.label} Status`);
-  choose.textContent = "Gerät wählen";
-  retry.textContent = "Erneut verbinden";
-  disconnect.textContent = "Trennen";
   description.setAttribute("aria-live", "polite");
   actions.setAttribute("class", "device-card__actions");
   diagnostics.setAttribute("class", "device-card__details");
@@ -110,10 +116,16 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
     renderSlotState(slot, elements, slot.adapter.status());
   };
 
-  const connect = (action: () => Promise<void>): void => {
-    void action().catch(() => {
+  const connect = async (trigger: ClickTarget, action: () => Promise<void>): Promise<void> => {
+    trigger.setAttribute("aria-busy", "true");
+
+    try {
+      await action();
+    } catch {
       renderSlotState(slot, elements, "error");
-    });
+    } finally {
+      trigger.setAttribute("aria-busy", "false");
+    }
   };
 
   bindActions(slot, elements, connect);
@@ -129,6 +141,7 @@ function renderSlot(slot: ConnectSlot, bus: EventBus): HTMLElement {
 
 interface ClickTarget {
   readonly addEventListener: (type: "click", listener: () => void) => void;
+  readonly setAttribute: (name: string, value: string) => void;
 }
 
 function bindActions(
@@ -138,32 +151,32 @@ function bindActions(
     retry: ClickTarget;
     disconnect: ClickTarget;
   }>,
-  connect: (action: () => Promise<void>) => void,
+  connect: (trigger: ClickTarget, action: () => Promise<void>) => Promise<void>,
 ): void {
   buttons.choose.addEventListener("click", () => {
-    connect(() => slot.adapter.select());
+    void connect(buttons.choose, () => slot.adapter.select());
   });
   buttons.retry.addEventListener("click", () => {
-    connect(() => slot.adapter.connect());
+    void connect(buttons.retry, () => slot.adapter.connect());
   });
   buttons.disconnect.addEventListener("click", () => {
-    connect(() => slot.adapter.disconnect());
+    void connect(buttons.disconnect, () => slot.adapter.disconnect());
   });
 }
 
 export function mountConnectDialog(slots: readonly ConnectSlot[], bus: EventBus): void {
-  const open = document.createElement("button");
+  const open = button("Geräte verbinden");
   const dialog = document.createElement("dialog");
   const header = document.createElement("header");
   const title = document.createElement("h2");
-  const close = document.createElement("button");
+  const close = button("Schließen");
   const body = document.createElement("div");
   const hint = document.createElement("p");
   const setup = document.createElement("details");
   const setupSummary = document.createElement("summary");
   const setupWarning = document.createElement("p");
 
-  open.textContent = "Geräte verbinden";
+  open.setAttribute("class", "btn btn--secondary");
   // oxlint-disable-next-line unicorn/prefer-dom-node-dataset -- Keep the navigation hook on the attribute API supported by the existing structural DOM adapter.
   open.setAttribute("data-game-action", "devices");
   dialog.setAttribute("class", "connect-dialog");
@@ -171,7 +184,7 @@ export function mountConnectDialog(slots: readonly ConnectSlot[], bus: EventBus)
   title.textContent = "Bluetooth-Geräte";
   title.id = "connect-title";
   dialog.setAttribute("aria-labelledby", title.id);
-  close.textContent = "Schließen";
+  close.setAttribute("class", "btn btn--secondary");
   close.setAttribute("autofocus", "");
   header.setAttribute("class", "connect-dialog__header");
   body.setAttribute("class", "connect-dialog__body");

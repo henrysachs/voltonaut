@@ -1,4 +1,4 @@
-/* oxlint-disable typescript/prefer-readonly-parameter-types -- Browser-owned DOM nodes and Playwright locators retain native mutable members. */
+/* oxlint-disable typescript/prefer-readonly-parameter-types -- Browser evaluate callbacks receive mutable DOM values and this helper only reads them. */
 import type { Page } from "@playwright/test";
 
 const INTERACTIVE_SELECTOR = [
@@ -227,20 +227,22 @@ function readDocument(page: Readonly<Page>): Promise<Pick<LayoutSnapshot, "docum
   }));
 }
 
-export function readLayout(page: Readonly<Page>): Promise<LayoutSnapshot> {
-  return Promise.all([
+export async function readLayout(page: Readonly<Page>): Promise<LayoutSnapshot> {
+  const [rects, content, tabs, footer, document] = await Promise.all([
     readRects(page),
     readContent(page),
     readTabs(page),
     readFooterOverlaps(page),
     readDocument(page),
-  ]).then(([rects, content, tabs, footer, document]) => ({
+  ]);
+
+  return {
     ...rects,
     ...content,
     ...tabs,
     ...footer,
     ...document,
-  }));
+  };
 }
 
 export async function settleLayout(page: Readonly<Page>): Promise<void> {
