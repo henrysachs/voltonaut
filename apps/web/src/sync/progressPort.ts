@@ -2,9 +2,11 @@ import {
   ProgressCheckpointBatchSchema,
   ProgressConsentStateSchema,
   ProgressConsentUpdateSchema,
+  ProgressHistoryResponseSchema,
   ProgressRangeResponseSchema,
   type ProgressCheckpointBatch,
   type ProgressConsentState,
+  type ProgressHistoryResponse,
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 import { PrivateRequestError, privateRoute, type PrivateSend } from "./apiRoute.js";
@@ -14,6 +16,8 @@ export interface ProgressPort {
   readonly status: () => Promise<ProgressConsentState>;
   readonly update: (enabled: boolean) => Promise<ProgressConsentState>;
   readonly submit: (batch: ProgressCheckpointBatch) => Promise<VoltsRideRangeReceipt>;
+  /** Newest server-confirmed journals (spec E6-11). */
+  readonly history: () => Promise<ProgressHistoryResponse>;
 }
 
 export const progressRoutes = {
@@ -31,6 +35,12 @@ export const progressRoutes = {
     response: ProgressConsentStateSchema,
     credentials: "omit",
   }),
+  history: privateRoute({
+    method: "GET",
+    path: () => "/v1/me/progress-history",
+    response: ProgressHistoryResponseSchema,
+    credentials: "omit",
+  }),
   submit: privateRoute({
     method: "POST",
     path: () => "/v1/progress/checkpoints",
@@ -44,6 +54,7 @@ export function progressPort(send: PrivateSend, generation: number): ProgressPor
   return {
     status: () => send(progressRoutes.status, null),
     update: (enabled) => send(progressRoutes.update, { enabled, sessionGeneration: generation }),
+    history: () => send(progressRoutes.history, null),
     async submit(batch) {
       const payload = ProgressCheckpointBatchSchema.parse(batch);
       const response = await send(progressRoutes.submit, payload);

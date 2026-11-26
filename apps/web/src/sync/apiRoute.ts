@@ -41,6 +41,7 @@ export type PrivatePath =
   | "/v1/me/export"
   | "/v1/me"
   | "/v1/me/progress-consent"
+  | "/v1/me/progress-history"
   | "/v1/progress/checkpoints"
   | "/v2/rides"
   | `/v2/rides?cursor=${string}`

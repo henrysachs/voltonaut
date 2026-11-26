@@ -22,6 +22,7 @@ Volts sind Voltonauts Währung, vergleichbar mit Zwifts Ingame-Währung: man ver
 
 ### Darstellung: Blitze ⚡
 
+- Stand [E6-11](specs/E6-11-progress-display.md): Das HUD zeigt oben rechts `⚡ <vorläufig> · <bestätigt> · <Status>`. Die Vorschau rechnet mit `calculateBaseRewards` aus nativen Checkpoint-Fakten, ohne Tageslimit. Bestätigt sind nur Volts aus Server-Quittungen des laufenden Journals. Status: Sim, Gast, aus, ausstehend, wird synchronisiert, offline, Fehler, bestätigt. Die Historie bestätigter Fahrten und der Server-Kontostand stehen im Konto-Menü. Animation und Blitz-Partikel folgen später.
 - Symbol ist ein **kleiner Blitz**. HUD: animierter Blitz-Zähler oben rechts; bei jedem verdienten Volt-Paket „fliegt" ein Blitz in den Zähler (Partikel + kurzer Glow, max. 1 Animation/s, damit es nicht nervt).
 - **In-World-Pickups:** schwebende, rotierende Blitz-Sprites/Meshes über der Straße (Emissive-Material, leichte Bloom-Aura, Sammel-Sound). Positionen deterministisch pro Route (`route.seed`), z. B. alle 1–2 km und auf Bergwertungen dichter. Einsammeln = Fahrer passiert die Distanzmarke (keine Lenkung nötig).
 - Zusammenfassung nach der Fahrt: Blitz-Regen-Animation mit Aufschlüsselung (Arbeit, Höhenmeter, Pickups, Boni).

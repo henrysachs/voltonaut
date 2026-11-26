@@ -5,8 +5,10 @@ import {
   ProgressAccountExportSchema,
   RideProgressPhysicsSchema,
   type ProgressAccountExport,
+  type ProgressHistoryResponse,
 } from "@voltonaut/shared";
 import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
+import { progressHistoryPage } from "./progress.history.js";
 import { ProgressRangeStore } from "./progress.range-store.js";
 import {
   PROGRESS_TABLES,
@@ -57,6 +59,11 @@ export class ProgressAccountDataService {
       journals: this.journalRows(userId).map((row) => this.exportJournal(row)),
       ranges: this.rangeRows(userId).map((row) => this.exportRange(row)),
     });
+  }
+
+  /** Confirmed journals for the in-game history (spec E6-11). */
+  public historyPage(userId: string, before: string | undefined): ProgressHistoryResponse {
+    return progressHistoryPage(this.db, this.store, this.tables, { userId, before });
   }
 
   public deleteOwn(userId: string): void {
