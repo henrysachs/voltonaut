@@ -10,23 +10,9 @@ export type SyncFailure =
   | "superseded";
 
 export class PrivateRequestError extends Error {
-  /**
-   * @param retryAfterS Seconds a rate-limited (429) request must wait, from `Retry-After`;
-   * undefined for every other failure or when the server sent no usable value.
-   */
-  constructor(
-    override readonly cause: SyncFailure,
-    readonly retryAfterS?: number,
-  ) {
+  constructor(override readonly cause: SyncFailure) {
     super(cause);
   }
-}
-
-/** Whole seconds from a `Retry-After` header, capped at an hour; dates and junk are ignored. */
-export function retryAfterSeconds(header: string | null): number | undefined {
-  return header !== null && /^\d{1,6}$/u.test(header.trim())
-    ? Math.min(Number(header.trim()), 3600)
-    : undefined;
 }
 
 /**
@@ -55,7 +41,6 @@ export type PrivatePath =
   | "/v1/me/export"
   | "/v1/me"
   | "/v1/me/progress-consent"
-  | "/v1/me/progress-history"
   | "/v1/progress/checkpoints"
   | "/v2/rides"
   | `/v2/rides?cursor=${string}`
@@ -237,9 +222,6 @@ async function deliver<Out>(
 }
 
 async function parseResponse<T>(response: ApiResponse, schema: ResponseSchema<T>): Promise<T> {
-  if (response.status === 429)
-    throw new PrivateRequestError("retry", retryAfterSeconds(response.headers.get("Retry-After")));
-
   if (response.status !== 200 && response.status !== 204)
     throw new PrivateRequestError(statusFailure(response.status));
 

@@ -8,8 +8,6 @@ export * from "./economy.js";
 
 export * from "./progress.js";
 
-export * from "./progressHistory.js";
-
 export * from "./shop.js";
 
 export * from "./loadout.js";

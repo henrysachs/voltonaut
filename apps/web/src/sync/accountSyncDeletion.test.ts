@@ -103,26 +103,14 @@ it("does not return a late export after the owning session ends", async () => {
   await expect(exporting).resolves.toBeUndefined();
 });
 
-it("reports a failed export without promising a retry window", async () => {
+it("explains the one-minute retry window when an export is rejected", async () => {
   const f = fixture();
   f.login(A);
   f.exportFailure = true;
 
   await expect(f.sync.exportAccount()).resolves.toBeUndefined();
   expect(JSON.stringify(f.sync.view())).toContain(
-    "Datenexport nicht bestätigt. Keine Datei erzeugt; Verbindung und Anmeldung prüfen.",
-  );
-  expect(JSON.stringify(f.sync.view())).not.toContain("Minute");
-});
-
-it("names the rate limit and its wait when the server answers 429", async () => {
-  const f = fixture();
-  f.login(A);
-  f.exportRateLimitS = 42;
-
-  await expect(f.sync.exportAccount()).resolves.toBeUndefined();
-  expect(JSON.stringify(f.sync.view())).toContain(
-    "Datenexport ist nur einmal pro Minute möglich. Neuer Versuch in 42 s. Keine Datei erzeugt.",
+    "Nach einem gerade angeforderten Export ist ein neuer erst nach einer Minute möglich",
   );
 });
 

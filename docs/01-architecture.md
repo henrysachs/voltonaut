@@ -7,6 +7,7 @@
 | Verbindungsstatus, Rohdaten der Geräte                                     | `devices/` (je Adapter)                                      | engine, ui                                       | nur Adapter selbst                                                                 |
 | `RideState` (Position, Tempo, Gang, Zeit, Summen, Bots, Drafting, Pickups) | `packages/engine` (nur `internal/`)                          | world, avatar, game, ui (als `RideSnapshot`)     | nur `engine.tick()` und Engine-Intents                                             |
 | `Route` / `ElevationProfile`                                               | `world/` (Laden/Erzeugen)                                    | engine (Steigung), world (Mesh), game (Segmente) | unveränderlich nach Laden                                                          |
+| `WorldData` (Straßennetz, Wege, Revision; ADR-033)                         | `packages/engine/src/world` (reine Daten, `createWorld`)     | engine (Route je Weg), später world (Gelände)    | unveränderlich; jede Geometrieänderung erhöht die Revision                         |
 | `AvatarConfig` (gespeicherte Ausrüstung)                                   | **Server** `inventory/`, Client-Spiegel `sync/GarageLoadout` | ui (Garage), avatar (über `render.look`)         | „Ausrüsten“ → `PUT /v1/me/loadout`; Garage-Vorschau bleibt lokal                   |
 | `RiderProfile` (Gewicht, Größe, FTP, Kettenblatt …)                        | Server `accounts/`, Client-Cache in `sync/`                  | engine (zu Fahrtbeginn), avatar (Größe), ui      | Intent `profile.update` → `sync/` → `PUT /v1/me/profile`                           |
 | Mitgliedsstufe, VIP und getrennte Adminberechtigung                        | Server `accounts/`, Spiegel unter `AccountSync`              | Konto-Menü, geschützte Adminrouten               | Mitgliedschaft über Admin-PATCH, Rolle ausschließlich per Operator-CLI             |
@@ -200,6 +201,16 @@ interface SegmentDef {
   kind: "sprint" | "kom" | "lap";
   startM: Meters;
   endM: Meters;
+}
+// Welt (ADR-033): Eine Route ist ein Weg durch ein Straßennetz; createWorld setzt ihn zu RouteData zusammen.
+interface WorldData {
+  id: string;
+  name: string;
+  revision: string;
+  regions: ReadonlyArray<{ id: string; name: string; scenery: string }>; // Biom je Gebiet
+  nodes: ReadonlyArray<{ id: string; x: number; z: number; elevationM: Meters }>;
+  edges: ReadonlyArray<RoadEdge>; // regionId, fromNodeId, toNodeId, lengthM, centerline (knickfreie Sehnen), profileSamples
+  paths: ReadonlyArray<WorldPath>; // steps: { edgeId, direction: "forward" | "reverse" }[], loop, segments; scenery = Region des ersten Abschnitts
 }
 
 // avatar

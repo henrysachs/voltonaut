@@ -8,7 +8,7 @@ import { FRAME_SPECS, WHEEL_SPECS } from "./bikeSpecs.js";
 const FRAME_KEYS = FRAME_SPECS.map((spec) => spec.key);
 const WHEEL_KEYS = WHEEL_SPECS.map((spec) => spec.key);
 
-import { avatarLook, sameAvatarLook } from "./look.js";
+import { avatarLook } from "./look.js";
 
 function withBike(frameId: string, wheelsId: string): ReturnType<typeof AvatarConfigSchema.parse> {
   return AvatarConfigSchema.parse({
@@ -124,37 +124,5 @@ describe("bike specs for future catalog items", () => {
 
     expect(look.frame.key).toBe("race");
     expect(look.wheels.key).toBe("alloy");
-  });
-});
-
-describe("same avatar look", () => {
-  it("treats identical looks as equal and any changed slot or color as different", () => {
-    const { rider, bike } = DEFAULT_AVATAR_CONFIG;
-
-    // Same values, keys in another order: the schema must restore one order before comparing.
-    const reordered = {
-      bike: { wheelsId: bike.wheelsId, frameColor: bike.frameColor, frameId: bike.frameId },
-      rider: {
-        glassesId: rider.glassesId,
-        shoesId: rider.shoesId,
-        helmetColor: rider.helmetColor,
-        helmetId: rider.helmetId,
-        jerseyColors: rider.jerseyColors,
-        jerseyId: rider.jerseyId,
-        skinTone: rider.skinTone,
-      },
-    };
-
-    expect(JSON.stringify(reordered)).not.toBe(JSON.stringify(DEFAULT_AVATAR_CONFIG));
-    expect(sameAvatarLook(DEFAULT_AVATAR_CONFIG, reordered)).toBe(true);
-    expect(
-      sameAvatarLook(DEFAULT_AVATAR_CONFIG, withBike("frame.race", "wheels.carbon-deep")),
-    ).toBe(false);
-    expect(
-      sameAvatarLook(DEFAULT_AVATAR_CONFIG, {
-        ...DEFAULT_AVATAR_CONFIG,
-        rider: { ...DEFAULT_AVATAR_CONFIG.rider, helmetColor: "#ec6b48" },
-      }),
-    ).toBe(false);
   });
 });

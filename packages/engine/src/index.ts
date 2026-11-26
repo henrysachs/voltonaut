@@ -14,6 +14,14 @@ export * from "./elevation/route.js";
 
 export * from "./elevation/data/index.js";
 
+export * from "./world/types.js";
+
+export * from "./world/world.js";
+
+export * from "./world/singleRouteWorld.js";
+
+export * from "./world/data/index.js";
+
 export * from "./trainer/gradeMap.js";
 
 export * from "./trainer/commands.js";

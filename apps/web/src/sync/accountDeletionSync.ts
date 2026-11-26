@@ -3,7 +3,7 @@ import type { AccountDataView } from "./accountDataView.js";
 import type { AccountOutbox } from "./accountOutbox.js";
 import type { DeletionIntents, DeletionOwner } from "./accountDeletion.js";
 import type { AccountDataPort } from "./accountPorts.js";
-import { PrivateRequestError, type LeaseBinding } from "./apiRoute.js";
+import type { LeaseBinding } from "./apiRoute.js";
 import type { ApplicationSession } from "./applicationSession.js";
 import type { ProgressOutbox } from "./progressOutbox.js";
 
@@ -30,14 +30,6 @@ type PatchAccount = (lease: LeaseBinding, message: string) => void;
 
 type PublishView = (view: AccountDataView) => void;
 
-/** A rate limit gets its own message with the wait; every other failure stays generic (#157). */
-function exportFailureText(retryAfterS: number | undefined): string {
-  if (retryAfterS !== undefined)
-    return `Datenexport ist nur einmal pro Minute möglich. Neuer Versuch in ${Math.max(1, retryAfterS)} s. Keine Datei erzeugt.`;
-
-  return "Datenexport nicht bestätigt. Keine Datei erzeugt; Verbindung und Anmeldung prüfen.";
-}
-
 export async function exportAccountData(
   lease: DataLease | undefined,
   patch: PatchAccount,
@@ -48,10 +40,10 @@ export async function exportAccountData(
     const value = await lease.data.exportAccount();
 
     return lease.current() ? value : undefined;
-  } catch (error) {
+  } catch {
     patch(
       lease,
-      exportFailureText(error instanceof PrivateRequestError ? error.retryAfterS : undefined),
+      "Datenexport nicht bestätigt. Keine Datei erzeugt; Verbindung und Anmeldung prüfen. Nach einem gerade angeforderten Export ist ein neuer erst nach einer Minute möglich.",
     );
 
     return undefined;

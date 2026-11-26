@@ -13,8 +13,6 @@ import { ProgressSync } from "./sync/progressSync.js";
 import { openProgressOutboxDatabase } from "./sync/progressOutboxDatabase.js";
 import type { ProgressOutbox } from "./sync/progressOutbox.js";
 import { mountProgressPanel } from "./ui/progressPanel.js";
-import { ProgressHistory, rereadOnReceipts } from "./sync/progressHistory.js";
-import { mountProgressHistoryPanel } from "./ui/progressHistoryPanel.js";
 import { sessionAccountScope, type AccountScope } from "./sync/accountScope.js";
 import type { AccountLease } from "./sync/privateAuthTransport.js";
 import { GarageLoadout } from "./sync/garageLoadout.js";
@@ -47,13 +45,9 @@ function setupProgress(
   outbox: () => Promise<ProgressOutbox>,
 ): ProgressSync {
   const progress = new ProgressSync({ scope, outbox });
-  const history = new ProgressHistory(scope);
   mountProgressPanel(progress);
-  mountProgressHistoryPanel(history);
-  rereadOnReceipts(progress, history);
   window.addEventListener("online", () => {
     void progress.retry("resume");
-    void history.refresh();
   });
   window.addEventListener("pagehide", () => {
     void progress.retry("resume");
