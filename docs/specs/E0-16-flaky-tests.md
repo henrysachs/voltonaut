@@ -1,8 +1,8 @@
 # Spec E0-16 – Wackelnde Tests
 
 - **Roadmap-Bezug:** E0, Gate-Stabilität (`mise run check` blockiert PRs)
-- **Status:** In Arbeit (Teilstand, Draft-PR)
-- **Betroffene Module:** `apps/web/src/game`, `apps/web/src/pwa` (nur Tests), `apps/web/e2e`
+- **Status:** Teilstand: AK1–AK4 und AK6 umgesetzt. AK5 offen; Fixpfade siehe Abschnitte.
+- **Betroffene Module:** `apps/web/src/game`, `apps/web/src/world`, `apps/web/src/pwa` (nur Tests), `apps/web/e2e`
 
 ## Ziel
 
@@ -10,9 +10,10 @@ Für jeden wackelnden Test die echte Ursache finden und beheben, ohne Timeouts, 
 
 ## Messumgebung
 
-- Lokal: macOS, 14 Kerne. Last: 14 × `yes > /dev/null`.
+- Lokal: macOS, 14 Kerne, Node 24.22.3. Last: 14 × `yes > /dev/null`. Dazu kam Fremdlast durch parallel laufende Agenten (Load 30–150) und den Echtzeitscanner Microsoft Defender. Die Fremdlast ist nicht steuerbar. Lastangaben stehen deshalb pro Messung.
 - CI-nah: Container `mcr.microsoft.com/playwright:v1.65.1-noble` (CI-Image), Node 24.22.3, `--cpus=4`, `CI=true`, voller `vitest run --coverage`.
-- Basis der Vorher-Messungen: `0d3951a`. Fix rebased auf `a9fba9e`.
+- Basen: ride-recording, pwa und fun-mode `0d3951a` (Fix rebased auf `a9fba9e`, PR #136). ride-menu, progress, Garage und Server `aacd0cd` (Fix rebased auf `e8818a2`).
+- Gate: Die lokale Maschine ist überlastet. Der volle `mise run check` läuft in CI. Lokal laufen nur gezielte Prüfungen.
 
 ## Befunde pro Test
 
@@ -61,24 +62,45 @@ Für jeden wackelnden Test die echte Ursache finden und beheben, ohne Timeouts, 
 - **Fix (Test):** Der Test trennt den Sim-Trainer über den Gerätedialog. Er wartet auf „Paused (auto)“: Ohne Daten rollt der Fahrer aus und pausiert. Erst dann wählt er den Spaßmodus und prüft den leeren Slot. Danach verbindet er den Trainer wieder („Gerät wählen“, neuer Helfer `connectSimTrainer` in `e2e/helpers/simTrainer.ts`) und fährt zur nächsten Box (alle 800 m ab 300 m). Sim-Uhr und Assertions bleiben unverändert. Eine erste Fassung wartete auf „0.0 km/h“. Das scheiterte 19/20, weil die Geschwindigkeit beim Ausrollen unter 0,5 m/s einfriert, sobald die Auto-Pause greift (1,1 km/h). Korrigiert auf den Pausenstatus.
 - **Nachher:** Verschachtelter A/B-Lauf unter Last (14 × `yes`), alter Test (`HEAD`) und neuer Test im selben Playwright-Lauf, `--repeat-each=20`: **alt 8/20 rot** („Leichtgewicht bereit · Taste P“), **neu 20/20 grün**. Ein früherer Lauf unter Load 72–108 hatte 21/40 rot. Darunter waren 10/20 im unveränderten zweiten Test (`page.goto`-/Klick-Timeouts nach 30 s) und eine „Paused (auto)“-Zeitüberschreitung. Gewertet ist dieser Lauf als Überlast der Maschine, nicht als Befund zum Fix.
 
-### `apps/web/e2e/ride-menu-dismissal.spec.ts:49` – Ursache offen
+### `apps/web/e2e/ride-menu-dismissal.spec.ts:49` und `progress-panel.spec.ts:18` – zwei Ursachen behoben, Rest Ressourcenbegrenzung
 
-- **Rot vorher:** lokal (Stand `a9fba9e`) `--repeat-each=10` zusammen mit progress-panel und garage-shop: 1/10. Fehler: `data-distance-m` stieg in 5 s nur um 0,025 m statt > 2 m.
-- **Hypothese (unbelegt):** Die Fahrt startet mit realer Uhr (ohne `clock=fast`) aus dem Stand; unter Last erreicht der Fahrer in 5 s keine 2 m, oder die Render-Diagnose liefert unter Last keine frischen Werte. Nicht verifiziert.
+Beide Tests messen „die Fahrt läuft weiter“ über `data-distance-m` der Render-Diagnose, also über die zuletzt **gezeichnete** Welt, nicht über die Engine. Messung (Instrumentierung, nicht committet; Basis `aacd0cd`, 14 × `yes`, Fremdlast anderer Agenten, Load 30–60):
 
-### `apps/web/e2e/progress-panel.spec.ts:18` – Ursache offen
+- **Die Fahrt selbst läuft.** Die HUD-Distanz und die Engine-Snapshots im Render-Worker wachsen ab dem Start stetig (Sim-Fahrer nach 3 s bei ~11 km/h). Die Hypothese „Fahrt startet zu langsam“ ist widerlegt.
+- **Ursache 1 (App, `world/frame.ts`):** Unter Last liegen zwischen zwei Render-Worker-Frames 1,5–3,7 s. Der `FrameSampler` interpolierte beim ersten Frame nach so einer Lücke vom zuletzt **gezeichneten** Snapshot zum neuen mit `alpha = 0`. Er zeichnete also noch einmal den Stand von vor der Lücke. Beleg: Die Diagnose blieb 3,6 s lang bei 0,067 m, während der Worker schon Snapshots mit 7,8–8,9 m hatte. Jeder Frame zeigte damit den Stand des vorigen Frames. Für Spieler zeigt die Welt nach jedem Ruckler einen veralteten Stand.
+- **Ursache 2 (Test-Race):** Die Basis wurde gelesen, bevor der Render-Worker zum ersten Mal gezeichnet hatte. Ohne Attribut liefert `Number(null)` den Wert 0, und das 5-s-Fenster begann vor dem ersten Bild.
+- **Fix:** `FrameSampler` startet nach einer Frame-Lücke > 250 ms beim neuesten Snapshot. Das ist dieselbe Grenze, bis zu der der Sampler bisher den Snapshot-Abstand glättete. Unit-Test `frame.test.ts` „draws the newest snapshot after a long frame gap …“: ohne Fix rot (`expected +0 to be 15`), mit Fix grün. E2E: `e2e/helpers/rideWorld.ts` wartet vor der Basismessung auf das echte Bereitschaftssignal (`aria-busy="false"` am Canvas, gesetzt erst nach dem ersten Renderaufruf mit Draw Calls, ADR-019). Fenster, Schwelle (+2 m) und Timeouts sind unverändert.
+- **Rot vorher (unverändert, 14 × `yes`, je Test `--repeat-each=10`):** 20/20 rot (Load ~56). Werte 0–0,28 m.
+- **Gegenprobe (gleiche Last):** Nur mit Testfix waren 20/20 rot. Nur mit App-Fix waren 18/20 und in einem zweiten Lauf 37/40 rot. Es braucht beide Fixes.
+- **Nachher (beide Fixes, 14 × `yes`, je Test `--repeat-each=20`):** 40/40 grün (Load ~59). Zweiter Lauf: 33/40 grün, 7 rot. Während dieses Laufs stieg die Fremdlast von 31 auf 97. Die roten Läufe zeigten nach dem ersten Bild 5 s lang **keinen** weiteren Frame (Werte 0–0,13 m).
+- **Rest (Ressourcenbegrenzung, nicht behoben):** Ab etwa Load 90 liefert der Render-Worker (SwiftShader, Software-GL) länger als 5 s kein Bild. Dafür ist keine App-Ursache belegt. Eine Mitigation wäre weniger Parallelität, und die braucht eine Konfigurationsänderung mit Henrys Freigabe. Sie ist nicht umgesetzt.
 
-- **Rot vorher:** lokal `--repeat-each=10` (Stand `a9fba9e`): 0/10. Im Gate-Lauf unter hoher Rechnerlast (Load ~50): 1 rot mit demselben Muster wie `ride-menu-dismissal.spec.ts:49` (`data-distance-m` stieg in 5 s nur um 0,008 m statt > 2 m).
-- **Hypothese (unbelegt):** gemeinsame Ursache mit `ride-menu-dismissal.spec.ts:49` (Fahrt mit realer Uhr erreicht unter Last in 5 s keine 2 m oder Diagnosewerte veralten). Nicht verifiziert.
+### `apps/web/e2e/progress-panel.spec.ts:25` – neu beobachtet, offen
 
-### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache offen
+- **Beobachtung (Zweitreview zu #144):** 1× unter Fremdlast stand nach 5 s noch „Waiting for devices“ statt „Sim connected“. Die Sim-Verbindung beim Mount war in dieser Zeit nicht fertig.
+- **Ursache:** nicht untersucht. Ein Fix ist nicht umgesetzt. Kein Rückschluss auf `frame.ts` oder den Helper, weil die Zeile vor beiden liegt.
 
-- **Rot vorher:** lokal `--repeat-each=10` (Stand `a9fba9e`): 0/20. Nicht reproduziert; keine Aussage zur Ursache.
+### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache belegt, Fix offen
 
-### Server `check-config.test.ts`, `main.shutdown.test.ts`, `admin.test.ts` – Ursache offen
+- **Rot vorher (14 × `yes`, `--repeat-each=10`, `aacd0cd`):** Im Messlauf beider Tests waren mindestens 8/20 rot. Die Ausgabe war gekürzt, die genaue Zahl fehlt. In der Gegenprobe war :153 10/10 rot. Im Gate-Lauf `E2E_PORT=5194` (Fremdlast) waren :37, :86 und :153 rot. Fehler: Klick oder `check` wartet 30 s auf „visible, enabled and stable“ (Item-Button, Farb-Radio).
+- **Ursache (App, Main-Thread-WebGL):** Die Garage-Vorschau (`ui/garage/preview.ts`) zeichnet mit Three.js auf dem Main-Thread bei jedem `requestAnimationFrame`. ADR-019 deckt nur die Fahrtwelt ab. Unter Last misst der Main-Thread mit offener Garage Long Tasks von 1,5–2,5 s, also nur 3–4 Frames in 5 s. `renderer.render` selbst kostet in JS 0–1 ms, die Zeit liegt im synchronen Software-GL-Pfad. Ohne Garage hat derselbe Tab 60 fps. Playwright prüft „stable“ über aufeinanderfolgende rAF-Frames. Mit ~2 s pro Frame reichen 30 s nicht für mehrere Aktionen. Das Element bewegt sich nicht (Rechteck über 6 Frames identisch).
+- **Gegenprobe (gleiche Last):** WebGL nur auf Main abgeschaltet (Weltrenderer im Worker unberührt): :153 10/10 grün, unverändert 10/10 rot. Mit stillgelegtem Weltrenderer und laufender Garage gibt es weiter Long Tasks von 0,5 s. Die Ursache ist die Garage, nicht der Welt-Worker.
+- **Fixpfad:** Die Garage-Vorschau wandert wie ADR-019 in einen Worker mit `OffscreenCanvas`. Das geschieht im laufenden Zweig `feat/garage-preview-worker` (ADR-032), nicht in diesem Teilstand. Eine Drosselung der Vorschau-Bildrate allein zum Bestehen wäre verbogene Grafikqualität und bleibt ausgeschlossen.
 
-- **Rot vorher:** lokal voller `vitest run --coverage` unter parallelem Debug-Last-Lauf: 1/3 mit 6 Server-Timeouts (5 s) gleichzeitig (`check-config` ×3, `main.shutdown`, `admin` ×2). Ohne Fremdlast 0/2, isoliert 0/1.
-- **Hypothese (unbelegt):** Diese Tests starten Kindprozesse (`execFile`), deren Start unter CPU-Sättigung allein mehrere Sekunden dauert. Das wäre Ressourcenbegrenzung, kein Code-Fehler. Nicht pro Schritt gemessen.
+### Server `check-config.test.ts`, `main.shutdown.test.ts`, `admin.test.ts` – Ressourcenbegrenzung, kein Code-Fehler belegt
+
+- **Rot vorher (14 × `yes` + Fremdlast, die drei Dateien, 3 Läufe):** 3/3 Läufe rot, je 7/7 Tests (5-s-Timeouts). Im Gate-Lauf (Fremdlast Load 30–70, ohne eigene Last) zusätzlich rot: `database.test.ts`, `strava-migrations.test.ts`, `ledger-migrations.test.ts`. Diese starten **keine** Kindprozesse.
+- **Messung pro Schritt:**
+  - Kein Kompilieren pro Test. `buildServerProcess` baut einmal pro Datei in `beforeAll` (0,25 s ohne, 1,1 s mit Last).
+  - Ein CLI-Kind lädt 1026 ESM-Module aus `node_modules`.
+  - Ohne Last braucht ein Kind 0,5–1,2 s Wandzeit bei ~0,5 s CPU.
+  - Unter Last braucht es 6,9–9,1 s Wandzeit bei nur ~1,25 s CPU. Davon entfallen 5,5–7,2 s auf das Laden der Module (Sample: überwiegend `__open`, `__psynch_cvwait`). Einzelne Läufe hingen 60–93 s fast ohne CPU.
+  - Parallel lief der Echtzeitscanner von Microsoft Defender (`wdavdaemon`) mit über 300 % CPU.
+  - `node -e 0` braucht unter Last 0,2–5 s.
+- **Bewertung:** Die Zeit liegt im Prozessstart bzw. Dateizugriff unter Sättigung, nicht im Testcode. Dass auch Migrationstests ohne Kindprozess scheitern, stützt das. **Ressourcenbegrenzung, kein Fix.**
+- **Fixpfad:** Der laufende Zweig `perf/server-cli-entry` verkleinert den Importgraphen der CLI-Einstiege. Damit lädt ein Kind weniger Module. Dieser Teilstand enthält das nicht.
+- **Nicht änderbar:** Microsoft Defender ist verwaltete Rechnerkonfiguration. Eine Ausnahme für Temp- oder `node_modules`-Verzeichnisse steht nicht zur Verfügung.
+- **Verworfen:** `node_modules` ins Testartefakt bündeln. Das ändert das geprüfte Artefakt gegenüber Produktion.
 
 ## Abnahmekriterien
 
@@ -86,16 +108,19 @@ Für jeden wackelnden Test die echte Ursache finden und beheben, ohne Timeouts, 
 - [x] AK2 – Leeres Fenster > 1 s ohne Trainerdaten zeigt „leer oder ungültig“ statt Zod-JSON (Unit-Test, vorher rot).
 - [x] AK3 – `pwa.build.test.ts:263`: in drei Einzelschritte aufgeteilt, jede alte Assertion genau einmal. Unter Last: vorher 14/20 Dateiläufe mit rotem Update-Test, nachher Update-Tests 60/60 grün (20 Läufe × 3). A/B: alt 11/14 rot, neu 0/14.
 - [x] AK4 – `fun-mode.spec.ts:25`: Modus im Stand gewählt, keine App-Reihenfolgeursache. Vorher unter Last 7/20 rot (alter Test allein). A/B im selben Lauf: alt 8/20 rot, neu 20/20 grün.
-- [ ] AK5 – übrige Tests: Ursache belegt (offen).
+- [ ] AK5 – übrige Tests: Ursache belegt. Teilweise erfüllt: ride-menu-dismissal/progress-panel:18 zwei Ursachen behoben, Rest Ressourcenbegrenzung. Garage: Ursache belegt, Fix in `feat/garage-preview-worker` (ADR-032). Server: Fix in `perf/server-cli-entry`. progress-panel:25 offen.
+- [x] AK6 – `FrameSampler` zeichnet nach einer Frame-Lücke den neuesten Snapshot (Unit-Test, vorher rot).
 
 ## Testplan
 
-| AK  | Ebene | Datei                                                            |
-| --- | ----- | ---------------------------------------------------------------- |
-| AK1 | E2E   | `apps/web/e2e/ride-recording.spec.ts` (`--repeat-each=20`)       |
-| AK2 | Unit  | `apps/web/src/game/recordedRide.journal.test.ts`                 |
-| AK3 | Build | `apps/web/src/pwa/pwa.build.test.ts` (Schleife, Last, Container) |
-| AK4 | E2E   | `apps/web/e2e/fun-mode.spec.ts` (`--repeat-each=10`)             |
+| AK  | Ebene | Datei                                                                                                              |
+| --- | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| AK1 | E2E   | `apps/web/e2e/ride-recording.spec.ts` (`--repeat-each=20`)                                                         |
+| AK2 | Unit  | `apps/web/src/game/recordedRide.journal.test.ts`                                                                   |
+| AK3 | Build | `apps/web/src/pwa/pwa.build.test.ts` (Schleife, Last, Container)                                                   |
+| AK4 | E2E   | `apps/web/e2e/fun-mode.spec.ts` (`--repeat-each=10`)                                                               |
+| AK5 | E2E   | `ride-menu-dismissal.spec.ts:49`, `progress-panel.spec.ts:18`, `garage-shop.spec.ts` (`--repeat-each=10/20`, Last) |
+| AK6 | Unit  | `apps/web/src/world/frame.test.ts`                                                                                 |
 
 ## Nicht-Ziele
 
@@ -103,7 +128,11 @@ Keine Änderung an Timeouts, Retries, Sim-Uhr, Vitest-/Playwright-Konfiguration 
 
 ## Nachweisstand
 
-- `E2E_PORT=5191 mise run check` auf dem Endstand: grün (1918 Unit/Integration, 81 E2E). Vorherige Gate-Läufe unter hoher Rechnerlast scheiterten an den offenen Tests (Server-Timeouts ×6; progress-panel ×1).
-- AK3/AK4 (Branch `fix/flaky-pwa-funmode`): `fmt:check`, `lint`, `typecheck`, `depcruise` und `guard` grün. `vitest run apps/web/src/pwa/` ohne Last 26/26 grün. Playwright `fun-mode` + `ride-recording` mit `--workers=1 --repeat-each=3` ohne Last 21/21 grün. Ein lokaler Lauf von `mise run check` fand nicht statt, weil Henrys Rechner während der Lastmessung nicht bedienbar war. Das volle Gate ist die CI des PR.
+- **Nachweis PR #136 (AK1, AK2):** `E2E_PORT=5191 mise run check` auf dem damaligen Endstand grün (1918 Unit/Integration, 81 E2E). Vorherige Gate-Läufe unter hoher Rechnerlast scheiterten an den offenen Tests (Server-Timeouts ×6; progress-panel ×1).
+- **Nachweis PR #144 (AK6, Teil von AK5):**
+  - Lokal unter Fremdlast war `mise run check` nicht grün. Format, Lint, Typecheck, depcruise und guard waren grün. Rot waren Server-Timeouts und Garage-/Welt-Worker-Tests, alle in den offenen Ursachen oben.
+  - Das unabhängige Zweitreview bestätigt den Teilumfang. Unter Fremdlast war Base 9/10 rot, nur App-Fix 6/10 rot, beide Fixes 19/20 grün.
+  - Nach dem Rebase auf `e8818a2` liefen lokal gezielte Prüfungen, siehe PR. Der volle Gate läuft in CI auf dem exakten Head.
+- **Nachweis PR #149 (AK3, AK4):** `fmt:check`, `lint`, `typecheck`, `depcruise` und `guard` grün. `vitest run apps/web/src/pwa/` ohne Last 26/26 grün. Playwright `fun-mode` + `ride-recording` mit `--workers=1 --repeat-each=3` ohne Last 21/21 grün. Ein lokaler Lauf von `mise run check` fand nicht statt, weil Henrys Rechner während der Lastmessung nicht bedienbar war. Das volle Gate ist die CI des PR.
 
-Implementiert und softwaregeprüft: AK1–AK4. An echter Hardware geprüft: nein (nicht nötig). Bereitgestellt: nein.
+Implementiert und softwaregeprüft: AK1–AK4, AK6. An echter Hardware geprüft: nein (nicht nötig). Bereitgestellt: AK1, AK2, AK6.

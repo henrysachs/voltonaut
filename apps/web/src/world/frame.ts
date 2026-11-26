@@ -39,6 +39,9 @@ export interface FrameSampler {
   readonly sample: (ride: Readonly<RideSnapshot>, nowMs: number) => FrameInput;
 }
 
+/** Longest snapshot spacing that is smoothed; also the longest frame gap that still interpolates. */
+const MAX_INTERPOLATION_MS = 250;
+
 export function createFrameSampler(
   environment: Readonly<EnvironmentSettings> = DEFAULT_ENVIRONMENT_SETTINGS,
 ): FrameSampler {
@@ -51,9 +54,13 @@ export function createFrameSampler(
   return {
     sample(ride, nowMs) {
       if (ride !== current) {
-        previous = current ?? ride;
+        // After a long frame gap the last drawn snapshot is stale; starting from it would
+        // draw that old state again instead of the newest one.
+        const stale = lastFrameMs !== undefined && nowMs - lastFrameMs > MAX_INTERPOLATION_MS;
+
+        previous = stale ? ride : (current ?? ride);
         current = ride;
-        intervalMs = Math.max(1, Math.min(250, nowMs - receivedMs));
+        intervalMs = Math.max(1, Math.min(MAX_INTERPOLATION_MS, nowMs - receivedMs));
         receivedMs = nowMs;
       }
 

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openGameMenu } from "./helpers/gameMenu.js";
+import { drawnDistanceM } from "./helpers/rideWorld.js";
 
 const outside = { x: 30, y: 450 };
 
@@ -53,7 +54,7 @@ test("outside dismissal keeps the ordinary ride and an active recording running"
   const diagnostics = page.getByLabel("Render diagnostics");
   await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
-  const distanceM = Number(await diagnostics.getAttribute("data-distance-m"));
+  const distanceM = await drawnDistanceM(page);
   await page.mouse.click(outside.x, outside.y);
   await expect(page.getByRole("dialog", { name: "Fahrtmenü" })).not.toBeVisible();
   await expect
