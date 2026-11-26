@@ -3,7 +3,7 @@
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E4 (Render-Isolation nach E4-04) und E7 (Garage). Korrektur, keine neue Funktion.
 - **Status:** Review (PR #154). Unabhängiges Review ohne Codefehler; ADR-032 wartet auf Henrys Freigabe.
   - **Implementiert:** ja (Worker, Link, Port, Loop, Szene, Fehlerhinweis, Dispose).
-  - **Am Artefakt softwaregeprüft:** ja. Gesamtgate in CI-Lauf 45832934400 (Head `c3c4f7e`) grün. Lokal nach Rebase auf `d964d6f`: `fmt:check`, `lint`, `typecheck`, `depcruise`, `guard`, Unit-Tests `ui/garage`, `garage-shop.spec.ts:38` einzeln mit Screenshot sowie eine Long-Task-Probe.
+  - **Am Artefakt softwaregeprüft:** ja. Gesamtgate in CI-Lauf 45832934400 (Head `c3c4f7e`) grün. Lokal nach Rebase auf `d964d6f` bzw. `c5c0986`: `fmt:check`, `lint`, `typecheck`, `depcruise`, `guard`, Unit-Tests `ui/garage`, `garage-shop.spec.ts:38` einzeln mit Screenshot sowie eine Long-Task-Probe.
   - **An echter Hardware geprüft:** nein.
   - **Bereitgestellt:** nein.
 - **Betroffene Module:** `apps/web/src/ui/garage`, Garage-E2E-Fehlerinjektion

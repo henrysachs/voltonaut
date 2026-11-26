@@ -108,7 +108,7 @@ Beide Tests messen „die Fahrt läuft weiter“ über `data-distance-m` der Ren
 - [x] AK2 – Leeres Fenster > 1 s ohne Trainerdaten zeigt „leer oder ungültig“ statt Zod-JSON (Unit-Test, vorher rot).
 - [x] AK3 – `pwa.build.test.ts:263`: in drei Einzelschritte aufgeteilt, jede alte Assertion genau einmal. Unter Last: vorher 14/20 Dateiläufe mit rotem Update-Test, nachher Update-Tests 60/60 grün (20 Läufe × 3). A/B: alt 11/14 rot, neu 0/14.
 - [x] AK4 – `fun-mode.spec.ts:25`: Modus im Stand gewählt, keine App-Reihenfolgeursache. Vorher unter Last 7/20 rot (alter Test allein). A/B im selben Lauf: alt 8/20 rot, neu 20/20 grün.
-- [ ] AK5 – übrige Tests: Ursache belegt. Teilweise erfüllt: ride-menu-dismissal/progress-panel:18 zwei Ursachen behoben, Rest Ressourcenbegrenzung. Garage: Ursache belegt, Fix in `feat/garage-preview-worker` (ADR-032). Server: Fix in `perf/server-cli-entry`. progress-panel:25 offen.
+- [ ] AK5 – übrige Tests: Ursache belegt. Teilweise erfüllt: ride-menu-dismissal/progress-panel:18 zwei Ursachen behoben, Rest Ressourcenbegrenzung. Garage: Ursache belegt, Fix in [E4-12](E4-12-garage-preview-worker.md) / PR #154 (ADR-032), Nachher-Messung unter Last offen. Server: Fix in `perf/server-cli-entry`. progress-panel:25 offen.
 - [x] AK6 – `FrameSampler` zeichnet nach einer Frame-Lücke den neuesten Snapshot (Unit-Test, vorher rot).
 
 ## Testplan
