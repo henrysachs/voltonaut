@@ -129,9 +129,24 @@ describe("bike specs for future catalog items", () => {
 
 describe("same avatar look", () => {
   it("treats identical looks as equal and any changed slot or color as different", () => {
-    const copy = AvatarConfigSchema.parse(JSON.parse(JSON.stringify(DEFAULT_AVATAR_CONFIG)));
+    const { rider, bike } = DEFAULT_AVATAR_CONFIG;
 
-    expect(sameAvatarLook(DEFAULT_AVATAR_CONFIG, copy)).toBe(true);
+    // Same values, keys in another order: the schema must restore one order before comparing.
+    const reordered = {
+      bike: { wheelsId: bike.wheelsId, frameColor: bike.frameColor, frameId: bike.frameId },
+      rider: {
+        glassesId: rider.glassesId,
+        shoesId: rider.shoesId,
+        helmetColor: rider.helmetColor,
+        helmetId: rider.helmetId,
+        jerseyColors: rider.jerseyColors,
+        jerseyId: rider.jerseyId,
+        skinTone: rider.skinTone,
+      },
+    };
+
+    expect(JSON.stringify(reordered)).not.toBe(JSON.stringify(DEFAULT_AVATAR_CONFIG));
+    expect(sameAvatarLook(DEFAULT_AVATAR_CONFIG, reordered)).toBe(true);
     expect(
       sameAvatarLook(DEFAULT_AVATAR_CONFIG, withBike("frame.race", "wheels.carbon-deep")),
     ).toBe(false);
