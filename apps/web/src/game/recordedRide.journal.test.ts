@@ -195,6 +195,24 @@ it("invalidates only the bad raw channel, preserving an omitted but still fresh 
   expect(capture.track.samples.at(-1)?.powerW).toBeUndefined();
 });
 
+it("rejects a long window without trainer data as empty and keeps it discardable", () => {
+  const run = setup();
+  run.ingest(
+    { type: "device.status", tS: 0, kind: "trainer", id: "trainer", status: "disconnected" },
+    0,
+  );
+  run.command("start", 0);
+  run.advance(1000);
+  run.advance(2000);
+  const result = run.command("finish", 2500);
+  expect(result).toMatchObject({
+    kind: "failed",
+    message: "Aufnahme leer oder ungültig. Mindestens eine Sekunde mit Trainerdaten aufnehmen.",
+    view: { kind: "recording" },
+  });
+  expect(run.command("discard", 2500).kind).toBe("state");
+});
+
 it("rejects early/overlong completion without freeing active data", () => {
   const run = setup();
   run.command("start", 0);

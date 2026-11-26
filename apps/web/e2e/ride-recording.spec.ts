@@ -5,6 +5,7 @@ import type { CapturedRide, CompletedLocalRide } from "@voltonaut/shared";
 
 import { localRide } from "../src/sync/testdata/localRide.js";
 import { openGameMenu } from "./helpers/gameMenu.js";
+import { disconnectSimTrainer } from "./helpers/simTrainer.js";
 
 const localCapture = {
   kind: "local_only",
@@ -158,6 +159,7 @@ test("records real time, explicitly downloads TCX and reloads the same saved byt
 test("rejects an empty capture without creating a saved ride", async ({ page }) => {
   await page.goto("/?sim=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await disconnectSimTrainer(page);
   await openGameMenu(page, "Aufnahmen");
   await page.getByRole("button", { name: "Aufnahme starten", exact: true }).click();
   await expect(page.getByTestId("recording-status")).toContainText("Aufnahme läuft.");
