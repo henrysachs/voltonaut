@@ -41,6 +41,7 @@ export class SyncFixture {
   readonly pendingDeletions = new Map<string, DeletionOwner>();
   purgeFailure = false;
   deletionFailure = false;
+  stravaRevocation: "revoked" | "not_connected" | "failed" = "not_connected";
   exportFailure = false;
   exportResponse: Promise<AccountExport> | undefined;
   sessionEnded = false;
@@ -177,7 +178,7 @@ export class SyncFixture {
 
         return this.deletionFailure
           ? Promise.reject(new Error("delete failed"))
-          : Promise.resolve();
+          : Promise.resolve({ stravaRevocation: this.stravaRevocation });
       },
     };
   }

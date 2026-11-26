@@ -1,4 +1,4 @@
-import type { AccountExport } from "@voltonaut/shared";
+import type { AccountDeletionResponse, AccountExport } from "@voltonaut/shared";
 import type { AccountDataView } from "./accountDataView.js";
 import type { AccountOutbox } from "./accountOutbox.js";
 import type { DeletionIntents, DeletionOwner } from "./accountDeletion.js";
@@ -13,6 +13,16 @@ interface DeletionSyncOptions {
   readonly progressOutbox: () => Promise<Pick<ProgressOutbox, "purgeOwner">>;
   readonly deletions: DeletionIntents;
 }
+
+/** What the deletion did at Strava (issue #140); empty when no connection existed. */
+const STRAVA_REVOCATION_TEXT: Readonly<
+  Record<AccountDeletionResponse["stravaRevocation"], string>
+> = {
+  revoked: "Strava-Zugriff widerrufen.",
+  not_connected: "",
+  failed:
+    "Strava-Zugriff konnte nicht widerrufen werden: Voltonaut bitte in den Strava-Einstellungen unter „Meine Apps“ entfernen.",
+};
 
 type DataLease = LeaseBinding & { readonly data: AccountDataPort };
 
@@ -49,8 +59,10 @@ export async function deleteAccountData(
 ): Promise<boolean> {
   if (lease === undefined) return false;
 
+  let deletion: AccountDeletionResponse;
+
   try {
-    await lease.data.deleteAccount(confirmation);
+    deletion = await lease.data.deleteAccount(confirmation);
   } catch {
     patch(
       lease,
@@ -65,6 +77,10 @@ export async function deleteAccountData(
   const remembered = options.deletions.remember(owner);
   const cleaned = await cleanupOwner(owner, options);
   const messages: string[] = [];
+
+  const strava = STRAVA_REVOCATION_TEXT[deletion.stravaRevocation];
+
+  if (strava !== "") messages.push(strava);
 
   if (sessionCleared) messages.push("Lokale Session entfernt.");
   else messages.push("Lokale Session konnte nicht entfernt werden; Browserdaten prüfen.");

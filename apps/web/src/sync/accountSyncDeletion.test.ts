@@ -114,3 +114,33 @@ it("reports a persisted session that could not be removed after confirmed deleti
   expect(f.rows.size).toBe(0);
   expect(JSON.stringify(f.sync.view())).toContain("Lokale Session konnte nicht entfernt werden");
 });
+
+it("tells the rider to remove Voltonaut at Strava when the revocation failed (issue #140)", async () => {
+  const f = fixture();
+
+  f.login(A);
+  await f.sync.refresh();
+  f.stravaRevocation = "failed";
+
+  await expect(f.sync.deleteAccount(`${A}@example.com`)).resolves.toBe(true);
+  expect(JSON.stringify(f.sync.view())).toContain("Strava-Einstellungen unter „Meine Apps“");
+});
+
+it("confirms a successful Strava revocation and stays silent without a connection", async () => {
+  const revoked = fixture();
+
+  revoked.login(A);
+  await revoked.sync.refresh();
+  revoked.stravaRevocation = "revoked";
+  await revoked.sync.deleteAccount(`${A}@example.com`);
+
+  expect(JSON.stringify(revoked.sync.view())).toContain("Strava-Zugriff widerrufen.");
+
+  const unconnected = fixture();
+
+  unconnected.login(A);
+  await unconnected.sync.refresh();
+  await unconnected.sync.deleteAccount(`${A}@example.com`);
+
+  expect(JSON.stringify(unconnected.sync.view())).not.toContain("Strava");
+});

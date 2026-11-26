@@ -1,5 +1,5 @@
 import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Route } from "@playwright/test";
 
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright pages and IndexedDB fixtures are mutable browser handles. */
 
@@ -56,10 +56,24 @@ async function routeExportAndIdentities(page: Page): Promise<void> {
   );
 }
 
+/** `GET /v1/me` returns the user; `DELETE` answers like the server, with the Strava outcome (#140). */
+function fulfillMe(
+  route: Route,
+  deleteStatus: number,
+  stravaRevocation: "revoked" | "not_connected" | "failed",
+): Promise<void> {
+  if (route.request().method() !== "DELETE") return route.fulfill({ json: { user } });
+
+  return route.fulfill(
+    deleteStatus === 200 ? { json: { stravaRevocation } } : { status: deleteStatus, body: "" },
+  );
+}
+
 export async function setupAccountPage(
   page: Page,
   deleteStatus: number,
   seed = true,
+  stravaRevocation: "revoked" | "not_connected" | "failed" = "not_connected",
 ): Promise<void> {
   await page.addInitScript(
     ({ apiOrigin, sessionToken }) => {
@@ -70,15 +84,9 @@ export async function setupAccountPage(
     },
     { apiOrigin: API_ORIGIN, sessionToken: token },
   );
-  await page.route(`${API_ORIGIN}/v1/me`, async (route) => {
-    if (route.request().method() === "DELETE") {
-      await route.fulfill({ status: deleteStatus, body: "" });
-
-      return;
-    }
-
-    await route.fulfill({ json: { user } });
-  });
+  await page.route(`${API_ORIGIN}/v1/me`, (route) =>
+    fulfillMe(route, deleteStatus, stravaRevocation),
+  );
   await page.route(`${API_ORIGIN}/v1/me/profile`, (route) =>
     route.fulfill({ json: { status: "missing" } }),
   );

@@ -85,7 +85,7 @@ it("deletes the owner's progress with the account and blocks late progress write
     .set(bearer(f.owner.sessionToken))
     .set("Origin", ORIGIN)
     .send({ confirmation: f.owner.user.email })
-    .expect(204);
+    .expect(200);
 
   expect(ownedRows(f, f.owner.user.id)).toEqual([0, 0, 0]);
   expect(ownedRows(f, f.other.user.id)).toEqual([1, 1, 1]);

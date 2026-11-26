@@ -129,7 +129,7 @@ async function setupPage(page: Page, state: State): Promise<void> {
     page.waitForResponse((response) => isFixtureResponse(response, path)),
   );
 
-  await setupAccountPage(page, 204, false);
+  await setupAccountPage(page, 200, false);
   await Promise.all(fixtureResponses);
   await waitForAuthenticatedAccount(page);
 }

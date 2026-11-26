@@ -1,7 +1,12 @@
 /* oxlint-disable import/max-dependencies -- Account export and deletion run one transaction across every user-data owner port. */
 import { Inject, Injectable } from "@nestjs/common";
 
-import { AccountExportSchema, type AccountExport } from "@voltonaut/shared";
+import {
+  AccountDeletionResponseSchema,
+  AccountExportSchema,
+  type AccountDeletionResponse,
+  type AccountExport,
+} from "@voltonaut/shared";
 import { ApiError } from "../api-error.js";
 import { AuthAccountDataService } from "../auth/auth-account-data.service.js";
 import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
@@ -62,14 +67,33 @@ export class AccountDataService {
     );
   }
 
+  /**
+   * Checks the confirmation, revokes Strava while its tokens still exist, then deletes (issue #140).
+   * A wrong confirmation therefore never disconnects Strava.
+   */
+  public async deleteAccountAfterRevocation(
+    userId: string,
+    confirmation: string,
+    nowMs: number,
+  ): Promise<AccountDeletionResponse> {
+    this.assertConfirmed(userId, confirmation);
+
+    const stravaRevocation = await this.strava.revokeBeforeDeletion(userId);
+
+    this.deleteAccount(userId, confirmation, nowMs);
+
+    return AccountDeletionResponseSchema.parse({ stravaRevocation });
+  }
+
+  private assertConfirmed(userId: string, confirmation: string): void {
+    if (confirmation !== this.authData.currentUser(userId).email)
+      throw new ApiError(403, "forbidden", "deletion confirmation does not match this account");
+  }
+
   public deleteAccount(userId: string, confirmation: string, nowMs: number): void {
     this.db.transaction(
       () => {
-        const user = this.authData.currentUser(userId);
-
-        if (confirmation !== user.email)
-          throw new ApiError(403, "forbidden", "deletion confirmation does not match this account");
-
+        this.assertConfirmed(userId, confirmation);
         this.rides.deleteOwn(userId);
         this.strava.deleteOwn(userId);
         this.inventory.deleteOwn(userId);
