@@ -48,7 +48,6 @@ export class GaragePreviewPanel {
   #pointerId: number | undefined;
   #lastPointerX = 0;
   #lastPointerY = 0;
-
   /** `unavailable` fires when the preview worker fails after a successful start (ADR-032). */
   constructor(wheelCircM: number, unavailable: () => void) {
     this.#dialog = document.querySelector<HTMLDialogElement>("#game-menu");
@@ -60,6 +59,8 @@ export class GaragePreviewPanel {
     this.#reducedMotion.addEventListener("change", this.#onReducedMotionChange);
     this.#view = createGaragePreviewView(this.#host, wheelCircM, () => {
       this.#leavePhotoMode(false, false);
+
+      if (this.#dialog?.open === true) this.#note.focus({ preventScroll: true });
       unavailable();
     });
     this.#view?.setAutoRotate(this.#autoRotate);
@@ -283,6 +284,8 @@ export class GaragePreviewPanel {
       "3D-Vorschau. Mit Maus, Touch oder Stift ziehen. Pfeiltasten drehen und neigen. Home setzt die Ansicht zurück.",
     );
     this.#note.className = "garage__preview-note";
+    this.#note.tabIndex = -1;
+    this.#note.setAttribute("role", "status");
 
     this.#controls.className = "garage__preview-controls";
     this.#controls.append(this.#rotateLeft, this.#rotateRight);

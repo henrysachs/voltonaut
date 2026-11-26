@@ -173,6 +173,13 @@ class PreviewLoop {
 
     try {
       this.state.scene.resize(viewport);
+
+      const draw = this.state.scene.render(this.angleRad, this.orbit);
+
+      if (draw !== undefined) {
+        if (this.firstDraw.kind === "reported") this.send({ type: "preview.drawn", draw });
+        else this.confirmFirstDraw(draw);
+      }
     } catch {
       this.fail("render-error");
     }

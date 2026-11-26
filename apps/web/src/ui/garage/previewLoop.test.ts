@@ -157,6 +157,20 @@ it("forwards resizes to a running scene only", () => {
   expect(f.viewports).toEqual([VISIBLE]);
 });
 
+it("redraws immediately after a resize once the first draw is confirmed", () => {
+  const f = new LoopFixture();
+
+  f.loop.start(() => f.scene);
+  f.frame(0);
+  f.task();
+  f.loop.setOrbit({ yawRad: -1, pitchRad: 0.4 });
+  f.loop.resize({ widthCssPx: 640, heightCssPx: 360, devicePixelRatio: 2 });
+
+  expect(f.angles.at(-1)).toBe(-0.65);
+  expect(f.orbits.at(-1)).toEqual({ yawRad: -1, pitchRad: 0.4 });
+  expect(f.replies.at(-1)).toEqual({ type: "preview.drawn", draw: f.draw });
+});
+
 it("captures the latest avatar angle and camera orbit as a PNG blob", async () => {
   const f = new LoopFixture();
   const blob = new Blob(["png"], { type: "image/png" });

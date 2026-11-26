@@ -2,11 +2,13 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright owns mutable browser fixtures and native CDP input. */
 import { readFile } from "node:fs/promises";
 
-import { expect, test, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 import { DEFAULT_PREVIEW_ORBIT, MAX_PREVIEW_PITCH_RAD } from "../src/ui/garage/previewOrbit.js";
 import {
   attachScreenshot,
+  brightPngPixelRatio,
+  capturePreviewWorker,
   expectPhotoChromeHidden,
   expectPhotoStageSized,
   hasOpaquePngPixel,
@@ -17,7 +19,20 @@ import {
   touchDrag,
   type PageFixture,
 } from "./helpers/garageShowroom.js";
-import { countCanvasTransfers } from "./render-worker.helpers.js";
+import {
+  countCanvasTransfers,
+  LOSE_RENDER_CONTEXT,
+  previewWorkerPrelude,
+} from "./render-worker.helpers.js";
+
+async function expectPreviewVisible(
+  page: Readonly<Page>,
+  canvas: Readonly<Locator>,
+): Promise<void> {
+  await expect
+    .poll(async () => brightPngPixelRatio(page, await canvas.screenshot()))
+    .toBeGreaterThan(0.01);
+}
 
 test("mouse, real touch, and the named rotate buttons orbit the preview", async ({
   page,
@@ -131,6 +146,7 @@ test("photo mode hides ride chrome, keeps the canvas, and Escape exits it first"
   await expect(canvas).toHaveAttribute("data-transfer-count", "1");
   await expectPhotoChromeHidden(page);
   await expectPhotoStageSized(preview, canvas);
+  await expectPreviewVisible(page, canvas);
   await attachScreenshot(page, testInfo, "garage-photo-mode.png");
 
   await page.keyboard.press("Escape");
@@ -150,6 +166,28 @@ test("photo mode hides ride chrome, keeps the canvas, and Escape exits it first"
   await expect(page.locator("body")).not.toHaveClass(/garage-photo-mode/u);
 });
 
+test("preview failure exits photo mode and focuses the visible fallback", async ({
+  page,
+}: Readonly<PageFixture>) => {
+  await capturePreviewWorker(page);
+  await previewWorkerPrelude(page, LOSE_RENDER_CONTEXT);
+  const preview = await openGarage(page);
+  const dialog = page.getByRole("dialog", { name: "Fahrtmenü", exact: true });
+  const note = page.locator(".garage__preview-note");
+
+  await page.getByRole("button", { name: "Fotomodus", exact: true }).click();
+  await expect(dialog).toHaveAttribute("data-photo-mode", "true");
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("test-lose-preview-context"));
+  });
+
+  await expect(preview).toHaveAttribute("data-preview-state", "unavailable3d");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).not.toHaveAttribute("data-photo-mode");
+  await expect(note).toBeFocused();
+  await expect(note).toContainText("3D nicht verfügbar");
+});
+
 test.describe("HiDPI photo download", () => {
   test.use({ deviceScaleFactor: 2 });
 
@@ -160,6 +198,7 @@ test.describe("HiDPI photo download", () => {
     await page.getByRole("button", { name: "Fotomodus", exact: true }).click();
     const canvas = preview.locator("canvas");
     await expectPhotoStageSized(preview, canvas);
+    await expectPreviewVisible(page, canvas);
 
     const canvasBox = required(await canvas.boundingBox());
 

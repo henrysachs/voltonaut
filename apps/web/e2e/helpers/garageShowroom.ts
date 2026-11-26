@@ -186,3 +186,59 @@ export function hasOpaquePngPixel(page: Readonly<Page>, bytes: Buffer): Promise<
     }
   }, bytes.toString("base64"));
 }
+
+/** Captures the garage preview worker for its native context-loss fault injection. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
+export async function capturePreviewWorker(page: Readonly<Page>): Promise<void> {
+  await page.addInitScript(() => {
+    const NativeWorker = Worker;
+
+    window.Worker = class extends NativeWorker {
+      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The native WorkerOptions is forwarded unchanged to the browser.
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+
+        if (options?.name === "garage-preview") {
+          window.addEventListener("test-lose-preview-context", () => {
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin -- This is a dedicated Worker, not Window.
+            this.postMessage({ type: "test.loseRenderContext" });
+          });
+        }
+      }
+    };
+  });
+}
+
+export function brightPngPixelRatio(page: Readonly<Page>, bytes: Buffer): Promise<number> {
+  return page.evaluate(async (base64: string) => {
+    const binary = atob(base64);
+    const pixels = Uint8Array.from(binary, (character) => character.codePointAt(0) ?? 0);
+    const url = URL.createObjectURL(new Blob([pixels], { type: "image/png" }));
+
+    try {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d");
+
+      if (context === null) throw new Error("PNG decode context unavailable");
+
+      context.drawImage(image, 0, 0);
+      const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let brightPixels = 0;
+
+      for (let index = 0; index < data.length; index += 4) {
+        const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+
+        if (brightness > 80) brightPixels += 1;
+      }
+
+      return brightPixels / (canvas.width * canvas.height);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }, bytes.toString("base64"));
+}
