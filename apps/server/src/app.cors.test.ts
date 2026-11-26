@@ -30,6 +30,15 @@ describe("CORS (spec AK10)", () => {
     expect(response.headers["access-control-allow-headers"]).toContain("Content-Encoding");
   });
 
+  it("lets the web client read how long a rate limit lasts", async () => {
+    const response = await request(httpServerOf(testApp.app))
+      .get("/healthz")
+      .set("Origin", ALLOWED_ORIGIN)
+      .expect(200);
+
+    expect(response.headers["access-control-expose-headers"]).toBe("Retry-After");
+  });
+
   it("answers no ACAO header for a foreign origin", async () => {
     const response = await request(httpServerOf(testApp.app))
       .options("/v1/auth/magic-link")

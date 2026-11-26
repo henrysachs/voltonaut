@@ -9,7 +9,7 @@ import {
 import { AccountSync } from "../accountSync.js";
 import { outboxKey, type AccountOutbox, type OutboxRow } from "../accountOutbox.js";
 import type { AccountSyncLease } from "../accountDataView.js";
-import type { PrivateRequestError } from "../apiRoute.js";
+import { PrivateRequestError } from "../apiRoute.js";
 import { deletionOwnerKey, type DeletionOwner } from "../accountDeletion.js";
 import { accountExport } from "../../testdata/accountExport.js";
 import { localRide } from "./localRide.js";
@@ -43,6 +43,8 @@ export class SyncFixture {
   deletionFailure = false;
   stravaRevocation: "revoked" | "not_connected" | "failed" = "not_connected";
   exportFailure = false;
+  /** Seconds a 429 asks the export to wait; undefined means no rate limit. */
+  exportRateLimitS: number | undefined;
   exportResponse: Promise<AccountExport> | undefined;
   sessionEnded = false;
   sessionClearResult = true;
@@ -170,9 +172,11 @@ export class SyncFixture {
   private data(): AccountSyncLease["data"] {
     return {
       exportAccount: () =>
-        this.exportFailure
-          ? Promise.reject(new Error("export failed"))
-          : (this.exportResponse ?? Promise.resolve(accountExport)),
+        this.exportRateLimitS === undefined
+          ? this.exportFailure
+            ? Promise.reject(new Error("export failed"))
+            : (this.exportResponse ?? Promise.resolve(accountExport))
+          : Promise.reject(new PrivateRequestError("retry", this.exportRateLimitS)),
       deleteAccount: (confirmation) => {
         this.deletionConfirmations.push(confirmation);
 
