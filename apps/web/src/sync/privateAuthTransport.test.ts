@@ -156,7 +156,7 @@ it("accepts only a valid stored receipt for the exact canonical ride ID", async 
   });
 });
 
-it("downloads a validated own export and confirms deletion only from an empty 204", async () => {
+it("downloads a validated own export and confirms deletion with the Strava revocation outcome", async () => {
   const f = await fixture();
 
   const exported = {
@@ -188,11 +188,18 @@ it("downloads a validated own export and confirms deletion only from an empty 20
   await expect(f.lease.data.deleteAccount("rider@example.com")).rejects.toMatchObject({
     cause: "contract",
   });
+  f.reply(200, "application/json", JSON.stringify({ stravaRevocation: "failed" }));
+  await expect(f.lease.data.deleteAccount("rider@example.com")).resolves.toEqual({
+    stravaRevocation: "failed",
+  });
   f.reply(204, "text/plain", "");
-  await expect(f.lease.data.deleteAccount("rider@example.com")).resolves.toBeUndefined();
-  expect(f.methods).toEqual(["GET", "DELETE", "DELETE"]);
+  await expect(f.lease.data.deleteAccount("rider@example.com")).rejects.toMatchObject({
+    cause: "contract",
+  });
+  expect(f.methods).toEqual(["GET", "DELETE", "DELETE", "DELETE"]);
   expect(f.calls).toEqual([
     "/v1/me/export:Bearer private-token",
+    "/v1/me:Bearer private-token",
     "/v1/me:Bearer private-token",
     "/v1/me:Bearer private-token",
   ]);

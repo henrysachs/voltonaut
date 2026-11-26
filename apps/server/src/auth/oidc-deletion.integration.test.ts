@@ -31,7 +31,7 @@ it("keeps deleted email and external identity blocked without recreating an acco
     .set(bearer(original.sessionToken))
     .set("Origin", ORIGIN)
     .send({ confirmation: original.user.email })
-    .expect(204);
+    .expect(200);
 
   await expectRejectedLogin(context);
 
@@ -63,7 +63,7 @@ it("keeps an existing identity active when its changed provider email matches a 
     .set(bearer(deleted.sessionToken))
     .set("Origin", ORIGIN)
     .send({ confirmation: deleted.user.email })
-    .expect(204);
+    .expect(200);
 
   context.provider.control.subject = "local-test-subject";
   context.provider.control.email = "blocked@example.com";
@@ -89,7 +89,7 @@ it("rejects a pending link callback after deleting its owner without a trigger e
     .set(bearer(active.sessionToken))
     .set("Origin", PROVIDERS_ORIGIN)
     .send({ confirmation: active.user.email })
-    .expect(204);
+    .expect(200);
   expect(getDatabase(context.app).$client.prepare("SELECT * FROM oidc_transactions").all()).toEqual(
     [],
   );
@@ -111,7 +111,7 @@ it("does not link a deleted provider identity to another account", async () => {
     .set(bearer(deleted.sessionToken))
     .set("Origin", PROVIDERS_ORIGIN)
     .send({ confirmation: deleted.user.email })
-    .expect(204);
+    .expect(200);
 
   setIdentity(context.authentik, "active-ak", "active@example.com");
   const active = await loginVia(context.app, "authentik");

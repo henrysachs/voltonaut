@@ -83,7 +83,7 @@ function readUpgradedOutbox(page: Page) {
 }
 
 test("downloads a validated account export without exposing the bearer", async ({ page }) => {
-  await setupAccountPage(page, 204);
+  await setupAccountPage(page, 200);
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Datenexport herunterladen", exact: true }).click();
   const download = await downloadPromise;
@@ -96,7 +96,7 @@ test("downloads a validated account export without exposing the bearer", async (
 test("confirmed deletion purges only the owner's outbox and keeps riding plus local archives", async ({
   page,
 }) => {
-  await setupAccountPage(page, 204);
+  await setupAccountPage(page, 200);
   const diagnostics = page.getByLabel("Render diagnostics");
   const beforeM = Number(await diagnostics.getAttribute("data-distance-m"));
   const confirmation = page.getByLabel("E-Mail zur Löschbestätigung");
@@ -149,7 +149,7 @@ test("upgrades the account outbox from version 1 without losing existing rows", 
 }) => {
   await page.goto("/robots.txt");
   await seedVersionOneOutbox(page);
-  await setupAccountPage(page, 204, false);
+  await setupAccountPage(page, 200, false);
   await expect.poll(() => readOutboxStores(page)).toEqual(["deleted-owners", "outbox"]);
   const upgraded = await readUpgradedOutbox(page);
   expect(upgraded.stores.toSorted()).toEqual(["deleted-owners", "outbox"]);

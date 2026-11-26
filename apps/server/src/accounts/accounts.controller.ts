@@ -15,6 +15,7 @@ import {
   AccountDeletionRequestSchema,
   ProfileInputSchema,
   type AccountDeletionRequest,
+  type AccountDeletionResponse,
   type AccountExport,
   type AccountStatus,
   type PresentProfile,
@@ -67,13 +68,17 @@ export class AccountsController {
   }
 
   @Delete()
-  @HttpCode(204)
+  @HttpCode(200)
   @Header("Cache-Control", "no-store")
   @UseGuards(ClientOriginGuard)
   public delete(
     @CurrentSession() session: SessionPrincipal,
     @Body(new ZodValidationPipe(AccountDeletionRequestSchema)) body: AccountDeletionRequest,
-  ): void {
-    this.data.deleteAccount(session.userId, body.confirmation, this.clock.nowMs());
+  ): Promise<AccountDeletionResponse> {
+    return this.data.deleteAccountAfterRevocation(
+      session.userId,
+      body.confirmation,
+      this.clock.nowMs(),
+    );
   }
 }

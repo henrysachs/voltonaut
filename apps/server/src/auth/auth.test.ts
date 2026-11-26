@@ -209,7 +209,7 @@ it("keeps magic-link delivery failures indistinguishable for deleted and unknown
     .set(bearer(session.sessionToken))
     .set("Origin", config.clientOrigin)
     .send({ confirmation: session.user.email })
-    .expect(204);
+    .expect(200);
 
   mail.failNext();
   await request(server)

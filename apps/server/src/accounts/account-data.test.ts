@@ -15,6 +15,9 @@ import {
   ride,
 } from "./account-data.fixture.js";
 
+// The fixture stores an unreadable Strava ciphertext: revocation fails, the deletion still runs (#140).
+const STRAVA_OUTCOME = "failed";
+
 it("requires authentication and never accepts another account as an export or deletion target", async () => {
   const f = await accountDataFixture();
   await request(f.server).get("/v1/me/export").expect(401);
@@ -155,9 +158,10 @@ it("deletes only the confirmed owner, revokes sessions and blocks silent recreat
     .set(bearer(f.owner.sessionToken))
     .set("Origin", ORIGIN)
     .send({ confirmation: ` ${f.owner.user.email.toUpperCase()} ` })
-    .expect(204);
+    .expect(200);
 
   expect(deleted.headers["cache-control"]).toBe("no-store");
+  expect(bodyOf(deleted)).toEqual({ stravaRevocation: STRAVA_OUTCOME });
   await request(f.server).get("/v1/me").set(bearer(f.owner.sessionToken)).expect(401);
   await request(f.server).get("/v1/me").set(bearer(f.other.sessionToken)).expect(200);
   assertOwnerPurged(f);

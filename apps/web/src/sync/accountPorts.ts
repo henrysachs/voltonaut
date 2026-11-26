@@ -13,6 +13,7 @@ import {
   RideListSchema,
   RideReceiptSchema,
   RideUploadSchema,
+  type AccountDeletionResponse,
   type AccountExport,
   type AccountStatus,
   type AdminUsers,
@@ -42,7 +43,8 @@ export interface RidePort {
 /** Export and deletion of all own data (spec E5-11). */
 export interface AccountDataPort {
   readonly exportAccount: () => Promise<AccountExport>;
-  readonly deleteAccount: (confirmation: string) => Promise<void>;
+  /** Resolves once the server deleted the account; reports the Strava revocation (issue #140). */
+  readonly deleteAccount: (confirmation: string) => Promise<AccountDeletionResponse>;
 }
 
 /** Own membership and, for admins, the directory and its writes (spec E5-10, no retry). */
@@ -155,9 +157,7 @@ export function ridePort(send: PrivateSend): RidePort {
 export function accountDataPort(send: PrivateSend): AccountDataPort {
   return {
     exportAccount: () => send(accountRoutes.exportAccount, null),
-    async deleteAccount(confirmation) {
-      await send(accountRoutes.deleteAccount, confirmation);
-    },
+    deleteAccount: (confirmation) => send(accountRoutes.deleteAccount, confirmation),
   };
 }
 
