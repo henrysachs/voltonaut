@@ -1,6 +1,6 @@
 import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 
-import { roadClearanceM } from "./landscape-clearance.js";
+import { roadClearanceM, rowValue } from "./landscape-clearance.js";
 
 export const TERRAIN_OFFSETS_M = [
   -360, -240, -160, -120, -100, -90, -80, -76, -72, -68, -64, -60, -56, -52, -48, -44, -40, -36,
@@ -50,13 +50,19 @@ const ROAD_HALF_WIDTH_M = 4;
 /** Relief starts this far beyond the shoulder, so a pinched row cannot lift the road edge. */
 const SHOULDER_MARGIN_M = 2;
 
-/** Up to two terrain rows (10 m each, see terrain.ts) on either side. */
-const RELIEF_NEIGHBOURS_M = [-20, -10, 10, 20];
+/** Up to two terrain rows (10 m each, see terrain.ts) on either side, and the row itself. */
+const RELIEF_ROWS = 2;
+
+const RELIEF_NEIGHBOURS_M = [-20, -10, 0, 10, 20];
 const MIN_TURN_RAD = 0.2;
 const MAX_TURN_RAD = Math.PI / 2;
 
 /** Signed heading change across the turn window; positive turns towards positive offsets. */
 function turnAt(route: EngineRoute, distanceM: number): number {
+  return rowValue(route, "turn", distanceM, (atM) => measureTurn(route, atM));
+}
+
+function measureTurn(route: EngineRoute, distanceM: number): number {
   // Loops wrap across the lap line, so a turn at the seam is seen like any other.
   const beforeM = route.loop
     ? distanceM - TURN_WINDOW_M / 2
@@ -72,19 +78,42 @@ function turnAt(route: EngineRoute, distanceM: number): number {
   return Math.atan2(Math.sin(afterRad - beforeRad), Math.cos(afterRad - beforeRad));
 }
 
-/** Shrinks lateral terrain offsets at sharp turns so inner rows miss the previous leg. */
-function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number): number {
-  const turnRad = Math.abs(turnAt(route, distanceM));
+/** Share of a lateral offset kept at a turn: 1 on straights, 0 at a right angle or sharper. */
+function blendAt(route: EngineRoute, distanceM: number): number {
+  return rowValue(route, "blend", distanceM, (atM) => {
+    const turnRad = Math.abs(turnAt(route, atM));
 
-  const blend =
-    turnRad <= MIN_TURN_RAD
+    return turnRad <= MIN_TURN_RAD
       ? 1
       : Math.max(0, 1 - (turnRad - MIN_TURN_RAD) / (MAX_TURN_RAD - MIN_TURN_RAD));
+  });
+}
 
+/** Shrinks lateral terrain offsets at sharp turns so inner rows miss the previous leg. */
+function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number): number {
   // Never across another leg of the same road, e.g. the next switchback (#138 review).
-  const reachM = Math.min(Math.abs(lateralM * blend), roadClearanceM(route, distanceM, lateralM));
+  const reachM = Math.min(
+    Math.abs(lateralM * blendAt(route, distanceM)),
+    roadClearanceM(route, distanceM, lateralM),
+  );
 
   return Math.sign(lateralM) * reachM;
+}
+
+/**
+ * How far relief may grow at an offset: no further than this row and up to two rows (20 m) on
+ * either side reach, since beside a pinched row a raised vertex would tilt the shared triangles
+ * over the road edge.
+ */
+function reliefReachM(route: EngineRoute, distanceM: number, lateralM: number): number {
+  const blendM = rowValue(route, "relief-blend", distanceM, (atM) =>
+    Math.min(...RELIEF_NEIGHBOURS_M.map((offsetM) => blendAt(route, atM + offsetM))),
+  );
+
+  return Math.min(
+    Math.abs(lateralM) * blendM,
+    roadClearanceM(route, distanceM, lateralM, 1 + RELIEF_ROWS),
+  );
 }
 
 /** Whether an offset lies on the inside of a sharp turn, where the rows fold back. */
@@ -133,14 +162,7 @@ export function terrainPosition(
   const effectiveLateralM = cornerLateralM(plan.route, distanceM, lateralM);
   const position = offsetPosition(plan.route, distanceM, effectiveLateralM);
 
-  // Relief grows only as far as the neighbouring rows reach too; beside a pinched row a raised
-  // vertex would tilt the shared triangles over the road edge.
-  const reachM = Math.min(
-    Math.abs(effectiveLateralM),
-    ...RELIEF_NEIGHBOURS_M.map((offsetM) =>
-      Math.abs(cornerLateralM(plan.route, distanceM + offsetM, lateralM)),
-    ),
-  );
+  const reachM = reliefReachM(plan.route, distanceM, lateralM);
 
   const inside = insideTurn(plan.route, distanceM, lateralM);
   // Folded inner rows get no relief; a raised vertex there would cover the road.
