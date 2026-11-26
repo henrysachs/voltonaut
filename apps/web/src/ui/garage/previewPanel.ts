@@ -15,9 +15,10 @@ export class GaragePreviewPanel {
   readonly #view: GaragePreviewView | null;
   #autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  constructor(wheelCircM: number) {
+  /** `unavailable` fires when the preview worker fails after a successful start (ADR-032). */
+  constructor(wheelCircM: number, unavailable: () => void) {
     this.#build();
-    this.#view = createGaragePreviewView(this.#host, wheelCircM);
+    this.#view = createGaragePreviewView(this.#host, wheelCircM, unavailable);
     this.#view?.setAutoRotate(this.#autoRotate);
     this.#rotateLeft.addEventListener("click", () => this.#view?.rotateBy(-Math.PI / 6));
     this.#rotateRight.addEventListener("click", () => this.#view?.rotateBy(Math.PI / 6));
