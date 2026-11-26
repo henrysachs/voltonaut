@@ -133,35 +133,45 @@ interface EnvironmentQuery {
   readonly get: (name: string) => string | null;
 }
 
-function parseSeed(value: string | null): number {
-  if (value === null || !/^-?\d+$/u.test(value)) return DEFAULT_ENVIRONMENT_SETTINGS.seed;
+function parseSeed(value: string | null, fallback: number): number {
+  if (value === null || !/^-?\d+$/u.test(value)) return fallback;
 
   const seed = Number(value);
 
-  return Number.isSafeInteger(seed) ? seed : DEFAULT_ENVIRONMENT_SETTINGS.seed;
+  return Number.isSafeInteger(seed) ? seed : fallback;
 }
 
-function parseTimeOfDay(value: string | null): number {
-  if (value === null) return DEFAULT_ENVIRONMENT_SETTINGS.startTimeS;
+function parseTimeOfDay(value: string | null, fallback: number): number {
+  if (value === null) return fallback;
 
   const match = /^(\d{2}):(\d{2})$/u.exec(value);
 
-  if (match === null) return DEFAULT_ENVIRONMENT_SETTINGS.startTimeS;
+  if (match === null) return fallback;
 
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
 
-  if (hours > 23 || minutes > 59) return DEFAULT_ENVIRONMENT_SETTINGS.startTimeS;
+  if (hours > 23 || minutes > 59) return fallback;
 
   return hours * 60 * 60 + minutes * 60;
 }
 
-export function parseEnvironmentSettings(query: EnvironmentQuery): EnvironmentSettings {
-  const weather = parseWeatherKind(query.get("weather"));
+/**
+ * Merges the URL parameters seed, time and weather over the given base
+ * (DEFAULT_ENVIRONMENT_SETTINGS or a route's catalog default, #75). Every
+ * missing or invalid parameter falls back per field, so a URL with only
+ * weather=rain keeps the route's seed and start time.
+ */
+export function parseEnvironmentSettings(
+  query: EnvironmentQuery,
+  base: EnvironmentSettings = DEFAULT_ENVIRONMENT_SETTINGS,
+): EnvironmentSettings {
+  const rawWeather = query.get("weather");
+  const weather = rawWeather === null ? undefined : parseWeatherKind(rawWeather);
 
   return {
-    seed: parseSeed(query.get("seed")),
-    startTimeS: parseTimeOfDay(query.get("time")),
-    script: [{ startS: 0, weather }],
+    seed: parseSeed(query.get("seed"), base.seed),
+    startTimeS: parseTimeOfDay(query.get("time"), base.startTimeS),
+    script: weather === undefined ? base.script : [{ startS: 0, weather }],
   };
 }
