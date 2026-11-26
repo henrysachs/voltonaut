@@ -48,7 +48,7 @@ test("selecting a route sets the route param, keeps sim and debug and reloads", 
 
   await page.waitForURL(/route=alpine-pass/u);
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
-  await expect(page.locator("#ride-route-identity")).toHaveText("ALPINE PASS / 12 KM");
+  await expect(page.locator("#ride-route-identity")).toHaveText("ALPINE PASS / 25.2 KM");
 
   const url = new URL(page.url());
 
