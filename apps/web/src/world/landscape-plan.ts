@@ -1,5 +1,7 @@
 import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 
+import { roadClearanceM } from "./landscape-clearance.js";
+
 export const TERRAIN_OFFSETS_M = [
   -360, -240, -160, -120, -100, -90, -80, -76, -72, -68, -64, -60, -56, -52, -48, -44, -40, -36,
   -32, -28, -24, -20, -16, -10, -6, -4, 0, 4, 6, 10, 16, 24, 36, 50, 70, 100, 160, 240, 360,
@@ -41,6 +43,9 @@ export function offsetPosition(route: EngineRoute, distanceM: number, lateralM: 
 }
 
 const TURN_WINDOW_M = 20;
+
+/** Up to two terrain rows (10 m each, see terrain.ts) on either side. */
+const RELIEF_NEIGHBOURS_M = [-20, -10, 10, 20];
 const MIN_TURN_RAD = 0.2;
 const MAX_TURN_RAD = Math.PI / 2;
 
@@ -55,11 +60,15 @@ function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number)
     Math.atan2(Math.sin(afterRad - beforeRad), Math.cos(afterRad - beforeRad)),
   );
 
-  if (turnRad <= MIN_TURN_RAD) return lateralM;
+  const blend =
+    turnRad <= MIN_TURN_RAD
+      ? 1
+      : Math.max(0, 1 - (turnRad - MIN_TURN_RAD) / (MAX_TURN_RAD - MIN_TURN_RAD));
 
-  const blend = Math.max(0, 1 - (turnRad - MIN_TURN_RAD) / (MAX_TURN_RAD - MIN_TURN_RAD));
+  // Never across another leg of the same road, e.g. the next switchback (#138 review).
+  const reachM = Math.min(Math.abs(lateralM * blend), roadClearanceM(route, distanceM, lateralM));
 
-  return lateralM * blend;
+  return Math.sign(lateralM) * reachM;
 }
 
 export function lakeRadius(lake: Lake, position: WorldPos): number {
@@ -78,7 +87,17 @@ export function terrainPosition(
 ): WorldPos {
   const effectiveLateralM = cornerLateralM(plan.route, distanceM, lateralM);
   const position = offsetPosition(plan.route, distanceM, effectiveLateralM);
-  const clearanceM = Math.max(0, Math.abs(effectiveLateralM) - 4);
+
+  // Relief grows only as far as the neighbouring rows reach too; beside a pinched row a raised
+  // vertex would tilt the shared triangles over the road edge.
+  const reachM = Math.min(
+    Math.abs(effectiveLateralM),
+    ...RELIEF_NEIGHBOURS_M.map((offsetM) =>
+      Math.abs(cornerLateralM(plan.route, distanceM + offsetM, lateralM)),
+    ),
+  );
+
+  const clearanceM = Math.max(0, reachM - 4);
   const blend = Math.min(1, clearanceM / 32);
   const phase = (distanceM / plan.route.lengthM) * Math.PI * 2;
 
