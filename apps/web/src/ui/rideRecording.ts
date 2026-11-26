@@ -7,6 +7,8 @@ import {
 
 import type { CaptureView, RecordingControls } from "../game/rideCaptureProtocol.js";
 
+import { button } from "./button.js";
+
 interface RecordingArchive {
   readonly list: () => Promise<readonly ArchivedRide[]>;
   readonly save: (ride: CapturedRide) => Promise<void>;
@@ -24,13 +26,6 @@ function errorText(cause: unknown): string {
 
 function archiveId(ride: ArchivedRide): string {
   return ride.kind === "local_only" ? ride.track.rideId : ride.recording.rideId;
-}
-
-function button(text: string): HTMLButtonElement {
-  const element = document.createElement("button");
-  element.textContent = text;
-
-  return element;
 }
 
 function download(file: { readonly filename: string; readonly xml: string }): void {
@@ -131,6 +126,9 @@ class RecordingPanel {
     this.#retry.disabled = this.#busy;
     this.#continue.hidden = this.#completed === undefined || this.#downloadedId === undefined;
     this.#continue.disabled = this.#busy;
+
+    for (const control of [this.#start, this.#finish, this.#discard, this.#retry, this.#continue])
+      control.setAttribute("aria-busy", String(this.#busy));
   }
 
   private async load(): Promise<void> {

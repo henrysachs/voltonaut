@@ -1,13 +1,13 @@
 import { AVATAR_SLOTS } from "@voltonaut/rules";
 import type { AvatarConfig, AvatarSlot, ItemDef } from "@voltonaut/shared";
 
+import { button } from "../button.js";
 import { garageItemStatus, itemStatusText } from "./equipOffer.js";
 import { slotText } from "./garageText.js";
 
 export function garageButton(text: string): HTMLButtonElement {
-  const element = document.createElement("button");
-  element.type = "button";
-  element.textContent = text;
+  const element = button(text);
+  element.setAttribute("class", "btn btn--secondary");
 
   return element;
 }

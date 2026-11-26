@@ -162,8 +162,25 @@ it("mounts explicit consent and retry controls inside the account overlay", () =
   });
   expect(toggle?.hidden).toBe(false);
   expect(toggle?.disabled).toBe(false);
+  expect(toggle?.attributes.get("aria-busy")).toBe("false");
+  expect(retry?.attributes.get("aria-busy")).toBe("false");
   expect(toggle?.textContent).toBe("Automatischen Fahrtfortschritt aktivieren");
   expect(status?.textContent).toContain("6 ausstehend");
+  toggle?.click();
+  expect(view.port.consents).toEqual([true]);
+});
+
+it("marks consent and retry controls busy only while activation is pending", () => {
+  const view = fixture();
+  const [, , status, toggle, retry] = view.section.children;
+
+  view.port.publish({
+    kind: "account",
+    consent: { kind: "ready", enabled: false, version: 0, rewardsAvailable: true },
+    outbox: { kind: "ready", counts },
+    busy: false,
+    message: "",
+  });
   toggle?.click();
   expect(view.port.consents).toEqual([true]);
 
@@ -176,6 +193,8 @@ it("mounts explicit consent and retry controls inside the account overlay", () =
   });
   expect(toggle?.disabled).toBe(true);
   expect(retry?.disabled).toBe(true);
+  expect(toggle?.attributes.get("aria-busy")).toBe("true");
+  expect(retry?.attributes.get("aria-busy")).toBe("true");
 
   view.port.publish({
     kind: "account",
@@ -185,6 +204,8 @@ it("mounts explicit consent and retry controls inside the account overlay", () =
     message: "",
   });
   expect(toggle?.textContent).toBe("Automatischen Fahrtfortschritt widerrufen");
+  expect(toggle?.attributes.get("aria-busy")).toBe("false");
+  expect(retry?.attributes.get("aria-busy")).toBe("false");
   expect(status?.textContent).toContain("Kapazität voll");
   toggle?.click();
   retry?.click();

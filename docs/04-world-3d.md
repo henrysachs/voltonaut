@@ -101,6 +101,8 @@ Die Fahrt, Geräte und eine laufende Aufnahme bleiben aktiv. Menüschließen spe
 
 [E4-07](specs/E4-07-accessible-ride-menus.md) ergänzt natives Light-Dismiss für Fahrtmenü und Gerätefenster. Ein Klick oder Tap außerhalb schließt nur das Fenster. Fahrt, Aufnahme und Verbindungen laufen weiter. Die Geräteansicht zeigt verständliche Zustände und Aktionen zuerst; Rohstatus, Zielwerte, ACKs und Einrichtungshinweise liegen in technischen Details. Widerstandssteuerung bleibt eine getrennte, ausdrückliche Handlung. Implementiert, regulär und unabhängig am tatsächlich gebauten Artefakt softwaregeprüft. Noch nicht bereitgestellt.
 
+[E4-11](specs/E4-11-in-ride-menu-redesign.md) vereinheitlicht Fahrtmenü, Gerätedialog und Garage mit eigenen Design-Tokens. Der Spielmodus liegt im Profil-Tab. Kopf, Tabs, scrollender Inhalt und Fußzeile bilden vier Rasterzeilen. Unter 480 px Menübreite brechen die Tabs in zwei Zeilen um. Ein sichtbarer Scroll-Schatten zeigt überlaufenden Inhalt. Menü und Gerätedialog nutzen Glasflächen mit deckendem Fallback. Kurze Ein- und Ausblendungen entfallen bei reduzierter Bewegung. Das HUD bleibt deckend, damit die WebGL-Fläche nicht mit mehreren Blur-Ebenen belastet wird.
+
 ## 10. Asset-Pipeline
 
 - **Quellen:** Blender (eigene Modelle), CC0 (Kenney, Quaternius, Poly Haven, ambientCG), CC-BY nur mit Credits; kein NC/ND; Mixamo nur als Rigging-Hilfe (Weitergabe-Bedingungen unklar). Jede Datei in `apps/web/public/assets/LICENSES.md`.

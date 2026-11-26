@@ -99,6 +99,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 
 [E4-09](specs/E4-09-realistic-procedural-bike.md) ersetzt das Zylinder-Rad in Spiel und Garage durch ein prozedurales Rennrad mit echter Rahmengeometrie, vollständigem Antrieb, Scheibenbremsen und Cockpit. Rahmen und Laufräder sind über `assetRef` datengetriebene, erweiterbare Specs. Die Beine treten per Zwei-Knochen-IK. [E4-10](specs/E4-10-detailed-procedural-rider.md) ersetzt den provisorischen Fahrerkörper durch einen detaillierten, geskinnten Fahrer mit Gesicht, Helm, Handschuhen, Schuhen und gemalten Trikotdesigns. Die Checkbox bleibt offen, bis Oberkörperbewegung, Wiegetritt (henrysachs/voltonaut#69) und ein LOD für Bots folgen.
 
+[E4-11](specs/E4-11-in-ride-menu-redesign.md) vereinheitlicht Fahrtmenü, Gerätedialog und Garage mit gemeinsamen Tokens, klaren Button-Zuständen, einem festen Menüraster und sichtbaren Scrollzuständen. Tabs und Inhalte bleiben von 320 bis 1440 px ohne Überlappung erreichbar. Der begrenzte Umbau ist am tatsächlich gebauten Artefakt softwaregeprüft und unabhängig reviewed. Echte GPU-FPS mit Glas-Look und Henrys Screenshot-Freigabe bleiben offen.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen

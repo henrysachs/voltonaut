@@ -10,9 +10,9 @@ export class GarageEquip {
 
   constructor(handlers: Readonly<{ equip: () => void; discard: () => void }>) {
     this.root.className = "garage__equip";
-    this.#equip.className = "garage__purchase";
+    this.#equip.setAttribute("class", "btn btn--primary garage__purchase");
     this.#equip.dataset["testid"] = "garage-equip";
-    this.#discard.className = "garage__purchase";
+    this.#discard.setAttribute("class", "btn btn--secondary garage__purchase");
     this.#discard.dataset["testid"] = "garage-discard";
     this.#hint.className = "garage__purchase-hint";
     this.#hint.dataset["testid"] = "garage-equip-hint";

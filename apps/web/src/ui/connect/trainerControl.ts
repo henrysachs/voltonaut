@@ -1,4 +1,5 @@
 import type { TrainerControlPanel, TrainerAuthority, TrainerControlView } from "@voltonaut/ble";
+import { button } from "../button.js";
 
 const HARDWARE_LABEL: Readonly<Record<TrainerControlView["hardware"], string>> = {
   unknown: "Widerstand unbekannt",
@@ -73,8 +74,8 @@ function authoritySummary(authority: TrainerAuthority): string {
 function controlElements(): ControlElements {
   const section = document.createElement("div");
   const heading = document.createElement("h4");
-  const enable = document.createElement("button");
-  const disable = document.createElement("button");
+  const enable = button("Widerstand aktivieren");
+  const disable = button("Widerstand deaktivieren");
   const status = readout("Rollenschaltung Übersicht");
   const reason = document.createElement("p");
   const guidance = document.createElement("p");
@@ -82,8 +83,8 @@ function controlElements(): ControlElements {
   section.setAttribute("role", "group");
   section.setAttribute("aria-label", "Rollenschaltung");
   heading.textContent = "Widerstand";
-  enable.textContent = "Widerstand aktivieren";
-  disable.textContent = "Widerstand deaktivieren";
+  enable.setAttribute("class", "btn btn--secondary");
+  disable.setAttribute("class", "btn btn--secondary");
   status.output.setAttribute("aria-live", "polite");
   reason.setAttribute("aria-live", "polite");
   guidance.textContent =

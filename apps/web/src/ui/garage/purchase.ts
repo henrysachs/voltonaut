@@ -40,7 +40,8 @@ export class GaragePurchase {
   #open: { readonly itemId: string; readonly offer: PurchaseConfirmation } | undefined;
 
   constructor() {
-    this.button.className = "garage__purchase";
+    this.button.setAttribute("class", "btn btn--primary garage__purchase");
+    this.button.setAttribute("aria-busy", "false");
     this.hint.className = "garage__purchase-hint";
     this.hint.dataset["testid"] = "garage-purchase-hint";
     this.hint.setAttribute("aria-live", "polite");
@@ -82,9 +83,9 @@ export class GaragePurchase {
     this.confirmation.hidden = true;
     this.#question.id = QUESTION_ID;
     this.#question.className = "garage__purchase-question";
-    this.#confirm.className = "garage__purchase";
+    this.#confirm.setAttribute("class", "btn btn--primary garage__purchase");
     this.#confirm.setAttribute("aria-describedby", QUESTION_ID);
-    this.#cancel.className = "garage__purchase";
+    this.#cancel.setAttribute("class", "btn btn--secondary garage__purchase");
     this.#cancel.setAttribute("aria-describedby", QUESTION_ID);
     this.confirmation.append(this.#question, this.#confirm, this.#cancel);
   }
@@ -140,6 +141,8 @@ export class GaragePurchase {
     this.confirmation.hidden = !open;
     this.#question.textContent = this.#open?.offer.question ?? "";
     this.#confirm.textContent = this.#open?.offer.confirmText ?? "";
+    const pending = this.#view.kind === "ready" && this.#view.pendingItemId === item.id;
+    this.button.setAttribute("aria-busy", String(pending));
     this.hint.textContent = offer.hint;
 
     // Closed by a view change (logout, failed load, balance): keep keyboard users in place.

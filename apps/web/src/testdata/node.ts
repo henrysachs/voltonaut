@@ -17,6 +17,7 @@ export class TestElement {
   href = "";
   download = "";
   open = false;
+  focused = false;
   readonly children: TestElement[] = [];
   readonly attributes = new Map<string, string>();
   readonly listeners = new Map<string, (() => void)[]>();
@@ -28,6 +29,17 @@ export class TestElement {
   }
   replaceChildren(): void {
     this.children.length = 0;
+  }
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM contains accepts a live node reference and only reads the tree.
+  contains(node: Readonly<TestElement> | null): boolean {
+    if (node === this) return true;
+
+    for (const child of this.children) if (child.contains(node)) return true;
+
+    return false;
+  }
+  focus(): void {
+    this.focused = true;
   }
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
