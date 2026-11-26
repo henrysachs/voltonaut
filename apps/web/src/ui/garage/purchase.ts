@@ -131,10 +131,9 @@ export class GaragePurchase {
     const waiting = view.kind === "ready" && view.pendingItemId === this.#open?.itemId;
 
     if (!this.#buying || waiting) return;
+    // Focus already sits on the hint since #buy; #render handles a confirmation closed under focus.
     this.#buying = false;
     this.#open = undefined;
-
-    if (this.confirmation.contains(document.activeElement)) this.hint.focus();
   }
 
   #render(): void {

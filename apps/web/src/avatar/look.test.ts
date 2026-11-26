@@ -8,7 +8,7 @@ import { FRAME_SPECS, WHEEL_SPECS } from "./bikeSpecs.js";
 const FRAME_KEYS = FRAME_SPECS.map((spec) => spec.key);
 const WHEEL_KEYS = WHEEL_SPECS.map((spec) => spec.key);
 
-import { avatarLook } from "./look.js";
+import { avatarLook, sameAvatarLook } from "./look.js";
 
 function withBike(frameId: string, wheelsId: string): ReturnType<typeof AvatarConfigSchema.parse> {
   return AvatarConfigSchema.parse({
@@ -124,5 +124,22 @@ describe("bike specs for future catalog items", () => {
 
     expect(look.frame.key).toBe("race");
     expect(look.wheels.key).toBe("alloy");
+  });
+});
+
+describe("same avatar look", () => {
+  it("treats identical looks as equal and any changed slot or color as different", () => {
+    const copy = AvatarConfigSchema.parse(JSON.parse(JSON.stringify(DEFAULT_AVATAR_CONFIG)));
+
+    expect(sameAvatarLook(DEFAULT_AVATAR_CONFIG, copy)).toBe(true);
+    expect(
+      sameAvatarLook(DEFAULT_AVATAR_CONFIG, withBike("frame.race", "wheels.carbon-deep")),
+    ).toBe(false);
+    expect(
+      sameAvatarLook(DEFAULT_AVATAR_CONFIG, {
+        ...DEFAULT_AVATAR_CONFIG,
+        rider: { ...DEFAULT_AVATAR_CONFIG.rider, helmetColor: "#ec6b48" },
+      }),
+    ).toBe(false);
   });
 });
