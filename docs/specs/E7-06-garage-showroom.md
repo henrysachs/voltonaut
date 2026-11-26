@@ -16,7 +16,7 @@ Die Garage zeigt den Fahrer und das Rad als Studio-Szene. Die Nutzer drehen die 
 - [x] AK3: Die fokussierte Vorschau reagiert auf Pfeiltasten. Horizontal dreht, vertikal neigt und `Home` setzt die Ansicht zurück. Die Tasten lösen keine globalen Fahr- oder Menükürzel aus.
 - [x] AK4: Bei `prefers-reduced-motion: reduce` dreht sich die Vorschau nicht automatisch. Manuelle Orbit-Eingaben bleiben möglich.
 - [x] AK5: Der Fotomodus blendet HUD, Menükopf, Tabs, Item-Auswahl und Menüfuß aus. Die Vorschau füllt die Fläche. „PNG herunterladen“ und „Fotomodus beenden“ bleiben per Tastatur erreichbar. Escape beendet den Fotomodus, ohne die Fahrt zu unterbrechen.
-- [x] AK6: Der PNG-Download enthält genau die Pixel des Preview-Canvas. Die PNG-Maße entsprechen `canvas.width` und `canvas.height` und sind kleiner als der Viewport. Die Datei enthält keine Konto- oder DOM-Daten.
+- [x] AK6: Der PNG-Download enthält genau die Pixel des Preview-Canvas. Die PNG-Maße entsprechen dem Canvas-Backing-Store. Die sichtbare Canvas-Fläche ist kleiner als der Viewport. Die Datei enthält keine Konto- oder DOM-Daten.
 - [x] AK7: Ohne WebGL bleibt die Garage bedienbar. Der Fotomodus ist ohne verfügbare Vorschau deaktiviert und der bestehende Hinweis „3D nicht verfügbar“ bleibt sichtbar.
 - [x] AK8: Die bestehenden Garage- und Menü-E2Es bleiben grün. Neue E2Es prüfen Maus-, Touch- und Tastatur-Orbit, reduzierte Bewegung, Fotomodus und Download. Screenshots sind als Test-Anhänge für Henrys Sichtprüfung beigefügt.
 
@@ -38,6 +38,7 @@ Die Garage zeigt den Fahrer und das Rad als Studio-Szene. Die Nutzer drehen die 
 - Der Worker behält den Avatar-Winkel und die Auto-Drehung getrennt von der Kamera. `ThreePreviewScene.render(angleRad, orbit)` setzt beide Werte unabhängig.
 - Die Studio-Szene nutzt einen deckenden Hintergrund, matten Boden, eine zurückhaltende Plattform mit Ring sowie Key-, Fill- und Rim-Licht. Neue Geometrien und Materialien werden entsorgt. DPR bleibt auf 1,5 begrenzt. ADR-032 bleibt unverändert.
 - Der Capture läuft im Worker. `OffscreenCanvas.convertToBlob()` liefert nach einem expliziten Draw das PNG. `PreviewLink` ordnet Antworten über Request-IDs zu und lehnt offene Promises bei Fehler oder Dispose ab.
+- ADR-032 beschreibt den Preview-Worker zum Zeitpunkt der Migration. Issue #122 ändert bewusst den deckenden Clear-Farbraum und ersetzt `rotateBy` durch `setOrbit` und `capture`. Die Besitzgrenze aus ADR-032 bleibt unverändert.
 - `downloadPreviewPng()` akzeptiert nur `image/png`, nutzt den festen Namen `voltonaut-garage.png` und entfernt Anker und Object-URL.
 - Der Fotomodus nutzt denselben modalen Menudialog als bildschirmfüllende Bühne. Der Canvas wird weder verschoben noch erneut transferiert. Escape verlässt zuerst den Fotomodus. Fokus, Auto-Drehung, Body-Klasse und Dialog-Attribut werden beim Schließen oder Preview-Fehler bereinigt.
 - Reduced Motion deaktiviert die Auto-Drehung und den Drehschalter. Manuelle Orbit-Eingaben bleiben aktiv. Medienwechsel werden überwacht.
@@ -66,7 +67,7 @@ Orbit-Helper, absolutes Worker-Protokoll, Studio-Szene, Worker-Capture, PNG-Down
 - Typisierter Oxlint mit `--deny-warnings --report-unused-disable-directives` auf allen geänderten Web-Dateien: grün.
 - `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-showroom.spec.ts e2e/garage-shop.spec.ts e2e/overlay-states.spec.ts --workers=1`: 16 Tests grün.
 - `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-loadout.spec.ts e2e/garage-purchase.spec.ts e2e/game-menu.spec.ts e2e/menu-layout.spec.ts --workers=1`: 65 Tests grün.
-- Der Download-Test prüft PNG-Signatur, IHDR, Canvas-Maße, Viewport-Maße und mindestens ein deckendes Pixel nach dem Decode im Browser.
+- Der Download-Test prüft bei DPR 2 PNG-Signatur, IHDR, Canvas-Backing-Store, sichtbare CSS-Fläche und mindestens ein deckendes Pixel nach dem Decode im Browser.
 
 Die Tests hängen `garage-showroom.png`, `garage-photo-mode.png`, `voltonaut-garage.png` und die drei bestehenden Garage-Screenshots an den Playwright-Bericht.
 

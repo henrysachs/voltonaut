@@ -1,8 +1,9 @@
 /// <reference types="node" />
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright owns mutable browser fixtures and native CDP input. */
+import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 
-import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 
 import type { PreviewOrbit } from "../../src/ui/garage/previewOrbit.js";
 import { openGameMenu } from "./gameMenu.js";
@@ -19,11 +20,24 @@ export function required<T>(value: T | null): T {
 
 export async function openGarage(page: Readonly<Page>): Promise<Locator> {
   await page.goto("/?sim=1&debug=1");
-  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await page.getByTestId("hud-status").waitFor({ state: "visible" });
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="hud-status"]')?.textContent === "Sim connected",
+  );
+
+  assert.equal(await page.getByTestId("hud-status").textContent(), "Sim connected");
   await openGameMenu(page, "Garage / Shop");
   const preview = page.getByTestId("garage-preview");
-  await expect(preview).toHaveAttribute("data-preview-state", "preview");
-  await expect(preview.locator("canvas")).toHaveAttribute("data-preview-ready", "true");
+
+  await page.waitForFunction(() => {
+    const host = document.querySelector<HTMLElement>('[data-testid="garage-preview"]');
+    const canvas = host?.querySelector<HTMLCanvasElement>("canvas");
+
+    return (
+      host?.dataset["previewState"] === "preview" && canvas?.dataset["previewReady"] === "true"
+    );
+  });
   await preview.scrollIntoViewIfNeeded();
 
   return preview;
@@ -92,39 +106,48 @@ export async function expectPhotoChromeHidden(page: Readonly<Page>): Promise<voi
     ".garage__preview-controls",
   ];
 
-  await Promise.all(selectors.map((selector) => expect(page.locator(selector)).toBeHidden()));
+  await Promise.all(
+    selectors.map(async (selector) => {
+      assert.equal(await page.locator(selector).isHidden(), true, selector);
+    }),
+  );
 
-  await expect(page.locator(".game-menu__focus-guard").first()).toBeHidden();
+  assert.equal(
+    await page.locator(".game-menu__focus-guard").first().isHidden(),
+    true,
+    "photo mode hides the menu focus guards",
+  );
 }
 
 export async function expectPhotoStageSized(
   preview: Readonly<Locator>,
   canvas: Readonly<Locator>,
 ): Promise<void> {
-  await expect
-    .poll(async () => {
-      const host = await preview.evaluate((element: Readonly<HTMLElement>) => ({
-        width: element.clientWidth,
-        height: element.clientHeight,
-      }));
+  await canvas.waitFor({ state: "visible" });
+  await preview.page().waitForFunction(() => {
+    const host = document.querySelector<HTMLElement>('[data-testid="garage-preview"]');
+    const target = host?.querySelector<HTMLCanvasElement>("canvas");
 
-      const target = await canvas.evaluate((element: Readonly<HTMLCanvasElement>) => ({
-        width: element.width,
-        height: element.height,
-      }));
+    if (host === null || target === null) return false;
 
-      return {
-        widthDifference: host.width - target.width,
-        heightDifference: host.height - target.height,
-      };
-    })
-    .toEqual({ widthDifference: 0, heightDifference: 0 });
+    const hostBox = host.getBoundingClientRect();
+    const canvasBox = target.getBoundingClientRect();
+    const pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+
+    return (
+      Math.abs(hostBox.width - canvasBox.width) < 0.5 &&
+      Math.abs(hostBox.height - canvasBox.height) < 0.5 &&
+      Math.abs(target.width - hostBox.width * pixelRatio) < 1 &&
+      Math.abs(target.height - hostBox.height * pixelRatio) < 1
+    );
+  });
   const stage = required(await preview.boundingBox());
   const viewport = required(preview.page().viewportSize());
-  expect(stage.width).toBeGreaterThan(1000);
-  expect(stage.height).toBeGreaterThan(400);
-  expect(stage.width).toBeLessThan(viewport.width);
-  expect(stage.height).toBeLessThan(viewport.height);
+
+  assert.ok(stage.width > 1000, "photo stage is wide enough");
+  assert.ok(stage.height > 400, "photo stage is tall enough");
+  assert.ok(stage.width < viewport.width, "photo stage stays inside the viewport width");
+  assert.ok(stage.height < viewport.height, "photo stage stays inside the viewport height");
 }
 
 export function pngDimensions(bytes: Buffer) {

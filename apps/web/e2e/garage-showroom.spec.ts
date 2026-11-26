@@ -150,35 +150,44 @@ test("photo mode hides ride chrome, keeps the canvas, and Escape exits it first"
   await expect(page.locator("body")).not.toHaveClass(/garage-photo-mode/u);
 });
 
-test("photo mode downloads only the preview canvas as an opaque PNG", async ({
-  page,
-}: Readonly<PageFixture>, testInfo: Readonly<TestInfo>) => {
-  const preview = await openGarage(page);
-  await page.getByRole("button", { name: "Fotomodus", exact: true }).click();
-  const canvas = preview.locator("canvas");
-  await expectPhotoStageSized(preview, canvas);
+test.describe("HiDPI photo download", () => {
+  test.use({ deviceScaleFactor: 2 });
 
-  const canvasSize = await canvas.evaluate((element: Readonly<HTMLCanvasElement>) => ({
-    width: element.width,
-    height: element.height,
-  }));
+  test("photo mode downloads only the preview canvas as an opaque PNG", async ({
+    page,
+  }: Readonly<PageFixture>, testInfo: Readonly<TestInfo>) => {
+    const preview = await openGarage(page);
+    await page.getByRole("button", { name: "Fotomodus", exact: true }).click();
+    const canvas = preview.locator("canvas");
+    await expectPhotoStageSized(preview, canvas);
 
-  const viewport = required(page.viewportSize());
-  expect(canvasSize.width).toBeLessThan(viewport.width);
-  expect(canvasSize.height).toBeLessThan(viewport.height);
+    const canvasBox = required(await canvas.boundingBox());
 
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "PNG herunterladen", exact: true }).click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("voltonaut-garage.png");
-  const path = testInfo.outputPath("voltonaut-garage.png");
-  await download.saveAs(path);
+    const canvasSize = await canvas.evaluate((element: Readonly<HTMLCanvasElement>) => ({
+      width: element.width,
+      height: element.height,
+    }));
 
-  const bytes = await readFile(path);
-  expect(pngDimensions(bytes)).toEqual(canvasSize);
-  expect(await hasOpaquePngPixel(page, bytes)).toBe(true);
-  await expect(page.locator(".garage__photo-status")).toHaveText("PNG heruntergeladen.");
-  await testInfo.attach("voltonaut-garage.png", { path, contentType: "image/png" });
+    const viewport = required(page.viewportSize());
+
+    expect(canvasBox.width).toBeLessThan(viewport.width);
+    expect(canvasBox.height).toBeLessThan(viewport.height);
+    expect(canvasSize.width).toBeGreaterThan(canvasBox.width);
+    expect(canvasSize.height).toBeGreaterThan(canvasBox.height);
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "PNG herunterladen", exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("voltonaut-garage.png");
+    const path = testInfo.outputPath("voltonaut-garage.png");
+    await download.saveAs(path);
+
+    const bytes = await readFile(path);
+    expect(pngDimensions(bytes)).toEqual(canvasSize);
+    expect(await hasOpaquePngPixel(page, bytes)).toBe(true);
+    await expect(page.locator(".garage__photo-status")).toHaveText("PNG heruntergeladen.");
+    await testInfo.attach("voltonaut-garage.png", { path, contentType: "image/png" });
+  });
 });
 
 /* oxlint-enable typescript/prefer-readonly-parameter-types */
