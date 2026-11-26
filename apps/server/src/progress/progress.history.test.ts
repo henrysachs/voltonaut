@@ -120,4 +120,21 @@ it("requires a session and rejects a malformed cursor or extra query", async () 
 
   expect((await history(f, f.owner.sessionToken)).journals).toEqual([]);
 });
+
+it("gives a journal without a stored range no page slot", async () => {
+  const f = await fixture();
+  grantConsent(f.db, f.owner);
+
+  for (const index of Array.from({ length: 21 }, (_, offset) => offset + 1))
+    accept(f, f.owner, batch([checkpoint({ journalId: journalId(index) })]));
+
+  f.db.$client.prepare("DELETE FROM ride_progress_ranges WHERE journal_id = ?").run(journalId(21));
+
+  const page = await history(f, f.owner.sessionToken);
+
+  expect(page.journals.map(({ journalId: id }) => id)).toEqual(
+    Array.from({ length: 20 }, (_, offset) => journalId(20 - offset)),
+  );
+  expect(page.nextCursor).toBeNull();
+});
 /* oxlint-enable typescript/prefer-readonly-parameter-types */

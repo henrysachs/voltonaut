@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, exists, inArray, lt, or } from "drizzle-orm";
 
 import {
   PROGRESS_HISTORY_PAGE_SIZE,
@@ -62,7 +62,18 @@ function journalRows(
   cursor: HistoryCursor | undefined,
 ): readonly RideProgressJournalRow[] {
   const journals = tables.rideProgressJournals;
-  const owner = eq(journals.userId, userId);
+  const ranges = tables.rideProgressRanges;
+
+  // Only journals with a stored receipt take a page slot; otherwise a page could come back short.
+  const owner = and(
+    eq(journals.userId, userId),
+    exists(
+      db
+        .select({ journalId: ranges.journalId })
+        .from(ranges)
+        .where(and(eq(ranges.userId, userId), eq(ranges.journalId, journals.journalId))),
+    ),
+  );
 
   const older =
     cursor === undefined
@@ -85,7 +96,7 @@ function receiptsByJournal(
   db: HistoryDatabase,
   store: Readonly<Pick<ProgressRangeStore, "receipt">>,
   tables: ProgressTables,
-  journalIds: readonly string[],
+  { userId, journalIds }: Readonly<{ userId: string; journalIds: readonly string[] }>,
 ): ReadonlyMap<string, readonly VoltsRideRangeReceipt[]> {
   const ranges = tables.rideProgressRanges;
   const grouped = new Map<string, VoltsRideRangeReceipt[]>();
@@ -95,7 +106,7 @@ function receiptsByJournal(
   const rows = db
     .select()
     .from(ranges)
-    .where(inArray(ranges.journalId, [...journalIds]))
+    .where(and(eq(ranges.userId, userId), inArray(ranges.journalId, [...journalIds])))
     .orderBy(asc(ranges.journalId), asc(ranges.startTick))
     .all();
 
@@ -119,12 +130,10 @@ export function progressHistoryPage(
   const journals = journalRows(db, tables, userId, parseCursor(before));
   const page = journals.slice(0, PROGRESS_HISTORY_PAGE_SIZE);
 
-  const receipts = receiptsByJournal(
-    db,
-    store,
-    tables,
-    page.map(({ journalId }) => journalId),
-  );
+  const receipts = receiptsByJournal(db, store, tables, {
+    userId,
+    journalIds: page.map(({ journalId }) => journalId),
+  });
 
   const last = page.at(-1);
 

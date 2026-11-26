@@ -11,7 +11,7 @@ Während einer normalen Fahrt sieht der Fahrer im HUD, wie viele Volts die Fahrt
 
 ## Entscheidungen
 
-- **Vorschau aus nativen Fakten mit derselben Formel.** Die HUD-Vorschau summiert `energyKj` und `elevationGainM` der Checkpoints des laufenden Journals und rechnet mit `calculateBaseRewards` aus `packages/rules`, also mit derselben Formel wie der Server. Das Tageslimit kennt nur der Server, deshalb heißt der Wert ausdrücklich „vorläufig“.
+- **Vorschau aus nativen Fakten mit derselben Formel.** Die HUD-Vorschau summiert `energyKj` und `elevationGainM` der Checkpoints des laufenden Journals und rechnet mit `calculateBaseRewards` aus `packages/rules`, also mit derselben Formel wie der Server. Das Tageslimit kennt nur der Server, deshalb heißt der Wert ausdrücklich „vorläufig“. Der Client summiert Fließkommawerte in einer anderen Reihenfolge als der Server; an einer Rundungsgrenze kann die Vorschau um 1 Volt abweichen.
 - **Bestätigt heißt: eine Quittung vom Server.** Bestätigte Volts sind die Summe von `awardedVolts` aus den `VoltsRideRangeReceipt`s des laufenden Journals, je `entryId` nur einmal gezählt. Ohne Quittung zeigt das HUD „–“ und nie einen geschätzten Wert.
 - **Sim bleibt Vorschau.** Sim wird nie erfasst (E6-07). Für Sim zeigt das HUD die Vorschau mit dem Status „Sim – keine Serverbuchung“.
 - **Historie pro Journal.** `GET /v1/me/progress-history` liefert die neuesten 20 Journale (absteigend nach Anlage, Cursor `before`) aus `ride_progress_journals` mit den Summen der gespeicherten Range-Quittungen. Die Tabellen gehören `progress`; das Ledger wird nicht direkt gelesen.
@@ -27,12 +27,12 @@ Während einer normalen Fahrt sieht der Fahrer im HUD, wie viele Volts die Fahrt
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK  | Ebene            | Datei                                                           |
-| --- | ---------------- | --------------------------------------------------------------- |
-| 1   | Contract         | `packages/shared/src/api/progressHistory.test.ts`               |
-| 2   | Nest-Integration | `apps/server/src/progress/progress.history.test.ts`             |
-| 3   | Unit             | `apps/web/src/sync/progressLive.test.ts`                        |
-| 4   | Unit, E2E        | `apps/web/src/ui/hudVolts.test.ts`, `e2e/progress-live.spec.ts` |
+| AK  | Ebene            | Datei                                                                    |
+| --- | ---------------- | ------------------------------------------------------------------------ |
+| 1   | Contract         | `packages/shared/src/api/progressHistory.test.ts`                        |
+| 2   | Nest-Integration | `apps/server/src/progress/progress.history.test.ts`                      |
+| 3   | Unit             | `apps/web/src/sync/progressLive.test.ts`                                 |
+| 4   | Unit, E2E        | `apps/web/src/ui/hudVolts.test.ts`, `e2e/progress-live.spec.ts`          |
 | 5–6 | Unit, E2E        | `apps/web/src/sync/progressHistory.test.ts`, `e2e/progress-live.spec.ts` |
 
 ## Nicht-Ziele
