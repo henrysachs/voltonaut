@@ -26,7 +26,8 @@ export class GarageEquip {
     this.#equip.hidden = !offer.visible || !visible;
     this.#equip.textContent = offer.equipText;
     this.#equip.disabled = !offer.equipEnabled;
-    this.#discard.hidden = !offer.discardEnabled;
+    // Only next to „Ausrüsten“: a lone discard button would sit where the purchase flow just was.
+    this.#discard.hidden = !offer.visible || !visible || !offer.discardEnabled;
     this.#hint.hidden = !visible || offer.hint === "";
     this.#hint.textContent = offer.hint;
   }

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
-import type { AvatarConfig } from "@voltonaut/shared";
+import { AvatarConfigSchema, type AvatarConfig } from "@voltonaut/shared";
 
 import { disposeObject } from "../world/resources.js";
 import type { FrameInput, RenderSystem } from "../world/scheduler.js";
@@ -165,6 +165,14 @@ export function createRiderModel(wheelCircM: number): RiderOnBike {
   return new RiderOnBike(wheelCircM);
 }
 
+/** Equal looks; the schema fixes the key order of both sides. */
+function sameLook(left: Readonly<AvatarConfig>, right: Readonly<AvatarConfig>): boolean {
+  return (
+    JSON.stringify(AvatarConfigSchema.parse(left)) ===
+    JSON.stringify(AvatarConfigSchema.parse(right))
+  );
+}
+
 export function createRider(wheelCircM: number): RiderView {
   const rider = new RiderOnBike(wheelCircM, true);
   let worn: AvatarConfig = DEFAULT_AVATAR_CONFIG;
@@ -172,6 +180,8 @@ export function createRider(wheelCircM: number): RiderView {
 
   return {
     setLook(config) {
+      // An unchanged look (e.g. a guest's default) must not rebuild bike and body mid-ride.
+      if (sameLook(config, worn)) return;
       worn = config;
       pending = config;
     },

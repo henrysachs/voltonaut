@@ -181,6 +181,21 @@ test("a rejected save shows the server state and a discard returns to the equipm
   expect(server.loadout).toEqual(DEFAULT_AVATAR_CONFIG);
 });
 
+test("a double-clicked purchase confirmation buys once and equips nothing", async ({ page }) => {
+  const server = new LoadoutServer();
+
+  await server.attach(page);
+  await openGarage(page, "/?sim=1");
+  await page.getByTestId("garage-item-jersey.stripe").click();
+  await page.getByTestId("garage-purchase").click();
+  await page.getByTestId("garage-purchase-confirm").dblclick();
+  await expect(page.getByTestId("garage-item-status-jersey.stripe")).toHaveText("Im Besitz");
+
+  expect(server.owned).toEqual(["jersey.stripe"]);
+  expect(server.loadout).toEqual(DEFAULT_AVATAR_CONFIG);
+  expect(server.loadoutRequests).toEqual(["GET"]);
+});
+
 test("equipping works without WebGL and a guest sends no loadout request", async ({
   page,
   browser,
