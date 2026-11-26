@@ -80,12 +80,12 @@ Beide Tests messen „die Fahrt läuft weiter“ über `data-distance-m` der Ren
 - **Beobachtung (Zweitreview zu #144):** 1× unter Fremdlast stand nach 5 s noch „Waiting for devices“ statt „Sim connected“. Die Sim-Verbindung beim Mount war in dieser Zeit nicht fertig.
 - **Ursache:** nicht untersucht. Ein Fix ist nicht umgesetzt. Kein Rückschluss auf `frame.ts` oder den Helper, weil die Zeile vor beiden liegt.
 
-### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache belegt, Fix offen
+### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache belegt, Korrektur in E4-12
 
 - **Rot vorher (14 × `yes`, `--repeat-each=10`, `aacd0cd`):** Im Messlauf beider Tests waren mindestens 8/20 rot. Die Ausgabe war gekürzt, die genaue Zahl fehlt. In der Gegenprobe war :153 10/10 rot. Im Gate-Lauf `E2E_PORT=5194` (Fremdlast) waren :37, :86 und :153 rot. Fehler: Klick oder `check` wartet 30 s auf „visible, enabled and stable“ (Item-Button, Farb-Radio).
 - **Ursache (App, Main-Thread-WebGL):** Die Garage-Vorschau (`ui/garage/preview.ts`) zeichnet mit Three.js auf dem Main-Thread bei jedem `requestAnimationFrame`. ADR-019 deckt nur die Fahrtwelt ab. Unter Last misst der Main-Thread mit offener Garage Long Tasks von 1,5–2,5 s, also nur 3–4 Frames in 5 s. `renderer.render` selbst kostet in JS 0–1 ms, die Zeit liegt im synchronen Software-GL-Pfad. Ohne Garage hat derselbe Tab 60 fps. Playwright prüft „stable“ über aufeinanderfolgende rAF-Frames. Mit ~2 s pro Frame reichen 30 s nicht für mehrere Aktionen. Das Element bewegt sich nicht (Rechteck über 6 Frames identisch).
 - **Gegenprobe (gleiche Last):** WebGL nur auf Main abgeschaltet (Weltrenderer im Worker unberührt): :153 10/10 grün, unverändert 10/10 rot. Mit stillgelegtem Weltrenderer und laufender Garage gibt es weiter Long Tasks von 0,5 s. Die Ursache ist die Garage, nicht der Welt-Worker.
-- **Fixpfad:** Die Garage-Vorschau wandert wie ADR-019 in einen Worker mit `OffscreenCanvas`. Das geschieht im laufenden Zweig `feat/garage-preview-worker` (ADR-032), nicht in diesem Teilstand. Eine Drosselung der Vorschau-Bildrate allein zum Bestehen wäre verbogene Grafikqualität und bleibt ausgeschlossen.
+- **Korrektur:** Die Garage-Vorschau rendert wie ADR-019 in einem Worker mit `OffscreenCanvas`: [E4-12](E4-12-garage-preview-worker.md) / [ADR-032](../decisions/ADR-032-garage-preview-worker.md). Nachher-Messung unter Last offen. Eine Drosselung der Vorschau-Bildrate allein zum Bestehen wäre verbogene Grafikqualität und bleibt ausgeschlossen.
 
 ### Server `check-config.test.ts`, `main.shutdown.test.ts`, `admin.test.ts` – Ressourcenbegrenzung, kein Code-Fehler belegt
 
