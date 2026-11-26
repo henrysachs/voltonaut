@@ -55,9 +55,11 @@ function turnAt(route: EngineRoute, distanceM: number): number {
   const beforeM = route.loop
     ? distanceM - TURN_WINDOW_M / 2
     : Math.max(0, distanceM - TURN_WINDOW_M / 2);
+
   const afterM = route.loop
     ? distanceM + TURN_WINDOW_M / 2
     : Math.min(route.lengthM, distanceM + TURN_WINDOW_M / 2);
+
   const beforeRad = route.headingRad(beforeM);
   const afterRad = route.headingRad(afterM);
 

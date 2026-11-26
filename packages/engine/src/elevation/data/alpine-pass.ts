@@ -13,6 +13,7 @@ const SWITCHBACK_RAD = (45 * Math.PI) / 180;
 const START_ELEVATION_M = 160;
 const GRADE_PCT = 7;
 const SUMMIT_ELEVATION_M = START_ELEVATION_M + (CLIMB_M / 100) * GRADE_PCT;
+
 /** Floating-point drift the closed polyline may carry before the last point is snapped shut. */
 const CLOSURE_TOLERANCE_M = 1e-6;
 

@@ -30,14 +30,15 @@ function terrainTriangles(terrain: THREE.Group): readonly Triangle[] {
 
   const geometry: unknown = mesh instanceof THREE.Mesh ? mesh.geometry : undefined;
 
-  if (!(mesh instanceof THREE.Mesh) || !(geometry instanceof THREE.BufferGeometry))
-    throw new Error("The terrain system must own a named terrain mesh");
+  const positions: unknown =
+    geometry instanceof THREE.BufferGeometry ? geometry.getAttribute("position") : undefined;
 
-  const positions: unknown = geometry.getAttribute("position");
-  const index = geometry.getIndex();
+  const index = geometry instanceof THREE.BufferGeometry ? geometry.getIndex() : null;
 
-  if (!(positions instanceof THREE.BufferAttribute) || index === null)
-    throw new Error("The terrain mesh must be indexed");
+  const indexed = positions instanceof THREE.BufferAttribute && index !== null;
+
+  if (mesh === undefined || !indexed)
+    throw new Error("The terrain system must own a named, indexed terrain mesh");
 
   terrain.updateMatrixWorld(true);
 
