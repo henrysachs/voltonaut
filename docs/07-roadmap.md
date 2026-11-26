@@ -145,6 +145,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
   - [x] [E6-08](specs/E6-08-progress-consent.md): versionierte, widerrufbare Zustimmung und globale Journal-/Sessionbindung softwaregeprüft.
   - [x] [E6-09](specs/E6-09-progress-outbox.md): HR-freie lokale Outbox mit Offline-Status, Kapazität und idempotentem Retry softwaregeprüft. Echte Browser-IDB-Offlineprüfung bleibt offen.
   - [x] [E6-10](specs/E6-10-progress-server-intake.md): authentifizierte Checkpoint-Annahme und atomare Volts-Buchung softwaregeprüft. Keine XP, synthetischen Fahrten oder produktive Quellenfreigabe.
+  - [ ] [E6-11](specs/E6-11-progress-display.md) (#61): HUD-Vorschau und vom Server bestätigte Volts der laufenden Fahrt, Status für ausstehend, offline und Fehler, Historie bestätigter Journale im Konto-Menü. Implementiert und softwaregeprüft; Review, Merge und Hardwareabnahme offen.
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)

@@ -11,6 +11,7 @@ import { createRideSession } from "./game/rideSession.js";
 import { setupProfile } from "./profileBootstrap.js";
 import { setupBrowserAccount, type BrowserAccount } from "./browserAccount.js";
 import { mountRideViews } from "./rideViews.js";
+import { setupProgressHud } from "./progressHud.js";
 import { wornLoadout } from "./sync/garageLoadout.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
 import { parseEnvironmentSettings } from "./world/environment.js";
@@ -49,7 +50,7 @@ async function start(): Promise<void> {
     source: simMode ? "sim" : "ble",
     clockScale,
     trainer: devices,
-    onProgress: account?.progress.accept,
+    onProgress: setupProgressHud(account?.progress),
   });
 
   const scene = mountRideViews(session, {

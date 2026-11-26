@@ -50,7 +50,14 @@ import {
 import { createProgressOutboxDatabase } from "./progressOutboxDatabase.js";
 import { ProgressSync, type ProgressLease, type ProgressSyncOptions } from "./progressSync.js";
 import { deferred } from "./testdata/deferred.js";
-import { MemoryOutboxDatabase, batch, checkpoint, owner, userA } from "./progressOutboxTestdata.js";
+import {
+  MemoryOutboxDatabase,
+  batch,
+  checkpoint,
+  journalId as testJournalId,
+  owner,
+  userA,
+} from "./progressOutboxTestdata.js";
 
 const ORIGIN = "http://localhost:3000";
 const OTHER_JOURNAL = "550e8400-e29b-41d4-a716-446655440001";
@@ -607,6 +614,7 @@ class Harness {
 
         return { ...this.consent };
       },
+      history: () => Promise.reject(new PrivateRequestError("missing")),
       submit: async (value) => {
         if (!current()) throw new PrivateRequestError("superseded");
         this.submitted.push(value);
@@ -1489,4 +1497,50 @@ it("rejects malformed or invalid progress contracts before accepting a receipt",
   } finally {
     await server.close();
   }
+});
+
+it("reports the journal binding and each stored receipt to the live display", async () => {
+  const f = new Harness();
+  const receipts: string[] = [];
+
+  f.sync.subscribeReceipts((receipt) => {
+    receipts.push(`${receipt.journalId}:${receipt.endTick}`);
+  });
+  f.consent = { version: 1, enabled: true, rewardsAvailable: true, sessionGeneration: 1 };
+  f.login();
+  await settle();
+
+  expect(f.sync.journal()).toBeUndefined();
+
+  f.sync.accept(checkpoint());
+  await settle();
+
+  expect(f.sync.journal()).toEqual({ journalId: testJournalId, kind: "writing" });
+  expect(receipts).toEqual([]);
+
+  await f.sync.flush();
+
+  expect(receipts).toEqual([`${testJournalId}:1`]);
+});
+
+it("reports no receipt for a rejected range and an ignored sim journal", async () => {
+  const memory = new MemoryOutbox();
+  seedRow(memory, [checkpoint({ paused: true })]);
+  const f = new Harness(memory);
+  const receipts: string[] = [];
+
+  const unsubscribe = f.sync.subscribeReceipts((receipt) => {
+    receipts.push(receipt.entryId);
+  });
+
+  f.consent = { version: 1, enabled: true, rewardsAvailable: true, sessionGeneration: 1 };
+  f.submitOverride = () =>
+    Promise.resolve(rangeReceipt(batch([checkpoint({ id: OTHER_JOURNAL, paused: true })])));
+  f.login();
+  await settle();
+  f.sync.accept(checkpoint({ source: "sim", id: OTHER_JOURNAL }));
+  unsubscribe();
+
+  expect(receipts).toEqual([]);
+  expect(f.sync.journal()).toBeUndefined();
 });

@@ -161,6 +161,7 @@ function deliveryPageCursor(
 export class ProgressSync {
   readonly #options: ProgressSyncOptions;
   readonly #listeners = new Set<(view: ProgressPanelView) => void>();
+  readonly #receiptListeners = new Set<(receipt: VoltsRideRangeReceipt) => void>();
   readonly #flush = (): void => {
     const view = this.view();
 
@@ -306,6 +307,22 @@ export class ProgressSync {
     return () => {
       this.#listeners.delete(listener);
     };
+  }
+
+  /** Server receipts as they are stored; the live HUD counts only these as confirmed (spec E6-11). */
+  subscribeReceipts(listener: (receipt: VoltsRideRangeReceipt) => void): () => void {
+    this.#receiptListeners.add(listener);
+
+    return () => {
+      this.#receiptListeners.delete(listener);
+    };
+  }
+
+  /** Whether the current journal is written for this account, waits for consent or stays local. */
+  journal(): Readonly<{ journalId: string; kind: JournalState["kind"] }> | undefined {
+    return this.#journal === undefined
+      ? undefined
+      : { journalId: this.#journal.journalId, kind: this.#journal.kind };
   }
 
   async setConsent(enabled: boolean): Promise<void> {
@@ -921,6 +938,7 @@ export class ProgressSync {
       });
     }
 
+    if (this.current(lease)) for (const listener of this.#receiptListeners) listener(receipt);
     const uncovered = sending.filter((row) => !progressReceiptCoversRow(receipt, row));
 
     for (const row of uncovered) {
