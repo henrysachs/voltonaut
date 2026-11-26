@@ -61,13 +61,14 @@ Orbit-Helper, absolutes Worker-Protokoll, Studio-Szene, Worker-Capture, PNG-Down
 
 ### Softwaregeprüft
 
-- `pnpm --filter @voltonaut/web exec vitest run src/ui/garage`: 9 Dateien, 57 Tests grün.
+- `pnpm --filter @voltonaut/web exec vitest run src/ui/garage`: 9 Dateien, 53 Tests grün.
 - `pnpm exec tsc -b packages/shared packages/rules packages/ble packages/engine apps/web --pretty false`: grün.
 - `pnpm --filter @voltonaut/web build`: grün.
 - Typisierter Oxlint mit `--deny-warnings --report-unused-disable-directives` auf allen geänderten Web-Dateien: grün.
-- `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-showroom.spec.ts e2e/garage-shop.spec.ts e2e/overlay-states.spec.ts --workers=1`: 16 Tests grün.
+- `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-showroom.spec.ts e2e/garage-shop.spec.ts e2e/overlay-states.spec.ts --workers=1`: 17 Tests grün.
 - `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-loadout.spec.ts e2e/garage-purchase.spec.ts e2e/game-menu.spec.ts e2e/menu-layout.spec.ts --workers=1`: 65 Tests grün.
 - Der Download-Test prüft bei DPR 2 PNG-Signatur, IHDR, Canvas-Backing-Store, sichtbare CSS-Fläche und mindestens ein deckendes Pixel nach dem Decode im Browser.
+- Der Fotomodus-Screenshot wartet auf sichtbare helle Canvas-Pixel. Ein erzwungener Kontextverlust prüft, dass der sichtbare Fallback den Fokus behält.
 
 Die Tests hängen `garage-showroom.png`, `garage-photo-mode.png`, `voltonaut-garage.png` und die drei bestehenden Garage-Screenshots an den Playwright-Bericht.
 
