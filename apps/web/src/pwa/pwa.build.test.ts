@@ -5,6 +5,16 @@ import type { Browser, Page } from "@playwright/test";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  announceRelease,
+  installShell,
+  openUpdateNotice,
+  removeShell,
+  verifyAnnouncement,
+  verifyApply,
+  verifyNotice,
+} from "./pwaReleaseKit.js";
+import type { InstalledShell } from "./pwaReleaseKit.js";
+import {
   buildProduction,
   cacheContents,
   fetchApi,
@@ -173,68 +183,6 @@ async function verifyHardReload({ dist, app, page }: Fixture): Promise<void> {
   expect(page.url()).toBe(`${app.origin}/?sim=1`);
 }
 
-const UPDATE_MARKER = '<meta name="update-marker" content="next">';
-
-/** A new release: changed shell bytes and a changed worker script, as a real deploy produces. */
-async function publishRelease(dist: string): Promise<void> {
-  const index = join(dist, "index.html");
-  const worker = join(dist, "sw.js");
-
-  await writeFile(
-    index,
-    (await readFile(index, "utf8")).replace("</head>", `${UPDATE_MARKER}</head>`),
-  );
-  await writeFile(worker, `${await readFile(worker, "utf8")}\n// next release\n`);
-}
-
-async function verifyUpdateShortcut({ dist, page }: Fixture): Promise<void> {
-  const shortcut = page.getByRole("button", { name: "Neue Version", exact: true });
-
-  expect(await shortcut.isVisible()).toBe(false);
-
-  await publishRelease(dist);
-  await page.reload();
-  // Chromium defers its own update check after a navigation; ask for it like a returning tab would.
-  await page.evaluate(() =>
-    navigator.serviceWorker.getRegistration().then((registration) => registration?.update()),
-  );
-  await shortcut.waitFor({ state: "visible" });
-  expect(await page.locator('meta[name="update-marker"]').count()).toBe(0);
-
-  await shortcut.click();
-
-  const apply = page.getByRole("button", { name: "Jetzt aktualisieren", exact: true });
-
-  const warning =
-    "Eine neue Version ist bereit. Aktualisieren lädt die Seite neu und verwirft eine laufende Aufnahme.";
-
-  expect(await page.getByRole("dialog", { name: "Fahrtmenü" }).isVisible()).toBe(true);
-  expect(await shortcut.getAttribute("aria-haspopup")).toBe("dialog");
-  expect(
-    await page
-      .getByRole("group", { name: warning })
-      .evaluate((element) => element === document.activeElement),
-  ).toBe(true);
-  expect(await page.getByText(warning, { exact: true }).isVisible()).toBe(true);
-  // The reload button carries the recording warning as its accessible description.
-  expect(
-    await apply.evaluate((element) => {
-      const id = element.getAttribute("aria-describedby") ?? "";
-
-      return document.querySelector(`#${id}`)?.textContent ?? "";
-    }),
-  ).toBe(warning);
-
-  // A repeated Enter after the shortcut lands on the notice, not on the reload button.
-  await page.keyboard.press("Enter");
-  await page.keyboard.press("Enter");
-  expect(await page.locator('meta[name="update-marker"]').count()).toBe(0);
-  expect(await page.getByRole("dialog", { name: "Fahrtmenü" }).isVisible()).toBe(true);
-
-  await Promise.all([page.waitForEvent("load"), apply.click()]);
-  expect(await page.locator('meta[name="update-marker"]').count()).toBe(1);
-}
-
 describe("built PWA", () => {
   let fixture: Fixture;
 
@@ -260,11 +208,64 @@ describe("built PWA", () => {
     await expect(verifyHardReload(fixture)).resolves.toBeUndefined();
   });
 
-  it("announces a waiting release next to the menu and applies it on request", async () => {
-    await expect(verifyUpdateShortcut(fixture)).resolves.toBeUndefined();
-  });
-
   it("reloads the app shell offline and still passes API traffic to the network", async () => {
     await expect(verifyOffline(fixture)).resolves.toBeUndefined();
   });
+
+  describe("release update", () => {
+    describeReleaseUpdate(() => fixture);
+  });
 });
+
+type ShellStep = (shell: InstalledShell) => Promise<void>;
+
+/**
+ * Installs one shell for one update step and reaches the step's starting state in setup,
+ * so the test holds only the step. Each shell has its own origin and lives only for its step.
+ */
+function shellFor(built: () => Fixture, setup: ShellStep): () => InstalledShell {
+  let shell: InstalledShell | undefined;
+
+  beforeAll(async () => {
+    shell = await installShell(built().browser, built().dist);
+    await setup(shell);
+  }, 120_000);
+
+  afterAll(async () => {
+    if (shell !== undefined) await removeShell(shell);
+  });
+
+  return () => {
+    if (shell === undefined) throw new Error("shell setup did not run");
+
+    return shell;
+  };
+}
+
+// As one test the update steps took 4–7 s under load, past the 5 s timeout
+// (docs/specs/E0-16-flaky-tests.md), so each step is its own test.
+function describeReleaseUpdate(built: () => Fixture): void {
+  describe("before the announcement", () => {
+    const shell = shellFor(built, () => Promise.resolve());
+
+    it("announces a waiting release next to the menu and keeps the old version", async () => {
+      await expect(verifyAnnouncement(shell())).resolves.toBeUndefined();
+    });
+  });
+
+  describe("after the announcement", () => {
+    const shell = shellFor(built, announceRelease);
+
+    it("opens the focused warning notice from the shortcut, safe against repeated Enter", async () => {
+      await expect(verifyNotice(shell())).resolves.toBeUndefined();
+    });
+  });
+
+  describe("with the notice open", () => {
+    const shell = shellFor(built, openUpdateNotice);
+
+    it("applies the waiting release on request and reloads onto it", async () => {
+      await expect(verifyApply(shell())).resolves.toBeUndefined();
+    });
+  });
+}
