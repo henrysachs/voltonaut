@@ -2,6 +2,7 @@
 import { expect, test, type Page, type Request as PlaywrightRequest } from "@playwright/test";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
+import { drawnDistanceM } from "./helpers/rideWorld.js";
 
 function watchProgressRequests(page: Readonly<Page>): string[] {
   const urls: string[] = [];
@@ -34,7 +35,7 @@ test("guest progress controls explain consent and sim exclusion while the ride c
   ).toBeHidden();
 
   const diagnostics = page.getByLabel("Render diagnostics");
-  const distanceM = Number(await diagnostics.getAttribute("data-distance-m"));
+  const distanceM = await drawnDistanceM(page);
 
   expect(Number.isFinite(distanceM)).toBe(true);
   await expect
