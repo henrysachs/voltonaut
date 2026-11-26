@@ -1,4 +1,4 @@
-import type { DeviceEvent, RideMode, RiderProfile } from "@voltonaut/shared";
+import type { DeviceEvent, RideMode, RiderProfile, WorldPathReference } from "@voltonaut/shared";
 import type { RideSnapshot } from "@voltonaut/engine";
 
 import type { EngineWorkerRequest, EngineWorkerResponse } from "./engineWorkerCore.js";
@@ -29,7 +29,7 @@ export interface EngineLinkCallbacks {
 
 export interface EngineLinkInit {
   readonly source: "sim" | "ble";
-  readonly routeId: string;
+  readonly worldPath: WorldPathReference;
   readonly profile: RiderProfile;
   readonly clockScale?: number;
 }
@@ -78,7 +78,7 @@ class WorkerLink implements EngineLink {
       type: "engine.init",
       actorId: this.actorId,
       source: init.source,
-      routeId: init.routeId,
+      worldPath: init.worldPath,
       profile: init.profile,
       clockScale: init.clockScale ?? 1,
     });

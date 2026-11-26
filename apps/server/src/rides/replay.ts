@@ -4,10 +4,8 @@ import {
   createRoute,
   PHYSICS_REVISION,
   replaySnapshotEqual,
-  TEST_ROUTES,
   type Engine,
   type RideSnapshot,
-  type RouteData,
 } from "@voltonaut/engine";
 import {
   RecordingV2Schema,
@@ -20,6 +18,7 @@ import {
 
 import { replayCommandEqual, replayEventEqual } from "./replayComparison.js";
 import { recordingV2Eligibility } from "./replayEligibility.js";
+import { replayRoute, type ReplayRoute } from "./replayRoute.js";
 
 export type RecordingV2Assessment =
   | RideAssessment
@@ -46,6 +45,7 @@ function windowSummary(
 
 class ReplayRun {
   private readonly recording: RecordingV2;
+  private readonly replayRevision: ReplayRoute["replayRevision"];
   private readonly engine: Engine;
   private observationIndex = 0;
   private eventOffset = 0;
@@ -55,10 +55,11 @@ class ReplayRun {
   private start: { readonly snapshot: RideSnapshot; readonly workerMs: number } | undefined;
   private clockSkipped = false;
 
-  constructor(recording: RecordingV2, routeData: Readonly<RouteData>) {
+  constructor(recording: RecordingV2, target: ReplayRoute) {
     this.recording = recording;
+    this.replayRevision = target.replayRevision;
     this.engine = createEngine({
-      route: createRoute(routeData),
+      route: createRoute(target.route),
       profile: recording.initialization.profile,
     });
   }
@@ -102,18 +103,24 @@ class ReplayRun {
 
     if (entry[3] !== "finish" || this.start === undefined) return undefined;
 
-    return {
-      status: "replayed",
-      physicsRevision: PHYSICS_REVISION,
-      summary: windowSummary(this.start.snapshot, snapshot, {
-        elapsedRealS: (entry[1] - this.start.workerMs) / 1000,
-        eventCount: this.eventCount,
-        commandCount: this.commandCount,
-      }),
-      source: recordingV2Eligibility(this.recording, {
-        clockSkipped: this.clockSkipped,
-      }),
-    };
+    const summary = windowSummary(this.start.snapshot, snapshot, {
+      elapsedRealS: (entry[1] - this.start.workerMs) / 1000,
+      eventCount: this.eventCount,
+      commandCount: this.commandCount,
+    });
+
+    const source = recordingV2Eligibility(this.recording, { clockSkipped: this.clockSkipped });
+
+    // Single-route replays keep the stored form; world paths name their replay revision.
+    return this.replayRevision === undefined
+      ? { status: "replayed", physicsRevision: PHYSICS_REVISION, summary, source }
+      : {
+          status: "replayed",
+          physicsRevision: PHYSICS_REVISION,
+          replayRevision: this.replayRevision,
+          summary,
+          source,
+        };
   }
 
   run(): RecordingV2Assessment {
@@ -145,21 +152,11 @@ export function assessRecordingV2(recording: RecordingV2): RecordingV2Assessment
 
   if (normalized.journalState !== "complete")
     return { status: "unverified", reason: "incomplete_journal" };
-  const initialization = normalized.initialization;
+  const target = replayRoute(normalized.initialization);
 
-  if (
-    initialization.physicsRevision !== PHYSICS_REVISION ||
-    initialization.routeRevision !== "1" ||
-    !Object.hasOwn(TEST_ROUTES, initialization.routeId)
-  ) {
+  if (normalized.initialization.physicsRevision !== PHYSICS_REVISION || target === undefined) {
     return { status: "unverified", reason: "unknown_revision" };
   }
 
-  const routeData = TEST_ROUTES[initialization.routeId];
-
-  if (routeData === undefined) {
-    return { status: "unverified", reason: "unknown_revision" };
-  }
-
-  return new ReplayRun(normalized, routeData).run();
+  return new ReplayRun(normalized, target).run();
 }

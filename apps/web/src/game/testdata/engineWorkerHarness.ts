@@ -8,7 +8,7 @@ import {
 } from "../engineWorkerCore.js";
 import type { RideInit } from "../recordedRide.js";
 import type { CaptureCommand } from "../rideCaptureProtocol.js";
-import { FIRST_RIDE_ID } from "./recordedRideHarness.js";
+import { FIRST_RIDE_ID, TEST_LOOP_PATH } from "./recordedRideHarness.js";
 import { createFakeTimers, createManualClock } from "./workerClock.js";
 
 type EngineUpdate = Extract<EngineWorkerResponse, { readonly type: "engine.update" }>;
@@ -65,7 +65,7 @@ export function createWorkerHarness(
         type: "engine.init",
         actorId,
         source: "sim",
-        routeId: "test-loop",
+        worldPath: TEST_LOOP_PATH,
         profile: DEFAULT_RIDER_PROFILE,
         clockScale: 1,
         ...init,

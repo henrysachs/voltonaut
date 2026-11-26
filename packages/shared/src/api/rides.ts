@@ -5,6 +5,9 @@ import { RideRecordingSchema } from "../recordingCapture.js";
 
 const nonnegative = z.number().finite().nonnegative();
 
+/** Replay revision of world path recordings; a new path semantics needs a new revision. */
+export const WORLD_PATH_REPLAY_REVISION = "world-path-1";
+
 export const WindowFailureSchema = z.enum([
   "sim",
   "clock_scale",
@@ -64,10 +67,22 @@ export const RideAssessmentSchema = z.union([
     .object({ status: z.literal("rejected"), reason: z.literal("observation_mismatch") })
     .strict()
     .readonly(),
+  // Single-route replay (ADR-016); stored assessments keep this form.
   z
     .object({
       status: z.literal("replayed"),
       physicsRevision: z.literal("engine-v1"),
+      summary: ReplayWindowSummarySchema,
+      source: SourceAssessmentSchema,
+    })
+    .strict()
+    .readonly(),
+  // World path replay (ADR-033 §7): the server resolves world and revision itself.
+  z
+    .object({
+      status: z.literal("replayed"),
+      physicsRevision: z.literal("engine-v1"),
+      replayRevision: z.literal(WORLD_PATH_REPLAY_REVISION),
       summary: ReplayWindowSummarySchema,
       source: SourceAssessmentSchema,
     })

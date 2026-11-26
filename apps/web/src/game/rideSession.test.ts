@@ -11,6 +11,7 @@ import { expect, it } from "vitest";
 import type { EngineWorkerRequest, EngineWorkerResponse } from "./engineWorkerCore.js";
 import { createRideSession, ENGINE_INPUT_TYPES, type RideSessionOptions } from "./rideSession.js";
 import { createFakePort } from "./testdata/enginePort.js";
+import { singleRouteWorldPath, TEST_LOOP_PATH } from "./testdata/recordedRideHarness.js";
 
 const snapshot = createEngine({
   route: createRoute(TEST_LOOP),
@@ -32,8 +33,9 @@ const progress = {
   source: "sim",
   clockScale: 1,
   physicsRevision: "engine-v1",
-  routeId: "test-loop",
-  routeRevision: "1",
+  worldId: "test-loop",
+  worldRevision: "1",
+  pathId: "test-loop",
   physics: { massKg: 75, bikeMassKg: 8, cdaM2: 0.32, crr: 0.004, wheelCircM: 2.105 },
   facts: [
     { powerW: 200, cadenceRpm: 90, timeS: 0.05, distanceM: 1, elevationGainM: 0, energyKj: 0.01 },
@@ -56,7 +58,7 @@ function setup(extra: Partial<Pick<RideSessionOptions, "onProgress">> = {}) {
     {
       ...extra,
       bus,
-      routeId: "test-loop",
+      worldPath: TEST_LOOP_PATH,
       profile: DEFAULT_RIDER_PROFILE,
       source: "sim",
       clockScale: 1,
@@ -109,10 +111,12 @@ it("initializes the worker first, then forwards exactly the engine input events 
     type: "engine.init",
     actorId: "actor",
     source: "sim",
-    routeId: "test-loop",
+    worldPath: TEST_LOOP_PATH,
     profile: DEFAULT_RIDER_PROFILE,
     clockScale: 1,
   });
+  // The render worker keeps loading by route id: the id of the resolved world path.
+  expect(ride.session.routeId).toBe("test-loop");
   expect(ride.sent.slice(1).map((message) => ingestedType(message))).toEqual([
     ...ENGINE_INPUT_TYPES,
   ]);
@@ -207,19 +211,25 @@ it("stops forwarding and connection tracking on dispose", () => {
   expect(ride.session.segments().rows[0]?.progress.kind).toBe("invalid");
 });
 
-it("rejects unknown routes before creating a worker port or subscribing", () => {
+it("rejects unknown world paths before creating a worker port or subscribing", () => {
   const ports: string[] = [];
   const bus = createEventBus();
 
   expect(() =>
     createRideSession(
-      { bus, routeId: "missing", profile: DEFAULT_RIDER_PROFILE, source: "sim", clockScale: 1 },
+      {
+        bus,
+        worldPath: singleRouteWorldPath("missing"),
+        profile: DEFAULT_RIDER_PROFILE,
+        source: "sim",
+        clockScale: 1,
+      },
       () => {
         ports.push("created");
 
         return createFakePort().port;
       },
     ),
-  ).toThrow("Unknown route");
+  ).toThrow("Unknown world path: World missing, revision 1, path missing");
   expect(ports).toEqual([]);
 });

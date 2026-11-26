@@ -1,15 +1,24 @@
 import { expect, it } from "vitest";
 
-import { FIRST_RIDE_ID, SECOND_RIDE_ID, TRAINER_READING } from "./testdata/recordedRideHarness.js";
+import {
+  FIRST_RIDE_ID,
+  SECOND_RIDE_ID,
+  singleRouteWorldPath,
+  TRAINER_READING,
+} from "./testdata/recordedRideHarness.js";
 import { createWorkerHarness } from "./testdata/engineWorkerHarness.js";
 
-it("rejects an unknown route with engine.initFailed and schedules nothing", () => {
+it("rejects an unknown world path with engine.initFailed and schedules nothing", () => {
   const worker = createWorkerHarness();
 
-  worker.init("actor", { routeId: "does-not-exist" });
+  worker.init("actor", { worldPath: singleRouteWorldPath("does-not-exist") });
 
   expect(worker.posted).toEqual([
-    { type: "engine.initFailed", actorId: "actor", message: "unknown route does-not-exist" },
+    {
+      type: "engine.initFailed",
+      actorId: "actor",
+      message: "unknown world path: World does-not-exist, revision 1, path does-not-exist",
+    },
   ]);
   expect(worker.timers.active()).toBe(0);
 });

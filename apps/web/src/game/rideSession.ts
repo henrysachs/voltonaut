@@ -1,11 +1,13 @@
 import type { TrainerControl } from "@voltonaut/ble";
-import { TEST_ROUTES, type RideSnapshot } from "@voltonaut/engine";
-import type {
-  DeviceEvent,
-  EventBus,
-  RideMode,
-  RideProgressCheckpoint,
-  RiderProfile,
+import { TEST_WORLDS, worldPathRoute, type RideSnapshot } from "@voltonaut/engine";
+import {
+  describeRideReference,
+  type DeviceEvent,
+  type EventBus,
+  type RideMode,
+  type RideProgressCheckpoint,
+  type RiderProfile,
+  type WorldPathReference,
 } from "@voltonaut/shared";
 
 import { createConnectionMonitor } from "./connectionMonitor.js";
@@ -27,7 +29,8 @@ export type RideTrainerSink = Pick<TrainerControl, "forward">;
 
 export interface RideSessionOptions {
   readonly bus: EventBus;
-  readonly routeId: string;
+  /** The driven world path (ADR-033 §7); unknown paths fail before a worker exists. */
+  readonly worldPath: WorldPathReference;
   /** Frozen at ride start; profile edits apply to the next ride. */
   readonly profile: RiderProfile;
   readonly source: "sim" | "ble";
@@ -39,6 +42,7 @@ export interface RideSessionOptions {
 
 /** The running ride on the main thread. The worker owns state; this is its read model and intents. */
 export interface RideSession {
+  /** Route id of the resolved path, for the render worker. */
   readonly routeId: string;
   readonly profile: RiderProfile;
   readonly snapshot: () => RideSnapshot | undefined;
@@ -101,7 +105,7 @@ function startEngine(
   return createEngineLink(
     port,
     {
-      routeId: options.routeId,
+      worldPath: options.worldPath,
       profile: options.profile,
       source: options.source,
       clockScale: options.clockScale,
@@ -121,17 +125,18 @@ function startEngine(
 }
 
 /**
- * Starts the ride: resolves the route, initializes the engine worker, then forwards
- * device events from the bus. Rejects unknown routes before a worker exists.
+ * Starts the ride: resolves the world path, initializes the engine worker, then forwards
+ * device events from the bus. Rejects unknown world paths before a worker exists.
  */
 export function createRideSession(
   options: RideSessionOptions,
   newPort: () => EngineWorkerPort = createWorkerPort,
   newId?: () => string,
 ): RideSession {
-  const route = TEST_ROUTES[options.routeId];
+  const route = worldPathRoute(TEST_WORLDS, options.worldPath);
 
-  if (route === undefined) throw new Error(`Unknown route: ${options.routeId}`);
+  if (route === undefined)
+    throw new Error(`Unknown world path: ${describeRideReference(options.worldPath)}`);
 
   const segments = createSegmentProjector(route);
   const connection = createConnectionMonitor(options.bus);
@@ -145,7 +150,7 @@ export function createRideSession(
   const unsubscribes = ENGINE_INPUT_TYPES.map((type) => options.bus.subscribe(type, forward));
 
   return {
-    routeId: options.routeId,
+    routeId: route.id,
     profile: options.profile,
     snapshot: () => link.latestSnapshot(),
     connected: () => connection.state().connected,

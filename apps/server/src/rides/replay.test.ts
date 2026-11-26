@@ -96,7 +96,7 @@ it("replays a complete recording on a newly selectable biome route", () => {
       [4, 1000, "boundary", "finish"],
     ],
     1,
-    "coast-loop",
+    { worldId: "coast-loop", worldRevision: "1", pathId: "coast-loop" },
   );
 
   expect(assessRecordingV2(ride).status).toBe("replayed");
@@ -166,16 +166,13 @@ it("keeps V2 incomplete and unknown revisions unverified", () => {
     reason: "incomplete_journal",
   });
 
-  for (const initialization of [
-    { ...ride.initialization, physicsRevision: "future" },
-    { ...ride.initialization, routeRevision: "future" },
-    { ...ride.initialization, routeId: "missing-route" },
-  ]) {
-    expect(assessRecordingV2({ ...ride, initialization })).toEqual({
-      status: "unverified",
-      reason: "unknown_revision",
-    });
-  }
+  // Unknown worlds, paths and routes: replay.world.test.ts.
+  expect(
+    assessRecordingV2({
+      ...ride,
+      initialization: { ...ride.initialization, physicsRevision: "future" },
+    }),
+  ).toEqual({ status: "unverified", reason: "unknown_revision" });
 });
 
 it("rejects distance, discrete state, profile and scale tampering", () => {

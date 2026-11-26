@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { RiderProfileSchema } from "./profile.js";
+import { withRideReference } from "./rideReference.js";
 
 export const MAX_RECORDING_V2_BYTES = 8_388_608;
 export const MAX_RECORDING_V2_ADVANCES = 500_000;
@@ -109,11 +110,10 @@ const envelope = z
     schemaVersion: z.literal(2),
     rideId: z.string().uuid(),
     initializedAt: z.string().datetime({ precision: 3 }),
-    initialization: z
-      .object({
-        physicsRevision: revision,
-        routeId: revision,
-        routeRevision: revision,
+    // New rides reference a world path; stored single-route rides stay readable (ADR-033 §7).
+    initialization: withRideReference(
+      { physicsRevision: revision },
+      {
         profile: RiderProfileSchema.extend({
           bike: RiderProfileSchema.shape.bike.strict().readonly(),
         })
@@ -123,9 +123,9 @@ const envelope = z
         clockScale: finite.min(1).max(20),
         workerTimeOriginMs: workerMs,
         initializedWorkerMs: workerMs,
-      })
-      .strict()
-      .readonly(),
+      },
+      revision,
+    ),
     journalState: z.enum(["complete", "incomplete"]),
     entries: z
       .array(RecordingEntryV2Schema)

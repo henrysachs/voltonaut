@@ -1,4 +1,9 @@
-import { DEFAULT_RIDER_PROFILE, type DeviceEvent, type RideMode } from "@voltonaut/shared";
+import {
+  DEFAULT_RIDER_PROFILE,
+  type DeviceEvent,
+  type RideMode,
+  type WorldPathReference,
+} from "@voltonaut/shared";
 
 import {
   startRecordedRide,
@@ -8,6 +13,14 @@ import {
 } from "../recordedRide.js";
 import type { CaptureCommand, CaptureResult } from "../rideCaptureProtocol.js";
 import { createManualClock } from "./workerClock.js";
+
+/** The path of a single-route world from step 1 of ADR-033: world, path and route share the id. */
+export function singleRouteWorldPath(routeId: string): WorldPathReference {
+  return { worldId: routeId, worldRevision: "1", pathId: routeId };
+}
+
+/** The world path the app rides (main.ts). */
+export const TEST_LOOP_PATH = singleRouteWorldPath("test-loop");
 
 export const FIRST_RIDE_ID = "550e8400-e29b-41d4-a716-446655440000";
 export const SECOND_RIDE_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -30,7 +43,7 @@ function startHarnessRide(options: RideHarnessOptions, atMs: number) {
   return startRecordedRide(
     {
       source: "sim",
-      routeId: "test-loop",
+      worldPath: TEST_LOOP_PATH,
       profile: DEFAULT_RIDER_PROFILE,
       clockScale: 1,
       ...options.init,

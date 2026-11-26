@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { withRideReference, type RideReference } from "./rideReference.js";
+
 const finite = z.number().finite();
 const nonnegative = finite.nonnegative();
 const tick = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -41,53 +43,49 @@ const qualitySchema = z
   .strict()
   .readonly();
 
-const progressFields = {
+// The ride reference (ADR-033 §7) sits between these field groups in withRideReference.
+const progressHead = {
   journalId: z.string().uuid().toLowerCase(),
   startedAtMs: timestampMs,
   endedAtMs: timestampMs,
   source: z.enum(["sim", "ble"]),
   clockScale: finite.min(1).max(20),
   physicsRevision: revision,
-  routeId: revision,
-  routeRevision: revision,
+};
+
+const progressTail = {
   physics: RideProgressPhysicsSchema,
   facts: z.array(NativeTickFactsSchema).max(120).readonly(),
   quality: qualitySchema,
 };
 
-const inputSchema = z
-  .object(progressFields)
-  .strict()
-  .readonly()
-  .refine((input) => input.endedAtMs >= input.startedAtMs, {
+const inputSchema = withRideReference(progressHead, progressTail, revision).refine(
+  (input) => input.endedAtMs >= input.startedAtMs,
+  {
     message: "Progress end time must not precede its start time",
     path: ["endedAtMs"],
-  });
+  },
+);
 
 export type RideProgressCheckpointInput = z.infer<typeof inputSchema>;
 
 export type RideProgressMetadata = Pick<
   RideProgressCheckpointInput,
-  | "journalId"
-  | "source"
-  | "clockScale"
-  | "physicsRevision"
-  | "routeId"
-  | "routeRevision"
-  | "physics"
->;
+  "journalId" | "source" | "clockScale" | "physicsRevision" | "physics"
+> &
+  RideReference;
 
-const checkpointEnvelopeSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    ...progressFields,
+const checkpointEnvelopeSchema = withRideReference(
+  { schemaVersion: z.literal(1), ...progressHead },
+  {
+    ...progressTail,
     sequence: tick,
     startTick: tick,
     endTick: tick,
     facts: z.array(NativeTickFactsSchema).min(1).max(120).readonly(),
-  })
-  .strict()
-  .readonly();
+  },
+  revision,
+);
 
 /** One immutable, bounded projection of the native facts consumed by one wake. */
 export const RideProgressCheckpointSchema = checkpointEnvelopeSchema
