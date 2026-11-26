@@ -1,5 +1,6 @@
 import { ALPINE_PASS, createRoute, type EngineRoute } from "@voltonaut/engine";
 import * as THREE from "three";
+/* oxlint-disable eslint/max-lines -- Full-route terrain regression keeps the optimized raycast helpers and range cases together. */
 import { expect, it } from "vitest";
 
 import {
@@ -262,29 +263,49 @@ it("keeps alpine terrain offsets open after the rounded switchback", () => {
   );
 });
 
-it("keeps both alpine road shoulders below the real road along the whole route", () => {
-  const route = createRoute(ALPINE_PASS);
-  const plan = createLandscapePlan(route, 42, false);
-  const terrain = createTerrain(plan);
-  const rowCount = Math.ceil(route.lengthM / 10);
-  const nearbyM = 170;
+const ALPINE_SHOULDER_RANGES = [
+  [0, 4000],
+  [4000, 8000],
+  [8000, 12_000],
+  [12_000, 16_000],
+  [16_000, 20_000],
+  [20_000, 24_000],
+  [24_000, 28_000],
+  [28_000, 30_000],
+] as const;
 
-  terrain.updateMatrixWorld(true);
+it.each(ALPINE_SHOULDER_RANGES)(
+  "keeps both alpine road shoulders below the real road from %i to %i m",
+  (startM, endM) => {
+    const route = createRoute(ALPINE_PASS);
+    const plan = createLandscapePlan(route, 42, false);
+    const terrain = createTerrain(plan);
+    const rowCount = Math.ceil(route.lengthM / 10);
+    const nearbyM = 170;
 
-  const parts = alpineTerrain(terrain);
+    terrain.updateMatrixWorld(true);
 
-  for (let sample = 0; sample <= rowCount; sample += 1) {
-    const distanceM = alpineSampleDistanceM(route, sample, rowCount);
+    const parts = alpineTerrain(terrain);
 
-    for (const lateralM of [-3.5, 3.5]) {
-      const position = offsetPosition(route, distanceM, lateralM);
+    try {
+      for (
+        let sample = Math.floor(startM / 10);
+        sample <= Math.ceil(Math.min(endM, route.lengthM) / 10);
+        sample += 1
+      ) {
+        const distanceM = alpineSampleDistanceM(route, sample, rowCount);
 
-      const hit = alpineShoulderHit(parts, route, distanceM, lateralM, nearbyM);
+        for (const lateralM of [-3.5, 3.5]) {
+          const position = offsetPosition(route, distanceM, lateralM);
 
-      expect(hit).toBeDefined();
-      assertAlpineShoulder(hit, position.y, `d=${distanceM}, lateral=${lateralM}`);
+          const hit = alpineShoulderHit(parts, route, distanceM, lateralM, nearbyM);
+
+          expect(hit).toBeDefined();
+          assertAlpineShoulder(hit, position.y, `d=${distanceM}, lateral=${lateralM}`);
+        }
+      }
+    } finally {
+      disposeObject(terrain);
     }
-  }
-
-  disposeObject(terrain);
-});
+  },
+);
