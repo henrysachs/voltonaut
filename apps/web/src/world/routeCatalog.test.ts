@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ENVIRONMENT_SETTINGS } from "./environment.js";
 import {
+  resolveRouteId,
   routeEnvironmentSettings,
   routePresentation,
   ROUTE_CATALOG,
@@ -28,6 +29,15 @@ describe("route presentation catalog (#75)", () => {
     expect(routePresentation("flat-loop")).toBeUndefined();
     expect(routePresentation("kom-climb")).toBeUndefined();
     expect(routePresentation("missing-route")).toBeUndefined();
+  });
+
+  it("accepts only catalog ids and rejects inherited object names", () => {
+    expect(resolveRouteId("coast-loop")).toBe("coast-loop");
+    expect(resolveRouteId("flat-loop")).toBe("test-loop");
+    expect(resolveRouteId("constructor")).toBe("test-loop");
+    expect(resolveRouteId("__proto__")).toBe("test-loop");
+    expect(resolveRouteId("missing-route")).toBe("test-loop");
+    expect(resolveRouteId(null)).toBe("test-loop");
   });
 
   it("keeps every render budget inside the docs/04 world ceiling", () => {
@@ -71,6 +81,12 @@ describe("route environment defaults (#75)", () => {
 });
 
 describe("route catalog copy (#75)", () => {
+  it("keeps the route weather default when the URL value is invalid", () => {
+    const settings = routeEnvironmentSettings(new URLSearchParams("weather=wind"), "alpine-pass");
+
+    expect(settings.script).toEqual([{ startS: 0, weather: "cloudy" }]);
+  });
+
   it("describes every card in German with title and copy", () => {
     for (const entry of ROUTE_CATALOG satisfies readonly RoutePresentation[]) {
       expect(entry.description.length).toBeGreaterThan(10);

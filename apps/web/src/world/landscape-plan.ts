@@ -40,6 +40,28 @@ export function offsetPosition(route: EngineRoute, distanceM: number, lateralM: 
   };
 }
 
+const TURN_WINDOW_M = 20;
+const MIN_TURN_RAD = 0.2;
+const MAX_TURN_RAD = Math.PI / 2;
+
+/** Shrinks lateral terrain offsets at sharp turns so inner rows miss the previous leg. */
+function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number): number {
+  const beforeM = Math.max(0, distanceM - TURN_WINDOW_M / 2);
+  const afterM = Math.min(route.lengthM, distanceM + TURN_WINDOW_M / 2);
+  const beforeRad = route.headingRad(beforeM);
+  const afterRad = route.headingRad(afterM);
+
+  const turnRad = Math.abs(
+    Math.atan2(Math.sin(afterRad - beforeRad), Math.cos(afterRad - beforeRad)),
+  );
+
+  if (turnRad <= MIN_TURN_RAD) return lateralM;
+
+  const blend = Math.max(0, 1 - (turnRad - MIN_TURN_RAD) / (MAX_TURN_RAD - MIN_TURN_RAD));
+
+  return lateralM * blend;
+}
+
 export function lakeRadius(lake: Lake, position: WorldPos): number {
   const dx = position.x - lake.center.x;
   const dz = position.z - lake.center.z;
@@ -54,8 +76,9 @@ export function terrainPosition(
   distanceM: number,
   lateralM: number,
 ): WorldPos {
-  const position = offsetPosition(plan.route, distanceM, lateralM);
-  const clearanceM = Math.max(0, Math.abs(lateralM) - 4);
+  const effectiveLateralM = cornerLateralM(plan.route, distanceM, lateralM);
+  const position = offsetPosition(plan.route, distanceM, effectiveLateralM);
+  const clearanceM = Math.max(0, Math.abs(effectiveLateralM) - 4);
   const blend = Math.min(1, clearanceM / 32);
   const phase = (distanceM / plan.route.lengthM) * Math.PI * 2;
 
@@ -66,7 +89,7 @@ export function terrainPosition(
 
   const radius = lakeRadius(plan.lake, position);
 
-  if (radius < 1.65 && Math.abs(lateralM) > 6) {
+  if (radius < 1.65 && Math.abs(effectiveLateralM) > 6) {
     const basinYM = plan.lake.waterYM - 2 + 2.2 * Math.min(radius, 1.18) ** 4;
     const shoreBlend = Math.max(0, (radius - 1.18) / 0.47);
 
@@ -106,6 +129,7 @@ function plantPosition(
   distanceM: number,
   lateralM: number,
 ): WorldPos {
+  const effectiveLateralM = cornerLateralM(plan.route, distanceM, lateralM);
   const position = terrainPosition(plan, distanceM, lateralM);
   const stepM = plan.route.lengthM / Math.ceil(plan.route.lengthM / 10);
   const startM = Math.floor(distanceM / stepM) * stepM;
@@ -114,7 +138,7 @@ function plantPosition(
     for (const [index, leftM] of TERRAIN_OFFSETS_M.entries()) {
       const rightM = TERRAIN_OFFSETS_M[index + 1];
 
-      if (rightM === undefined || lateralM < leftM - 1 || lateralM > rightM + 1) {
+      if (rightM === undefined || effectiveLateralM < leftM - 1 || effectiveLateralM > rightM + 1) {
         continue;
       }
 
@@ -136,7 +160,8 @@ function plantPosition(
 /**
  * Deterministic landscape placement for a route. Without a lake (alpine pass,
  * night city) the plan uses a 1 m pond 58 m off the road, far outside every
- * terrain offset and plant row, so no basin or shore is ever carved.
+ * terrain offset and plant row, so no basin or shore is ever carved. The coast
+ * keeps a small lagoon beside the open sea.
  */
 export function createLandscapePlan(route: EngineRoute, seed = 42, withLake = true): LandscapePlan {
   const lake: Lake = {

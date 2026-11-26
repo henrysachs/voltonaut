@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 
 import { biomeFromScenery } from "./biome.js";
 import { createAlpineScenery, createCoastScenery, createNightCityScenery } from "./biomeScenery.js";
+import { routeClearanceM, routeCorridorSamples } from "./biomeSceneryShared.js";
 import { createLandscapeSystem } from "./landscape.js";
 import { createLandscapePlan } from "./landscape-plan.js";
 import { createScheduler } from "./scheduler.js";
@@ -70,6 +71,22 @@ function basicMaterials(root: Readonly<THREE.Object3D>): readonly THREE.MeshBasi
   return materials;
 }
 
+function instancePositions(root: Readonly<THREE.Object3D>): readonly THREE.Vector3[] {
+  const positions: THREE.Vector3[] = [];
+  const matrix = new THREE.Matrix4();
+
+  root.traverse((object) => {
+    if (object instanceof THREE.InstancedMesh) {
+      for (let index = 0; index < object.count; index += 1) {
+        object.getMatrixAt(index, matrix);
+        positions.push(new THREE.Vector3().setFromMatrixPosition(matrix));
+      }
+    }
+  });
+
+  return positions;
+}
+
 it("derives the discriminated biome from RouteData.scenery", () => {
   expect(biomeFromScenery("plain")).toEqual({ kind: "forest" });
   expect(biomeFromScenery("coast")).toEqual({ kind: "coast" });
@@ -98,7 +115,7 @@ it("coast scenery spreads palms, the sea and one lighthouse deterministically", 
   expect(first.getObjectByName("biome-lighthouse")?.children).toHaveLength(3);
   expect(instanceCount(first)).toBe(instanceCount(second));
   expect(instanceCount(first)).toBeGreaterThan(300);
-  expect(seaPositionY(first)).toBeLessThan(route.worldPos(0).y);
+  expect(seaPositionY(first)).toBeLessThan(route.worldPos(0).y - 6);
 });
 
 it("alpine scenery keeps the serpentine flanks rocky, snowy and sparse", () => {
@@ -113,6 +130,17 @@ it("alpine scenery keeps the serpentine flanks rocky, snowy and sparse", () => {
   // No lake was requested: the stand-in pond stays tiny and far off the road.
   expect(plan.lake.alongRadiusM).toBe(1);
   expect(plan.lake.acrossRadiusM).toBe(1);
+});
+
+it("keeps alpine rocks and pines off every road leg after the hairpins", () => {
+  const route = createRoute(ALPINE_PASS);
+  const plan = createLandscapePlan(route, 42, false);
+  const scenery = createAlpineScenery(plan);
+  const roadSamples = routeCorridorSamples(route);
+
+  for (const position of instancePositions(scenery)) {
+    expect(routeClearanceM(position, roadSamples)).toBeGreaterThanOrEqual(8);
+  }
 });
 
 it("night city scenery wires streetlights and neon without real light sources", () => {

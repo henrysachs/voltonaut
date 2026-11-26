@@ -448,7 +448,7 @@ body > dialog.connect-dialog::backdrop {
 }
 @container game-menu (inline-size < 480px) {
   .game-menu__tabs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     display: grid;
   }
 }

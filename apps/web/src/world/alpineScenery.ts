@@ -5,6 +5,8 @@ import * as THREE from "three";
 import {
   chunkedMeshes,
   groundPosition,
+  routeClearanceM,
+  routeCorridorSamples,
   seededRandom,
   type ChunkLayer,
   type ChunkItem,
@@ -27,6 +29,7 @@ interface AlpineFlora {
 function alpineFlora(plan: Readonly<LandscapePlan>, random: () => number): AlpineFlora {
   const rocks: AlpineRock[] = [];
   const pines: Plant[] = [];
+  const roadSamples = routeCorridorSamples(plan.route);
 
   for (let distanceM = 0; distanceM < plan.route.lengthM; distanceM += 30) {
     for (const side of [-1, 1]) {
@@ -34,26 +37,33 @@ function alpineFlora(plan: Readonly<LandscapePlan>, random: () => number): Alpin
       const lateralM = side * (12 + random() * 110);
       const shade = random();
       const pineShade = random();
+      const rockPosition = groundPosition(plan, alongM, lateralM);
 
-      rocks.push({
-        routeDistanceM: alongM,
-        position: groundPosition(plan, alongM, lateralM),
-        radiusM: 0.6 + shade * 2.4,
-        heightM: 0.6 + shade * 1.8,
-        rotationRad: random() * Math.PI * 2,
-        // Far-placed rocks read as snow fields; near ones as bare rock.
-        shade: Math.abs(lateralM) > 140 ? 0.75 + shade * 0.25 : shade * 0.5,
-      });
+      if (routeClearanceM(rockPosition, roadSamples) >= 8) {
+        rocks.push({
+          routeDistanceM: alongM,
+          position: rockPosition,
+          radiusM: 0.6 + shade * 2.4,
+          heightM: 0.6 + shade * 1.8,
+          rotationRad: random() * Math.PI * 2,
+          // Far-placed rocks read as snow fields; near ones as bare rock.
+          shade: Math.abs(lateralM) > 90 ? 0.75 + shade * 0.25 : shade * 0.5,
+        });
+      }
 
       if (pineShade > 0.45) {
-        pines.push({
-          routeDistanceM: alongM,
-          position: groundPosition(plan, alongM, side * (25 + random() * 145)),
-          radiusM: 1.4 + pineShade,
-          heightM: 5 + pineShade * 6,
-          rotationRad: random() * Math.PI * 2,
-          shade: pineShade,
-        });
+        const pinePosition = groundPosition(plan, alongM, side * (25 + random() * 145));
+
+        if (routeClearanceM(pinePosition, roadSamples) >= 8) {
+          pines.push({
+            routeDistanceM: alongM,
+            position: pinePosition,
+            radiusM: 1.4 + pineShade,
+            heightM: 5 + pineShade * 6,
+            rotationRad: random() * Math.PI * 2,
+            shade: pineShade,
+          });
+        }
       }
     }
   }

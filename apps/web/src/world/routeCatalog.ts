@@ -1,5 +1,3 @@
-import { TEST_ROUTES } from "@voltonaut/engine";
-
 import {
   DEFAULT_ENVIRONMENT_SETTINGS,
   parseEnvironmentSettings,
@@ -77,7 +75,7 @@ const DEFAULT_ROUTE_ID = "test-loop";
 
 /** Route URL parameter (#75); unknown ids keep the default ride. */
 export function resolveRouteId(value: string | null): string {
-  if (value !== null && TEST_ROUTES[value] !== undefined) return value;
+  if (value !== null && routePresentation(value) !== undefined) return value;
 
   return DEFAULT_ROUTE_ID;
 }

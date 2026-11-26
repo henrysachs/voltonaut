@@ -1,4 +1,4 @@
-import type { WorldPos } from "@voltonaut/engine";
+import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import { terrainPosition, type LandscapePlan } from "./landscape-plan.js";
@@ -74,6 +74,35 @@ export function groundPosition(
   lateralM: number,
 ): WorldPos {
   return terrainPosition(plan, distanceM, lateralM);
+}
+
+/** Horizontal route samples used to keep decorations out of every road leg. */
+export function routeCorridorSamples(
+  route: Readonly<EngineRoute>,
+  stepM = 10,
+): readonly WorldPos[] {
+  const count = Math.max(1, Math.ceil(route.lengthM / stepM));
+  const samples: WorldPos[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    samples.push(route.worldPos((index / count) * route.lengthM));
+  }
+
+  return samples;
+}
+
+/** Horizontal distance to the nearest sampled road centerline point. */
+export function routeClearanceM(
+  position: Readonly<WorldPos>,
+  samples: readonly WorldPos[],
+): number {
+  let clearanceM = Number.POSITIVE_INFINITY;
+
+  for (const sample of samples) {
+    clearanceM = Math.min(clearanceM, Math.hypot(position.x - sample.x, position.z - sample.z));
+  }
+
+  return clearanceM;
 }
 
 export interface RouteBounds {
