@@ -16,7 +16,7 @@ Die Garage zeigt den Fahrer und das Rad als Studio-Szene. Die Nutzer drehen die 
 - [x] AK3: Die fokussierte Vorschau reagiert auf Pfeiltasten. Horizontal dreht, vertikal neigt und `Home` setzt die Ansicht zurück. Die Tasten lösen keine globalen Fahr- oder Menükürzel aus.
 - [x] AK4: Bei `prefers-reduced-motion: reduce` dreht sich die Vorschau nicht automatisch. Manuelle Orbit-Eingaben bleiben möglich.
 - [x] AK5: Der Fotomodus blendet HUD, Menükopf, Tabs, Item-Auswahl und Menüfuß aus. Die Vorschau füllt die Fläche. „PNG herunterladen“ und „Fotomodus beenden“ bleiben per Tastatur erreichbar. Escape beendet den Fotomodus, ohne die Fahrt zu unterbrechen.
-- [x] AK6: Der PNG-Download enthält genau die Pixel des Preview-Canvas. Seitenmaß und PNG-Maße unterscheiden sich, wenn HUD oder Menü sichtbar wären. Die Datei enthält keine Konto- oder DOM-Daten.
+- [x] AK6: Der PNG-Download enthält genau die Pixel des Preview-Canvas. Die PNG-Maße entsprechen `canvas.width` und `canvas.height` und sind kleiner als der Viewport. Die Datei enthält keine Konto- oder DOM-Daten.
 - [x] AK7: Ohne WebGL bleibt die Garage bedienbar. Der Fotomodus ist ohne verfügbare Vorschau deaktiviert und der bestehende Hinweis „3D nicht verfügbar“ bleibt sichtbar.
 - [x] AK8: Die bestehenden Garage- und Menü-E2Es bleiben grün. Neue E2Es prüfen Maus-, Touch- und Tastatur-Orbit, reduzierte Bewegung, Fotomodus und Download. Screenshots sind als Test-Anhänge für Henrys Sichtprüfung beigefügt.
 
@@ -26,7 +26,7 @@ Die Garage zeigt den Fahrer und das Rad als Studio-Szene. Die Nutzer drehen die 
 | ---- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 1    | E2E mit Screenshot-Anhang | `apps/web/e2e/garage-showroom.spec.ts`                                                                   |
 | 2, 3 | Unit und E2E              | `apps/web/src/ui/garage/previewOrbit.test.ts`, `apps/web/e2e/garage-showroom.spec.ts`                    |
-| 4    | Unit und E2E              | `apps/web/src/ui/garage/previewOrbit.test.ts`, `apps/web/e2e/garage-showroom.spec.ts`                    |
+| 4    | E2E                       | `apps/web/e2e/garage-showroom.spec.ts`                                                                   |
 | 5, 6 | Unit und E2E              | `apps/web/src/ui/garage/previewDownload.test.ts`, `apps/web/e2e/garage-showroom.spec.ts`                 |
 | 7    | E2E                       | `apps/web/e2e/garage-shop.spec.ts`, `apps/web/e2e/garage-showroom.spec.ts`                               |
 | 8    | Regression                | `apps/web/e2e/garage-shop.spec.ts`, `apps/web/e2e/game-menu.spec.ts`, `apps/web/e2e/menu-layout.spec.ts` |
@@ -68,14 +68,7 @@ Orbit-Helper, absolutes Worker-Protokoll, Studio-Szene, Worker-Capture, PNG-Down
 - `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-loadout.spec.ts e2e/garage-purchase.spec.ts e2e/game-menu.spec.ts e2e/menu-layout.spec.ts --workers=1`: 65 Tests grün.
 - Der Download-Test prüft PNG-Signatur, IHDR, Canvas-Maße, Viewport-Maße und mindestens ein deckendes Pixel nach dem Decode im Browser.
 
-Test-Anhänge aus dem letzten geforderten Lauf:
-
-- `apps/web/test-results/garage-showroom-mouse-real-1b8cf-e-buttons-orbit-the-preview/garage-showroom.png`
-- `apps/web/test-results/garage-showroom-photo-mode-55f88-s-and-Escape-exits-it-first/garage-photo-mode.png`
-- `apps/web/test-results/garage-showroom-photo-mode-71cd7-iew-canvas-as-an-opaque-PNG/voltonaut-garage.png`
-- `apps/web/test-results/garage-shop-garage-preview-6bb87-bled-and-the-ride-continues/garage-shop.png`
-- `apps/web/test-results/garage-shop-garage-keeps-i-13f42-L-and-honors-reduced-motion/garage-shop-no-webgl.png`
-- `apps/web/test-results/garage-shop-garage-stays-i-fc9c8-menu-without-body-scrolling/garage-shop-small.png`
+Die Tests hängen `garage-showroom.png`, `garage-photo-mode.png`, `voltonaut-garage.png` und die drei bestehenden Garage-Screenshots an den Playwright-Bericht.
 
 ### Echte Hardware
 

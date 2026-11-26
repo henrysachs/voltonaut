@@ -49,6 +49,7 @@ export class GaragePreviewPanel {
   #lastPointerX = 0;
   #lastPointerY = 0;
 
+  /** `unavailable` fires when the preview worker fails after a successful start (ADR-032). */
   constructor(wheelCircM: number, unavailable: () => void) {
     this.#dialog = document.querySelector<HTMLDialogElement>("#game-menu");
     this.#build();

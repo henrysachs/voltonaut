@@ -146,6 +146,7 @@ test("garage keeps item information usable without WebGL and honors reduced moti
   await expect(page.getByRole("button", { name: "Links drehen", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Drehung starten", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Fotomodus", exact: true })).toBeDisabled();
+  await expect(page.getByTestId("garage-preview")).toHaveCSS("touch-action", "auto");
 
   await page.getByTestId("garage-item-jersey.stripe").click();
   await expect(page.getByTestId("garage-item-name")).toHaveText("Blitzstreifen");

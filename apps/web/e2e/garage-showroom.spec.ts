@@ -177,7 +177,7 @@ test("photo mode downloads only the preview canvas as an opaque PNG", async ({
   const bytes = await readFile(path);
   expect(pngDimensions(bytes)).toEqual(canvasSize);
   expect(await hasOpaquePngPixel(page, bytes)).toBe(true);
-  await expect(page.getByRole("status")).toHaveText("PNG heruntergeladen.");
+  await expect(page.locator(".garage__photo-status")).toHaveText("PNG heruntergeladen.");
   await testInfo.attach("voltonaut-garage.png", { path, contentType: "image/png" });
 });
 

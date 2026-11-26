@@ -11,7 +11,6 @@ const STUDIO_BACKGROUND = 0x101a18;
 const CAMERA_TARGET = new THREE.Vector3(0, 0.95, 0);
 const CAMERA_RADIUS = 3.6;
 
-/** The worker-owned studio scene. Avatar rotation and camera orbit are independent. */
 class ThreePreviewScene implements PreviewScene {
   private readonly avatar: ReturnType<typeof createAvatarPreview>;
   private readonly scene = new THREE.Scene();
@@ -46,8 +45,7 @@ class ThreePreviewScene implements PreviewScene {
   constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's native renderer is mutable and exclusively owned here.
     private readonly renderer: THREE.WebGLRenderer,
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The worker owns the transferred native canvas and its GL lifecycle.
-    private readonly canvas: OffscreenCanvas,
+    private readonly canvas: Readonly<OffscreenCanvas>,
     wheelCircM: number,
   ) {
     this.avatar = createAvatarPreview(wheelCircM);

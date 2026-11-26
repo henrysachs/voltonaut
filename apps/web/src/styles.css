@@ -708,6 +708,10 @@ body > dialog.connect-dialog::backdrop {
 .garage__preview-host.is-dragging {
   cursor: grabbing;
 }
+.garage__preview-host[aria-disabled="true"] {
+  cursor: default;
+  touch-action: auto;
+}
 .garage__canvas {
   position: absolute;
   inset: 0;
