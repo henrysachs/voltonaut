@@ -70,7 +70,7 @@ export function chunkedMeshes<T extends ChunkItem>(
 }
 
 export function groundPosition(
-  plan: Readonly<Pick<LandscapePlan, "route" | "lake">>,
+  plan: Readonly<Pick<LandscapePlan, "route" | "terrain">>,
   distanceM: number,
   lateralM: number,
 ): WorldPos {

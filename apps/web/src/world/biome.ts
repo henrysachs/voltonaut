@@ -22,3 +22,8 @@ export function biomeFromScenery(scenery: string): Biome {
       return { kind: "forest" };
   }
 }
+
+/** The forest and the coast keep their lake; the alpine pass and the night city drop it (#75). */
+export function biomeHasLake(biome: Biome): boolean {
+  return biome.kind === "forest" || biome.kind === "coast";
+}

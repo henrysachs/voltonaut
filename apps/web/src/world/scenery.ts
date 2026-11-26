@@ -95,20 +95,29 @@ function createLayers(): readonly PlantLayer[] {
   ];
 }
 
+/** Plants grouped per road in 250 m stretches, so each instanced mesh culls compactly. */
+function chunkPlants(plants: readonly Plant[]): ReadonlyMap<string, readonly Plant[]> {
+  const chunks = new Map<string, Plant[]>();
+
+  for (const plant of plants) {
+    const key = `${plant.roadIndex}:${Math.floor(plant.routeDistanceM / 250)}`;
+    const chunk = chunks.get(key) ?? [];
+
+    chunk.push(plant);
+    chunks.set(key, chunk);
+  }
+
+  return chunks;
+}
+
 export function createScenery(plan: LandscapePlan): THREE.Group {
   const root = new THREE.Group();
   const layers = createLayers();
 
   root.name = "forest-and-rocks";
 
-  for (let startM = 0; startM < plan.route.lengthM; startM += 250) {
-    for (const [index, layer] of layers.entries()) {
-      const source = index === 3 ? plan.rocks : plan.trees;
-
-      const plants = source.filter(
-        (plant) => plant.routeDistanceM >= startM && plant.routeDistanceM < startM + 250,
-      );
-
+  for (const [index, layer] of layers.entries()) {
+    for (const plants of chunkPlants(index === 3 ? plan.rocks : plan.trees).values()) {
       root.add(plantInstances(plants, layer));
     }
   }

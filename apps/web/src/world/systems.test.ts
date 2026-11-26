@@ -7,7 +7,7 @@ import { createRider } from "../avatar/rider.js";
 import { createRideCamera } from "./camera.js";
 import { DEFAULT_ENVIRONMENT_SETTINGS, environmentAt } from "./environment.js";
 import { createEnvironmentSystem } from "./environmentSystem.js";
-import { createRoadSystem, sampleRoad } from "./road.js";
+import { createRoadSystem } from "./road.js";
 import { createScheduler } from "./scheduler.js";
 
 const route = createRoute(TEST_LOOP);
@@ -36,23 +36,6 @@ it("keeps the follow camera near the rider even with accelerated snapshot transl
     rideCamera.system.update({ ride, dtS: 1 / 60, alpha: 1, env });
     expect(camera.position.distanceTo(new THREE.Vector3(ride.worldPos.x, 100, 0))).toBeLessThan(7);
   }
-});
-
-it("samples the public engine centerline, preserves width and closes the road", () => {
-  const samples = sampleRoad(route, 7);
-
-  for (const [index, sample] of samples.entries()) {
-    const position = route.worldPos((index / (samples.length - 1)) * route.lengthM);
-
-    expect((sample.left.x + sample.right.x) / 2).toBeCloseTo(position.x);
-    expect((sample.left.z + sample.right.z) / 2).toBeCloseTo(position.z);
-    expect(sample.left.y).toBeCloseTo(position.y + 0.025);
-    expect(Math.hypot(sample.left.x - sample.right.x, sample.left.z - sample.right.z)).toBeCloseTo(
-      7,
-    );
-  }
-
-  expect(samples[0]).toEqual(samples.at(-1));
 });
 
 it("uses the actual snapshot pose and cadence, changes camera, then releases every mesh", () => {

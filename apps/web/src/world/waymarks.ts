@@ -1,7 +1,7 @@
 import type { EngineRoute } from "@voltonaut/engine";
 import * as THREE from "three";
 
-import { offsetPosition } from "./landscape-plan.js";
+import { offsetPosition } from "./lake-plan.js";
 import { planWaymarks } from "./waymark-plan.js";
 
 const DIGITS = [
