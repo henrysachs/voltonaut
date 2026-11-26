@@ -7,18 +7,42 @@ import {
   type LandscapePlan,
 } from "./landscape-plan.js";
 
-function terrainColor(distanceM: number, lateralM: number, radius: number): THREE.Color {
+/** Terrain vertex colors per biome (#75); the forest values are the original ones. */
+export interface TerrainPalette {
+  readonly low: number;
+  readonly high: number;
+  readonly shore: number;
+  readonly ground: number;
+}
+
+export const FOREST_TERRAIN: TerrainPalette = {
+  low: 0x466848,
+  high: 0x72925a,
+  shore: 0xc9bb8a,
+  ground: 0x59744d,
+};
+
+function terrainColor(
+  distanceM: number,
+  lateralM: number,
+  radius: number,
+  palette: TerrainPalette,
+): THREE.Color {
   const shade = (Math.sin(distanceM / 53 + lateralM / 29) + 1) / 2;
-  const color = new THREE.Color(0x466848).lerp(new THREE.Color(0x72925a), shade * 0.65 + 0.25);
+
+  const color = new THREE.Color(palette.low).lerp(
+    new THREE.Color(palette.high),
+    shade * 0.65 + 0.25,
+  );
 
   if (radius < 1.18) {
-    color.lerp(new THREE.Color(0xc9bb8a), Math.min(1, (1.18 - radius) * 9));
+    color.lerp(new THREE.Color(palette.shore), Math.min(1, (1.18 - radius) * 9));
   }
 
   return color;
 }
 
-function terrainGeometry(plan: LandscapePlan): THREE.BufferGeometry {
+function terrainGeometry(plan: LandscapePlan, palette: TerrainPalette): THREE.BufferGeometry {
   const vertices: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
@@ -31,7 +55,7 @@ function terrainGeometry(plan: LandscapePlan): THREE.BufferGeometry {
     for (const [column, lateralM] of TERRAIN_OFFSETS_M.entries()) {
       const position = terrainPosition(plan, distanceM, lateralM);
       const radius = lakeRadius(plan.lake, position);
-      const color = terrainColor(distanceM, lateralM, radius);
+      const color = terrainColor(distanceM, lateralM, radius, palette);
 
       vertices.push(position.x, position.y, position.z);
       colors.push(color.r, color.g, color.b);
@@ -62,9 +86,12 @@ function terrainGeometry(plan: LandscapePlan): THREE.BufferGeometry {
   return geometry;
 }
 
-export function createTerrain(plan: LandscapePlan): THREE.Group {
+export function createTerrain(
+  plan: LandscapePlan,
+  palette: TerrainPalette = FOREST_TERRAIN,
+): THREE.Group {
   const root = new THREE.Group();
-  const geometry = terrainGeometry(plan);
+  const geometry = terrainGeometry(plan, palette);
 
   const terrain = new THREE.Mesh(
     geometry,
@@ -82,7 +109,7 @@ export function createTerrain(plan: LandscapePlan): THREE.Group {
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(size.x, size.z),
-    new THREE.MeshStandardMaterial({ color: 0x59744d, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: palette.ground, roughness: 1 }),
   );
 
   ground.rotation.x = -Math.PI / 2;

@@ -133,12 +133,17 @@ function plantPosition(
   return position;
 }
 
-export function createLandscapePlan(route: EngineRoute, seed = 42): LandscapePlan {
+/**
+ * Deterministic landscape placement for a route. Without a lake (alpine pass,
+ * night city) the plan uses a 1 m pond 58 m off the road, far outside every
+ * terrain offset and plant row, so no basin or shore is ever carved.
+ */
+export function createLandscapePlan(route: EngineRoute, seed = 42, withLake = true): LandscapePlan {
   const lake: Lake = {
     center: offsetPosition(route, 110, -58),
     headingRad: route.headingRad(110),
-    alongRadiusM: 148,
-    acrossRadiusM: 44,
+    alongRadiusM: withLake ? 148 : 1,
+    acrossRadiusM: withLake ? 44 : 1,
     waterYM: route.worldPos(110).y - 1.4,
   };
 
