@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import {
   ProgressCheckpointBatchSchema,
   RewardFactsSchema,
+  sameRideReference,
   VoltsRideRangeReceiptSchema,
   type ProgressCheckpointBatch,
   type RewardFacts,
@@ -19,9 +20,11 @@ import type {
   RideProgressJournalRow,
   RideProgressRangeRow,
 } from "./progress.schema.js";
+import { journalReferenceColumns, storedRideReference } from "./progress.reference.js";
 import {
   progressError,
   type ValidatedProgressBatch,
+  type ValidatedProgressMetadata,
   type ValidatedProgressRange,
 } from "./progress.validation.js";
 
@@ -48,6 +51,20 @@ export class ProgressRangeStore {
 
   public journal(journalId: string): RideProgressJournalRow | undefined {
     return this.db.select().from(this.journals).where(eq(this.journals.journalId, journalId)).get();
+  }
+
+  /** Whether a stored journal has the immutable metadata of a range, its ride reference included. */
+  public journalMatches(
+    journal: Readonly<RideProgressJournalRow>,
+    metadata: ValidatedProgressMetadata,
+  ): boolean {
+    return (
+      journal.source === metadata.source &&
+      journal.clockScale === metadata.clockScale &&
+      journal.physicsRevision === metadata.physicsRevision &&
+      sameRideReference(storedRideReference(journal), metadata) &&
+      journal.physicsJson === JSON.stringify(metadata.physics)
+    );
   }
 
   public range(range: ValidatedProgressRange): RideProgressRangeRow | undefined {
@@ -171,8 +188,7 @@ export class ProgressRangeStore {
         source: range.metadata.source,
         clockScale: range.metadata.clockScale,
         physicsRevision: range.metadata.physicsRevision,
-        routeId: range.metadata.routeId,
-        routeRevision: range.metadata.routeRevision,
+        ...journalReferenceColumns(range.metadata),
         physicsJson: JSON.stringify(range.metadata.physics),
         startedAtMs: range.startedAtMs,
         ...highWater,

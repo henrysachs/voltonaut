@@ -7,6 +7,7 @@ import {
   VoltsRideRangeReceiptSchema,
 } from "../economy.js";
 import { RewardFactsSchema } from "../rewards.js";
+import { sameRideReference, withRideReference } from "../rideReference.js";
 import {
   RideProgressCheckpointSchema,
   RideProgressPhysicsSchema,
@@ -62,8 +63,7 @@ function hasSameImmutableMetadata(
     left.source === right.source &&
     left.clockScale === right.clockScale &&
     left.physicsRevision === right.physicsRevision &&
-    left.routeId === right.routeId &&
-    left.routeRevision === right.routeRevision &&
+    sameRideReference(left, right) &&
     hasSamePhysics(left.physics, right.physics)
   );
 }
@@ -198,16 +198,16 @@ export const ProgressAccountExportSchema = z
         .strict(),
     ]),
     journals: z.array(
-      z
-        .object({
+      withRideReference(
+        {
           journalId: JournalIdSchema,
           sessionGeneration: ProgressSessionGenerationSchema,
           consentVersion: safeInteger.positive(),
           source: z.literal("ble"),
           clockScale: z.literal(1),
           physicsRevision: exportRevision,
-          routeId: exportRevision,
-          routeRevision: exportRevision,
+        },
+        {
           physics: RideProgressPhysicsSchema,
           startedAtMs: safeInteger,
           lastEndTick: safeInteger,
@@ -216,8 +216,9 @@ export const ProgressAccountExportSchema = z
           lastRewardDay: VoltsRewardDaySchema,
           cumulativeFacts: RewardFactsSchema,
           createdAt: exportedAt,
-        })
-        .strict(),
+        },
+        exportRevision,
+      ),
     ),
     ranges: z.array(
       z

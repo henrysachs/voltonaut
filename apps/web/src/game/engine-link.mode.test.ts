@@ -3,13 +3,14 @@ import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
 
 import { createEngineLink } from "./engine-link.js";
 import { createFakePort } from "./testdata/enginePort.js";
+import { TEST_LOOP_PATH } from "./testdata/recordedRideHarness.js";
 
 it("forwards mode requests to the current actor and drops them once disposed", () => {
   const fake = createFakePort();
 
   const link = createEngineLink(
     fake.port,
-    { routeId: "test-loop", profile: DEFAULT_RIDER_PROFILE, source: "sim" },
+    { worldPath: TEST_LOOP_PATH, profile: DEFAULT_RIDER_PROFILE, source: "sim" },
     {},
     () => "id-1",
   );

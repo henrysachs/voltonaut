@@ -30,6 +30,9 @@ interface JournalColumns {
   readonly physicsRevision: SQLiteColumn;
   readonly routeId: SQLiteColumn;
   readonly routeRevision: SQLiteColumn;
+  readonly worldId: SQLiteColumn;
+  readonly worldRevision: SQLiteColumn;
+  readonly pathId: SQLiteColumn;
   readonly physicsJson: SQLiteColumn;
   readonly startedAtMs: SQLiteColumn;
   readonly lastEndTick: SQLiteColumn;
@@ -77,6 +80,22 @@ function consentChecks(table: Readonly<ConsentColumns>) {
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle columns retain mutable metadata used by SQL builders.
+function journalReferenceChecks(table: Readonly<JournalColumns>) {
+  return [
+    check("ride_progress_journals_route_id", sql`length(${table.routeId}) > 0`),
+    check("ride_progress_journals_route_revision", sql`length(${table.routeRevision}) > 0`),
+    check("ride_progress_journals_world_id", sql`length(${table.worldId}) > 0`),
+    check("ride_progress_journals_world_revision", sql`length(${table.worldRevision}) > 0`),
+    check("ride_progress_journals_path_id", sql`length(${table.pathId}) > 0`),
+    // Exactly one complete ride reference: a world path (new) or a single route (stored).
+    check(
+      "ride_progress_journals_ride_reference",
+      sql`(${table.worldId} IS NOT NULL AND ${table.worldRevision} IS NOT NULL AND ${table.pathId} IS NOT NULL AND ${table.routeId} IS NULL AND ${table.routeRevision} IS NULL) OR (${table.worldId} IS NULL AND ${table.worldRevision} IS NULL AND ${table.pathId} IS NULL AND ${table.routeId} IS NOT NULL AND ${table.routeRevision} IS NOT NULL)`,
+    ),
+  ];
+}
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle columns retain mutable metadata used by SQL builders.
 function journalChecks(table: Readonly<JournalColumns>) {
   return [
     check("ride_progress_journals_journal_id", sql`length(${table.journalId}) > 0`),
@@ -95,8 +114,7 @@ function journalChecks(table: Readonly<JournalColumns>) {
       sql`typeof(${table.clockScale}) = 'real' AND ${table.clockScale} = 1`,
     ),
     check("ride_progress_journals_physics_revision", sql`length(${table.physicsRevision}) > 0`),
-    check("ride_progress_journals_route_id", sql`length(${table.routeId}) > 0`),
-    check("ride_progress_journals_route_revision", sql`length(${table.routeRevision}) > 0`),
+    ...journalReferenceChecks(table),
     check(
       "ride_progress_journals_physics_json",
       sql`length(${table.physicsJson}) > 0 AND json_valid(${table.physicsJson})`,
@@ -190,8 +208,12 @@ function createRideProgressJournalsTable(userIdColumn: SQLiteColumn) {
       source: text("source", { enum: ["ble"] }).notNull(),
       clockScale: real("clock_scale").notNull(),
       physicsRevision: text("physics_revision").notNull(),
-      routeId: text("route_id").notNull(),
-      routeRevision: text("route_revision").notNull(),
+      // Stored single-route journals keep these; new journals use the world columns (ADR-033 §7).
+      routeId: text("route_id"),
+      routeRevision: text("route_revision"),
+      worldId: text("world_id"),
+      worldRevision: text("world_revision"),
+      pathId: text("path_id"),
       physicsJson: text("physics_json").notNull(),
       startedAtMs: integer("started_at_ms").notNull(),
       lastEndTick: integer("last_end_tick").notNull(),

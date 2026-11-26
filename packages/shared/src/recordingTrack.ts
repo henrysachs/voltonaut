@@ -5,6 +5,7 @@ import {
   type RideTrack,
 } from "./localRide.js";
 import type { RecordingEntryV2, RecordingV2, ReplayObservationV2 } from "./recordingV2.js";
+import { rideReferenceOf } from "./rideReference.js";
 
 interface Reading {
   readonly value: number;
@@ -172,8 +173,7 @@ class TrackProjection {
       ).toISOString(),
       metadata: {
         source: initialization.source,
-        routeId: initialization.routeId,
-        routeRevision: initialization.routeRevision,
+        ...rideReferenceOf(initialization),
         physicsClockScale: initialization.clockScale,
         profile: initialization.profile,
       },

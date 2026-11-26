@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 
-import { DEFAULT_RIDER_PROFILE, RideProgressCheckpointSchema } from "@voltonaut/shared";
+import {
+  DEFAULT_RIDER_PROFILE,
+  RideProgressCheckpointSchema,
+  type WorldPathReference,
+} from "@voltonaut/shared";
 import { riderParamsFromProfile } from "@voltonaut/engine";
 
 import { startRecordedRide } from "./recordedRide.js";
@@ -8,11 +12,14 @@ import {
   createRideHarness,
   FIRST_RIDE_ID,
   SECOND_RIDE_ID,
+  singleRouteWorldPath,
   TRAINER_READING,
 } from "./testdata/recordedRideHarness.js";
 
+const FLAT_LOOP_PATH = singleRouteWorldPath("flat-loop");
+
 function progressRide(source: "sim" | "ble" = "sim") {
-  return createRideHarness({ init: { source, routeId: "flat-loop" } });
+  return createRideHarness({ init: { source, worldPath: FLAT_LOOP_PATH } });
 }
 
 it("leaves progress undefined on init and empty advances, then projects one native tick", () => {
@@ -38,8 +45,9 @@ it("leaves progress undefined on init and empty advances, then projects one nati
     source: "sim",
     clockScale: 1,
     physicsRevision: "engine-v1",
-    routeId: "flat-loop",
-    routeRevision: "1",
+    worldId: "flat-loop",
+    worldRevision: "1",
+    pathId: "flat-loop",
     physics: riderParamsFromProfile(DEFAULT_RIDER_PROFILE),
     quality: { paused: false, dataAgeS: 0, clockSkipped: false },
   });
@@ -77,7 +85,7 @@ it("runs one 0.05 s virtual tick per 50 ms real wake with contiguous progress", 
 });
 
 it("scales virtual time with the fast test clock", () => {
-  const run = createRideHarness({ init: { routeId: "flat-loop", clockScale: 20 } });
+  const run = createRideHarness({ init: { worldPath: FLAT_LOOP_PATH, clockScale: 20 } });
 
   run.arm();
 
@@ -161,7 +169,7 @@ it("asks for one journal UUID per ride, at its start", () => {
 
   const journalIds = [FIRST_RIDE_ID, SECOND_RIDE_ID].map((id) => {
     const run = createRideHarness({
-      init: { routeId: "flat-loop" },
+      init: { worldPath: FLAT_LOOP_PATH },
       newId: () => {
         requested.push(id);
 
@@ -179,23 +187,37 @@ it("asks for one journal UUID per ride, at its start", () => {
 });
 
 it.each([
-  { routeId: "does-not-exist", clockScale: 1, message: "unknown route does-not-exist" },
-  { routeId: "flat-loop", clockScale: 21, message: "Invalid engine clock scale" },
-  { routeId: "flat-loop", clockScale: Number.NaN, message: "Invalid engine clock scale" },
+  {
+    worldPath: singleRouteWorldPath("does-not-exist"),
+    clockScale: 1,
+    message: "unknown world path: World does-not-exist, revision 1, path does-not-exist",
+  },
+  {
+    worldPath: { ...FLAT_LOOP_PATH, worldRevision: "2" },
+    clockScale: 1,
+    message: "unknown world path: World flat-loop, revision 2, path flat-loop",
+  },
+  {
+    worldPath: { ...FLAT_LOOP_PATH, pathId: "test-loop" },
+    clockScale: 1,
+    message: "unknown world path: World flat-loop, revision 1, path test-loop",
+  },
+  { worldPath: FLAT_LOOP_PATH, clockScale: 21, message: "Invalid engine clock scale" },
+  { worldPath: FLAT_LOOP_PATH, clockScale: Number.NaN, message: "Invalid engine clock scale" },
 ])(
-  "refuses to start on $routeId at clock scale $clockScale",
+  "refuses to start on $worldPath at clock scale $clockScale",
   ({
-    routeId,
+    worldPath,
     clockScale,
     message,
   }: {
-    readonly routeId: string;
+    readonly worldPath: WorldPathReference;
     readonly clockScale: number;
     readonly message: string;
   }) => {
     expect(() =>
       startRecordedRide(
-        { source: "sim", routeId, profile: DEFAULT_RIDER_PROFILE, clockScale },
+        { source: "sim", worldPath, profile: DEFAULT_RIDER_PROFILE, clockScale },
         0,
         0,
         () => FIRST_RIDE_ID,

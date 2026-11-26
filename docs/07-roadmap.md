@@ -212,7 +212,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 - [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
 - [ ] Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen ([ADR-033](decisions/ADR-033-connected-worlds.md), #150)
   - [ ] Schritt 1 ([E10-11](specs/E10-11-connected-world.md)): Welt-Datentypen mit Knoten, Abschnitten, Wegen und Regionen in `packages/engine`; Höhenstetigkeit an Knoten und Krümmungsgrenze je Sehne geprüft; bestehende Strecken sind je eine Welt mit einem Weg, Golden-Fahrten bit-identisch. Softwaregeprüft, CI und Review offen.
-  - [ ] Schritt 2: Höhenraster mit Korridor-Einebnung und Abstandstest · Schritt 3: Welt `voltonaut` mit Regionen (nach PR #138) · Schritt 4: Aufnahme-/Replay-Vertrag mit Welt, Revision und Weg · Schritt 5: Abbiegen und Mini-Map (#85)
+  - [ ] Schritt 4 ([E10-13](specs/E10-13-world-recording-contract.md)): Aufnahme-, Spur- und Progress-Vertrag mit `worldId`, `worldRevision` und `pathId`; Server rechnet Weltwege mit `replayRevision: "world-path-1"` nach; Altaufnahmen mit `routeId`/`routeRevision` bleiben lesbar und werden nicht neu bewertet; Migration `0015` erhält alle Progress-Journale. Softwaregeprüft, CI und Review offen.
+  - [ ] Schritt 2: Höhenraster mit Korridor-Einebnung und Abstandstest · Schritt 3: Welt `voltonaut` mit Regionen (nach PR #138) · Schritt 5: Abbiegen und Mini-Map (#85)
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)

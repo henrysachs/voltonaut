@@ -44,7 +44,7 @@ async function start(): Promise<void> {
 
   const session = createRideSession({
     bus,
-    routeId: route.routeId,
+    worldPath: { worldId: route.routeId, worldRevision: "1", pathId: route.routeId },
     profile,
     source: simMode ? "sim" : "ble",
     clockScale,

@@ -6,10 +6,10 @@ import {
   type NativeTickFacts,
 } from "@voltonaut/shared";
 
-import { createRideHarness } from "./testdata/recordedRideHarness.js";
+import { createRideHarness, singleRouteWorldPath } from "./testdata/recordedRideHarness.js";
 
 function batchRide(clockScale: number) {
-  return createRideHarness({ init: { routeId: "flat-loop", clockScale } });
+  return createRideHarness({ init: { worldPath: singleRouteWorldPath("flat-loop"), clockScale } });
 }
 
 function hasPausedContributions(fact: NativeTickFacts): boolean {

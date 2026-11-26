@@ -9,11 +9,13 @@ import {
 } from "@voltonaut/engine";
 import {
   DEFAULT_RIDER_PROFILE,
+  isWorldPathReference,
   RecordingV2Schema,
   ReplayEventV2Schema,
   type RecordingEntryV2,
   type RecordingV2,
   type ReplayObservationV2,
+  type RideReference,
   type WindowFailure,
 } from "@voltonaut/shared";
 
@@ -27,12 +29,23 @@ export function replayEngine(routeId = "test-loop"): Engine {
   return createEngine({ route: createRoute(routeData), profile: DEFAULT_RIDER_PROFILE });
 }
 
+/** The world path every new client ride references (ADR-033 §7). */
+export const TEST_LOOP_WORLD_PATH = {
+  worldId: "test-loop",
+  worldRevision: "1",
+  pathId: "test-loop",
+} as const;
+
+/** The single-route reference of stored rides from before worlds (ADR-033 §8). */
+export const TEST_LOOP_ROUTE = { routeId: "test-loop", routeRevision: "1" } as const;
+
 export function recordReplay(
   entries: readonly RecordingEntryV2[],
   clockScale = 1,
-  routeId = "test-loop",
+  reference: RideReference = TEST_LOOP_WORLD_PATH,
 ): RecordingV2 {
-  const live = replayEngine(routeId);
+  const routeId = isWorldPathReference(reference) ? reference.pathId : reference.routeId;
+  const live = replayEngine(TEST_ROUTES[routeId] === undefined ? "test-loop" : routeId);
   const observations: ReplayObservationV2[] = [];
   const events: ReplayObservationV2["events"][number][] = [];
   const commands: ReplayObservationV2["commands"][number][] = [];
@@ -63,8 +76,7 @@ export function recordReplay(
     initializedAt: "2026-11-20T12:00:00.000Z",
     initialization: {
       physicsRevision: PHYSICS_REVISION,
-      routeId,
-      routeRevision: "1",
+      ...reference,
       profile: DEFAULT_RIDER_PROFILE,
       source: "ble",
       clockScale,
@@ -78,28 +90,36 @@ export function recordReplay(
   });
 }
 
-export function normalReplay(): RecordingV2 {
-  return recordReplay([
-    [0, 0, "arm"],
-    [1, 0, "status", "trainer", "ready"],
-    [2, 0, "trainer", 250, 90, null],
-    [3, 0, "boundary", "start"],
-    [4, 1000, "advance", 1],
-    [5, 1000, "boundary", "finish"],
-  ]);
+export function normalReplay(reference: RideReference = TEST_LOOP_WORLD_PATH): RecordingV2 {
+  return recordReplay(
+    [
+      [0, 0, "arm"],
+      [1, 0, "status", "trainer", "ready"],
+      [2, 0, "trainer", 250, 90, null],
+      [3, 0, "boundary", "start"],
+      [4, 1000, "advance", 1],
+      [5, 1000, "boundary", "finish"],
+    ],
+    1,
+    reference,
+  );
 }
 
-export function warmupReplay(): RecordingV2 {
-  return recordReplay([
-    [0, 0, "arm"],
-    [1, 0, "status", "trainer", "ready"],
-    [2, 0, "trainer", 250, 90, null],
-    [3, 1000, "advance", 1],
-    [4, 1000, "trainer", 300, 80, null],
-    [5, 1000, "boundary", "start"],
-    [6, 2000, "advance", 1],
-    [7, 2000, "boundary", "finish"],
-  ]);
+export function warmupReplay(reference: RideReference = TEST_LOOP_WORLD_PATH): RecordingV2 {
+  return recordReplay(
+    [
+      [0, 0, "arm"],
+      [1, 0, "status", "trainer", "ready"],
+      [2, 0, "trainer", 250, 90, null],
+      [3, 1000, "advance", 1],
+      [4, 1000, "trainer", 300, 80, null],
+      [5, 1000, "boundary", "start"],
+      [6, 2000, "advance", 1],
+      [7, 2000, "boundary", "finish"],
+    ],
+    1,
+    reference,
+  );
 }
 
 export function replayed(

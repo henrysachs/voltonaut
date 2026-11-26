@@ -28,7 +28,6 @@ import {
   progressPayloadHash,
   validateProgressBatch,
   type ValidatedProgressBatch,
-  type ValidatedProgressMetadata,
   type ValidatedProgressRange,
 } from "./progress.validation.js";
 
@@ -165,7 +164,7 @@ export class ProgressService {
       throw progressError(409, "progress_consent_conflict", "progress journal binding changed");
     }
 
-    if (!this.metadataMatches(journal, batch.range.metadata)) {
+    if (!this.store.journalMatches(journal, batch.range.metadata)) {
       throw progressError(409, "ledger_conflict", "progress journal metadata changed");
     }
 
@@ -278,19 +277,5 @@ export class ProgressService {
     ) {
       throw progressError(409, "progress_consent_conflict", "progress consent no longer matches");
     }
-  }
-
-  private metadataMatches(
-    journal: Readonly<RideProgressJournalRow>,
-    metadata: ValidatedProgressMetadata,
-  ): boolean {
-    return (
-      journal.source === metadata.source &&
-      journal.clockScale === metadata.clockScale &&
-      journal.physicsRevision === metadata.physicsRevision &&
-      journal.routeId === metadata.routeId &&
-      journal.routeRevision === metadata.routeRevision &&
-      journal.physicsJson === JSON.stringify(metadata.physics)
-    );
   }
 }
