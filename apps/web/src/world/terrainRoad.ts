@@ -7,7 +7,7 @@ const FOREIGN_ROAD_CLEARANCE_M = 8;
 
 /** Mitered inside corners overlap; the apron stays below the higher neighbor. */
 const ROAD_APRON_DROP_M = 0.3;
-const ROAD_INDEX_CELL_M = 100;
+const ROAD_INDEX_CELL_M = 50;
 const LOCAL_DIRECTION_RAD = 0.05;
 const DISTANCE_EPSILON_M = 1e-6;
 
@@ -27,8 +27,17 @@ interface RoadBounds {
   readonly maxZ: number;
 }
 
-function roadCellKey(x: number, z: number): string {
-  return `${Math.floor(x / ROAD_INDEX_CELL_M)},${Math.floor(z / ROAD_INDEX_CELL_M)}`;
+/** Dense cell grid over the route bounds; a flat array avoids string keys in the per-face loop. */
+interface RoadCellGrid {
+  readonly minCellX: number;
+  readonly minCellZ: number;
+  readonly columns: number;
+  readonly rows: number;
+  readonly cells: readonly (readonly number[])[];
+}
+
+function cellOf(valueM: number): number {
+  return Math.floor(valueM / ROAD_INDEX_CELL_M);
 }
 
 function roadSegments(route: Readonly<EngineRoute>): readonly RoadSegment[] {
@@ -65,60 +74,61 @@ function roadSegments(route: Readonly<EngineRoute>): readonly RoadSegment[] {
   return segments;
 }
 
-function indexRoadSegments(
-  segments: readonly RoadSegment[],
-): ReadonlyMap<string, readonly number[]> {
-  const cells = new Map<string, number[]>();
+function indexRoadSegments(segments: readonly RoadSegment[]): RoadCellGrid {
+  let minCellX = Number.POSITIVE_INFINITY;
+  let maxCellX = Number.NEGATIVE_INFINITY;
+  let minCellZ = Number.POSITIVE_INFINITY;
+  let maxCellZ = Number.NEGATIVE_INFINITY;
+
+  for (const segment of segments) {
+    minCellX = Math.min(minCellX, cellOf(segment.minX - FOREIGN_ROAD_CLEARANCE_M));
+    maxCellX = Math.max(maxCellX, cellOf(segment.maxX + FOREIGN_ROAD_CLEARANCE_M));
+    minCellZ = Math.min(minCellZ, cellOf(segment.minZ - FOREIGN_ROAD_CLEARANCE_M));
+    maxCellZ = Math.max(maxCellZ, cellOf(segment.maxZ + FOREIGN_ROAD_CLEARANCE_M));
+  }
+
+  const columns = maxCellX - minCellX + 1;
+  const rows = maxCellZ - minCellZ + 1;
+  const cells: number[][] = Array.from({ length: columns * rows }, () => []);
 
   for (const [index, segment] of segments.entries()) {
-    const minCellX = Math.floor((segment.minX - FOREIGN_ROAD_CLEARANCE_M) / ROAD_INDEX_CELL_M);
-
-    const maxCellX = Math.floor((segment.maxX + FOREIGN_ROAD_CLEARANCE_M) / ROAD_INDEX_CELL_M);
-
-    const minCellZ = Math.floor((segment.minZ - FOREIGN_ROAD_CLEARANCE_M) / ROAD_INDEX_CELL_M);
-
-    const maxCellZ = Math.floor((segment.maxZ + FOREIGN_ROAD_CLEARANCE_M) / ROAD_INDEX_CELL_M);
-
-    for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
-      for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ += 1) {
-        const key = roadCellKey(cellX * ROAD_INDEX_CELL_M, cellZ * ROAD_INDEX_CELL_M);
-        const cell = cells.get(key);
-
-        if (cell === undefined) {
-          cells.set(key, [index]);
-        } else {
-          cell.push(index);
-        }
+    for (
+      let cellX = cellOf(segment.minX - FOREIGN_ROAD_CLEARANCE_M);
+      cellX <= cellOf(segment.maxX + FOREIGN_ROAD_CLEARANCE_M);
+      cellX += 1
+    ) {
+      for (
+        let cellZ = cellOf(segment.minZ - FOREIGN_ROAD_CLEARANCE_M);
+        cellZ <= cellOf(segment.maxZ + FOREIGN_ROAD_CLEARANCE_M);
+        cellZ += 1
+      ) {
+        cells[(cellZ - minCellZ) * columns + (cellX - minCellX)]?.push(index);
       }
     }
   }
 
-  return cells;
+  return { minCellX, minCellZ, columns, rows, cells };
 }
 
+/** Road segment indices in the cells under bounds, each once, in ascending order. */
 function candidateRoadIndices(
-  cells: Pick<ReadonlyMap<string, readonly number[]>, "get">,
+  grid: Readonly<RoadCellGrid>,
   bounds: Readonly<RoadBounds>,
-): ReadonlySet<number> {
-  const candidates = new Set<number>();
+): number[] {
+  const fromX = Math.max(0, cellOf(bounds.minX) - grid.minCellX);
+  const toX = Math.min(grid.columns - 1, cellOf(bounds.maxX) - grid.minCellX);
+  const fromZ = Math.max(0, cellOf(bounds.minZ) - grid.minCellZ);
+  const toZ = Math.min(grid.rows - 1, cellOf(bounds.maxZ) - grid.minCellZ);
+  const candidates: number[] = [];
 
-  for (
-    let cellX = Math.floor(bounds.minX / ROAD_INDEX_CELL_M);
-    cellX <= Math.floor(bounds.maxX / ROAD_INDEX_CELL_M);
-    cellX += 1
-  ) {
-    for (
-      let cellZ = Math.floor(bounds.minZ / ROAD_INDEX_CELL_M);
-      cellZ <= Math.floor(bounds.maxZ / ROAD_INDEX_CELL_M);
-      cellZ += 1
-    ) {
-      const key = roadCellKey(cellX * ROAD_INDEX_CELL_M, cellZ * ROAD_INDEX_CELL_M);
-
-      for (const index of cells.get(key) ?? []) candidates.add(index);
+  for (let cellZ = fromZ; cellZ <= toZ; cellZ += 1) {
+    for (let cellX = fromX; cellX <= toX; cellX += 1) {
+      for (const index of grid.cells[cellZ * grid.columns + cellX] ?? []) candidates.push(index);
     }
   }
 
-  return candidates;
+  // A segment spans several cells; sorting makes duplicates adjacent so the caller can skip them.
+  return candidates.toSorted((left, right) => left - right);
 }
 
 function isLocalRoadSegment(
@@ -161,18 +171,28 @@ export function createForeignRoadQuery(route: Readonly<EngineRoute>): ForeignRoa
 
     const ownHeadingRad = route.headingRad((fromM + toM) / 2);
 
-    const candidates = candidateRoadIndices(cells, {
+    const bounds: RoadBounds = {
       minX: Math.min(a.x, b.x, c.x) - FOREIGN_ROAD_CLEARANCE_M,
       maxX: Math.max(a.x, b.x, c.x) + FOREIGN_ROAD_CLEARANCE_M,
       minZ: Math.min(a.z, b.z, c.z) - FOREIGN_ROAD_CLEARANCE_M,
       maxZ: Math.max(a.z, b.z, c.z) + FOREIGN_ROAD_CLEARANCE_M,
-    });
+    };
 
-    for (const index of candidates) {
+    let previous = -1;
+
+    for (const index of candidateRoadIndices(cells, bounds)) {
+      if (index === previous) continue;
+      previous = index;
+
       const road = segments[index];
 
+      // Box test first: most candidates share a 100 m cell but lie far from this face.
       if (
         road !== undefined &&
+        road.maxX >= bounds.minX &&
+        road.minX <= bounds.maxX &&
+        road.maxZ >= bounds.minZ &&
+        road.minZ <= bounds.maxZ &&
         !isLocalRoadSegment(road, fromM, toM, route.lengthM, route.loop, ownHeadingRad) &&
         triangleRoadDistanceSquared(a, b, c, road) <= FOREIGN_ROAD_CLEARANCE_M ** 2
       ) {

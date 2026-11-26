@@ -13,9 +13,8 @@ import { setupBrowserAccount, type BrowserAccount } from "./browserAccount.js";
 import { mountRideViews } from "./rideViews.js";
 import { setupProgressHud } from "./progressHud.js";
 import { wornLoadout } from "./sync/garageLoadout.js";
+import { selectRouteFromUrl } from "./routeSelection.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
-import { mountRouteCatalog, updateRouteIdentity } from "./ui/routeCatalogPanel.js";
-import { resolveRouteId, routeEnvironmentSettings, ROUTE_CATALOG } from "./world/routeCatalog.js";
 
 const FAST_CLOCK_SCALE = 20;
 
@@ -42,12 +41,11 @@ async function start(): Promise<void> {
   const devices = source === undefined ? undefined : setupRideDevices(bus, clockScale, source);
 
   const { initialProfile: profile } = await profileReady;
-  const routeId = resolveRouteId(params.get("route"));
-  const environment = routeEnvironmentSettings(params, routeId);
+  const route = selectRouteFromUrl(params);
 
   const session = createRideSession({
     bus,
-    routeId,
+    routeId: route.routeId,
     profile,
     source: simMode ? "sim" : "ble",
     clockScale,
@@ -57,12 +55,11 @@ async function start(): Promise<void> {
 
   const scene = mountRideViews(session, {
     connectedLabel: simMode ? "Sim connected" : "Bluetooth connected",
-    environment,
+    environment: route.environment,
     debug: params.get("debug") === "1",
   });
 
   setupKeyboard(bus);
-  updateRouteIdentity(routeId);
 
   devices?.mount();
   const garage = mountGameMenu(profile.bike.wheelCircM);
@@ -71,7 +68,7 @@ async function start(): Promise<void> {
   if (garage !== undefined && account !== undefined)
     garage.attachAccount({ shop: account.shop, loadout: account.loadout });
   wearLoadout(scene, account?.loadout);
-  mountRouteCatalog(ROUTE_CATALOG, routeId);
+  route.mount();
 }
 
 await start();
