@@ -18,19 +18,22 @@ Option 1 aus #140: **Widerruf vor der Löschung, ohne neue Tabelle.** Eine Warte
 
 - [x] AK1 – `DELETE /v1/me` prüft zuerst die Bestätigung. Eine falsche Bestätigung ergibt `403`, und Strava wird nicht berührt (keine Revoke-Anfrage, Verbindung bleibt).
 - [x] AK2 – Mit Strava-Verbindung ruft der Server vor der Löschung den bestehenden Trennungsablauf (`StravaService.disconnect`) auf. Gelingt der Widerruf, antwortet er `200 { stravaRevocation: "revoked" }`, und die Verbindung ist entfernt.
-- [x] AK3 – Scheitert der Widerruf (Anbieterfehler, Timeout von 2 s, unlesbare Tokens, Strava deaktiviert), wird das Konto trotzdem gelöscht, mit Antwort `failed`. Ohne Verbindung lautet sie `not_connected`.
+- [x] AK3 – Scheitert der Widerruf (getestet: Anbieterfehler, hängender Anbieter bis zum Timeout von 2 s, unlesbare Tokens), wird das Konto trotzdem gelöscht, mit Antwort `failed`. Ohne Verbindung lautet sie `not_connected`. Für deaktiviertes Strava gilt dasselbe laut Code (`enabledConfig` wirft vor jeder Änderung), ist aber nicht eigens getestet.
 - [x] AK4 – Die Oberfläche bestätigt einen gelungenen Widerruf. Bei `failed` bittet sie, Voltonaut in den Strava-Einstellungen unter „Meine Apps“ zu entfernen. Ohne Verbindung erwähnt sie Strava nicht.
 - [x] AK5 – Nach der Löschung bleiben keine Tokens gespeichert.
 
 ## Testplan
 
-| AK           | Ebene                            | Datei                                                                                                     |
-| ------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| AK1–AK3, AK5 | Nest-Integration (Fake-Provider) | `apps/server/src/strava/strava.account-deletion.test.ts`, `apps/server/src/accounts/account-data.test.ts` |
-| AK2          | Unit (Vertrag)                   | `apps/web/src/sync/privateAuthTransport.test.ts`                                                          |
-| AK4          | Unit                             | `apps/web/src/sync/accountSyncDeletion.test.ts`                                                           |
+| AK           | Ebene                                                         | Datei                                                                                                     |
+| ------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| AK1–AK3, AK5 | Nest-Integration (Fake-Provider, auch `revokeFault: "stall"`) | `apps/server/src/strava/strava.account-deletion.test.ts`, `apps/server/src/accounts/account-data.test.ts` |
+| AK2          | Unit (Vertrag)                                                | `apps/web/src/sync/privateAuthTransport.test.ts`                                                          |
+| AK4          | Unit                                                          | `apps/web/src/sync/accountSyncDeletion.test.ts`                                                           |
 
 ## Grenzen
+
+- Ist die Verbindung gerade von einem Upload oder einem Token-Refresh belegt, versucht der Server keinen Widerruf und meldet `failed`. Die Löschung läuft trotzdem.
+- Zwei gleichzeitige Löschanfragen desselben Kontos können für die erste ein falsches `revoked` ergeben, während die zweite `failed` meldet und löscht. Die Oberfläche sperrt den Knopf während der Anfrage; der Hinweis bei `failed` ist in beiden Fällen sicher.
 
 - Der Widerruf verlängert die Löschung um bis zu etwa 2 s (Timeout des Providers).
 - Gegen den echten Strava-Dienst ist der Widerruf nicht geprüft (Strava-Pilot #82).

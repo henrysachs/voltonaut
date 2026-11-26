@@ -38,20 +38,23 @@ it("revokes the Strava grant before deleting the account (issue #140)", async ()
   expect(connections()).toEqual([]);
 });
 
-it("still deletes the account when Strava cannot revoke and reports it", async () => {
-  const { context, remove, connections } = await connectedStrava();
+it.each<"http" | "stall">(["http", "stall"])(
+  "still deletes the account when Strava cannot revoke (%s) and reports it",
+  async (fault) => {
+    const { context, remove, connections } = await connectedStrava();
 
-  context.provider.control.revokeFault = "http";
+    context.provider.control.revokeFault = fault;
 
-  const deleted = await remove(context.owner.user.email).expect(200);
+    const deleted = await remove(context.owner.user.email).expect(200);
 
-  expect(bodyOf(deleted)).toEqual({ stravaRevocation: "failed" });
-  expect(connections()).toEqual([]);
-  await request(httpServerOf(context.app))
-    .get("/v1/me")
-    .set(bearer(context.owner.sessionToken))
-    .expect(401);
-});
+    expect(bodyOf(deleted)).toEqual({ stravaRevocation: "failed" });
+    expect(connections()).toEqual([]);
+    await request(httpServerOf(context.app))
+      .get("/v1/me")
+      .set(bearer(context.owner.sessionToken))
+      .expect(401);
+  },
+);
 
 it("never touches Strava when the deletion confirmation is wrong", async () => {
   const { context, remove, connections } = await connectedStrava();
