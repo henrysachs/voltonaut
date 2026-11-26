@@ -1,6 +1,6 @@
 # ADR-032 – Garage-Vorschau im Render-Worker
 
-**Status:** Vorgeschlagen, Henrys Freigabe ausstehend. Erweitert [ADR-019](ADR-019-render-worker-isolation.md) auf die Garage.
+**Status:** Angenommen (Henrys Freigabe im Chat am 2026-11-26). Erweitert [ADR-019](ADR-019-render-worker-isolation.md) auf die Garage.
 
 ## Kontext
 
