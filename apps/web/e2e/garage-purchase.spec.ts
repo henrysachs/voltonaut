@@ -33,7 +33,7 @@ async function fulfillPurchase(route: Route, server: ShopServer): Promise<void> 
   });
 }
 
-async function signedInGarage(page: Page): Promise<ShopServer> {
+async function signedInGarage(page: Page, loadoutUp = true): Promise<ShopServer> {
   const server: ShopServer = { purchases: [], balance: 2000 };
 
   await page.addInitScript(
@@ -62,10 +62,14 @@ async function signedInGarage(page: Page): Promise<ShopServer> {
       json: { items: [{ itemId: "jersey.classic", source: "default", acquiredAt: null }] },
     }),
   );
+
   // The server always answers the loadout read since E7-05; the default loadout keeps the garage ready.
-  await page.route(`${API}/v1/me/loadout`, (route) =>
-    route.fulfill({ json: { loadout: DEFAULT_AVATAR_CONFIG, updatedAt: null } }),
-  );
+  if (loadoutUp) {
+    await page.route(`${API}/v1/me/loadout`, (route) =>
+      route.fulfill({ json: { loadout: DEFAULT_AVATAR_CONFIG, updatedAt: null } }),
+    );
+  }
+
   await page.route(`${API}/v1/shop/purchase`, (route) => fulfillPurchase(route, server));
   await page.goto("/?sim=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
@@ -128,5 +132,22 @@ test("switching the item closes an open confirmation without buying", async ({ p
   await expect(page.getByTestId("garage-purchase-confirmation")).toBeHidden();
   await expect(page.getByTestId("garage-purchase")).toHaveText("Im Besitz");
   expect(server.purchases).toEqual([]);
+});
+
+// Issue #142: the second click of a double click hit „Vorschau verwerfen“, which moved up into the
+// place of the closed confirmation, and reset the garage to the default jersey.
+test("a double-clicked confirmation keeps its place while the purchase is pending", async ({
+  page,
+}) => {
+  const server = await signedInGarage(page, false);
+
+  await page.getByTestId("garage-purchase").click();
+  await page.getByTestId("garage-purchase-confirm").dblclick();
+
+  await expect(page.getByTestId("garage-purchase-hint")).toContainText("Gekauft.");
+  await expect(page.getByTestId("garage-equip-hint")).toContainText("Ausrüstung nicht erreichbar");
+  await expect(page.getByTestId("garage-purchase-hint")).not.toContainText("Ausrüstung");
+  await expect(page.getByTestId("garage-item-name")).toHaveText("Blitzstreifen");
+  expect(server.purchases).toEqual([{ itemId: "jersey.stripe", expectedPriceVolts: 1500 }]);
 });
 /* oxlint-enable typescript/prefer-readonly-parameter-types */

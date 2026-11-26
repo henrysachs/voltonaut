@@ -18,8 +18,13 @@ export class GarageEquip {
     this.#hint.dataset["testid"] = "garage-equip-hint";
     this.#hint.setAttribute("aria-live", "polite");
     this.#hint.tabIndex = -1;
-    this.#equip.addEventListener("click", handlers.equip);
-    this.#discard.addEventListener("click", handlers.discard);
+    // The second click of a double click lands wherever the purchase flow just moved (#142).
+    this.#equip.addEventListener("click", ({ detail }: Readonly<{ detail: number }>) => {
+      if (detail <= 1) handlers.equip();
+    });
+    this.#discard.addEventListener("click", ({ detail }: Readonly<{ detail: number }>) => {
+      if (detail <= 1) handlers.discard();
+    });
     this.root.append(this.#equip, this.#discard, this.#hint);
   }
 
