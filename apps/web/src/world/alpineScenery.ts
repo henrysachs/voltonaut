@@ -59,6 +59,7 @@ function alpineFlora(plan: Readonly<LandscapePlan>, random: () => number): Alpin
 
         if (routeClearanceM(pinePosition, roadSamples) >= 8) {
           pines.push({
+            roadIndex: 0,
             routeDistanceM: alongM,
             position: pinePosition,
             radiusM: 1.4 + pineShade,

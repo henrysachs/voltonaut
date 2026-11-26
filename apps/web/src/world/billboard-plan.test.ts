@@ -9,7 +9,8 @@ import {
   planBillboards,
   type Billboard,
 } from "./billboard-plan.js";
-import { createLandscapePlan, lakeRadius, offsetPosition } from "./landscape-plan.js";
+import { lakeRadius, offsetPosition } from "./lake-plan.js";
+import { createLandscapePlan } from "./landscape-plan.js";
 import { planWaymarks } from "./waymark-plan.js";
 
 interface PointXz {
@@ -77,7 +78,7 @@ it("skips a slot the lake blocks across the whole 40 m shift window", () => {
   const spot = offsetPosition(loop, 667, BILLBOARD_LATERAL_M);
 
   const flooded = planBillboards({
-    route: loop,
+    ...loopPlan,
     lake: { ...loopPlan.lake, center: spot, alongRadiusM: 60, acrossRadiusM: 60 },
   });
 

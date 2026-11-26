@@ -2,7 +2,12 @@ import * as THREE from "three";
 
 import { createRenderLoop } from "./render-loop.js";
 import type { RenderCommand, RenderReply } from "./render-protocol.js";
-import { createSceneCore, resolveRenderRoute, type SceneCore } from "./scene-core.js";
+import {
+  createSceneCore,
+  resolveRenderRoads,
+  resolveRenderRoute,
+  type SceneCore,
+} from "./scene-core.js";
 
 interface RenderScope {
   readonly postMessage: (reply: RenderReply) => void;
@@ -19,6 +24,7 @@ function initialize(
   lost: () => void,
 ): SceneCore {
   const route = resolveRenderRoute(command.routeId);
+  const roads = resolveRenderRoads(command.routeId);
 
   const context = command.canvas.getContext("webgl2", { antialias: true, alpha: false });
 
@@ -32,7 +38,7 @@ function initialize(
   };
 
   try {
-    core = createSceneCore(renderer, route, command.wheelCircM, command.environment);
+    core = createSceneCore(renderer, route, roads, command.wheelCircM, command.environment);
     core.resize(command.viewport);
     command.canvas.addEventListener("webglcontextlost", onLost);
     const owned = core;

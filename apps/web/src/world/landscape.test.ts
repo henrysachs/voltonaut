@@ -2,38 +2,36 @@ import { createRoute, TEST_LOOP } from "@voltonaut/engine";
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
+import { heightAt } from "./heightfield.js";
+import { lakeRadius, offsetPosition } from "./lake-plan.js";
 import { createLandscapeSystem } from "./landscape.js";
-import {
-  createLandscapePlan,
-  lakeRadius,
-  offsetPosition,
-  TERRAIN_OFFSETS_M,
-  terrainPosition,
-} from "./landscape-plan.js";
-import { createScheduler } from "./scheduler.js";
-import { createTerrain } from "./terrain.js";
+import { createLandscapePlan, PLANT_ROAD_CLEARANCE_M, terrainPosition } from "./landscape-plan.js";
 import { disposeObject } from "./resources.js";
+import { createScheduler } from "./scheduler.js";
+import { createTerrain, createTerrainGeometries, RENDER_CHUNK_TILES } from "./terrain.js";
 
 const route = createRoute(TEST_LOOP);
 const plan = createLandscapePlan(route);
+const terrain = createTerrain(plan);
+const ray = new THREE.Raycaster();
 
-const roadSamples = [0, 10, 110, 180, 2999, 3000, 4200, 5000, 5600, 6600, 8000, 9999].map(
-  (distanceM) => ({ distanceM, rowCount: distanceM === 0 ? Infinity : 3 }),
-);
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The test reads the geometry owned by this mutable Three group.
-function landGeometry(terrain: Readonly<THREE.Group>): Pick<THREE.BufferGeometry, "setDrawRange"> {
-  const mesh = terrain.getObjectByName("route-terrain");
-
-  if (mesh instanceof THREE.Mesh && mesh.geometry instanceof THREE.BufferGeometry) {
-    return mesh.geometry;
-  }
-
-  throw new Error("The terrain system must own a named terrain mesh");
-}
+terrain.updateMatrixWorld(true);
 
 interface DisposalResource {
   readonly addEventListener: (type: "dispose", listener: () => void) => void;
+}
+
+interface Hit {
+  readonly y: number;
+  readonly normalY: number;
+}
+
+/** Casts straight down onto the real terrain meshes. */
+function hitTerrain(x: number, z: number): Hit {
+  ray.set(new THREE.Vector3(x, 1000, z), new THREE.Vector3(0, -1, 0));
+  const hit = ray.intersectObject(terrain)[0];
+
+  return { y: hit?.point.y ?? Number.NaN, normalY: hit?.face?.normal.y ?? Number.NaN };
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The test observes the real mutable Three scene graph.
@@ -59,15 +57,42 @@ function collectResources(scene: Readonly<THREE.Scene>): ReadonlySet<DisposalRes
   return resources;
 }
 
+/** Every drawn terrain vertex keyed by XZ position, as "height normal" text per occurrence. */
+function drawnVertices(): ReadonlyMap<string, readonly string[]> {
+  const vertices = new Map<string, string[]>();
+
+  for (const geometry of createTerrainGeometries(plan)) {
+    const position = geometry.getAttribute("position");
+
+    const normal = geometry.getAttribute("normal");
+
+    for (let index = 0; index < position.count; index += 1) {
+      const key = `${position.getX(index)}:${position.getZ(index)}`;
+      const entries = vertices.get(key) ?? [];
+
+      entries.push(
+        [position.getY(index), normal.getX(index), normal.getY(index), normal.getZ(index)]
+          .map((value) => value.toFixed(4))
+          .join(" "),
+      );
+      vertices.set(key, entries);
+    }
+
+    geometry.dispose();
+  }
+
+  return vertices;
+}
+
 it("repeats the same original forest for the same seed and varies placement for another seed", () => {
   expect(createLandscapePlan(route)).toEqual(plan);
-  expect(createLandscapePlan(route, 43).trees).not.toEqual(plan.trees);
+  expect(createLandscapePlan(route, [route], 43).trees).not.toEqual(plan.trees);
   expect(plan.trees.length).toBeGreaterThan(1000);
   expect(plan.trees.filter((plant) => plant.routeDistanceM < 400).length).toBeGreaterThan(50);
 });
 
 it("keeps full tree crowns and rocks off the actual asphalt and outside the lake", () => {
-  const centerline = Array.from({ length: 1000 }, (_, index) => route.worldPos(index * 10));
+  const centerline = Array.from({ length: 2500 }, (_, index) => route.worldPos(index * 4));
 
   for (const plant of [...plan.trees, ...plan.rocks]) {
     const distanceM = Math.min(
@@ -76,68 +101,11 @@ it("keeps full tree crowns and rocks off the actual asphalt and outside the lake
       ),
     );
 
-    expect(distanceM - plant.radiusM).toBeGreaterThan(7);
+    expect(distanceM - plant.radiusM).toBeGreaterThan(PLANT_ROAD_CLEARANCE_M);
     expect(lakeRadius(plan.lake, plant.position)).toBeGreaterThanOrEqual(1.2);
     expect(plant.routeDistanceM).toBeLessThan(route.lengthM);
+    expect(plant.position.y).toBe(heightAt(plan.terrain, plant.position.x, plant.position.z));
   }
-});
-
-it("joins both road shoulders across the whole elevation profile and has relief outside them", () => {
-  let maxReliefM = 0;
-
-  for (let distanceM = 0; distanceM <= route.lengthM; distanceM += 10) {
-    for (const lateralM of [-4, 0, 4]) {
-      expect(terrainPosition(plan, distanceM, lateralM).y).toBeCloseTo(
-        route.worldPos(distanceM).y - 0.06,
-        8,
-      );
-    }
-
-    const outside = terrainPosition(plan, distanceM, -70);
-
-    maxReliefM = Math.max(maxReliefM, Math.abs(outside.y - route.worldPos(distanceM).y));
-  }
-
-  expect(maxReliefM).toBeGreaterThan(8);
-  expect(terrainPosition(plan, 0, 4)).toEqual(terrainPosition(plan, route.lengthM, 4));
-});
-
-it("builds upward-facing bounded terrain which supports the real road at climbs and the loop seam", () => {
-  const terrain = createTerrain(plan);
-  const geometry = landGeometry(terrain);
-  const indicesPerRow = (TERRAIN_OFFSETS_M.length - 1) * 6;
-
-  terrain.updateMatrixWorld(true);
-  const ray = new THREE.Raycaster();
-
-  for (const { distanceM, rowCount } of roadSamples) {
-    const row = Math.floor(distanceM / 10);
-
-    geometry.setDrawRange(Math.max(0, row - 1) * indicesPerRow, indicesPerRow * rowCount);
-
-    for (const lateralM of [-3.5, 0, 3.5]) {
-      const position = offsetPosition(route, distanceM, lateralM);
-
-      ray.set(
-        new THREE.Vector3(position.x, position.y + 20, position.z),
-        new THREE.Vector3(0, -1, 0),
-      );
-      const hit = ray.intersectObject(terrain)[0];
-
-      expect(hit).toBeDefined();
-      expect(hit?.point.y).toBeLessThan(position.y);
-      expect(hit?.point.y).toBeGreaterThan(position.y - 0.2);
-      expect(hit?.face?.normal.y).toBeGreaterThan(0.9);
-    }
-  }
-
-  const bounds = new THREE.Box3().setFromObject(terrain);
-
-  expect(bounds.max.x - bounds.min.x).toBeLessThan(4000);
-  expect(bounds.max.z - bounds.min.z).toBeLessThan(4000);
-  expect(bounds.max.y).toBeLessThan(210);
-  expect(bounds.min.y).toBeGreaterThan(90);
-  disposeObject(terrain);
 });
 
 it("places the lake below the start road, above its bed and inside a dry shore", () => {
@@ -151,29 +119,34 @@ it("places the lake below the start road, above its bed and inside a dry shore",
   }
 });
 
-it("roots tree trunks in the actual triangulated terrain instead of floating above it", () => {
-  const terrain = createTerrain(plan);
-  const ray = new THREE.Raycaster();
-  const geometry = landGeometry(terrain);
-  const indicesPerRow = (TERRAIN_OFFSETS_M.length - 1) * 6;
+it("draws exactly the planned raster under road, lake, trees and open land, facing up", () => {
+  const probes = [
+    ...[0, 110, 2999, 5000, 9999].flatMap((distanceM) =>
+      [-3.5, 0, 3.5, -40, 70].map((lateralM) => offsetPosition(route, distanceM, lateralM)),
+    ),
+    plan.lake.center,
+    ...plan.trees.slice(0, 10).map((tree) => tree.position),
+    ...plan.rocks.slice(0, 5).map((rock) => rock.position),
+    { x: 0, y: 0, z: 0 },
+  ];
 
-  terrain.updateMatrixWorld(true);
+  for (const probe of probes) {
+    const hit = hitTerrain(probe.x, probe.z);
 
-  for (const plant of plan.trees) {
-    const row = Math.floor(plant.routeDistanceM / 10);
-
-    geometry.setDrawRange(Math.max(0, row - 1) * indicesPerRow, indicesPerRow * 3);
-    ray.set(
-      new THREE.Vector3(plant.position.x, plant.position.y + 20, plant.position.z),
-      new THREE.Vector3(0, -1, 0),
-    );
-    const hit = ray.intersectObject(terrain)[0];
-
-    expect(hit).toBeDefined();
-    expect(hit?.point.y).toBeCloseTo(plant.position.y, 1);
+    expect(Math.abs(hit.y - heightAt(plan.terrain, probe.x, probe.z))).toBeLessThanOrEqual(1e-3);
+    expect(hit.normalY).toBeGreaterThan(0);
   }
+});
 
-  disposeObject(terrain);
+it("merges 4 × 4 tiles per mesh and shares heights and normals across every tile seam", () => {
+  const shared = [...drawnVertices().values()].filter((entries) => entries.length > 1);
+
+  expect(terrain.children).toHaveLength(
+    Math.ceil(plan.terrain.columns / RENDER_CHUNK_TILES) *
+      Math.ceil(plan.terrain.rows / RENDER_CHUNK_TILES),
+  );
+  expect(shared.length).toBeGreaterThan(1000);
+  expect(shared.filter((entries) => new Set(entries).size > 1)).toEqual([]);
 });
 
 it("releases every shared geometry, material and instance buffer once without touching another owner", () => {
@@ -181,7 +154,7 @@ it("releases every shared geometry, material and instance buffer once without to
   const unrelated = new THREE.Group();
 
   scene.add(unrelated);
-  const scheduler = createScheduler([createLandscapeSystem()], { scene, route });
+  const scheduler = createScheduler([createLandscapeSystem([route])], { scene, route });
   const resources = collectResources(scene);
 
   const counts = Array.from(resources, (resource) => {
@@ -199,4 +172,5 @@ it("releases every shared geometry, material and instance buffer once without to
   scheduler.dispose();
   expect(counts.map((count) => count())).toEqual(counts.map(() => 1));
   expect(scene.children).toEqual([unrelated]);
+  disposeObject(terrain);
 });

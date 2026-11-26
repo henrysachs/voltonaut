@@ -1,257 +1,109 @@
-import { ALPINE_PASS, createRoute, type EngineRoute } from "@voltonaut/engine";
-import * as THREE from "three";
-/* oxlint-disable eslint/max-lines -- Full-route terrain regression keeps the optimized raycast helpers and range cases together. */
+import { ALPINE_PASS, createRoute } from "@voltonaut/engine";
 import { expect, it } from "vitest";
 
-import {
-  createLandscapePlan,
-  offsetPosition,
-  TERRAIN_OFFSETS_M,
-  terrainPosition,
-} from "./landscape-plan.js";
-import { disposeObject } from "./resources.js";
-import { createTerrain } from "./terrain.js";
+import { createCellGrid, itemsNear } from "./cell-grid.js";
+import { heightAt, type Heightfield } from "./heightfield.js";
+import { offsetPosition } from "./lake-plan.js";
+import { createLandscapePlan, terrainPosition } from "./landscape-plan.js";
+import { barycentric, planeHeight, ribbonTriangles, type BandTriangle } from "./road-band.js";
 
-interface TerrainWindow {
-  readonly startM: number;
-  readonly endM: number;
+interface ShoulderGround {
+  readonly label: string;
+  readonly roadYM: number;
+  readonly groundYM: number;
+  readonly normalY: number;
 }
 
-interface AlpineHit {
-  readonly point: { readonly y: number };
-  readonly face?: { readonly normal: { readonly y: number } } | null | undefined;
+const route = createRoute(ALPINE_PASS);
+const plan = createLandscapePlan(route, [route], 42, false);
+const apron = ribbonTriangles(plan.apron);
+
+const apronGrid = createCellGrid(
+  apron.map((triangle) => ({
+    minX: Math.min(...triangle.map((corner) => corner.x)),
+    minZ: Math.min(...triangle.map((corner) => corner.z)),
+    maxX: Math.max(...triangle.map((corner) => corner.x)),
+    maxZ: Math.max(...triangle.map((corner) => corner.z)),
+  })),
+  8,
+);
+
+interface Ground {
+  readonly yM: number;
+  readonly normalY: number;
 }
 
-/** Indices per terrain or apron quad: two triangles. */
-const QUAD_INDICES = 6;
+/** Upward component of a triangle's unit normal. */
+function planeNormalY(triangle: BandTriangle): number {
+  const [a, b, c] = triangle;
+  const ux = b.x - a.x;
+  const uy = b.y - a.y;
+  const uz = b.z - a.z;
+  const vx = c.x - a.x;
+  const vy = c.y - a.y;
+  const vz = c.z - a.z;
+  const nx = uy * vz - uz * vy;
+  const ny = uz * vx - ux * vz;
+  const nz = ux * vy - uy * vx;
 
-/** Quad bounds are widened slightly so a ray on a shared edge still tests both quads. */
-const QUAD_MARGIN_M = 1e-3;
-
-type RayHits = (x: number, y: number, z: number) => readonly THREE.Intersection[];
-
-/**
- * Downward-ray lookup over an indexed strip mesh. A vertical ray only hits quads whose XZ
- * bounds contain it, so raycasting just those runs finds the same hits as the whole window.
- */
-type StripHits = (
-  x: number,
-  y: number,
-  z: number,
-  fromRow: number,
-  toRow: number,
-) => readonly THREE.Intersection[];
-
-interface AlpineTerrain {
-  readonly land: StripHits;
-  readonly apron: StripHits;
-  /** The ground plane and any other child, raycast whole as intersectObject did. */
-  readonly ground: RayHits;
+  return Math.abs(ny) / Math.hypot(nx, ny, nz);
 }
 
-function downRay(x: number, y: number, z: number): THREE.Raycaster {
-  return new THREE.Raycaster(new THREE.Vector3(x, y, z), new THREE.Vector3(0, -1, 0));
+/** The highest drawn ground at a point: raster mesh or apron ribbon, as a downward ray hits it. */
+function groundAt(x: number, z: number): Ground {
+  const covering = itemsNear(apronGrid, x, z, 0).flatMap((item): readonly Ground[] => {
+    const triangle = apron[item];
+
+    return triangle !== undefined && barycentric(triangle, { x, z }).every((w) => w >= -1e-9)
+      ? [{ yM: planeHeight(triangle, { x, z }), normalY: planeNormalY(triangle) }]
+      : [];
+  });
+
+  const raster: Ground = { yM: heightAt(plan.terrain, x, z), normalY: normalY(plan.terrain, x, z) };
+
+  const grounds: readonly Ground[] = [raster, ...covering];
+
+  return grounds.reduce((top: Ground, next: Ground) => (next.yM > top.yM ? next : top));
 }
 
-/** XZ bounds per quad as [minX, maxX, minZ, maxZ, …], read from the mesh's index. */
-function quadBounds(
-  index: Pick<THREE.BufferAttribute, "count" | "getX">,
-  position: Pick<THREE.BufferAttribute, "getX" | "getZ">,
-): readonly number[] {
-  const bounds: number[] = [];
+/** Upward component of the drawn terrain's unit normal, from the mesh height around a point. */
+function normalY(field: Heightfield, x: number, z: number): number {
+  const stepM = 1e-3;
+  const dx = (heightAt(field, x + stepM, z) - heightAt(field, x - stepM, z)) / (2 * stepM);
+  const dz = (heightAt(field, x, z + stepM) - heightAt(field, x, z - stepM)) / (2 * stepM);
 
-  for (let start = 0; start + QUAD_INDICES <= index.count; start += QUAD_INDICES) {
-    const xs: number[] = [];
-    const zs: number[] = [];
-
-    for (let corner = 0; corner < QUAD_INDICES; corner += 1) {
-      const vertex = index.getX(start + corner);
-
-      xs.push(position.getX(vertex));
-      zs.push(position.getZ(vertex));
-    }
-
-    bounds.push(
-      Math.min(...xs) - QUAD_MARGIN_M,
-      Math.max(...xs) + QUAD_MARGIN_M,
-      Math.min(...zs) - QUAD_MARGIN_M,
-      Math.max(...zs) + QUAD_MARGIN_M,
-    );
-  }
-
-  return bounds;
+  return 1 / Math.hypot(dx, 1, dz);
 }
 
-function quadCovers(bounds: readonly number[], quad: number, x: number, z: number): boolean {
-  return (
-    x >= (bounds[quad * 4] ?? Number.POSITIVE_INFINITY) &&
-    x <= (bounds[quad * 4 + 1] ?? Number.NEGATIVE_INFINITY) &&
-    z >= (bounds[quad * 4 + 2] ?? Number.POSITIVE_INFINITY) &&
-    z <= (bounds[quad * 4 + 3] ?? Number.NEGATIVE_INFINITY)
-  );
-}
-
-function stripHits(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The lookup raycasts a mesh owned by this mutable Three group.
-  terrain: Readonly<THREE.Group>,
-  name: string,
-  quadsPerRow: number,
-): StripHits {
-  const mesh = terrain.getObjectByName(name);
-  const geometry: unknown = mesh instanceof THREE.Mesh ? mesh.geometry : undefined;
-  const ownsMesh = mesh instanceof THREE.Mesh && geometry instanceof THREE.BufferGeometry;
-
-  if (ownsMesh) {
-    const index = geometry.getIndex();
-    const position: unknown = geometry.getAttribute("position");
-
-    if (index !== null && position instanceof THREE.BufferAttribute) {
-      return stripLookup(
-        {
-          draw(start, count) {
-            geometry.setDrawRange(start, count);
-          },
-          // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's raycast reads the raycaster and appends to the caller's hit list.
-          cast(ray, hits) {
-            mesh.raycast(ray, hits);
-          },
-        },
-        quadBounds(index, position),
-        quadsPerRow,
-      );
-    }
-  }
-
-  throw new Error(`Alpine terrain must own the indexed ${name} mesh`);
-}
-
-/** The two mesh operations the lookup needs: narrow the draw range, then raycast it. */
-interface StripMesh {
-  readonly draw: (start: number, count: number) => void;
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's raycast appends to the caller's mutable hit list.
-  readonly cast: (ray: Readonly<THREE.Raycaster>, hits: THREE.Intersection[]) => void;
-}
-
-function stripLookup(
-  strip: Readonly<StripMesh>,
-  bounds: readonly number[],
-  quadsPerRow: number,
-): StripHits {
-  return (x, y, z, fromRow, toRow) => {
-    const ray = downRay(x, y, z);
-    const hits: THREE.Intersection[] = [];
-    const toQuad = toRow * quadsPerRow;
-    let runStart = -1;
-
-    for (let quad = fromRow * quadsPerRow; quad <= toQuad; quad += 1) {
-      const covers = quad < toQuad && quadCovers(bounds, quad, x, z);
-
-      if (covers && runStart < 0) runStart = quad;
-
-      if (!covers && runStart >= 0) {
-        strip.draw(runStart * QUAD_INDICES, (quad - runStart) * QUAD_INDICES);
-        strip.cast(ray, hits);
-        runStart = -1;
-      }
-    }
-
-    return hits;
-  };
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The lookup raycasts meshes owned by this mutable Three group.
-function alpineTerrain(terrain: Readonly<THREE.Group>): AlpineTerrain {
-  return {
-    land: stripHits(terrain, "route-terrain", TERRAIN_OFFSETS_M.length - 1),
-    apron: stripHits(terrain, "road-terrain", 1),
-    ground(x, y, z) {
-      const ray = downRay(x, y, z);
-      const hits: THREE.Intersection[] = [];
-
-      for (const child of terrain.children) {
-        if (child.name !== "route-terrain" && child.name !== "road-terrain") {
-          hits.push(...ray.intersectObject(child));
-        }
-      }
-
-      return hits;
-    },
-  };
-}
-
-function alpineSampleDistanceM(
-  route: Readonly<EngineRoute>,
-  sample: number,
-  rowCount: number,
-): number {
-  return sample === rowCount ? route.lengthM - 0.01 : sample * 10 + 0.01;
-}
-
-function alpineTerrainWindows(
-  route: Readonly<EngineRoute>,
-  distanceM: number,
-  nearbyM: number,
-): readonly TerrainWindow[] {
-  const windows: TerrainWindow[] = [
-    {
-      startM: Math.max(0, distanceM - nearbyM),
-      endM: Math.min(route.lengthM, distanceM + nearbyM),
-    },
-  ];
-
-  if (route.loop && distanceM < nearbyM) {
-    windows.push({ startM: route.lengthM - nearbyM, endM: route.lengthM });
-  }
-
-  return windows;
-}
-
-function alpineShoulderHit(
-  parts: Readonly<AlpineTerrain>,
-  route: Readonly<EngineRoute>,
-  distanceM: number,
-  lateralM: number,
-  nearbyM: number,
-): AlpineHit | undefined {
+/** Ground under both asphalt edges (±3.5 m) every 10 m in [startM, endM], as #169 sampled it. */
+function shoulderGround(startM: number, endM: number): readonly ShoulderGround[] {
   const rowCount = Math.ceil(route.lengthM / 10);
-  const apronRowCount = Math.ceil(route.lengthM / 2);
-  const apronStepM = route.lengthM / apronRowCount;
-  const position = offsetPosition(route, distanceM, lateralM);
-  const rayY = position.y + 20;
+  const samples: ShoulderGround[] = [];
 
-  // The first window with any hit decides, nearest hit first, as with intersectObject.
-  for (const { startM, endM } of alpineTerrainWindows(route, distanceM, nearbyM)) {
-    const startRow = Math.floor(startM / 10);
-    const endRow = Math.min(rowCount, Math.ceil(endM / 10));
-    const apronStart = Math.floor(startM / apronStepM);
-    const apronEnd = Math.min(apronRowCount, Math.ceil(endM / apronStepM));
-    let nearest: (AlpineHit & { readonly distance: number }) | undefined;
+  for (
+    let sample = Math.floor(startM / 10);
+    sample <= Math.ceil(Math.min(endM, route.lengthM) / 10);
+    sample += 1
+  ) {
+    const distanceM = sample === rowCount ? route.lengthM - 0.01 : sample * 10 + 0.01;
 
-    for (const hit of [
-      ...parts.ground(position.x, rayY, position.z),
-      ...parts.land(position.x, rayY, position.z, startRow, endRow),
-      ...parts.apron(position.x, rayY, position.z, apronStart, apronEnd),
-    ]) {
-      if (nearest === undefined || hit.distance < nearest.distance) nearest = hit;
+    for (const lateralM of [-3.5, 3.5]) {
+      const position = offsetPosition(route, distanceM, lateralM);
+      const ground = groundAt(position.x, position.z);
+
+      samples.push({
+        label: `d=${distanceM}, lateral=${lateralM}`,
+        roadYM: position.y,
+        groundYM: ground.yM,
+        normalY: ground.normalY,
+      });
     }
-
-    if (nearest !== undefined) return nearest;
   }
 
-  return undefined;
-}
-
-function assertAlpineShoulder(hit: AlpineHit | undefined, roadYM: number, label: string): void {
-  if (hit === undefined) throw new Error(label);
-
-  expect(hit.point.y).toBeLessThan(roadYM);
-  expect(hit.point.y).toBeGreaterThan(roadYM - 0.6);
-  expect(hit.face?.normal.y).toBeGreaterThan(0.9);
+  return samples;
 }
 
 it("keeps alpine terrain offsets open after the rounded switchback", () => {
-  const route = createRoute(ALPINE_PASS);
-  const plan = createLandscapePlan(route, 42, false);
   const cornerCenter = route.worldPos(1500);
   const corner = terrainPosition(plan, 1500, 100);
   const straightCenter = route.worldPos(100);
@@ -275,37 +127,13 @@ const ALPINE_SHOULDER_RANGES = [
 ] as const;
 
 it.each(ALPINE_SHOULDER_RANGES)(
-  "keeps both alpine road shoulders below the real road from %i to %i m",
+  "keeps both alpine road shoulders on ground just below the real road from %i to %i m",
   (startM, endM) => {
-    const route = createRoute(ALPINE_PASS);
-    const plan = createLandscapePlan(route, 42, false);
-    const terrain = createTerrain(plan);
-    const rowCount = Math.ceil(route.lengthM / 10);
-    const nearbyM = 170;
+    const samples = shoulderGround(startM, endM);
 
-    terrain.updateMatrixWorld(true);
-
-    const parts = alpineTerrain(terrain);
-
-    try {
-      for (
-        let sample = Math.floor(startM / 10);
-        sample <= Math.ceil(Math.min(endM, route.lengthM) / 10);
-        sample += 1
-      ) {
-        const distanceM = alpineSampleDistanceM(route, sample, rowCount);
-
-        for (const lateralM of [-3.5, 3.5]) {
-          const position = offsetPosition(route, distanceM, lateralM);
-
-          const hit = alpineShoulderHit(parts, route, distanceM, lateralM, nearbyM);
-
-          expect(hit).toBeDefined();
-          assertAlpineShoulder(hit, position.y, `d=${distanceM}, lateral=${lateralM}`);
-        }
-      }
-    } finally {
-      disposeObject(terrain);
-    }
+    expect(samples.length).toBeGreaterThan(70);
+    expect(samples.filter((s) => s.groundYM >= s.roadYM).map((s) => s.label)).toEqual([]);
+    expect(samples.filter((s) => s.groundYM <= s.roadYM - 0.6).map((s) => s.label)).toEqual([]);
+    expect(samples.filter((s) => s.normalY <= 0.9).map((s) => s.label)).toEqual([]);
   },
 );

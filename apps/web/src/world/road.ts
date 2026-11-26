@@ -1,36 +1,11 @@
-import type { EngineRoute, WorldPos } from "@voltonaut/engine";
+import type { EngineRoute } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
 import { createItemBoxSystem } from "./itemBoxes.js";
+import { sampleRoad, type RoadSample } from "./road-plan.js";
 import { createWaymarks } from "./waymarks.js";
-
-export interface RoadSample {
-  readonly left: WorldPos;
-  readonly right: WorldPos;
-}
-
-export function sampleRoad(route: EngineRoute, widthM: number, offsetM = 0): readonly RoadSample[] {
-  const count = Math.ceil(route.lengthM / 4);
-  const samples: RoadSample[] = [];
-
-  for (let index = 0; index <= count; index += 1) {
-    const distanceM = (index / count) * route.lengthM;
-    const position = route.worldPos(distanceM);
-    const heading = route.headingRad(distanceM);
-
-    const edge = (lateralM: number): WorldPos => ({
-      x: position.x - Math.sin(heading) * lateralM,
-      y: position.y + 0.025,
-      z: position.z + Math.cos(heading) * lateralM,
-    });
-
-    samples.push({ left: edge(offsetM - widthM / 2), right: edge(offsetM + widthM / 2) });
-  }
-
-  return samples;
-}
 
 function roadGeometry(samples: readonly RoadSample[]): THREE.BufferGeometry {
   const vertices: number[] = [];

@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 
 import { createRenderLoop } from "./render-loop.js";
 import { createRenderViewport, type RenderReply } from "./render-protocol.js";
-import { resolveRenderRoute, type SceneCore } from "./scene-core.js";
+import { resolveRenderRoads, resolveRenderRoute, type SceneCore } from "./scene-core.js";
 
 const snapshot = createEngine({
   route: createRoute(TEST_LOOP),
@@ -101,6 +101,12 @@ it("resolves every supported actual route and rejects unknown IDs", () => {
   expect(resolveRenderRoute("flat-loop").lengthM).toBeGreaterThan(0);
   expect(resolveRenderRoute("kom-climb").lengthM).toBeGreaterThan(0);
   expect(() => resolveRenderRoute("not-a-route")).toThrow("Unsupported render route");
+});
+
+it("hands the terrain every road of the world the ridden route belongs to", () => {
+  expect(resolveRenderRoads("test-loop").map((road) => road.id)).toEqual(["test-loop"]);
+  expect(resolveRenderRoads("kom-climb").map((road) => road.lengthM)).toEqual([2500]);
+  expect(() => resolveRenderRoads("not-a-route")).toThrow("Unsupported render route");
 });
 
 it("disposes a started core before its scheduled first frame and never restarts it", () => {

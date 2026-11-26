@@ -1,11 +1,7 @@
 import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 
-import {
-  lakeRadius,
-  offsetPosition,
-  terrainPosition,
-  type LandscapePlan,
-} from "./landscape-plan.js";
+import { lakeRadius, offsetPosition } from "./lake-plan.js";
+import { terrainPosition, type LandscapePlan } from "./landscape-plan.js";
 import { planWaymarks } from "./waymark-plan.js";
 
 /** Lateral distance of a billboard center from the road centerline. */
@@ -74,7 +70,7 @@ interface Slot {
   readonly side: BillboardSide;
 }
 
-type Plan = Pick<LandscapePlan, "route" | "lake">;
+type Plan = Pick<LandscapePlan, "route" | "lake" | "terrain">;
 
 /** Number of grid slots: three per kilometre, rounded. */
 export function billboardSlotCount(route: Pick<EngineRoute, "lengthM">): number {
