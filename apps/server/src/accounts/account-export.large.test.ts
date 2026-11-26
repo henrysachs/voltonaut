@@ -6,6 +6,12 @@ import { bearer, bodyOf } from "../testing/test-app.spec.js";
 import { accountDataFixture, NOW_MS, ride } from "./account-data.fixture.js";
 
 const RIDES = 50;
+
+/**
+ * Explicit budget for a 14.5 MB export: under the full gate with coverage it takes about 5 s on
+ * 4 cores, right at vitest's 5 s default. The data set stays at the size AK5 must prove.
+ */
+const LARGE_EXPORT_TIMEOUT_MS = 30_000;
 const SAMPLES_PER_RIDE = 3600;
 
 /** The fixture already stores small rides under low ids. */
@@ -39,24 +45,28 @@ function sampleCounts(
 }
 /* oxlint-enable typescript/prefer-readonly-parameter-types */
 
-it("exports fifty one-hour rides completely and schema-valid (#157)", async () => {
-  const f = await accountDataFixture();
+it(
+  "exports fifty one-hour rides completely and schema-valid (#157)",
+  async () => {
+    const f = await accountDataFixture();
 
-  const ids = Array.from({ length: RIDES }, (_, offset) => FIRST_ID + offset);
+    const ids = Array.from({ length: RIDES }, (_, offset) => FIRST_ID + offset);
 
-  for (const index of ids) f.rides.store(f.owner.user.id, hourRide(index), NOW_MS);
+    for (const index of ids) f.rides.store(f.owner.user.id, hourRide(index), NOW_MS);
 
-  const response = await request(f.server)
-    .get("/v1/me/export")
-    .set(bearer(f.owner.sessionToken))
-    .expect(200);
+    const response = await request(f.server)
+      .get("/v1/me/export")
+      .set(bearer(f.owner.sessionToken))
+      .expect(200);
 
-  const exported = AccountExportSchema.parse(bodyOf(response));
+    const exported = AccountExportSchema.parse(bodyOf(response));
 
-  const wanted = new Set(ids.map((index) => ride(index).rideId));
+    const wanted = new Set(ids.map((index) => ride(index).rideId));
 
-  const hours = sampleCounts(exported, wanted);
+    const hours = sampleCounts(exported, wanted);
 
-  expect(hours).toEqual(Array.from({ length: RIDES }, () => SAMPLES_PER_RIDE));
-  expect(response.text.length).toBeGreaterThan(10_000_000);
-});
+    expect(hours).toEqual(Array.from({ length: RIDES }, () => SAMPLES_PER_RIDE));
+    expect(response.text.length).toBeGreaterThan(10_000_000);
+  },
+  LARGE_EXPORT_TIMEOUT_MS,
+);

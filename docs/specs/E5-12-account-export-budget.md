@@ -21,8 +21,8 @@ Große Kontoexports sollen vollständig heruntergeladen werden können, ohne das
 - [x] AK1 – Eine Route kann ein eigenes Budget `timeoutMs` tragen. Ohne Angabe gelten 8 s. Nur `GET /v1/me/export` hat ein längeres Budget (120 s); alle anderen Routen behalten 8 s (Unit-Test über alle Routentabellen).
 - [x] AK2 – Der Server erlaubt einen Export pro Konto und Minute. Ein zweiter Export innerhalb der Minute ergibt `429 rate_limited` mit `Retry-After`. Andere Konten sind nicht betroffen, ohne Sitzung bleibt es bei `401` (Integrationstest).
 - [x] AK3 – Ein `429` beim Export zeigt eine eigene Meldung mit der Wartezeit aus `Retry-After`: „Datenexport ist nur einmal pro Minute möglich. Neuer Versuch in N s.“ Andere Fehler zeigen die allgemeine Meldung ohne Minuten-Hinweis (#157). Der Server gibt `Retry-After` per `Access-Control-Expose-Headers` für die Web-Origin frei; sonst könnte der Browser den Header nicht lesen.
-- [x] AK5 – 50 einstündige Fahrten (je 3600 Proben) werden vollständig und schema-gültig exportiert (`AccountExportSchema`, 14,5 MB; #157).
 - [x] AK4 – Bestehende Export- und Löschtests bleiben grün.
+- [x] AK5 – 50 einstündige Fahrten (je 3600 Proben) werden vollständig und schema-gültig exportiert (`AccountExportSchema`, 14,5 MB; #157).
 
 ## Bekannte Grenzen
 
@@ -40,14 +40,13 @@ Kein gestreamter oder seitenweiser Export. Nach der Messung ist das nicht nötig
 
 ## Testplan
 
-| AK  | Ebene             | Datei                                                                                |
-| --- | ----------------- | ------------------------------------------------------------------------------------ |
-| AK1 | Unit              | `apps/web/src/sync/requestTimeout.test.ts`                                           |
-| AK2 | Nest-Integration  | `apps/server/src/accounts/account-export.rate-limit.test.ts`                         |
-| AK3 | Unit              | `apps/web/src/sync/accountSyncDeletion.test.ts`                                      |
-| AK4 | Integration, E2E  | `apps/server/src/accounts/account-data.test.ts`, `apps/web/e2e/account-data.spec.ts` |
-| AK3 | Unit, Integration | `apps/web/src/sync/retryAfter.test.ts`, `apps/server/src/app.cors.test.ts`           |
-| AK5 | Nest-Integration  | `apps/server/src/accounts/account-export.large.test.ts`                              |
+| AK  | Ebene             | Datei                                                                                                                       |
+| --- | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| AK1 | Unit              | `apps/web/src/sync/requestTimeout.test.ts`                                                                                  |
+| AK2 | Nest-Integration  | `apps/server/src/accounts/account-export.rate-limit.test.ts`                                                                |
+| AK3 | Unit, Integration | `apps/web/src/sync/accountSyncDeletion.test.ts`, `apps/web/src/sync/retryAfter.test.ts`, `apps/server/src/app.cors.test.ts` |
+| AK4 | Integration, E2E  | `apps/server/src/accounts/account-data.test.ts`, `apps/web/e2e/account-data.spec.ts`                                        |
+| AK5 | Nest-Integration  | `apps/server/src/accounts/account-export.large.test.ts`                                                                     |
 
 ## Doku-Updates
 
