@@ -100,6 +100,20 @@ it("rejects an unowned item without writing and accepts it right after the purch
 
   expect(saved).toEqual({ loadout: STRIPE, updatedAt: "2026-11-25T12:00:00.000Z" });
   expect(await load()).toEqual(saved);
+
+  // A rejected update leaves the stored loadout as it was.
+  const unownedHelmet = {
+    ...STRIPE,
+    rider: { ...STRIPE.rider, helmetId: "helmet.aero" },
+  };
+
+  const before = db.prepare("SELECT * FROM avatar_loadouts").all();
+
+  expect(bodyOf(await save(unownedHelmet).expect(409))).toMatchObject({
+    error: { code: "not_owned" },
+  });
+  expect(db.prepare("SELECT * FROM avatar_loadouts").all()).toEqual(before);
+  expect(await load()).toEqual(saved);
 });
 
 it("keeps loadouts per account and rejects foreign colors, origins and sessions", async () => {

@@ -27,7 +27,7 @@ import type { Clock } from "../clock.js";
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe.js";
 import { AccountsService } from "./accounts.service.js";
 import { AccountDataService } from "./account-data.service.js";
-import { AdminOriginGuard } from "./admin-origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 
 @Controller("v1/me")
 export class AccountsController {
@@ -67,7 +67,7 @@ export class AccountsController {
   @Delete()
   @HttpCode(204)
   @Header("Cache-Control", "no-store")
-  @UseGuards(AdminOriginGuard)
+  @UseGuards(ClientOriginGuard)
   public delete(
     @CurrentSession() session: SessionPrincipal,
     @Body(new ZodValidationPipe(AccountDeletionRequestSchema)) body: AccountDeletionRequest,

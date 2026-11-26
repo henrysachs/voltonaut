@@ -19,8 +19,22 @@ const env = environmentAt(
 
 const STRIPE = {
   ...DEFAULT_AVATAR_CONFIG,
-  rider: { ...DEFAULT_AVATAR_CONFIG.rider, jerseyId: "jersey.stripe" },
+  rider: { ...DEFAULT_AVATAR_CONFIG.rider, jerseyId: "jersey.stripe", helmetColor: "#ec6b48" },
 };
+
+/** Colour of the rider's helmet shell, the only physical material on the skinned body. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's scene graph is mutable; the helper only reads it.
+function wornHelmetHex(scene: THREE.Scene): string | undefined {
+  for (const object of scene.getObjectsByProperty("isSkinnedMesh", true)) {
+    if (
+      object instanceof THREE.SkinnedMesh &&
+      object.material instanceof THREE.MeshPhysicalMaterial
+    )
+      return `#${object.material.color.getHexString()}`;
+  }
+
+  return undefined;
+}
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's scene graph is mutable; the helper only reads it.
 function skinnedMeshes(scene: THREE.Scene): number {
@@ -36,10 +50,13 @@ it("keeps the rider body out of the first frame even when a look arrives first",
   scheduler.update({ ride: snapshot, dtS: 0, alpha: 1, env });
 
   expect(skinnedMeshes(scene)).toBe(0);
-  expect(rider.look()).toEqual(STRIPE);
+  // Requested, not yet worn: the diagnostics must not claim a look the body does not show.
+  expect(rider.look()).toEqual(DEFAULT_AVATAR_CONFIG);
 
   scheduler.update({ ride: snapshot, dtS: 0.05, alpha: 1, env });
 
   expect(skinnedMeshes(scene)).toBeGreaterThan(0);
+  expect(rider.look()).toEqual(STRIPE);
+  expect(wornHelmetHex(scene)).toBe(STRIPE.rider.helmetColor);
   scheduler.dispose();
 });

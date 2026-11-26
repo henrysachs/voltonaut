@@ -6,6 +6,9 @@ import { purchaseConfirmation, purchaseOffer, type PurchaseConfirmation } from "
 /** The part of the account's shop sync the garage uses. */
 export type GarageShopSource = Pick<GarageShop, "subscribe" | "purchase" | "retry">;
 
+/** The part of the shop sync the purchase controls use; retrying belongs to user selection. */
+type PurchaseSource = Pick<GarageShopSource, "subscribe" | "purchase">;
+
 const QUESTION_ID = "garage-purchase-question";
 
 function actionButton(text: string, testId: string): HTMLButtonElement {
@@ -30,7 +33,7 @@ export class GaragePurchase {
   readonly #cancel = actionButton("Abbrechen", "garage-purchase-cancel");
   #item: Readonly<ItemDef> | undefined;
   #view: GarageShopView = { kind: "guest" };
-  #source: GarageShopSource | undefined;
+  #source: PurchaseSource | undefined;
   #detach: (() => void) | undefined;
   #visible = false;
   /** Open confirmation: the item and the price it showed. */
@@ -54,7 +57,7 @@ export class GaragePurchase {
     });
   }
 
-  attach(source: GarageShopSource): void {
+  attach(source: PurchaseSource): void {
     this.#detach?.();
     this.#source = source;
     this.#detach = source.subscribe((view) => {
@@ -67,9 +70,6 @@ export class GaragePurchase {
     if (this.#item?.id !== item.id) this.#open = undefined;
     this.#item = item;
     this.#visible = visible;
-
-    // Selecting an item after a failed load is the rider asking for the shop again.
-    if (this.#view.kind === "failed") void this.#source?.retry();
     this.#render();
   }
 
