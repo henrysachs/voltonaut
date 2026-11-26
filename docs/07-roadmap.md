@@ -145,7 +145,6 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
   - [x] [E6-08](specs/E6-08-progress-consent.md): versionierte, widerrufbare Zustimmung und globale Journal-/Sessionbindung softwaregeprüft.
   - [x] [E6-09](specs/E6-09-progress-outbox.md): HR-freie lokale Outbox mit Offline-Status, Kapazität und idempotentem Retry softwaregeprüft. Echte Browser-IDB-Offlineprüfung bleibt offen.
   - [x] [E6-10](specs/E6-10-progress-server-intake.md): authentifizierte Checkpoint-Annahme und atomare Volts-Buchung softwaregeprüft. Keine XP, synthetischen Fahrten oder produktive Quellenfreigabe.
-  - [ ] [E6-11](specs/E6-11-progress-display.md) (#61): HUD-Vorschau und vom Server bestätigte Volts der laufenden Fahrt, Status für ausstehend, offline und Fehler, Historie bestätigter Journale im Konto-Menü. Implementiert und softwaregeprüft; Review, Merge und Hardwareabnahme offen.
 - [ ] Domänen-Metriken: Volts-Ledger-Einträge und -Summe (Tageswerte in Grafana aus Countern, keine Datums-Labels)
 - [ ] **Blitz-Pickups ⚡** in der Welt (Emissive + Bloom, Funken-Partikel, Flug in den HUD-Zähler), serverseitige Pickup-Prüfung
 - [ ] GPU-Partikelsystem (Basis für alle späteren Effekte)
@@ -212,6 +211,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 - [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
 - [ ] Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen ([ADR-033](decisions/ADR-033-connected-worlds.md), #150)
+  - [ ] Schritt 1 ([E10-11](specs/E10-11-connected-world.md)): Welt-Datentypen mit Knoten, Abschnitten, Wegen und Regionen in `packages/engine`; Höhenstetigkeit an Knoten und Krümmungsgrenze je Sehne geprüft; bestehende Strecken sind je eine Welt mit einem Weg, Golden-Fahrten bit-identisch. Softwaregeprüft, CI und Review offen.
+  - [ ] Schritt 2: Höhenraster mit Korridor-Einebnung und Abstandstest · Schritt 3: Welt `voltonaut` mit Regionen (nach PR #138) · Schritt 4: Aufnahme-/Replay-Vertrag mit Welt, Revision und Weg · Schritt 5: Abbiegen und Mini-Map (#85)
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)

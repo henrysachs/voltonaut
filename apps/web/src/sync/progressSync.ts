@@ -161,7 +161,6 @@ function deliveryPageCursor(
 export class ProgressSync {
   readonly #options: ProgressSyncOptions;
   readonly #listeners = new Set<(view: ProgressPanelView) => void>();
-  readonly #receiptListeners = new Set<(receipt: VoltsRideRangeReceipt) => void>();
   readonly #flush = (): void => {
     const view = this.view();
 
@@ -307,22 +306,6 @@ export class ProgressSync {
     return () => {
       this.#listeners.delete(listener);
     };
-  }
-
-  /** Server receipts as they are stored; the live HUD counts only these as confirmed (spec E6-11). */
-  subscribeReceipts(listener: (receipt: VoltsRideRangeReceipt) => void): () => void {
-    this.#receiptListeners.add(listener);
-
-    return () => {
-      this.#receiptListeners.delete(listener);
-    };
-  }
-
-  /** Whether the current journal is written for this account, waits for consent or stays local. */
-  journal(): Readonly<{ journalId: string; kind: JournalState["kind"] }> | undefined {
-    return this.#journal === undefined
-      ? undefined
-      : { journalId: this.#journal.journalId, kind: this.#journal.kind };
   }
 
   async setConsent(enabled: boolean): Promise<void> {
@@ -917,30 +900,7 @@ export class ProgressSync {
       return "failed";
     }
 
-    const stored = await this.storeCovered(database, lease, receipt);
-
-    if (stored === undefined) return "failed";
-
-    if (stored && this.current(lease)) this.announceReceipt(receipt);
-
-    const uncovered = sending.filter((row) => !progressReceiptCoversRow(receipt, row));
-
-    for (const row of uncovered) {
-      if (!this.current(lease)) return "failed";
-      await database.requeue(row, this.rowFence(lease, row), this.nowMs());
-    }
-
-    return uncovered.length === 0 ? "delivered" : "partial";
-  }
-
-  /** Stores every journal row the receipt covers; `undefined` once the lease is no longer current. */
-  private async storeCovered(
-    database: ProgressOutbox,
-    lease: ProgressLease,
-    receipt: Readonly<VoltsRideRangeReceipt>,
-  ): Promise<boolean | undefined> {
     const journalRows = await database.listJournalPending(lease, receipt.journalId);
-    let stored = false;
 
     for (const row of journalRows) {
       if (row.state.kind === "stored" || !progressReceiptCoversRow(receipt, row)) continue;
@@ -953,29 +913,22 @@ export class ProgressSync {
         currentRow = sealed;
       }
 
-      if (!this.current(lease)) return undefined;
+      if (!this.current(lease)) return "failed";
       await database.markStored({
         row: currentRow,
         fence: this.rowFence(lease, currentRow),
         receipt,
       });
-      stored = true;
     }
 
-    return stored;
-  }
+    const uncovered = sending.filter((row) => !progressReceiptCoversRow(receipt, row));
 
-  /** Listeners run after delivery bookkeeping; a failing display cannot stall the outbox. */
-  private announceReceipt(receipt: VoltsRideRangeReceipt): void {
-    for (const listener of this.#receiptListeners) {
-      queueMicrotask(() => {
-        try {
-          listener(receipt);
-        } catch {
-          // The receipt is stored; a display error must not turn delivery into a failure.
-        }
-      });
+    for (const row of uncovered) {
+      if (!this.current(lease)) return "failed";
+      await database.requeue(row, this.rowFence(lease, row), this.nowMs());
     }
+
+    return uncovered.length === 0 ? "delivered" : "partial";
   }
 
   private async failGroup(

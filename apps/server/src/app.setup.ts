@@ -13,7 +13,6 @@ interface HttpSetupApp {
   readonly enableCors: (options: {
     readonly origin: readonly string[];
     readonly allowedHeaders: readonly string[];
-    readonly exposedHeaders: readonly string[];
     readonly credentials: boolean;
   }) => void;
   readonly getHttpAdapter: () => { readonly getInstance: () => ExpressSettings };
@@ -49,8 +48,6 @@ export function setupHttp(app: HttpSetupApp, config: ServerConfig): void {
   app.enableCors({
     origin: [...config.cors.origins],
     allowedHeaders: ["Authorization", "Content-Type", "Content-Encoding"],
-    // The web client lives on another origin; without this it cannot read the 429 wait (#157).
-    exposedHeaders: ["Retry-After"],
     credentials: config.auth.mode === "oidc" || config.strava.mode === "enabled",
   });
 

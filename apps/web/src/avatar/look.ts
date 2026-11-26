@@ -1,5 +1,5 @@
 import { SEASON_AVATAR_ITEMS, START_AVATAR_CATALOG } from "@voltonaut/rules";
-import { AvatarConfigSchema, type AvatarConfig, type ItemDef } from "@voltonaut/shared";
+import type { AvatarConfig, ItemDef } from "@voltonaut/shared";
 
 import { frameSpecFor, wheelSpecFor, type FrameSpec, type WheelSpec } from "./bikeSpecs.js";
 import {
@@ -42,18 +42,4 @@ export function avatarLook(
       glasses: glassesSpecFor(assetRefOf(rider.glassesId, catalog)),
     },
   };
-}
-
-/**
- * Equal looks; the schema fixes the key order of both sides. The ride ignores an unchanged look,
- * so a guest's repeated default never rebuilds bike and body mid-ride (issue #142, a mitigation).
- */
-export function sameAvatarLook(
-  left: Readonly<AvatarConfig>,
-  right: Readonly<AvatarConfig>,
-): boolean {
-  return (
-    JSON.stringify(AvatarConfigSchema.parse(left)) ===
-    JSON.stringify(AvatarConfigSchema.parse(right))
-  );
 }
