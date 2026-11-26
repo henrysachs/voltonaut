@@ -2,7 +2,7 @@
 
 - **Roadmap-Bezug:** E0, Gate-Stabilität (`mise run check` blockiert PRs)
 - **Status:** Teilstand: AK1–AK4 und AK6 umgesetzt. AK5 offen; Fixpfade siehe Abschnitte.
-- **Betroffene Module:** `apps/web/src/game`, `apps/web/src/world`, `apps/web/src/pwa` (nur Tests), `apps/web/e2e`
+- **Betroffene Module:** `apps/web/src/game`, `apps/web/src/world`, `apps/web/src/pwa` (nur Tests), `apps/web/e2e`, `apps/server`
 
 ## Ziel
 
@@ -80,16 +80,16 @@ Beide Tests messen „die Fahrt läuft weiter“ über `data-distance-m` der Ren
 - **Beobachtung (Zweitreview zu #144):** 1× unter Fremdlast stand nach 5 s noch „Waiting for devices“ statt „Sim connected“. Die Sim-Verbindung beim Mount war in dieser Zeit nicht fertig.
 - **Ursache:** nicht untersucht. Ein Fix ist nicht umgesetzt. Kein Rückschluss auf `frame.ts` oder den Helper, weil die Zeile vor beiden liegt.
 
-### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache belegt, Fix offen
+### `apps/web/e2e/garage-shop.spec.ts:37/153` – Ursache belegt, Korrektur in E4-12
 
 - **Rot vorher (14 × `yes`, `--repeat-each=10`, `aacd0cd`):** Im Messlauf beider Tests waren mindestens 8/20 rot. Die Ausgabe war gekürzt, die genaue Zahl fehlt. In der Gegenprobe war :153 10/10 rot. Im Gate-Lauf `E2E_PORT=5194` (Fremdlast) waren :37, :86 und :153 rot. Fehler: Klick oder `check` wartet 30 s auf „visible, enabled and stable“ (Item-Button, Farb-Radio).
 - **Ursache (App, Main-Thread-WebGL):** Die Garage-Vorschau (`ui/garage/preview.ts`) zeichnet mit Three.js auf dem Main-Thread bei jedem `requestAnimationFrame`. ADR-019 deckt nur die Fahrtwelt ab. Unter Last misst der Main-Thread mit offener Garage Long Tasks von 1,5–2,5 s, also nur 3–4 Frames in 5 s. `renderer.render` selbst kostet in JS 0–1 ms, die Zeit liegt im synchronen Software-GL-Pfad. Ohne Garage hat derselbe Tab 60 fps. Playwright prüft „stable“ über aufeinanderfolgende rAF-Frames. Mit ~2 s pro Frame reichen 30 s nicht für mehrere Aktionen. Das Element bewegt sich nicht (Rechteck über 6 Frames identisch).
 - **Gegenprobe (gleiche Last):** WebGL nur auf Main abgeschaltet (Weltrenderer im Worker unberührt): :153 10/10 grün, unverändert 10/10 rot. Mit stillgelegtem Weltrenderer und laufender Garage gibt es weiter Long Tasks von 0,5 s. Die Ursache ist die Garage, nicht der Welt-Worker.
-- **Fixpfad:** Die Garage-Vorschau wandert wie ADR-019 in einen Worker mit `OffscreenCanvas`. Das geschieht im laufenden Zweig `feat/garage-preview-worker` (ADR-032), nicht in diesem Teilstand. Eine Drosselung der Vorschau-Bildrate allein zum Bestehen wäre verbogene Grafikqualität und bleibt ausgeschlossen.
+- **Korrektur:** Die Garage-Vorschau rendert wie ADR-019 in einem Worker mit `OffscreenCanvas`: [E4-12](E4-12-garage-preview-worker.md) / [ADR-032](../decisions/ADR-032-garage-preview-worker.md). Nachher-Messung unter Last offen. Eine Drosselung der Vorschau-Bildrate allein zum Bestehen wäre verbogene Grafikqualität und bleibt ausgeschlossen.
 
-### Server `check-config.test.ts`, `main.shutdown.test.ts`, `admin.test.ts` – Ressourcenbegrenzung, kein Code-Fehler belegt
+### Server `check-config.test.ts`, `main.shutdown.test.ts`, `admin.test.ts` – Graph-Ursache behoben, Wiederholung des roten Lastszenarios offen
 
-- **Rot vorher (14 × `yes` + Fremdlast, die drei Dateien, 3 Läufe):** 3/3 Läufe rot, je 7/7 Tests (5-s-Timeouts). Im Gate-Lauf (Fremdlast Load 30–70, ohne eigene Last) zusätzlich rot: `database.test.ts`, `strava-migrations.test.ts`, `ledger-migrations.test.ts`. Diese starten **keine** Kindprozesse.
+- **Rot vorher (14 × `yes` + Fremdlast, die drei Dateien, 3 Läufe):** 3/3 Läufe rot, je 7/7 Tests (5-s-Timeouts). Im Gate-Lauf (Fremdlast Load 30–70, ohne eigene Last) zusätzlich rot: `database.test.ts`, `strava-migrations.test.ts`, `ledger-migrations.test.ts`. Diese starten **keine** Kindprozesse. In CI nie rot (0 von 34 untersuchten roten `check`-Läufen).
 - **Messung pro Schritt:**
   - Kein Kompilieren pro Test. `buildServerProcess` baut einmal pro Datei in `beforeAll` (0,25 s ohne, 1,1 s mit Last).
   - Ein CLI-Kind lädt 1026 ESM-Module aus `node_modules`.
@@ -97,9 +97,24 @@ Beide Tests messen „die Fahrt läuft weiter“ über `data-distance-m` der Ren
   - Unter Last braucht es 6,9–9,1 s Wandzeit bei nur ~1,25 s CPU. Davon entfallen 5,5–7,2 s auf das Laden der Module (Sample: überwiegend `__open`, `__psynch_cvwait`). Einzelne Läufe hingen 60–93 s fast ohne CPU.
   - Parallel lief der Echtzeitscanner von Microsoft Defender (`wdavdaemon`) mit über 300 % CPU.
   - `node -e 0` braucht unter Last 0,2–5 s.
-- **Bewertung:** Die Zeit liegt im Prozessstart bzw. Dateizugriff unter Sättigung, nicht im Testcode. Dass auch Migrationstests ohne Kindprozess scheitern, stützt das. **Ressourcenbegrenzung, kein Fix.**
-- **Fixpfad:** Der laufende Zweig `perf/server-cli-entry` verkleinert den Importgraphen der CLI-Einstiege. Damit lädt ein Kind weniger Module. Dieser Teilstand enthält das nicht.
-- **Nicht änderbar:** Microsoft Defender ist verwaltete Rechnerkonfiguration. Eine Ausnahme für Temp- oder `node_modules`-Verzeichnisse steht nicht zur Verfügung.
+- **Ursache, Graph (belegt):** `main.ts` importierte `reflect-metadata`, `@nestjs/core`, `AppModule`, `app.setup` und `admin` statisch. ESM wertet alle statischen Importe vor der argv-Weiche aus. Damit lud auch `check-config` die ganze Nest-App samt Drizzle, better-sqlite3 und openid-client.
+- **Ursache, Dateizugriff (Hypothese):** Lokal verlangsamt der Echtzeitscanner von Microsoft Defender vermutlich jedes Öffnen einer Datei. Gestützt wird das durch die `__open`-Samples und die Defender-CPU oben. Ein direkter Nachweis, etwa ein Lauf ohne Scanner, ist nicht möglich. Defender ist verwaltete Rechnerkonfiguration; eine Ausnahme für Temp- oder `node_modules`-Verzeichnisse steht nicht zur Verfügung.
+- **Fix (Graph):** `main.ts` ist nur noch Weiche und lädt per `await import()` entweder `check-config.js`, `admin.js` oder das neue `server-boot.ts` (`bootstrap` + `reflect-metadata`). Verhalten, Exit-Codes, Ausgaben, Signale und Shutdown bleiben unverändert, Einstieg bleibt `dist/main.js`. Vite/Rollup legt die Ziele als Chunks unter `dist/assets/` ab. Dockerfile (`pnpm deploy --prod` kopiert ganz `dist/`), `deploy.sh` und `test-docker.sh` rufen weiter `node dist/main.js` auf und brauchen keine Änderung.
+- **Messung** (`registerHooks`-Lade-Zähler auf gebautem `main.js`, ohne Test-Hooks, je ein kurzer Lauf, Rechnerlast 50–100):
+
+  | Einstieg       | Module vorher | Module nachher |
+  | -------------- | ------------- | -------------- |
+  | `check-config` | 971           | 13             |
+  | `admin list`   | 971           | 571            |
+  | Server-Start   | 971           | 974            |
+
+  Zeiten schwanken unter dieser Last stark (`check-config` vorher 1,4–8,1 s, nachher 0,09 s) und sind nur als Größenordnung zu lesen.
+
+- **Regressionstest:** `check-config.test.ts` „loads only the configuration graph …“ zählt die geladenen Module per Loader-Hook. Er verlangt keine Nest-, Drizzle-, better-sqlite3-, openid-client-, rxjs- oder reflect-metadata-Module und weniger als 30 Module insgesamt.
+- **Paketprüfung:** `apps/server/scripts/verify-package.ts` gegen `pnpm --filter @voltonaut/server deploy --prod` grün: gepackte Migrationen, WAL, Health, Bearer-Guard, SIGTERM, fail-closed Mode/Mail. Damit laufen die dynamischen Chunks im echten Paket. Vorher war das Skript schon auf `main` rot, weil `AUTH_TOMBSTONE_HMAC_KEY` fehlte (Pflicht in Produktion seit #96); der Schlüssel ist jetzt wie in `deploy/test-docker.sh` gesetzt.
+- **Offen – Wiederholung:** Das rote Lastszenario oben (14 × `yes` + Fremdlast, 3 Läufe) ist mit dem Fix nicht wiederholt. Henrys Rechner war dafür zu stark ausgelastet. Die Migrationstests ohne Kindprozess berührt der Fix nicht.
+- **Offen – `admin`:** Der Graph enthält weiter `@nestjs/common` (185 Module) und rxjs (226), weil `AuthDirectory`, `AccountsService`, `EconomyService`, `api-error.ts` und `drizzle.provider.ts` Nest-Dekoratoren, `HttpException` und Injection-Tokens importieren. Option: Dienste und Fehler ohne Nest-Laufzeitimport schreiben und die Nest-Bindung in Module/Provider verlagern. Das ist ein Umbau der Dienste und nicht Teil dieses Fixes.
+- **Offen – `main.shutdown`:** startet die volle App absichtlich; der Graph bleibt dort bei rund 970 Modulen.
 - **Verworfen:** `node_modules` ins Testartefakt bündeln. Das ändert das geprüfte Artefakt gegenüber Produktion.
 
 ## Abnahmekriterien
@@ -108,19 +123,20 @@ Beide Tests messen „die Fahrt läuft weiter“ über `data-distance-m` der Ren
 - [x] AK2 – Leeres Fenster > 1 s ohne Trainerdaten zeigt „leer oder ungültig“ statt Zod-JSON (Unit-Test, vorher rot).
 - [x] AK3 – `pwa.build.test.ts:263`: in drei Einzelschritte aufgeteilt, jede alte Assertion genau einmal. Unter Last: vorher 14/20 Dateiläufe mit rotem Update-Test, nachher Update-Tests 60/60 grün (20 Läufe × 3). A/B: alt 11/14 rot, neu 0/14.
 - [x] AK4 – `fun-mode.spec.ts:25`: Modus im Stand gewählt, keine App-Reihenfolgeursache. Vorher unter Last 7/20 rot (alter Test allein). A/B im selben Lauf: alt 8/20 rot, neu 20/20 grün.
-- [ ] AK5 – übrige Tests: Ursache belegt. Teilweise erfüllt: ride-menu-dismissal/progress-panel:18 zwei Ursachen behoben, Rest Ressourcenbegrenzung. Garage: Ursache belegt, Fix in `feat/garage-preview-worker` (ADR-032). Server: Fix in `perf/server-cli-entry`. progress-panel:25 offen.
+- [ ] AK5 – übrige Tests: Ursache belegt. Teilweise erfüllt: ride-menu-dismissal/progress-panel:18 zwei Ursachen behoben, Rest Ressourcenbegrenzung. Garage: Ursache belegt, Fix in [E4-12](E4-12-garage-preview-worker.md) / PR #154 (ADR-032), Nachher-Messung unter Last offen. Server: Graph-Ursache behoben (PR #153), Wiederholung des Lastszenarios offen. progress-panel:25 offen.
 - [x] AK6 – `FrameSampler` zeichnet nach einer Frame-Lücke den neuesten Snapshot (Unit-Test, vorher rot).
 
 ## Testplan
 
-| AK  | Ebene | Datei                                                                                                              |
-| --- | ----- | ------------------------------------------------------------------------------------------------------------------ |
-| AK1 | E2E   | `apps/web/e2e/ride-recording.spec.ts` (`--repeat-each=20`)                                                         |
-| AK2 | Unit  | `apps/web/src/game/recordedRide.journal.test.ts`                                                                   |
-| AK3 | Build | `apps/web/src/pwa/pwa.build.test.ts` (Schleife, Last, Container)                                                   |
-| AK4 | E2E   | `apps/web/e2e/fun-mode.spec.ts` (`--repeat-each=10`)                                                               |
-| AK5 | E2E   | `ride-menu-dismissal.spec.ts:49`, `progress-panel.spec.ts:18`, `garage-shop.spec.ts` (`--repeat-each=10/20`, Last) |
-| AK6 | Unit  | `apps/web/src/world/frame.test.ts`                                                                                 |
+| AK  | Ebene       | Datei                                                                                                              |
+| --- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| AK1 | E2E         | `apps/web/e2e/ride-recording.spec.ts` (`--repeat-each=20`)                                                         |
+| AK2 | Unit        | `apps/web/src/game/recordedRide.journal.test.ts`                                                                   |
+| AK3 | Build       | `apps/web/src/pwa/pwa.build.test.ts` (Schleife, Last, Container)                                                   |
+| AK4 | E2E         | `apps/web/e2e/fun-mode.spec.ts` (`--repeat-each=10`)                                                               |
+| AK5 | E2E         | `ride-menu-dismissal.spec.ts:49`, `progress-panel.spec.ts:18`, `garage-shop.spec.ts` (`--repeat-each=10/20`, Last) |
+| AK5 | Integration | `apps/server/src/check-config.test.ts` „loads only the configuration graph …“ (Modulzahl per Loader-Hook)          |
+| AK6 | Unit        | `apps/web/src/world/frame.test.ts`                                                                                 |
 
 ## Nicht-Ziele
 
@@ -134,5 +150,6 @@ Keine Änderung an Timeouts, Retries, Sim-Uhr, Vitest-/Playwright-Konfiguration 
   - Das unabhängige Zweitreview bestätigt den Teilumfang. Unter Fremdlast war Base 9/10 rot, nur App-Fix 6/10 rot, beide Fixes 19/20 grün.
   - Nach dem Rebase auf `e8818a2` liefen lokal gezielte Prüfungen, siehe PR. Der volle Gate läuft in CI auf dem exakten Head.
 - **Nachweis PR #149 (AK3, AK4):** `fmt:check`, `lint`, `typecheck`, `depcruise` und `guard` grün. `vitest run apps/web/src/pwa/` ohne Last 26/26 grün. Playwright `fun-mode` + `ride-recording` mit `--workers=1 --repeat-each=3` ohne Last 21/21 grün. Ein lokaler Lauf von `mise run check` fand nicht statt, weil Henrys Rechner während der Lastmessung nicht bedienbar war. Das volle Gate ist die CI des PR.
+- **Nachweis PR #153 (Server-Teil von AK5):** Server-Build, `check-config`/`main.shutdown`/`admin` einmal grün, `fmt:check`, `lint`, `typecheck`, `depcruise`, `guard` grün. `verify-package.ts` gegen das gepackte Server-Artefakt grün. `deploy/test-docker.sh` nicht gelaufen (Docker-Daemon aus). Kein lokales `mise run check`; das volle Gate ist die CI des PR.
 
 Implementiert und softwaregeprüft: AK1–AK4, AK6. An echter Hardware geprüft: nein (nicht nötig). Bereitgestellt: AK1, AK2, AK6.

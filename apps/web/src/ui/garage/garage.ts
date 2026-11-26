@@ -53,7 +53,9 @@ class GaragePanel {
     wheelCircM: number,
   ) {
     this.#state = createInitialGarageState();
-    this.#preview = new GaragePreviewPanel(wheelCircM);
+    this.#preview = new GaragePreviewPanel(wheelCircM, () => {
+      this.#dispatch({ kind: "previewUnavailable" });
+    });
     this.#build();
 
     if (this.#preview.available) this.#preview.setLook(this.#state.config);
