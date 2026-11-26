@@ -1,7 +1,20 @@
-import { Body, Controller, Get, Header, HttpCode, Inject, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Inject,
+  Post,
+  Put,
+  UseGuards,
+} from "@nestjs/common";
 
 import {
+  LoadoutUpdateSchema,
   PurchaseRequestSchema,
+  type LoadoutResponse,
+  type LoadoutUpdate,
   type InventoryResponse,
   type PurchaseRequest,
   type PurchaseResponse,
@@ -9,6 +22,8 @@ import {
 import { CurrentSession } from "../auth/auth-request.js";
 import type { SessionPrincipal } from "../auth/auth-request.js";
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
+import { LoadoutService } from "./inventory.loadout.js";
 import { InventoryService } from "./inventory.service.js";
 
 @Controller("v1")
@@ -16,7 +31,25 @@ export class InventoryController {
   public constructor(
     @Inject(InventoryService)
     private readonly inventory: Readonly<Pick<InventoryService, "list" | "purchase">>,
+    @Inject(LoadoutService)
+    private readonly loadouts: Readonly<Pick<LoadoutService, "get" | "save">>,
   ) {}
+
+  @Get("me/loadout")
+  @Header("Cache-Control", "no-store")
+  public loadout(@CurrentSession() session: SessionPrincipal): LoadoutResponse {
+    return this.loadouts.get(session.userId);
+  }
+
+  @Put("me/loadout")
+  @UseGuards(ClientOriginGuard)
+  @Header("Cache-Control", "no-store")
+  public saveLoadout(
+    @CurrentSession() session: SessionPrincipal,
+    @Body(new ZodValidationPipe(LoadoutUpdateSchema)) update: LoadoutUpdate,
+  ): LoadoutResponse {
+    return this.loadouts.save(session.userId, update);
+  }
 
   @Get("me/inventory")
   @Header("Cache-Control", "no-store")

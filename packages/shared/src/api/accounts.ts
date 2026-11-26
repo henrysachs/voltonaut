@@ -70,7 +70,7 @@ const AccountExportRideSchema = z
 
 export const AccountExportSchema = z
   .object({
-    schemaVersion: z.literal(3),
+    schemaVersion: z.literal(4),
     exportedAt: z.string().datetime({ precision: 3 }),
     account: z
       .object({

@@ -1,5 +1,6 @@
 import { createEngine, createRoute, TEST_LOOP } from "@voltonaut/engine";
-import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
+import { DEFAULT_RIDER_PROFILE, type AvatarConfig } from "@voltonaut/shared";
 import { expect, it } from "vitest";
 
 import { createRenderLoop } from "./render-loop.js";
@@ -15,6 +16,7 @@ function noop(): void {}
 
 class LoopFixture {
   readonly replies: RenderReply[] = [];
+  readonly looks: AvatarConfig[] = [];
   private frameCallback: (nowMs: number) => void = noop;
   private taskCallback: () => void = noop;
   private disposals = 0;
@@ -59,12 +61,16 @@ class LoopFixture {
         widthPx: 800,
         heightPx: 400,
         billboardsInView: { left: 0, right: 0 },
+        look: DEFAULT_AVATAR_CONFIG,
       };
     },
     resize: () => {
       this.resizes += 1;
     },
     toggleCamera: () => "overview",
+    setLook: (look) => {
+      this.looks.push(look);
+    },
     dispose: () => {
       this.disposals += 1;
     },
@@ -191,4 +197,26 @@ it("reports failed initialization, not a misleading ready frame", () => {
   });
   f.frame();
   expect(f.replies).toEqual([{ type: "render.failed", reason: "initialization" }]);
+});
+
+it("passes looks to a running core only and fails on a broken look", () => {
+  const f = fixture();
+
+  f.loop.look(DEFAULT_AVATAR_CONFIG);
+  f.loop.start(() => f.core);
+  f.loop.look(DEFAULT_AVATAR_CONFIG);
+
+  expect(f.looks).toEqual([DEFAULT_AVATAR_CONFIG]);
+
+  const broken = fixture();
+
+  broken.loop.start(() => ({
+    ...broken.core,
+    setLook() {
+      throw new Error("bad look");
+    },
+  }));
+  broken.loop.look(DEFAULT_AVATAR_CONFIG);
+
+  expect(broken.replies.at(-1)).toEqual({ type: "render.failed", reason: "render-error" });
 });

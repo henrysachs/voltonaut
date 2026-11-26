@@ -1,9 +1,8 @@
 import { z } from "zod";
 
+import { ItemIdSchema } from "../avatarCatalog.js";
 import { VoltsBalanceSchema, VoltsDebitAmountSchema } from "../economy.js";
-
-/** Catalog item id, same bounds as the avatar catalog. */
-const ItemIdSchema = z.string().trim().min(1).max(120);
+import { LoadoutResponseSchema } from "./loadout.js";
 
 /** `default` items are owned by every account without a stored row (spec E7-02 AK3). */
 export const InventorySourceSchema = z.enum(["default", "shop"]);
@@ -33,7 +32,11 @@ const PurchasedItemSchema = InventoryItemSchema.refine((item) => item.source !==
 });
 
 export const InventoryAccountExportSchema = z
-  .object({ items: z.array(PurchasedItemSchema).max(1000).readonly() })
+  .object({
+    items: z.array(PurchasedItemSchema).max(1000).readonly(),
+    /** Stored equipment, or the default loadout with `updatedAt: null` (spec E7-05 AK5). */
+    loadout: LoadoutResponseSchema,
+  })
   .strict()
   .readonly();
 

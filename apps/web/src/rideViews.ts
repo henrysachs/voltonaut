@@ -7,7 +7,7 @@ import { createRideStore } from "./sync/rideStore.js";
 import { mountRideMode } from "./ui/rideMode.js";
 import { mountRideRecording } from "./ui/rideRecording.js";
 import type { EnvironmentSettings } from "./world/environment.js";
-import { startRideScene } from "./world/scene.js";
+import { startRideScene, type RideScene } from "./world/scene.js";
 
 export interface RideViewOptions {
   readonly connectedLabel: string;
@@ -30,7 +30,10 @@ const domDocument: AppDocument = {
 };
 
 /** Mounts every view of the running ride: HUD, recording panel, mode picker and 3D scene. */
-export function mountRideViews(session: RideSession, options: RideViewOptions): void {
+export function mountRideViews(
+  session: RideSession,
+  options: RideViewOptions,
+): RideScene | undefined {
   startApp({ document: domDocument, ride: session, connectedLabel: options.connectedLabel });
 
   const store = Promise.resolve()
@@ -46,8 +49,8 @@ export function mountRideViews(session: RideSession, options: RideViewOptions): 
 
   const sceneHost = document.querySelector("#ride-scene");
 
-  if (sceneHost instanceof HTMLElement) {
-    startRideScene({
+  if (sceneHost instanceof HTMLElement)
+    return startRideScene({
       host: sceneHost,
       routeId: session.routeId,
       snapshot: session.snapshot,
@@ -55,5 +58,6 @@ export function mountRideViews(session: RideSession, options: RideViewOptions): 
       environment: options.environment,
       debug: options.debug,
     });
-  }
+
+  return undefined;
 }

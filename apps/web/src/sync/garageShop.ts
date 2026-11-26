@@ -5,7 +5,9 @@ import { AccountState } from "./accountState.js";
 import { ShopReceiptMismatch, type ShopPort } from "./shopPort.js";
 
 /** The garage reads and buys through the shop port only. */
-export type ShopLease = LeaseBinding & { readonly shop: ShopPort };
+export type ShopLease = LeaseBinding & {
+  readonly shop: Pick<ShopPort, "balance" | "inventory" | "purchase">;
+};
 
 export type GarageShopView =
   | { readonly kind: "guest" }

@@ -12,6 +12,7 @@ import {
   type RecordingEntryV2,
   type ReplayObservationV2,
   type RideEvent,
+  type RideTrack,
   type TrainerCommand,
 } from "@voltonaut/shared";
 import {
@@ -29,6 +30,9 @@ import type {
   CaptureView,
   RideRecorder,
 } from "./rideCaptureProtocol.js";
+
+const EMPTY_CAPTURE_MESSAGE =
+  "Aufnahme leer oder ungültig. Mindestens eine Sekunde mit Trainerdaten aufnehmen.";
 
 type RecorderState =
   | { readonly kind: "idle" }
@@ -245,10 +249,7 @@ class Recorder implements RideRecorder {
 
     if (state.kind !== "recording") throw new Error("Keine laufende Aufnahme.");
 
-    if (atMs - state.startMs < 1000)
-      throw new Error(
-        "Aufnahme leer oder ungültig. Mindestens eine Sekunde mit Trainerdaten aufnehmen.",
-      );
+    if (atMs - state.startMs < 1000) throw new Error(EMPTY_CAPTURE_MESSAGE);
 
     if (atMs - state.startMs > MAX_LOCAL_RIDE_MS)
       throw new Error(
@@ -256,7 +257,7 @@ class Recorder implements RideRecorder {
       );
     this.boundary("sample", atMs, snapshot);
     state.lastSampleMs = atMs;
-    const track = this.projection.finish();
+    const track = this.track();
     const recording = this.journal.finish();
 
     const capture = CapturedRideSchema.parse(
@@ -267,6 +268,15 @@ class Recorder implements RideRecorder {
 
     this.state = { kind: "completed", rideId: state.rideId, capture };
     this.journal.clearWindow();
+  }
+
+  /** A window without any trainer reading is empty, however long it ran. */
+  private track(): RideTrack {
+    try {
+      return this.projection.finish();
+    } catch {
+      throw new Error(EMPTY_CAPTURE_MESSAGE);
+    }
   }
 }
 
