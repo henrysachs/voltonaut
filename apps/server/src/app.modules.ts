@@ -1,3 +1,4 @@
+import { accountExportThrottlerModule } from "./accounts/account-export.rate-limit.js";
 import { AccountsModule } from "./accounts/accounts.module.js";
 import { EconomyModule } from "./economy/economy.module.js";
 import { InventoryModule } from "./inventory/inventory.module.js";
@@ -26,6 +27,7 @@ export const applicationModules = [
     economy: economyModule,
     inventory: inventoryModule,
     progress: progressModule,
+    exportThrottler: accountExportThrottlerModule(),
   }),
   economyModule,
   inventoryModule,
