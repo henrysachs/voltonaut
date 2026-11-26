@@ -9,25 +9,14 @@ import {
 
 import { createRideSession } from "./game/rideSession.js";
 import { setupProfile } from "./profileBootstrap.js";
-import { setupBrowserAccount, type BrowserAccount } from "./browserAccount.js";
-import { mountRideViews } from "./rideViews.js";
+import { setupBrowserAccount } from "./browserAccount.js";
+import { mountRideViews, wearLoadout } from "./rideViews.js";
 import { setupProgressHud } from "./progressHud.js";
-import { wornLoadout } from "./sync/garageLoadout.js";
 import { mountGameMenu } from "./ui/gameMenu.js";
 import { mountRouteCatalog, updateRouteIdentity } from "./ui/routeCatalogPanel.js";
 import { resolveRouteId, routeEnvironmentSettings, ROUTE_CATALOG } from "./world/routeCatalog.js";
 
 const FAST_CLOCK_SCALE = 20;
-
-/** The ride wears the confirmed equipment; guests and offline riders the default (spec E7-05 AK8). */
-function wearLoadout(
-  scene: ReturnType<typeof mountRideViews>,
-  loadout: Readonly<Pick<BrowserAccount["loadout"], "subscribe">> | undefined,
-): void {
-  loadout?.subscribe((view) => {
-    scene?.setLook?.(wornLoadout(view));
-  });
-}
 
 async function start(): Promise<void> {
   const profileReady = setupProfile();

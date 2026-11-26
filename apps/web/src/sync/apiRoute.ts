@@ -168,7 +168,8 @@ function statusFailure(status: number): SyncFailure {
     case 409:
       return "conflict";
     default:
-      return status >= 500 || status === 429 ? "retry" : "contract";
+      // 429 never reaches here: parseResponse handles it first and keeps its Retry-After.
+      return status >= 500 ? "retry" : "contract";
   }
 }
 

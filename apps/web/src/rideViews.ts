@@ -2,6 +2,7 @@ import { rideTcxFilename, serializeRideTcx } from "@voltonaut/shared";
 
 import { startApp, type AppDocument } from "./app.js";
 import type { RideSession } from "./game/rideSession.js";
+import { wornLoadout, type GarageLoadoutView } from "./sync/garageLoadout.js";
 import { openRideDatabase } from "./sync/rideDatabase.js";
 import { createRideStore } from "./sync/rideStore.js";
 import { mountRideMode } from "./ui/rideMode.js";
@@ -60,4 +61,16 @@ export function mountRideViews(
     });
 
   return undefined;
+}
+
+/** The ride wears the confirmed equipment; guests and offline riders the default (spec E7-05 AK8). */
+export function wearLoadout(
+  scene: ReturnType<typeof mountRideViews>,
+  loadout:
+    | Readonly<{ subscribe: (listener: (view: GarageLoadoutView) => void) => () => void }>
+    | undefined,
+): void {
+  loadout?.subscribe((view) => {
+    scene?.setLook?.(wornLoadout(view));
+  });
 }

@@ -13,7 +13,7 @@ Große Kontoexports sollen vollständig heruntergeladen werden können, ohne das
 
 - Jede API-Route nutzte ein festes Timeout von 8 s, gemessen von der Anfrage bis zum gelesenen JSON-Body.
 - Gemessen am 26.11.2026 in der Entwicklungsumgebung: 50 einstündige Fahrten (je 3600 Proben, Aufnahmeformat V1) erzeugen einen Export von 14,5 MB, den der Server in 0,8 s baut.
-- Die Rechenzeit auf dem Server ist also nicht der Engpass. Die Übertragung ist es: Bei 10 Mbit/s dauern 14,5 MB rund 12 s, und der Client brach vorher ab.
+- Für den damaligen Client-Abbruch war die Rechenzeit auf dem Server nicht der Engpass, sondern die Übertragung: Bei 10 Mbit/s dauern 14,5 MB rund 12 s, und der Client brach vorher ab.
 - Auf dem Produktionsserver und mit V2-Aufnahmen samt TCX ist das nicht gemessen.
 
 ## Abnahmekriterien
@@ -36,7 +36,7 @@ Große Kontoexports sollen vollständig heruntergeladen werden können, ohne das
 
 ## Nicht-Ziele
 
-Kein gestreamter oder seitenweiser Export. Nach der Messung ist das nicht nötig; er bleibt eine Option, falls V2-Exporte deutlich größer werden.
+Kein gestreamter oder seitenweiser Export in diesem Schritt. Für den Client-Abbruch ist er nicht nötig. Ob er oder eine stückweise Prüfung wegen der Event-Loop-Blockade (siehe „Bekannte Grenzen“) kommt, ist offen (#157).
 
 ## Testplan
 
@@ -53,3 +53,5 @@ Kein gestreamter oder seitenweiser Export. Nach der Messung ist das nicht nötig
 - [x] `docs/08-backend.md` beschreibt das eigene Export-Budget und das Konto-Limit.
 - [x] `docs/open-questions.md` verweist auf E5-12 statt auf das allgemeine 8-s-Timeout.
 - [ ] Prod-Messung mit V2-Aufnahmen samt TCX bleibt als Folgeaufgabe offen.
+- [ ] Entscheidung zur Event-Loop-Blockade großer Exporte (stückweise prüfen, Worker oder Streaming) offen (#157).
+- Deploy-Reihenfolge: Erst der Server mit `Access-Control-Expose-Headers: Retry-After`, dann der Web-Client. Ohne lesbaren Header zeigt ein 429 die allgemeine Meldung; das gilt auch für ein 429 von Traefik.
