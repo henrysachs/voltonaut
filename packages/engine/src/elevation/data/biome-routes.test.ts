@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { createRoute, type RouteData } from "../route.js";
+import { createRoute, type CenterlinePoint, type EngineRoute, type RouteData } from "../route.js";
 import { ALPINE_PASS } from "./alpine-pass.js";
 import { COAST_LOOP } from "./coast-loop.js";
 import { NIGHT_CITY } from "./night-city.js";
@@ -31,6 +31,40 @@ function assertSampleSpacing(data: Readonly<typeof COAST_LOOP>): void {
   }
 }
 
+function pointSegmentDistanceM(
+  point: Readonly<CenterlinePoint>,
+  start: Readonly<CenterlinePoint>,
+  end: Readonly<CenterlinePoint>,
+): number {
+  const dx = end.x - start.x;
+  const dz = end.z - start.z;
+
+  const fraction = Math.max(
+    0,
+    Math.min(1, ((point.x - start.x) * dx + (point.z - start.z) * dz) / (dx * dx + dz * dz)),
+  );
+
+  return Math.hypot(point.x - (start.x + fraction * dx), point.z - (start.z + fraction * dz));
+}
+
+function minimumClimbDescentSeparationM(route: Readonly<EngineRoute>): number {
+  const climb = Array.from({ length: 601 }, (_, index) => route.worldPos(index * 20));
+  const descent = Array.from({ length: 601 }, (_, index) => route.worldPos(13_460 + index * 20));
+  let minimumSeparationM = Number.POSITIVE_INFINITY;
+
+  for (const point of descent) {
+    for (const [index, start] of climb.entries()) {
+      const end = climb[index + 1];
+
+      if (end === undefined) continue;
+
+      minimumSeparationM = Math.min(minimumSeparationM, pointSegmentDistanceM(point, start, end));
+    }
+  }
+
+  return minimumSeparationM;
+}
+
 function firstElevationM(data: Readonly<typeof COAST_LOOP>): number {
   const sample = data.profileSamples[0];
 
@@ -55,6 +89,7 @@ const LOOP_ROUTES: readonly {
   readonly expectedPoints: number;
 }[] = [
   { id: COAST_LOOP.id, data: COAST_LOOP, expectedPoints: 641 },
+  { id: ALPINE_PASS.id, data: ALPINE_PASS, expectedPoints: 2839 },
   { id: NIGHT_CITY.id, data: NIGHT_CITY, expectedPoints: 481 },
 ];
 
@@ -110,13 +145,13 @@ it("coast-loop is a gentle seaside ring: wobble bounded, grades stay under 2 %",
   expect(chordCount).toBe(640);
 });
 
-it("alpine-pass climbs 840 m at a constant 7 % over a real serpentine", () => {
-  expect(ALPINE_PASS.lengthM).toBe(12_000);
-  expect(ALPINE_PASS.loop).toBe(false);
+it("alpine-pass is a closed climb and descent with a separate return corridor", () => {
+  expect(ALPINE_PASS.lengthM).toBe(28_380);
+  expect(ALPINE_PASS.loop).toBe(true);
   expect(ALPINE_PASS.scenery).toBe("alpine");
-  expect(ALPINE_PASS.centerline).toHaveLength(1201);
+  expect(ALPINE_PASS.centerline).toHaveLength(2839);
   expect(ALPINE_PASS.segments).toEqual([
-    { id: "pass-kom", name: "Pass KOM", kind: "kom", startM: 2000, endM: 10_000 },
+    { id: "pass-kom", name: "Pass KOM", kind: "kom", startM: 2000, endM: 12_000 },
   ]);
 
   const route = createRoute(ALPINE_PASS);
@@ -124,25 +159,30 @@ it("alpine-pass climbs 840 m at a constant 7 % over a real serpentine", () => {
 
   expect(route.profile.elevationAt(0)).toBeCloseTo(160, 10);
   expect(route.profile.elevationAt(12_000)).toBeCloseTo(1000, 10);
+  expect(route.profile.elevationAt(ALPINE_PASS.lengthM)).toBeCloseTo(160, 10);
   expect(route.profile.gradeAt(6000)).toBeCloseTo(7, 6);
+  expect(route.profile.gradeAt(20_000)).toBeLessThan(0);
+  expect(route.worldPos(ALPINE_PASS.lengthM)).toEqual(route.worldPos(0));
+  expect(route.worldPos(ALPINE_PASS.lengthM + 100)).toEqual(route.worldPos(100));
 
   // Leg 1 heads up-valley at +45°, leg 2 turns back at −45°: a real hairpin pair.
   expect(route.headingRad(100)).toBeCloseTo(switchbackRad, 8);
   expect(route.headingRad(1600)).toBeCloseTo(-switchbackRad, 8);
 
-  // Each 1500 m leg advances the valley axis and swings laterally by the same amount.
+  // The straight part of each 1500 m leg advances at ±45° before the chamfer.
   const legStart = route.worldPos(0);
-  const legEnd = route.worldPos(1500);
+  const legEnd = route.worldPos(1400);
 
-  expect(legEnd.x).toBeCloseTo(1500 * Math.cos(switchbackRad), 8);
-  expect(legEnd.z).toBeCloseTo(1500 * Math.sin(switchbackRad), 8);
+  expect(legEnd.x).toBeCloseTo(1400 * Math.cos(switchbackRad), 8);
+  expect(legEnd.z).toBeCloseTo(1400 * Math.sin(switchbackRad), 8);
   expect(legStart.x).toBe(0);
 
-  const last = route.worldPos(12_000);
+  const summit = route.worldPos(12_000);
 
-  // 8 legs of ±1500 m cancel laterally: the pass ends back on the valley axis.
-  expect(last.z).toBeCloseTo(0, 8);
-  expect(last.x).toBeCloseTo(8 * 1500 * Math.cos(switchbackRad), 6);
+  expect(summit.x).toBeGreaterThan(8000);
+
+  // The two 360 m terrain half-widths never overlap between climb and descent.
+  expect(minimumClimbDescentSeparationM(route)).toBeGreaterThan(720);
 });
 
 it("night-city is a flat dark block ring with a seamless lap", () => {

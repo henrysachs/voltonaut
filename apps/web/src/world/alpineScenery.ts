@@ -8,10 +8,13 @@ import {
   routeClearanceM,
   routeCorridorSamples,
   seededRandom,
+  CHUNK_M,
   type ChunkLayer,
   type ChunkItem,
 } from "./biomeSceneryShared.js";
 import type { LandscapePlan, Plant } from "./landscape-plan.js";
+
+const MAX_CHUNKS_PER_LAYER = 70;
 
 interface AlpineRock extends ChunkItem {
   readonly position: WorldPos;
@@ -112,8 +115,16 @@ export function createAlpineScenery(plan: Readonly<LandscapePlan>): THREE.Group 
   const root = new THREE.Group();
   const flora = alpineFlora(plan, seededRandom(11));
 
+  const chunkSizeM = Math.max(
+    CHUNK_M,
+    Math.ceil(plan.route.lengthM / (CHUNK_M * MAX_CHUNKS_PER_LAYER)) * CHUNK_M,
+  );
+
   root.name = "biome-alpine";
-  root.add(...chunkedMeshes(rockLayer(flora.rocks)), ...chunkedMeshes(pineLayer(flora.pines)));
+  root.add(
+    ...chunkedMeshes(rockLayer(flora.rocks), chunkSizeM),
+    ...chunkedMeshes(pineLayer(flora.pines), chunkSizeM),
+  );
 
   return root;
 }

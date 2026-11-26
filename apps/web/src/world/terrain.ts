@@ -1,3 +1,4 @@
+import type { WorldPos } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import {
@@ -6,6 +7,11 @@ import {
   terrainPosition,
   type LandscapePlan,
 } from "./landscape-plan.js";
+import {
+  createForeignRoadQuery,
+  createRoadApronGeometry,
+  type ForeignRoadQuery,
+} from "./terrainRoad.js";
 
 /** Terrain vertex colors per biome (#75); the forest values are the original ones. */
 export interface TerrainPalette {
@@ -42,36 +48,111 @@ function terrainColor(
   return color;
 }
 
+function requiredWorldPos(positions: readonly WorldPos[], index: number): WorldPos {
+  const position = positions[index];
+
+  if (position === undefined) throw new RangeError("terrain position is missing");
+
+  return position;
+}
+
+function terrainFaceIndices(
+  positions: readonly WorldPos[],
+  query: ForeignRoadQuery | undefined,
+  a: number,
+  b: number,
+  c: number,
+  fromM: number,
+  toM: number,
+  roadShoulder: boolean,
+): readonly [number, number, number] {
+  const blocked =
+    query?.(
+      requiredWorldPos(positions, a),
+      requiredWorldPos(positions, b),
+      requiredWorldPos(positions, c),
+      fromM,
+      toM,
+      roadShoulder,
+    ) ?? false;
+
+  return blocked ? [a, a, a] : [a, b, c];
+}
+
+function terrainRowIndices(
+  positions: readonly WorldPos[],
+  query: ForeignRoadQuery | undefined,
+  index: number,
+  count: number,
+  width: number,
+  routeLengthM: number,
+): readonly number[] {
+  const indices: number[] = [];
+  const fromM = ((index - 1) / count) * routeLengthM;
+
+  for (let column = 1; column < width; column += 1) {
+    const current = index * width + column;
+    const toM = (index / count) * routeLengthM;
+    const leftLateralM = TERRAIN_OFFSETS_M[column - 1];
+    const lateralM = TERRAIN_OFFSETS_M[column];
+
+    if (leftLateralM === undefined || lateralM === undefined) {
+      throw new RangeError("terrain offset is missing");
+    }
+
+    const roadShoulder = Math.abs(leftLateralM) <= 4 && Math.abs(lateralM) <= 4;
+
+    indices.push(
+      ...terrainFaceIndices(
+        positions,
+        query,
+        current - width - 1,
+        current - width,
+        current - 1,
+        fromM,
+        toM,
+        roadShoulder,
+      ),
+      ...terrainFaceIndices(
+        positions,
+        query,
+        current - width,
+        current,
+        current - 1,
+        fromM,
+        toM,
+        roadShoulder,
+      ),
+    );
+  }
+
+  return indices;
+}
+
 function terrainGeometry(plan: LandscapePlan, palette: TerrainPalette): THREE.BufferGeometry {
   const vertices: number[] = [];
+  const positions: WorldPos[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
   const count = Math.ceil(plan.route.lengthM / 10);
   const width = TERRAIN_OFFSETS_M.length;
+  const query = plan.route.scenery === "alpine" ? createForeignRoadQuery(plan.route) : undefined;
 
   for (let index = 0; index <= count; index += 1) {
     const distanceM = (index / count) * plan.route.lengthM;
 
-    for (const [column, lateralM] of TERRAIN_OFFSETS_M.entries()) {
+    for (const lateralM of TERRAIN_OFFSETS_M) {
       const position = terrainPosition(plan, distanceM, lateralM);
       const radius = lakeRadius(plan.lake, position);
       const color = terrainColor(distanceM, lateralM, radius, palette);
 
       vertices.push(position.x, position.y, position.z);
+      positions.push(position);
       colors.push(color.r, color.g, color.b);
+    }
 
-      if (index > 0 && column > 0) {
-        const current = index * width + column;
-
-        indices.push(
-          current - width - 1,
-          current - width,
-          current - 1,
-          current - width,
-          current,
-          current - 1,
-        );
-      }
+    if (index > 0) {
+      indices.push(...terrainRowIndices(positions, query, index, count, width, plan.route.lengthM));
     }
   }
 
@@ -79,7 +160,6 @@ function terrainGeometry(plan: LandscapePlan, palette: TerrainPalette): THREE.Bu
 
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
@@ -117,6 +197,17 @@ export function createTerrain(
   ground.receiveShadow = true;
 
   root.add(ground, terrain);
+
+  if (plan.route.scenery === "alpine") {
+    const apron = new THREE.Mesh(
+      createRoadApronGeometry(plan.route, palette.ground),
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }),
+    );
+
+    apron.name = "road-terrain";
+    apron.receiveShadow = true;
+    root.add(apron);
+  }
 
   return root;
 }

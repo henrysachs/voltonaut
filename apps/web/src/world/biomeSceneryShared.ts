@@ -34,6 +34,7 @@ export interface ChunkLayer<T extends ChunkItem> {
 export function chunkedMeshes<T extends ChunkItem>(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The layer owns the Three resources it hands to the instancing helper.
   layer: ChunkLayer<T>,
+  chunkSizeM = CHUNK_M,
 ): readonly THREE.InstancedMesh[] {
   const meshes: THREE.InstancedMesh[] = [];
   const object = new THREE.Object3D();
@@ -42,9 +43,9 @@ export function chunkedMeshes<T extends ChunkItem>(
 
   for (const item of layer.items) totalM = Math.max(totalM, item.routeDistanceM);
 
-  for (let startM = 0; startM <= totalM; startM += CHUNK_M) {
+  for (let startM = 0; startM <= totalM; startM += chunkSizeM) {
     const chunk = layer.items.filter(
-      (item) => item.routeDistanceM >= startM && item.routeDistanceM < startM + CHUNK_M,
+      (item) => item.routeDistanceM >= startM && item.routeDistanceM < startM + chunkSizeM,
     );
 
     if (chunk.length === 0) continue;

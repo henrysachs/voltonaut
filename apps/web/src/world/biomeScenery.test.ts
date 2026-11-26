@@ -125,6 +125,7 @@ it("alpine scenery keeps the serpentine flanks rocky, snowy and sparse", () => {
 
   expect(scenery.name).toBe("biome-alpine");
   expect(scenery.children.every((child) => child instanceof THREE.InstancedMesh)).toBe(true);
+  expect(scenery.children.length).toBeLessThanOrEqual(140);
   expect(instanceCount(scenery)).toBeGreaterThan(400);
 
   // No lake was requested: the stand-in pond stays tiny and far off the road.

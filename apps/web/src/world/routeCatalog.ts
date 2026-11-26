@@ -53,7 +53,7 @@ export const ROUTE_CATALOG: readonly RoutePresentation[] = [
   {
     id: "alpine-pass",
     title: "Alpine Pass",
-    description: "12 km Serpentinen, Fels und Schnee mit 840 Höhenmetern.",
+    description: "12 km Anstieg mit Serpentinen, 840 Höhenmetern und getrennter Abfahrt.",
     environment: environment(11, 9 * 60 * 60, "cloudy"),
     budget: STANDARD_BUDGET,
   },

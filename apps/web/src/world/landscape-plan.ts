@@ -58,8 +58,13 @@ function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number)
   if (turnRad <= MIN_TURN_RAD) return lateralM;
 
   const blend = Math.max(0, 1 - (turnRad - MIN_TURN_RAD) / (MAX_TURN_RAD - MIN_TURN_RAD));
+  const compressedM = lateralM * blend;
 
-  return lateralM * blend;
+  if (route.scenery === "alpine" && Math.abs(lateralM) > 4) {
+    return Math.sign(lateralM) * Math.max(4, Math.abs(compressedM));
+  }
+
+  return compressedM;
 }
 
 export function lakeRadius(lake: Lake, position: WorldPos): number {
