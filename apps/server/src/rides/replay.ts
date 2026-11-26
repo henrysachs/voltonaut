@@ -4,9 +4,10 @@ import {
   createRoute,
   PHYSICS_REVISION,
   replaySnapshotEqual,
-  TEST_LOOP,
+  TEST_ROUTES,
   type Engine,
   type RideSnapshot,
+  type RouteData,
 } from "@voltonaut/engine";
 import {
   RecordingV2Schema,
@@ -54,10 +55,10 @@ class ReplayRun {
   private start: { readonly snapshot: RideSnapshot; readonly workerMs: number } | undefined;
   private clockSkipped = false;
 
-  constructor(recording: RecordingV2) {
+  constructor(recording: RecordingV2, routeData: Readonly<RouteData>) {
     this.recording = recording;
     this.engine = createEngine({
-      route: createRoute(TEST_LOOP),
+      route: createRoute(routeData),
       profile: recording.initialization.profile,
     });
   }
@@ -148,11 +149,17 @@ export function assessRecordingV2(recording: RecordingV2): RecordingV2Assessment
 
   if (
     initialization.physicsRevision !== PHYSICS_REVISION ||
-    initialization.routeId !== "test-loop" ||
-    initialization.routeRevision !== "1"
+    initialization.routeRevision !== "1" ||
+    !Object.hasOwn(TEST_ROUTES, initialization.routeId)
   ) {
     return { status: "unverified", reason: "unknown_revision" };
   }
 
-  return new ReplayRun(normalized).run();
+  const routeData = TEST_ROUTES[initialization.routeId];
+
+  if (routeData === undefined) {
+    return { status: "unverified", reason: "unknown_revision" };
+  }
+
+  return new ReplayRun(normalized, routeData).run();
 }

@@ -274,6 +274,8 @@ interface RideUpload {
 
 [E10-02](specs/E10-02-replay-consistency.md) implementiert eine reine V2-Nachrechnung mit vollständigem Initialisierungsjournal. `assessRecordingV2` liefert ausschließlich `unverified`, `rejected` oder `replayed`. E10-04 verwendet diese Nachrechnung im kanonischen `/v2/rides`-Pfad. Konsistenz und Quellenrichtlinie bleiben getrennt. Die folgenden 3-Prozent- und Annahmeregeln sind weiterhin Zielskizzen, nicht die V2-Prüfung. V2 vergleicht diskrete Werte und Enginezeiten exakt und übrige Messwerte mit enger numerischer Toleranz.
 
+Die serverseitige Route-Allowlist umfasst jeden registrierten Eintrag aus `@voltonaut/engine` `TEST_ROUTES` mit Route-Revision `1`. Auch Küsten-, Alpen- und Nachtstadt-Routen werden damit mit derselben Engine nachgerechnet. Unbekannte Route-IDs oder Revisionen bleiben `unverified/unknown_revision`; ein Näherungs-Fallback besteht nicht.
+
 Der Server **rechnet nach**, statt Client-Werten zu vertrauen:
 
 1. **Struktur:** Zeitstempel monoton, 1-Hz-Raster ± Toleranz, Dauer ≤ Wanduhr zwischen `startedAt` und Upload, max. 6 h, `rideId` nicht doppelt.

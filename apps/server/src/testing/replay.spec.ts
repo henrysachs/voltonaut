@@ -4,7 +4,7 @@ import {
   createRoute,
   PHYSICS_REVISION,
   projectReplaySnapshot,
-  TEST_LOOP,
+  TEST_ROUTES,
   type Engine,
 } from "@voltonaut/engine";
 import {
@@ -19,12 +19,20 @@ import {
 
 import { assessRecordingV2, type RecordingV2Assessment } from "../rides/replay.js";
 
-export function replayEngine(): Engine {
-  return createEngine({ route: createRoute(TEST_LOOP), profile: DEFAULT_RIDER_PROFILE });
+export function replayEngine(routeId = "test-loop"): Engine {
+  const routeData = TEST_ROUTES[routeId];
+
+  if (routeData === undefined) throw new RangeError(`unknown replay route ${routeId}`);
+
+  return createEngine({ route: createRoute(routeData), profile: DEFAULT_RIDER_PROFILE });
 }
 
-export function recordReplay(entries: readonly RecordingEntryV2[], clockScale = 1): RecordingV2 {
-  const live = replayEngine();
+export function recordReplay(
+  entries: readonly RecordingEntryV2[],
+  clockScale = 1,
+  routeId = "test-loop",
+): RecordingV2 {
+  const live = replayEngine(routeId);
   const observations: ReplayObservationV2[] = [];
   const events: ReplayObservationV2["events"][number][] = [];
   const commands: ReplayObservationV2["commands"][number][] = [];
@@ -55,7 +63,7 @@ export function recordReplay(entries: readonly RecordingEntryV2[], clockScale = 
     initializedAt: "2026-11-20T12:00:00.000Z",
     initialization: {
       physicsRevision: PHYSICS_REVISION,
-      routeId: "test-loop",
+      routeId,
       routeRevision: "1",
       profile: DEFAULT_RIDER_PROFILE,
       source: "ble",

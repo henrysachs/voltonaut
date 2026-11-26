@@ -32,7 +32,7 @@ Einträge sind Tupel `[seq, workerMs, operation, ...payload]`. `seq` beginnt bei
 
 Workerzeiten stammen ausschließlich aus derselben monotonen Uhr. `workerTimeOriginMs` plus `initializedWorkerMs` verankert die Initialisierung. Bare `performance.now()`-Werte des Mainthreads dürfen nicht mit Workerwerten verrechnet werden. Jede `advance`-Dauer muss exakt aus dem vorherigen Wake-Anker und ihrem eigenen Workerzeitpunkt entstehen. Eingangs-`DeviceEvent.tS` wird nicht zur Physikzeit umgedeutet, da die Engine diesen Wert ignoriert.
 
-`assessRecordingV2(recording)` liefert `unverified` mit Grund, `rejected` mit Grund oder `replayed` mit Physikrevision und serverberechneter Fensterzusammenfassung. Route und Revision werden ausschließlich serverseitig aufgelöst. Die erste Allowlist enthält `test-loop` Revision `1`. Es gibt keinen Näherungs-Fallback und keine Funktionswerte im DTO.
+`assessRecordingV2(recording)` liefert `unverified` mit Grund, `rejected` mit Grund oder `replayed` mit Physikrevision und serverberechneter Fensterzusammenfassung. Route und Revision werden ausschließlich serverseitig aufgelöst. Die Allowlist umfasst jeden registrierten Eintrag aus `TEST_ROUTES` mit Route-Revision `1`; unbekannte IDs oder Revisionen bleiben `unverified`. Es gibt keinen Näherungs-Fallback und keine Funktionswerte im DTO.
 
 Beobachtungen enthalten öffentliche Snapshotwerte sowie geordnete Engine-Ereignisse und Trainerkommandos seit der vorigen Grenze. Am Start werden die Präfixausgaben ebenfalls verglichen, aber nicht der Fensterzusammenfassung zugerechnet. Jede Engine-Aufrufausgabe wird zeitnah geleert. Warmlaufdistanz, Energie, Höhenmeter, Fahrzeit und Runden zählen nicht zum Aufnahmefenster.
 

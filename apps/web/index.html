@@ -18,7 +18,9 @@
   <body>
     <main class="app" aria-label="Voltonaut">
       <header class="ride-title">
-        <div class="ride-title__identity"><span>VOLTONAUT</span><span>TEST LOOP / 10 KM</span></div>
+        <div class="ride-title__identity">
+          <span>VOLTONAUT</span><span id="ride-route-identity">TEST LOOP / 10 KM</span>
+        </div>
         <div id="game-header-actions" class="ride-title__actions">
           <button
             id="game-menu-open"
@@ -158,6 +160,16 @@
             tabindex="-1"
           >
             App
+          </button>
+          <button
+            id="game-tab-routes"
+            role="tab"
+            type="button"
+            aria-controls="game-panel-routes"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Strecke
           </button>
           <button
             id="game-tab-garage"
@@ -373,6 +385,23 @@
           >
             <h2>App installieren</h2>
             <div id="pwa-panel"></div>
+          </section>
+          <section
+            id="game-panel-routes"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="game-tab-routes"
+            data-game-panel
+            hidden
+            lang="de"
+            tabindex="0"
+          >
+            <h2>Strecke</h2>
+            <p>
+              Die Streckenwahl lädt die Seite neu. Eine laufende Aufnahme wird dabei verworfen;
+              Bluetooth-Geräte müssen danach erneut verbunden werden.
+            </p>
+            <div id="route-catalog" class="route-catalog"></div>
           </section>
           <section
             id="game-panel-garage"

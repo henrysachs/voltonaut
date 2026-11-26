@@ -448,7 +448,7 @@ body > dialog.connect-dialog::backdrop {
 }
 @container game-menu (inline-size < 480px) {
   .game-menu__tabs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     display: grid;
   }
 }
@@ -496,6 +496,54 @@ body > dialog.connect-dialog::backdrop {
   padding-block: var(--space-4);
   font-size: var(--text-sm);
   cursor: pointer;
+}
+.route-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.route-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--cockpit-border);
+  border-radius: 0.7rem;
+  background: #071b1780;
+}
+.route-card[data-current="true"] {
+  border-color: var(--cockpit-accent);
+}
+.route-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.route-card__preview {
+  width: 100%;
+  height: auto;
+  border-radius: 0.45rem;
+  background: #0a1512;
+}
+.route-card__path {
+  fill: none;
+  stroke: var(--cockpit-accent);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.route-card__meta {
+  margin: 0;
+  color: var(--cockpit-accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+.route-card__description {
+  margin: 0;
+  color: var(--cockpit-muted);
+  font-size: 0.8rem;
+}
+.route-card__select {
+  margin-top: auto;
 }
 #profile-form {
   display: grid;
