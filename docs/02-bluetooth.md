@@ -65,6 +65,16 @@ Beispiel `0x11`: 4,5 % Steigung, Crr 0,0040, Cw 0,51 → `11 00 00 C2 01 28 33`.
 - ❓ Max. simulierte Steigung (DC Rainmaker: 16 %) und Mindestfluss-/Bremsgrenzen bei niedriger Kadenz.
 - Der Trainer kann zusätzlich einen proprietären Zwift-Service anbieten (Zwift-Hub-artiges Protokoll mit Gangübersetzung direkt im Trainer). **Bewusst nicht genutzt** (ADR-001); im Sniffer nur dokumentieren, ob er auftaucht.
 
+### Zwift Hub One
+
+GATT-Export vom 26.11.2026 (Gerät eines Bekannten; Bytes nicht als Fixture übernommen). Name „Zwift Hub“. Services: Device Information (`2A24`, `2A26`, `2A27`, `2A29`), Heart Rate `0x180D`, Zwift `00000001-19ca-…` (`…02` notify, `…03` writeWithoutResponse, `…04` read/indicate), FTMS `0x1826` (`2ACC`, `2AD2`, `2AD6`, `2AD8`, `2AD9` write/indicate, `2ADA`), CPS `0x1818` mit Control Point `2A66`.
+
+- Frische Verbindung: `00` → `80 00 01`, `07` → `80 07 01` und Status `04`, Sim 0 % → `80 11 01` und Status `12 …`.
+- Zweiter Erwerb auf derselben Verbindung: `00` → `80 00 01`, `07` → **`80 07 04`** (Operation Failed), offenbar weil die Maschine schon läuft. qdomyos-zwift und Incyclist werten das Start-Ergebnis ebenfalls nicht als Abbruch. Die genaue FTMS-v1.0-Stelle ist hier nicht geprüft (**UNVERIFIED**). Der Erwerb akzeptiert für `0x07` deshalb `success` **und** `failed`. Das folgende neutrale `0x11` muss weiterhin `success` liefern; jeder andere Fehler sperrt wie bisher ([E2-04](specs/E2-04-hub-click-v2-guided-lab.md)).
+- Der Picker findet den Hub über `0x1826`, `0x1818` oder den Namen „Zwift Hub“. ⚠️ Ob `0x1826` im Advertising steht, ist unbelegt.
+- Der proprietäre Zwift-Service (Schalten im Hub) bleibt ungenutzt (ADR-001). Auch das Labor abonniert ihn auf einem Trainer nicht automatisch. Ein Controller-Slot lehnt Geräte mit FTMS/CPS ab, damit der Hub dort nicht als „Controller“ verbunden wird.
+- **UNVERIFIED:** Widerstandsgefühl, Reconnect-Verhalten nach Trennung, Firmware.
+
 ### Fallback: Cycling Power Service `0x1818` ✅
 
 Nur lesen (Watt `0x2A63` Cycling Power Measurement, Kadenz aus Crank-Revolution-Daten), kein Steuern. E1 verwendet CPS, wenn FTMS-Service oder Indoor Bike Data fehlen. Die Fahrt läuft ohne Trainer-Steuerung. Physischer Widerstand und virtuelle Gänge werden erst in E2 gekoppelt.
@@ -95,7 +105,7 @@ Fehler, Rechteverlust (`0x05`/Status `0xFF`), Trainer-Resetstatus `0x01`, Discon
 
 ## 4. Zwift Play Controller (Henrys Hardware) ⚠️ UNVERIFIZIERT
 
-Henry besitzt **Zwift Play**, zwei getrennte Griffe, nicht Click. Die digitalen Eingaben beider Griffe sind durch die Mitschnitte vom 20.11.2026 bestätigt. Die übrigen Angaben stammen aus öffentlichem Reverse Engineering und bleiben unverifiziert. Click und Ride sind keine implementierten Controllerpfade.
+Henry besitzt **Zwift Play**, zwei getrennte Griffe. Die digitalen Eingaben beider Griffe sind durch die Mitschnitte vom 20.11.2026 bestätigt. Die übrigen Angaben stammen aus öffentlichem Reverse Engineering und bleiben unverifiziert. Zusätzlich ist **Zwift Click v2** implementiert (siehe unten, unverifiziert). Click v1 und Ride sind keine implementierten Controllerpfade.
 
 Die neuen [Hardware-Fixtures und ihre Herkunft](../fixtures/ble/zwift-play-hardware-20261120.md) erhalten sämtliche Bytes, Zeitstempel und Marker. Nur Browser-Geräte-ID und vollständiger User-Agent sind anonymisiert. [E2-02](specs/E2-02-verified-play-input.md) verbindet diese belegten Eingaben mit der bestehenden Fahrt.
 
@@ -198,7 +208,7 @@ Bestätigte Zuordnung: Seitenfeld `1 = 0` bedeutet rechts, `1 = 1` bedeutet link
 
 ### Grenzen der Spielanbindung
 
-BLE besitzt Parser, Handshake, Seitenprüfung, Flanken und getrennte Wiederverbindungen. Der Dialog bietet die Zielseiten **Linker Play-Griff** und **Rechter Play-Griff**. Bis zum ersten gültigen Tastensignal bleibt die Seite ausdrücklich unbekannt. Erst nach gültiger Klartextantwort und passender Seite meldet der Adapter `ready`. Ein Griff auf der falschen Zielseite meldet einen behebbaren Fehler, keine Schaltung. **Trennen** beendet auch eine laufende Seitenprüfung. Pro Klick öffnet der Browser einen Picker für ein Gerät. Bereits verbundene andere Geräte bleiben verbunden.
+BLE besitzt Parser, Handshake, Seitenprüfung, Flanken und getrennte Wiederverbindungen. Der Dialog bietet die Zielseiten **Linker Controller** und **Rechter Controller**; beide nehmen Play-Griffe oder Click-v2-Pucks. Bis zum ersten gültigen Tastensignal bleibt die Seite ausdrücklich unbekannt. Erst nach gültiger Klartextantwort und passender Seite meldet der Adapter `ready`. Ein Griff auf der falschen Zielseite meldet einen behebbaren Fehler, keine Schaltung. **Trennen** beendet auch eine laufende Seitenprüfung. Pro Klick öffnet der Browser einen Picker für ein Gerät. Bereits verbundene andere Geräte bleiben verbunden.
 
 Der native Transport lehnt dieselbe Geräte-ID in einer zweiten aktiven Verbindung vor GATT-Setup und Übernahme des Geräts ab. Dadurch beendet die Abmeldung eines falsch ausgewählten Griffs nicht die Notifications des bereits verbundenen Griffs. Verschiedene Geräte behalten getrennte FIFOs.
 
@@ -211,6 +221,19 @@ Der Parser verlangt die neun vollständig übertragenen Felder. Fehlende oder do
 Die Softwarebelege verwenden echte Capture-Bytes, Replay und injizierte native GATT-Geräte. Sie ersetzen keine reale gemeinsame Funkprüfung mit Trainer und Pulsgurt. Eine erneute Vermessung der bereits bestätigten digitalen Tasten ist nicht nötig.
 
 `0x23`-Bitmap (falls FW 2.0.1), Belegung laut MarcelCode/JustFabi: `0x1` links · `0x2` hoch · `0x4` rechts · `0x8` runter · `0x10` A · `0x20` B · `0x40` Y · `0x80` Z · `0x100`/`0x200` Shifter L · `0x400` Power-up L · `0x800` On/Off L · `0x1000`/`0x2000` Shifter R · `0x4000` Power-up R · `0x8000` On/Off R. **Achtung:** ajchellew/ein Web-Bluetooth-Gist nennen eine abweichende Belegung (Z `0x100`, Shift-up L `0x200`, Shift-down L `0x400`, …, Shift-up R `0x2000`, Shift-down R `0x4000`). Quellen widersprechen sich → nur Sniffer entscheidet.
+
+### Zwift Click v2
+
+GATT-Export beider Pucks vom 26.11.2026 (Bytes nicht übernommen): Name „Zwift Click“, Battery `0x180F`, Device Information, Service **`fc82`** mit `…02` notify, `…03` writeWithoutResponse, `…04` read/indicate sowie `…0100`, `…0101` (write/notify) und `…0102` (writeWithoutResponse/notify) mit `0x2901`-Beschreibung. Deren Zweck ist unbekannt; Adapter und Labor schreiben dort nie und abonnieren sie nicht automatisch.
+
+Implementiert nach übereinstimmenden Quellen (SwiftControl/BikeControl, pizero_bikecomputer, RideControl, JustFabi), **UNVERIFIED** an Hardware:
+
+- Handshake: `…02` und `…04` abonnieren, dann `52 69 64 65 4f 6e 02 03` per writeWithoutResponse auf `…03`. Antwort auf `…04` beginnt mit denselben acht Bytes, danach folgt ein Gerätekey. Kein verschlüsselter Pfad.
+- Tasten: Typ `0x23`, Protobuf-Feld 1 = uint32-Bitmap, **inverse Logik** (Bit 0 = gedrückt; nichts gedrückt = `23 08 ff ff ff ff 0f`). Feld 3 (Paddel) wird übersprungen.
+- Belegung links (−-Puck): `0x1` links, `0x2` hoch, `0x4` rechts, `0x8` runter, `0x100` −. Rechts (+-Puck): `0x10` A, `0x20` B, `0x40` Y, `0x80` Z, `0x1000` +.
+- Spiel: + → `shiftUp`, − und B → `shiftDown`, nur Flanken. Die Seite gilt als bestätigt, sobald eine Taste ihres Pucks gedrückt ist.
+- Advertising-Gerätetyp nach `0x094A`: `0x0A` rechts, `0x0B` links (laut SwiftControl unbestätigt).
+- **Sperre:** Laut BikeControl verstummt der linke Puck ohne vorherige Zwift-Freischaltung (etwa alle 24 h) kurz nach dem Verbinden; der rechte nie. Vendor-Frames `ff 03 00 0a …` (Challenge) und `ff 05 00 ea|fa 05` (gestoppt) zeigen das an. Der Adapter erklärt die Abhilfe (einmal in Zwift verbinden) und den Rechts-only-Betrieb (+ hoch, B runter). Ein Unlock ist nicht implementiert; der Algorithmus ist nicht öffentlich.
 
 ### Weitergehendes Decoder-Design, nicht implementiert
 
@@ -254,6 +277,8 @@ Die digitale Tastenvermessung in Schritten 4 und 5 ist für beide Play-Griffe ab
 Softwarestand [E0-12](specs/E0-12-lab-control-procedure.md): FTMS-Presets laufen über dieselbe `ControlProcedure` wie die Rollenschaltung: exakter Opcode, höchstens ein offenes Verfahren, 3-s-Frist. Request Control bestätigt wie die Fahrt `00` → `07` → `11`. Fehlende oder verspätete Antworten, Fehlercodes, Status `0xFF`/`0x01`, Disconnect und Rohwrites auf `0x2AD9` sperren weitere Presets bis zur Neuverbindung. Der Mitschnitt zeichnet `0x2AD9` weiter auf. Explorer-Writes bleiben roh.
 
 Softwarestand [E1-04](specs/E1-04-multidevice-lab.md): Eine Geräteliste zeigt den Zustand jeder Verbindung. Die Detailauswahl beendet keine Hintergrundaufnahme. Firmware, Notizen und JSON-Export gehören jeweils zum ausgewählten Gerät. Eine erneute native Auswahl desselben Geräts öffnet dessen vorhandene Details, ohne erneut GATT zu verbinden. Trainer und zwei gleichnamige Griffe sind mit drei nativen Browser-Fakes geprüft. Der gleichzeitige Betrieb echter Geräte bleibt offen.
+
+Softwarestand [E2-04](specs/E2-04-hub-click-v2-guided-lab.md): Das Labor zeichnet jedes Gerät ab dem Verbinden vollständig auf (alle Notify/Indicate, alle lesbaren Standardwerte), führt pro Gerätetyp durch die Aufnahme und hat je Gerät einen eigenen Log-Tab und eine eigene Exportdatei. Presets, die nicht zum Gerät passen, sind gesperrt.
 
 1. Zwift/Companion-App schließen, Controller aufwecken (Taste drücken, LED blinkt).
 2. Firmware der Play-Griffe in Zwift Companion notieren. Sniffer: verbinden, GATT-Explorer-Export speichern (welcher Service: `00000001-…` oder `fc82`?). Device Info lesen (Firmware `0x2A26`).

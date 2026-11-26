@@ -32,7 +32,7 @@ function toRequestOptions(scan: ScanOptions): WebBluetoothRequestOptions {
   }
 
   const filters = scan.filters.map((filter: BleScanFilter) => ({
-    services: filter.services,
+    ...(filter.services !== undefined && { services: filter.services }),
     ...(filter.namePrefix !== undefined && { namePrefix: filter.namePrefix }),
   }));
 

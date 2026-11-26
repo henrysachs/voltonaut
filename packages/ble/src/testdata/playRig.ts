@@ -7,6 +7,7 @@ import {
   ZWIFT_PLAY_MEASUREMENT,
   ZWIFT_PLAY_CONTROL_POINT,
   ZWIFT_PLAY_COMMAND_RESPONSE,
+  ZWIFT_PLAY_V2_SERVICE,
 } from "../uuids.js";
 import { createPlayAdapter } from "../zwift-play/adapter.js";
 import type { PlaySide } from "../zwift-play/parse.js";
@@ -48,11 +49,44 @@ export interface RigOptions {
   readonly profile?: GattProfile;
 }
 
+/** GATT layout of a Zwift Click v2 puck, as exported on 2026-11-26 (service fc82). */
+export const CLICK_V2_PROFILE: GattProfile = {
+  services: [
+    {
+      uuid: ZWIFT_PLAY_V2_SERVICE,
+      characteristics: [
+        { uuid: ZWIFT_PLAY_MEASUREMENT, properties: ["notify"], descriptors: [] },
+        { uuid: ZWIFT_PLAY_CONTROL_POINT, properties: ["writeWithoutResponse"], descriptors: [] },
+        { uuid: ZWIFT_PLAY_COMMAND_RESPONSE, properties: ["read", "indicate"], descriptors: [] },
+        {
+          uuid: "00000100-19ca-4651-86e5-fa29dcdd09d1",
+          properties: ["write", "writeWithoutResponse", "notify"],
+          descriptors: [],
+        },
+      ],
+    },
+  ],
+};
+
+export const RIDE_ON_CLICK_V2 = "52 69 64 65 4f 6e 02 03";
+
+export const CLICK_V2_RELEASED = "23 08 ff ff ff ff 0f";
+
+/** Right puck, + held (bit 0x1000 cleared). */
+export const CLICK_V2_PLUS = "23 08 ff df ff ff 0f";
+
+/** Right puck, B held (bit 0x20 cleared). */
+export const CLICK_V2_B = "23 08 df ff ff ff 0f";
+
+/** Left puck, − held (bit 0x100 cleared). */
+export const CLICK_V2_MINUS = "23 08 ff fd ff ff 0f";
+
 export function noop(): void {}
 
 class PlayTestTransport implements BleTransport {
   readonly operations: string[] = [];
   readonly selections: string[] = [];
+  readonly services: string[] = [];
   private readonly listeners = new Map<string, Set<NotificationListener>>();
   private readonly historical: NotificationListener[] = [];
   private disconnected = noop;
@@ -88,6 +122,7 @@ class PlayTestTransport implements BleTransport {
     ref: Parameters<BleTransport["write"]>[0],
     bytes: Parameters<BleTransport["write"]>[1],
   ): Promise<void> {
+    this.services.push(ref.serviceUuid);
     this.operations.push(`write:${ref.characteristicUuid}:${toHex(bytes)}`);
 
     return this.options.write?.() ?? Promise.resolve();
@@ -97,6 +132,7 @@ class PlayTestTransport implements BleTransport {
     ref: Parameters<BleTransport["subscribe"]>[0],
     listener: NotificationListener,
   ): Promise<() => void> {
+    this.services.push(ref.serviceUuid);
     this.operations.push(`subscribe:${ref.characteristicUuid}`);
     await this.options.beforeSubscribe?.();
 
@@ -175,6 +211,7 @@ export function rig(options: RigOptions = {}) {
     events: (): readonly DeviceEvent[] => events,
     operations: (): readonly string[] => transport.operations,
     selections: (): readonly string[] => transport.selections,
+    services: (): readonly string[] => transport.services,
     input: (hex: string) => {
       transport.notify(ZWIFT_PLAY_MEASUREMENT, hex);
     },

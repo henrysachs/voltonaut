@@ -1,4 +1,4 @@
-import { parseControlResponse } from "./controlCodec.js";
+import { parseControlResponse, type ControlResult } from "./controlCodec.js";
 import type { ByteReader, ReadOnlyBytes } from "../bytes.js";
 import type { SimClock } from "../sim/clock.js";
 import type { TickSource, Unsubscribe } from "../sim/tick.js";
@@ -23,6 +23,19 @@ const CONTROL_POINT = {
   serviceUuid: FITNESS_MACHINE_SERVICE,
   characteristicUuid: FITNESS_MACHINE_CONTROL_POINT,
 };
+
+const START_OR_RESUME = 0x07;
+
+/**
+ * A Zwift Hub answered `80 07 04` (Operation Failed) to a second Start on the same
+ * connection, apparently because it already ran. It is a definite answer to our own write,
+ * so acquisition goes on; the following neutral 0x11 still needs "success". qdomyos-zwift
+ * and Incyclist also treat the Start result as non-fatal.
+ */
+// UNVERIFIED: docs/02-bluetooth.md#zwift-hub-one – the FTMS v1.0 section for this case is not checked here.
+function acknowledges(opcode: number | "subscribe", result: ControlResult): boolean {
+  return result === "success" || (opcode === START_OR_RESUME && result === "failed");
+}
 
 /** One procedure includes both the native write completion and its exact indication. */
 export class ControlProcedure {
@@ -110,7 +123,7 @@ export class ControlProcedure {
 
     if (pending === undefined || pending.opcode !== response.value.opcode) return;
 
-    if (response.value.result !== "success") {
+    if (!acknowledges(pending.opcode, response.value.result)) {
       this.fail(
         `Trainer meldet ${response.value.result}. Messwerte bleiben verfügbar; neu verbinden.`,
       );

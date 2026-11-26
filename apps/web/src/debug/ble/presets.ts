@@ -1,31 +1,63 @@
 import {
   FTMS_CONTROL_POINT_REF,
-  ZWIFT_PLAY_LEGACY_SERVICE,
-  ZWIFT_PLAY_V2_SERVICE,
+  ZWIFT_PLAY_COMMAND_RESPONSE,
+  ZWIFT_PLAY_CONTROL_POINT,
+  ZWIFT_PLAY_MEASUREMENT,
+  labDeviceKind,
+  zwiftControllerLink,
   type BlePreset,
-  type CharacteristicRef,
 } from "@voltonaut/ble";
 import type { LabDevice } from "./device.js";
 
-type PlayPreset = Extract<BlePreset, { readonly kind: "zwiftPlay" }>;
+/**
+ * Why `definition` cannot apply to the connected device at all, or `undefined` when it
+ * may run. Session state (control granted, preset running) is checked when it runs.
+ */
+export function presetMismatch(
+  device: Readonly<LabDevice>,
+  definition: BlePreset,
+): string | undefined {
+  // A failed read leaves the link up; only a missing link blocks every preset.
+  if (device.state.kind === "connecting" || device.state.kind === "disconnected") {
+    return "Gerät zuerst verbinden.";
+  }
 
-async function playHandshake(device: Readonly<LabDevice>, definition: PlayPreset): Promise<void> {
-  const playService = device.profile.services.find(
-    (service) =>
-      service.uuid === ZWIFT_PLAY_LEGACY_SERVICE || service.uuid === ZWIFT_PLAY_V2_SERVICE,
-  );
+  const kind = labDeviceKind(device.profile);
 
-  const onDevice = (ref: CharacteristicRef): CharacteristicRef =>
-    playService === undefined ? ref : { ...ref, serviceUuid: playService.uuid };
+  if (definition.kind === "zwiftController") {
+    return kind.kind === "controller"
+      ? undefined
+      : kind.kind === "trainer"
+        ? "Nur für Zwift Play und Click v2. Der Zwift-Dienst eines Trainers bleibt ungenutzt (ADR-001)."
+        : "Nur für Zwift Play und Click v2.";
+  }
 
+  return kind.kind === "trainer" && kind.ftmsControl
+    ? undefined
+    : "Nur für Trainer mit FTMS Control Point (Write und Indicate).";
+}
+
+async function controllerHandshake(device: Readonly<LabDevice>): Promise<void> {
+  const link = zwiftControllerLink(device.profile);
+
+  if (!link.ok) {
+    throw new Error(link.failure.reason);
+  }
+
+  const { serviceUuid, handshake } = link.value;
   const session = device.session;
-  await Promise.all(definition.observe.map((ref) => session.observe(onDevice(ref))));
-  await session.transport.write(onDevice(definition.write.ref), definition.write.bytes);
+  await session.observe({ serviceUuid, characteristicUuid: ZWIFT_PLAY_MEASUREMENT });
+  await session.observe({ serviceUuid, characteristicUuid: ZWIFT_PLAY_COMMAND_RESPONSE });
+  await session.transport.write(
+    { serviceUuid, characteristicUuid: ZWIFT_PLAY_CONTROL_POINT },
+    handshake,
+    "withoutResponse",
+  );
 }
 
 export async function preset(device: Readonly<LabDevice>, definition: BlePreset): Promise<void> {
-  if (definition.kind === "zwiftPlay") {
-    await playHandshake(device, definition);
+  if (definition.kind === "zwiftController") {
+    await controllerHandshake(device);
   } else {
     const ftms = device.ftms;
 

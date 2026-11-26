@@ -7,48 +7,122 @@
     <link rel="stylesheet" href="/src/debug/ble/styles.css" />
   </head>
   <body>
-    <header>
-      <p>VOLTONAUT / DIAGNOSE</p>
+    <header class="lab-header">
+      <p class="eyebrow">VOLTONAUT / DIAGNOSE</p>
       <h1>BLE-Labor</h1>
-      <p>GATT erkunden. Bytes mitschneiden. Hardware verstehen.</p>
+      <p class="lead">
+        Neue Geräte verstehen: verbinden, bedienen, markieren, exportieren. Jedes verbundene Gerät
+        zeichnet ab dem Verbinden alles auf.
+      </p>
     </header>
+
     <main>
-      <section aria-label="Verbindung">
-        <h2>Geräte</h2>
-        <button id="scan">Gerät hinzufügen</button>
+      <section class="panel" aria-labelledby="howto-title">
+        <h2 id="howto-title">So nimmst du ein Gerät auf</h2>
+        <ol class="howto">
+          <li>
+            <strong>Vorbereiten.</strong> Zwift, Companion, Wahoo-App und Uhren schließen oder
+            trennen. Chrome oder Edge über <code>localhost</code> verwenden.
+          </li>
+          <li>
+            <strong>Gerät hinzufügen.</strong> Pro Gerät einmal klicken und im Browser-Dialog
+            auswählen. Trainer, jeder Griff und jeder Puck sind eigene Geräte.
+          </li>
+          <li>
+            <strong>Anleitung des Geräts folgen.</strong> Die Karte erkennt Trainer, Zwift Play,
+            Click v2 und Pulsgurt und zeigt die passenden Schritte.
+          </li>
+          <li>
+            <strong>Vor jeder Aktion einen Marker setzen.</strong> Ohne Marker lässt sich ein Byte
+            später keiner Taste zuordnen.
+          </li>
+          <li>
+            <strong>Exportieren.</strong> Jedes Gerät hat seinen eigenen Log und eine eigene Datei.
+            „Alle exportieren“ lädt eine Datei pro Gerät.
+          </li>
+        </ol>
+        <p class="hint">
+          Mitschnitte leben nur in diesem Tab. Vor dem Schließen oder Neuladen exportieren.
+        </p>
+      </section>
+
+      <section class="panel" aria-labelledby="devices-title">
+        <div class="panel-head">
+          <h2 id="devices-title">Geräte</h2>
+          <div class="actions">
+            <button id="scan" class="primary">Gerät hinzufügen</button>
+            <button id="export-all">Alle exportieren</button>
+          </div>
+        </div>
         <output id="picker-status" aria-live="polite"></output>
-        <p>
-          Trainer und beide Griffe einzeln hinzufügen. Die Auswahl wechselt nur die Detailansicht.
+        <div id="devices" aria-label="Geräteliste">
+          <p class="empty">Noch kein Gerät verbunden.</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="selected-device">
+        <div class="panel-head">
+          <h2 id="selected-device">Details · kein Gerät ausgewählt</h2>
+          <div class="actions">
+            <button id="reconnect">Erneut verbinden</button>
+            <button id="disconnect">Trennen</button>
+            <button id="read-all">Werte erneut lesen</button>
+          </div>
+        </div>
+        <p>Status: <output id="status" aria-live="polite">disconnected</output></p>
+
+        <div class="detail-grid">
+          <div>
+            <h3 id="guide-title">Anleitung</h3>
+            <ol id="guide" aria-labelledby="guide-title"></ol>
+          </div>
+          <div>
+            <h3>Gerätedaten</h3>
+            <label>Firmware <input id="firmware" placeholder="wird automatisch gelesen" /></label>
+            <label
+              >Notizen
+              <input id="notes" placeholder="z. B. Besitzer, Modell, Besonderheiten" />
+            </label>
+            <h4>Advertising</h4>
+            <pre id="advertisement">Advertising noch nicht verfügbar</pre>
+          </div>
+        </div>
+
+        <h3>Diagnose-Presets</h3>
+        <p class="warning">
+          FTMS-Presets verändern den Widerstand. Den Trainer sicher aufstellen und nur kontrolliert
+          treten. Presets, die zum Gerät nicht passen, sind gesperrt.
         </p>
-        <div id="devices" aria-label="Geräteliste"></div>
-        <h2 id="selected-device">Details · kein Gerät ausgewählt</h2>
-        <button id="reconnect">Erneut verbinden</button>
-        <button id="disconnect">Trennen</button>
-        <output id="status" aria-live="polite">disconnected</output>
-        <pre id="advertisement">Advertising noch nicht verfügbar</pre>
-        <label>Firmware <input id="firmware" /></label>
-        <label>Notizen <input id="notes" /></label>
+        <div id="presets" class="actions"></div>
+
+        <details class="explorer">
+          <summary>GATT-Explorer für Fortgeschrittene</summary>
+          <p class="hint">
+            Rohwrites gehen ungeprüft ans Gerät. Nur gezielt und nach Absprache verwenden.
+          </p>
+          <div id="gatt"></div>
+        </details>
       </section>
-      <section aria-label="Presets">
-        <h2>Diagnose-Presets</h2>
-        <div id="presets"></div>
-        <p>
-          Trainer vorher stromlos machen. Andere Zentralen trennen. Presets verändern den
-          Widerstand.
-        </p>
-      </section>
-      <section aria-label="GATT-Explorer">
-        <h2>GATT-Explorer</h2>
-        <div id="gatt"></div>
-      </section>
-      <section aria-label="Logger">
-        <h2>Live-Log</h2>
-        <label>Filter <input id="filter" type="search" /></label>
-        <button id="pause">Anzeige pausieren</button>
-        <label>Marker <input id="marker" placeholder="Jetzt drücke ich: RS" /></label>
-        <button id="add-marker">Marker setzen</button>
-        <button id="export">JSON exportieren</button>
-        <pre id="log" aria-label="BLE-Log"></pre>
+
+      <section class="panel" aria-labelledby="log-title">
+        <div class="panel-head">
+          <h2 id="log-title">Live-Log</h2>
+          <div class="actions">
+            <button id="pause">Anzeige pausieren</button>
+            <button id="export">Export</button>
+          </div>
+        </div>
+        <div class="marker-row">
+          <label
+            >Marker
+            <input id="marker" placeholder="Jetzt drücke ich: rechts + (3×)" />
+          </label>
+          <button id="add-marker">Marker setzen</button>
+          <label>Filter <input id="filter" type="search" placeholder="z. B. 2ad2 oder RS" /></label>
+        </div>
+        <p id="log-summary" aria-live="polite"></p>
+        <div id="log-tabs" role="tablist" aria-label="Log je Gerät"></div>
+        <pre id="log" role="tabpanel" aria-labelledby="log-title" tabindex="0"></pre>
       </section>
     </main>
     <script type="module" src="/src/debug/ble/main.ts"></script>

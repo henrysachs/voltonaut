@@ -51,8 +51,8 @@ test("both native Play adapters shift exactly once through the real worker and W
   await page.getByRole("button", { name: "Geräte verbinden" }).click();
   await choose(page, "Trainer");
   await choose(page, "Pulsgurt");
-  await choose(page, "Linker Play-Griff");
-  await choose(page, "Rechter Play-Griff");
+  await choose(page, "Linker Controller");
+  await choose(page, "Rechter Controller");
   await expect(page.getByText("Linker Griff bestätigt.", { exact: false })).toBeVisible();
   await expect(page.getByText("Rechter Griff bestätigt.", { exact: false })).toBeVisible();
   await page
@@ -92,12 +92,12 @@ test("remembered Play reconnect needs no new picker", async ({ page }) => {
   const left = page
     .getByRole("dialog")
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Linker Play-Griff", exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: "Linker Controller", exact: true }) });
 
-  await choose(page, "Linker Play-Griff");
+  await choose(page, "Linker Controller");
   await page.evaluate(() => document.dispatchEvent(new Event("test-play-left-disconnect")));
-  await expect(left.getByLabel("Linker Play-Griff Status")).toHaveText("reconnecting");
-  await expect(left.getByLabel("Linker Play-Griff Status")).toHaveText("ready");
+  await expect(left.getByLabel("Linker Controller Status")).toHaveText("reconnecting");
+  await expect(left.getByLabel("Linker Controller Status")).toHaveText("ready");
   await expect(page.locator("body")).toHaveAttribute("data-play-picker-calls", "1");
   await expect(page.locator("body")).toHaveAttribute("data-play-writesleft", "2");
   await expect(page.locator("body")).not.toHaveAttribute("data-unexpected-write");
@@ -114,30 +114,30 @@ async function rejectedFormerOwner(page: Page) {
   const left = page
     .getByRole("dialog")
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Linker Play-Griff", exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: "Linker Controller", exact: true }) });
 
   await left.getByRole("button", { name: "Gerät wählen" }).click();
-  await expect(left.getByLabel("Linker Play-Griff Status")).toHaveText("error");
+  await expect(left.getByLabel("Linker Controller Status")).toHaveText("error");
   await expect(left).toContainText("Falscher Griff: rechts erkannt");
   await left.getByRole("button", { name: "Trennen", exact: true }).click();
-  await choose(page, "Rechter Play-Griff");
+  await choose(page, "Rechter Controller");
   await left.getByRole("button", { name: "Gerät wählen" }).click();
-  await expect(left.getByLabel("Linker Play-Griff Status")).toHaveText("error");
+  await expect(left.getByLabel("Linker Controller Status")).toHaveText("error");
   await left.getByRole("button", { name: "Erneut verbinden" }).click();
-  await expect(left.getByLabel("Linker Play-Griff Status")).toHaveText("error");
+  await expect(left.getByLabel("Linker Controller Status")).toHaveText("error");
   await expect(page.locator("body")).toHaveAttribute("data-play-picker-calls", "3");
 
   return left;
 }
 
 async function foreignRightStillWorks(page: Page): Promise<void> {
-  await expect(page.getByLabel("Rechter Play-Griff Status")).toHaveText("ready");
+  await expect(page.getByLabel("Rechter Controller Status")).toHaveText("ready");
   await expect(page.locator("body")).toHaveAttribute("data-disconnect-play-right", "1");
   await expect(page.locator("body")).toHaveAttribute("data-play-writesright", "2");
   await page.evaluate(() => document.dispatchEvent(new Event("test-play-right-down")));
   await expect(page.getByTestId("hud-gear")).toHaveText("13");
   await page.evaluate(() => document.dispatchEvent(new Event("test-play-right-up")));
-  await expect(page.getByLabel("Rechter Play-Griff Status")).toHaveText("ready");
+  await expect(page.getByLabel("Rechter Controller Status")).toHaveText("ready");
   await expect(page.locator("body")).not.toHaveAttribute("data-unexpected-write");
 }
 
@@ -159,7 +159,7 @@ test("choosing a replacement after ownership rejection leaves the foreign right 
   await page.evaluate(() => {
     delete document.body.dataset["playSelection"];
   });
-  await choose(page, "Linker Play-Griff");
+  await choose(page, "Linker Controller");
   await foreignRightStillWorks(page);
   await page
     .getByRole("dialog")

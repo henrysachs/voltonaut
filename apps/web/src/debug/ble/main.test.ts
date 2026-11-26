@@ -2,30 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TestNodeView } from "../../testdata/dom.js";
 import { downloadJson, element, input, select } from "./dom.js";
 import { snifferDevice } from "../../testdata/sniffer.js";
-import { prepareDom } from "./testdata/ui.js";
+import { prepareDom, visibleButton } from "./testdata/ui.js";
 
-interface ButtonNode {
-  readonly textContent: string;
-  readonly disabled: boolean;
-  readonly children: readonly ButtonNode[];
-  readonly click: () => void;
-}
-
-function visibleButton(root: ButtonNode, text: string): ButtonNode | undefined {
-  for (const node of root.children) {
-    if (node.textContent === text) {
-      return node;
-    }
-
-    const found = visibleButton(node, text);
-
-    if (found !== undefined) {
-      return found;
-    }
-  }
-
-  return undefined;
-}
+const RX_LINE = / {2}rx {2}Indoor Bike Data/gu;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -46,17 +25,18 @@ describe("sniffer browser composition", () => {
     expect(dom.querySelector("#status")?.textContent).toContain("Zuerst Gerät wählen");
     dom.querySelector("#scan")?.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(dom.querySelector("#status")?.textContent).toContain("ready");
+    expect(dom.querySelector("#status")?.textContent).toContain("Verbunden");
     dom.find("Read").click();
     dom.find("Subscribe").click();
     await vi.advanceTimersByTimeAsync(500);
     expect(dom.querySelector("#log")?.textContent).toContain("powerW");
-    input("marker").value = "RS";
+    // The decoded 0x2ACC line now names "...Parameters", so the marker needs a unique text.
+    input("marker").value = "Taste RS";
     dom.querySelector("#add-marker")?.click();
     await vi.advanceTimersByTimeAsync(0);
-    input("filter").value = "RS";
+    input("filter").value = "Taste RS";
     dom.querySelector("#filter")?.fire("input");
-    expect(dom.querySelector("#log")?.textContent).toContain("RS");
+    expect(dom.querySelector("#log")?.textContent).toContain("● Taste RS");
     expect(dom.querySelector("#log")?.textContent).not.toContain("2b 14");
     dom.querySelector("#pause")?.click();
     dom.querySelector("#add-marker")?.click();
@@ -85,11 +65,11 @@ describe("sniffer connection operations", () => {
     expect(dom.querySelector("#log")?.textContent).toContain("Preset abgeschlossen: FTMS Sim 5 %");
     dom.querySelector("#disconnect")?.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(dom.querySelector("#status")?.textContent).toBe("disconnected");
+    expect(dom.querySelector("#status")?.textContent).toContain("Getrennt");
     dom.querySelector("#reconnect")?.click();
     await vi.advanceTimersByTimeAsync(0);
     dom.querySelector("#devices")?.children[0]?.children[0]?.click();
-    expect(dom.querySelector("#status")?.textContent).toBe("ready");
+    expect(dom.querySelector("#status")?.textContent).toContain("Verbunden");
   });
 });
 
@@ -99,7 +79,7 @@ describe("sniffer boundary errors", () => {
     expect(() => element("absent")).toThrow("Missing");
     expect(() => input("scan")).toThrow("Expected input");
     expect(() => select("scan")).toThrow("Expected select");
-    downloadJson("{}");
+    downloadJson("{}", "ble-1-test");
   });
 
   it("reports malformed replay files", async () => {
@@ -126,6 +106,10 @@ async function twoDevices(notificationsReady: Readonly<Promise<void>> = Promise.
   dom.querySelector("#scan")?.click();
   await vi.advanceTimersByTimeAsync(0);
   dom.querySelector("#scan")?.click();
+  await vi.advanceTimersByTimeAsync(0);
+  // Settle the connect-time reads, so each test's own Read is the pending one.
+  a.finishRead();
+  b.finishRead();
   await vi.advanceTimersByTimeAsync(0);
 
   const choose = (index: number): void => {
@@ -192,11 +176,11 @@ describe("sniffer multi-device ownership", () => {
     choose(1);
     a.emit();
     choose(0);
-    expect(dom.querySelector("#log")?.textContent?.match(/"kind":"data"/gu)).toHaveLength(1);
+    expect(dom.querySelector("#log")?.textContent?.match(RX_LINE)).toHaveLength(1);
     click("Unsubscribe");
     await vi.advanceTimersByTimeAsync(0);
     a.emit();
-    expect(dom.querySelector("#log")?.textContent?.match(/"kind":"data"/gu)).toHaveLength(1);
+    expect(dom.querySelector("#log")?.textContent?.match(RX_LINE)).toHaveLength(1);
   });
 });
 
@@ -293,6 +277,6 @@ describe("sniffer pending observation controls", () => {
     expect(visibleButton(root, "Subscribe")?.disabled).toBe(false);
     expect(visibleButton(root, "Unsubscribe")?.disabled).toBe(true);
     a.emit();
-    expect(dom.querySelector("#log")?.textContent).not.toContain('"kind":"data"');
+    expect(dom.querySelector("#log")?.textContent).not.toMatch(RX_LINE);
   });
 });

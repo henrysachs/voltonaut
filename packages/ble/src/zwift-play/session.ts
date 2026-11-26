@@ -2,20 +2,29 @@ import type { StatusPublisher } from "../adapterShell.js";
 import type { EventBus } from "@voltonaut/shared";
 import type { ByteReader } from "../bytes.js";
 import type { SimClock, TickSource, Unsubscribe } from "../sim/index.js";
-import type {
-  BleTransport,
-  CharacteristicRef,
-  DeviceSelection,
-  GattProfile,
-} from "../transport.js";
+import type { BleTransport, CharacteristicRef, DeviceSelection } from "../transport.js";
 import {
   ZWIFT_PLAY_LEGACY_SERVICE,
   ZWIFT_PLAY_MEASUREMENT,
   ZWIFT_PLAY_CONTROL_POINT,
   ZWIFT_PLAY_COMMAND_RESPONSE,
 } from "../uuids.js";
-import { RIDE_ON } from "./handshake.js";
-import { parsePlayInput, type PlayInput, type PlaySide } from "./parse.js";
+import { isClickV2LockNotice } from "./clickV2.js";
+import {
+  CONTROLLER_SCAN,
+  acceptsHandshakeReply,
+  zwiftControllerLink,
+  type ZwiftControllerLink,
+} from "./controller.js";
+import {
+  SIDE_TEXT,
+  controllerFrame,
+  controllerName,
+  shiftHint,
+  type ControllerFrame,
+  type ShiftButton,
+} from "./frames.js";
+import type { PlaySide } from "./parse.js";
 
 export interface PlaySessionOptions {
   readonly bus: EventBus;
@@ -23,33 +32,6 @@ export interface PlaySessionOptions {
   readonly ticker: TickSource;
   readonly transport: BleTransport;
   readonly side: PlaySide;
-}
-
-const SCAN = {
-  acceptAllDevices: false,
-  filters: [{ services: [ZWIFT_PLAY_LEGACY_SERVICE] }],
-  optionalServices: [],
-};
-
-function ref(characteristicUuid: string): CharacteristicRef {
-  return { serviceUuid: ZWIFT_PLAY_LEGACY_SERVICE, characteristicUuid };
-}
-
-function supports(profile: GattProfile): boolean {
-  const service = profile.services.find((item) => item.uuid === ZWIFT_PLAY_LEGACY_SERVICE);
-
-  return [
-    { uuid: ZWIFT_PLAY_MEASUREMENT, property: "notify" },
-    { uuid: ZWIFT_PLAY_COMMAND_RESPONSE, property: "indicate" },
-    { uuid: ZWIFT_PLAY_CONTROL_POINT, property: "writeWithoutResponse" },
-  ].every(
-    (required: Readonly<{ uuid: string; property: string }>) =>
-      service?.characteristics.some(
-        (item) =>
-          item.uuid === required.uuid &&
-          item.properties.some((property) => property === required.property),
-      ) === true,
-  );
 }
 
 interface Completion {
@@ -62,12 +44,14 @@ export class PlaySession {
   private message = "Seite noch unbekannt. Verbindung wird aufgebaut.";
   private readonly stops: Unsubscribe[] = [];
   private completion: Completion | undefined;
+  private link: ZwiftControllerLink | undefined;
   private written = false;
   private writeCompleted = false;
   private plain = false;
-  private held = false;
+  private confirmed = false;
+  private readonly held = new Set<ShiftButton>();
   private source = "";
-  private latest: PlayInput | undefined;
+  private latest: ControllerFrame | undefined;
 
   constructor(
     private readonly options: PlaySessionOptions,
@@ -84,12 +68,14 @@ export class PlaySession {
     }
   }
 
-  private emit(pressed: boolean): void {
-    this.held = pressed;
+  private emit(button: ShiftButton, pressed: boolean): void {
+    if (pressed) this.held.add(button);
+    else this.held.delete(button);
+
     this.options.bus.publish({
       type: "controller.button",
       tS: this.options.clock.nowS(),
-      button: this.options.side === "right" ? "shiftUp" : "shiftDown",
+      button,
       source: this.source,
       pressed,
     });
@@ -102,8 +88,8 @@ export class PlaySession {
       stop();
     }
 
-    if (this.held) {
-      this.emit(false);
+    for (const button of Array.from(this.held)) {
+      this.emit(button, false);
     }
 
     this.completion?.reject(new Error("Play session stopped"));
@@ -116,28 +102,48 @@ export class PlaySession {
     this.publish("error");
   }
 
-  private applyInput(): void {
-    const input = this.latest;
+  private ref(characteristicUuid: string): CharacteristicRef {
+    return {
+      serviceUuid: this.link?.serviceUuid ?? ZWIFT_PLAY_LEGACY_SERVICE,
+      characteristicUuid,
+    };
+  }
 
-    if (!this.active || !this.plain || !this.writeCompleted || input === undefined) {
+  private confirm(side: PlaySide): void {
+    const family = this.link?.family ?? "play";
+
+    this.source = `${family}:${this.options.transport.deviceId()}:${side}`;
+    this.message = `${side === "left" ? "Linker" : "Rechter"} ${controllerName(family)} bestätigt. ${shiftHint(family, side)}`;
+    this.confirmed = true;
+    this.completion?.resolve();
+    this.completion = undefined;
+  }
+
+  private applyInput(): void {
+    const frame = this.latest;
+
+    if (!this.active || !this.plain || !this.writeCompleted || frame === undefined) {
       return;
     }
 
-    if (input.side !== this.options.side) {
+    if (frame.side !== undefined && frame.side !== this.options.side) {
       this.fail(
-        `Falscher Griff: ${input.side === "left" ? "links" : "rechts"} erkannt. Im passenden Play-Slot verbinden oder „Gerät wählen“ nutzen.`,
+        `Falscher ${controllerName(this.link?.family ?? "play")}: ${SIDE_TEXT[frame.side]} erkannt. Im passenden Slot verbinden oder „Gerät wählen“ nutzen.`,
       );
 
       return;
     }
 
-    this.source = `play:${this.options.transport.deviceId()}:${input.side}`;
-    this.message = `${input.side === "left" ? "Linker" : "Rechter"} Griff bestätigt. Seitentaste schaltet ${input.side === "left" ? "runter" : "hoch"}.`;
-    this.completion?.resolve();
-    this.completion = undefined;
+    if (!this.confirmed) {
+      if (frame.side === undefined) return;
 
-    if (input.buttons.shift !== this.held) {
-      this.emit(input.buttons.shift);
+      this.confirm(frame.side);
+    }
+
+    for (const button of ["shiftUp", "shiftDown"] satisfies readonly ShiftButton[]) {
+      if (frame.held.has(button) !== this.held.has(button)) {
+        this.emit(button, frame.held.has(button));
+      }
     }
   }
 
@@ -146,10 +152,18 @@ export class PlaySession {
       return;
     }
 
-    const parsed = parsePlayInput(data);
+    if (this.link?.family === "clickV2" && isClickV2LockNotice(data)) {
+      this.message =
+        "Click v2 meldet Sperre: Puck einmal in der Zwift-App verbinden, dann Zwift schließen. Alternativ nur den rechten Puck nutzen (+ hoch, B runter).";
+      this.publish(this.confirmed ? "ready" : "handshaking");
 
-    if (parsed.ok) {
-      this.latest = parsed.value;
+      return;
+    }
+
+    const frame = controllerFrame(this.link?.family ?? "play", data);
+
+    if (frame !== undefined) {
+      this.latest = frame;
       this.applyInput();
     }
   }
@@ -159,14 +173,12 @@ export class PlaySession {
       return;
     }
 
-    if (
-      data.byteLength !== RIDE_ON.length ||
-      Array.from({ length: RIDE_ON.length }, (_value, index) => data.getUint8(index)).some(
-        (byte, index) => byte !== RIDE_ON.at(index),
-      )
-    ) {
+    if (this.link === undefined || !acceptsHandshakeReply(this.link, data)) {
+      // UNVERIFIED: docs/02-bluetooth.md#zwift-click-v2 – later Click v2 replies on …04 stay raw.
+      if (this.plain && this.link?.family === "clickV2") return;
+
       this.fail(
-        "Nicht unterstützte/verschlüsselte Play-Antwort. Keine weiteren Writes; BLE-Labor verwenden.",
+        "Nicht unterstützte/verschlüsselte Controller-Antwort. Keine weiteren Writes; BLE-Labor verwenden.",
       );
 
       return;
@@ -177,13 +189,14 @@ export class PlaySession {
     }
 
     this.plain = true;
-    this.message = "RideOn bestätigt, Seite noch unbekannt. Eine Taste am gewählten Griff drücken.";
+    this.message =
+      "RideOn bestätigt, Seite noch unbekannt. Eine Taste am gewählten Controller drücken.";
     this.publish("handshaking");
     this.applyInput();
   }
 
   private async observe(uuid: string, receive: (data: ByteReader) => void): Promise<void> {
-    const stop = await this.options.transport.subscribe(ref(uuid), receive);
+    const stop = await this.options.transport.subscribe(this.ref(uuid), receive);
 
     if (!this.active) {
       stop();
@@ -193,7 +206,7 @@ export class PlaySession {
     this.stops.push(stop);
   }
 
-  private async handshake(): Promise<void> {
+  private async handshake(link: ZwiftControllerLink): Promise<void> {
     const deadlineS = this.options.clock.nowS() + 3;
 
     const ready = new Promise<void>((resolve, reject) => {
@@ -203,7 +216,7 @@ export class PlaySession {
     this.stops.push(
       this.options.ticker.start(() => {
         if (!this.plain && this.options.clock.nowS() >= deadlineS) {
-          this.fail("Keine RideOn-Antwort. Griff aufwecken und erneut verbinden.");
+          this.fail("Keine RideOn-Antwort. Controller aufwecken und erneut verbinden.");
         }
       }),
     );
@@ -212,7 +225,7 @@ export class PlaySession {
     await Promise.all([
       ready,
       this.options.transport
-        .write(ref(ZWIFT_PLAY_CONTROL_POINT), RIDE_ON, "withoutResponse")
+        .write(this.ref(ZWIFT_PLAY_CONTROL_POINT), link.handshake, "withoutResponse")
         .then(() => {
           this.writeCompleted = true;
           this.applyInput();
@@ -224,15 +237,15 @@ export class PlaySession {
 
   async start(selection: DeviceSelection): Promise<void> {
     try {
-      const profile = await this.options.transport.connect(SCAN, selection);
+      const profile = await this.options.transport.connect(CONTROLLER_SCAN, selection);
       this.assertActive();
+      const link = zwiftControllerLink(profile);
 
-      if (!supports(profile)) {
-        throw new Error(
-          "Kein unterstützter Play-Griff mit Notify/Indicate/writeWithoutResponse. Anderes Gerät wählen.",
-        );
+      if (!link.ok) {
+        throw new Error(link.failure.reason);
       }
 
+      this.link = link.value;
       this.publish("handshaking");
       await this.observe(ZWIFT_PLAY_MEASUREMENT, (data) => {
         this.input(data);
@@ -241,11 +254,12 @@ export class PlaySession {
         this.response(data);
       });
       this.assertActive();
-      await this.handshake();
+      await this.handshake(link.value);
       this.assertActive();
     } catch (error) {
       if (this.active) {
-        this.message = error instanceof Error ? error.message : "Play-Verbindung fehlgeschlagen.";
+        this.message =
+          error instanceof Error ? error.message : "Controller-Verbindung fehlgeschlagen.";
       }
 
       this.stop();
