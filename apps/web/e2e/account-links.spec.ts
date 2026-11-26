@@ -142,6 +142,8 @@ test("does not leave the tab to link while the session lives only in this tab", 
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("matches disabled account button states and preserves keyboard focus", async ({ page }) => {
+  // No colour transition: a forbidden hover colour must show on the first read, not 200 ms later.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await signedIn(page, "denied");
   const account = page.getByRole("tabpanel", { name: "Konto", exact: true });
   const connect = account.getByRole("button", { name: "Mit authentik verbinden", exact: true });
@@ -168,6 +170,8 @@ test("matches disabled account button states and preserves keyboard focus", asyn
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("preserves enabled primary and secondary hover colors", async ({ page }) => {
+  // No colour transition: the first read after hover must already be the hover colour.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/?sim=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await openGameMenu(page, "Profil");

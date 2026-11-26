@@ -360,15 +360,13 @@ button[aria-busy="true"],
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 @supports (backdrop-filter: blur(1px)) {
-  .game-menu,
-  body > dialog.connect-dialog {
+  .game-menu {
     background: var(--surface-glass);
     backdrop-filter: var(--surface-glass-filter);
   }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .game-menu,
-  body > dialog.connect-dialog {
+  .game-menu {
     background: var(--surface-solid);
     backdrop-filter: none;
   }
@@ -430,7 +428,8 @@ body > dialog.connect-dialog::backdrop {
   min-inline-size: 0;
   min-height: 44px;
   padding: var(--space-2);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  hyphens: auto;
   white-space: normal;
   font-size: var(--text-sm);
   line-height: 1.25;
@@ -781,6 +780,19 @@ body > dialog.connect-dialog {
 body > dialog.connect-dialog[open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+}
+/* After the solid dialog base above, which has the same specificity. */
+@supports (backdrop-filter: blur(1px)) {
+  body > dialog.connect-dialog {
+    background: var(--surface-glass);
+    backdrop-filter: var(--surface-glass-filter);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  body > dialog.connect-dialog {
+    background: var(--surface-solid);
+    backdrop-filter: none;
+  }
 }
 .connect-dialog__header {
   display: flex;

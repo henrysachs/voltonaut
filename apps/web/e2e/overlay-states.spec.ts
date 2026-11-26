@@ -94,6 +94,35 @@ test("menu glass gains a solid backdrop-filter fallback for reduced transparency
   await expect(menu).toHaveCSS("background-color", "rgb(16, 42, 39)");
 });
 
+test("device dialog shows the same glass and the same solid fallback as the menu", async ({
+  page,
+}: Readonly<PageFixture>) => {
+  await page.goto("/?sim=1");
+  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await page.getByRole("button", { name: "Geräte verbinden", exact: true }).click();
+
+  const devices = page.getByRole("dialog", { name: "Bluetooth-Geräte", exact: true });
+
+  await settleOverlay(devices);
+
+  const glass = await devices.evaluate((element) => {
+    const style = getComputedStyle(element);
+
+    return { backdrop: style.backdropFilter, background: style.backgroundColor };
+  });
+
+  // A blur over WebGL only earns its GPU cost when the glass background actually shows.
+  expect(glass.backdrop).toContain("blur");
+  expect(glass.background).not.toBe("rgb(16, 42, 39)");
+
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
+  });
+  await expect(devices).toHaveCSS("backdrop-filter", "none");
+  await expect(devices).toHaveCSS("background-color", "rgb(16, 42, 39)");
+});
+
 test("visible tab panels use the short panel-in animation", async ({
   page,
 }: Readonly<PageFixture>) => {

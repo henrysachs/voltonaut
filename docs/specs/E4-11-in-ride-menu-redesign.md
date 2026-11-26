@@ -65,5 +65,6 @@ Die Bildrate mit `backdrop-filter` muss auf echter Hardware gemessen werden. Bis
 
 - Implementiert: ja. Menü, Gerätedialog und Garage nutzen gemeinsame Tokens und Button-Zustände. Navigation, Fokus, native Geräteauswahl und State-Ownership bleiben unverändert.
 - Am tatsächlichen Artefakt softwaregeprüft: ja. 48 Layoutfälle, ein Scroll-Reset-Fall, fünf Overlay-Fälle, 138 E2E-Tests, 1936 Unit-Tests, Coverage, Typecheck, Lint, Dependency-Cruiser, Guard und Produktionsbuild bestehen. 24 Nachher-Screenshots wurden geprüft. Die früheren Arbeitsstandsbilder bleiben interne Artefakte und sind kein reproduzierbarer Base-Vergleich.
+- Unabhängiges Review (26.11.2026): Der Hover-Test aus #117 prüfte wegen der 200-ms-Farbübergänge nichts und läuft jetzt mit reduzierter Bewegung; ohne die `aria-disabled`-Ausnahme wird er rot. Der Gerätedialog bekam die Glasfläche nie, weil die spätere solide Dialogregel sie überschrieb, zahlte aber den Blur; die Glasregeln stehen jetzt danach und haben einen eigenen E2E-Fall. Tabs trennen nicht mehr mitten im Wort. Nach #137 tragen Garage-, Ausrüsten- und Verwerfen-Knöpfe die gemeinsamen Button-Varianten.
 - An echter Hardware geprüft: nein. Echte GPU-FPS mit Glas-Look und die gemeinsame Hardwareabnahme bleiben offen.
 - Bereitgestellt: nein. PR, CI, Merge und Produktionsdeploy sind getrennte Schritte.
