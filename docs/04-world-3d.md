@@ -56,7 +56,7 @@ Während des Starts bleibt ein zugänglicher Ladestatus sichtbar. Renderdiagnost
 - **Vegetation:** `InstancedMesh`/`BatchedMesh` für Bäume, Büsche, Gras (Gras-Shader mit Wind nur nahe Kamera); Billboard-Impostoren für ferne Bäume; Poisson-Scatter per Seed außerhalb des Straßenkorridors.
 - **Roadside life:** Häuser, Zäune, Weidetiere, Fahnen, Banner, Verpflegungsstand, Wasser (See mit Reflexion auf High), Vögel-Schwärme (GPU-Boids, billig).
 - **Zuschauer:** an KOM/Sprint/Zielbögen; Low-Poly-Instanzen mit **Vertex-Animation-Textures** (Jubeln, Winken, Fahne schwenken) → hunderte Figuren in wenigen Draw Calls; laufen bei Annäherung mit (simple Agenten-Logik).
-- **Biome (Stufenplan):** „Voltonaut Loop" (See, Wald, Hügel – MVP), Küste mit Leuchtturm, Alpenpass mit Serpentinen, Nachtstadt mit Neon.
+- **Biome (Stufenplan):** „Voltonaut Loop" (See, Wald, Hügel – MVP), Küste mit Leuchtturm (`coast-loop`), Alpenpass mit Serpentinen (`alpine-pass`) und Nachtstadt mit Neon (`night-city`). Die Streckenauswahl im Fahrtmenü zeigt pro Route eine 2D-Vorschau, Länge und Höhenmeter und lädt die gewählte Route über den `route`-URL-Parameter.
 - **GPX-Import** (optional, später): Lat/Lon/Ele → ENU-Projektion → Douglas-Peucker → Höhenglättung (~50 m) → `Route`; Umgebung prozedural.
 
 ## 5. Mitfahrer, Bots, Windschatten
