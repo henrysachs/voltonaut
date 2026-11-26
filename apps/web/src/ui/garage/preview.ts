@@ -1,7 +1,8 @@
 import type { AvatarConfig } from "@voltonaut/shared";
-import * as THREE from "three";
 
-import { createAvatarPreview } from "../../avatar/customize.js";
+import { createPreviewLink } from "./previewLink.js";
+import { BrowserPreviewPort } from "./previewPort.js";
+import type { PreviewViewport } from "./previewProtocol.js";
 
 export interface GaragePreviewView {
   readonly setLook: (config: AvatarConfig) => void;
@@ -10,137 +11,108 @@ export interface GaragePreviewView {
   readonly dispose: () => void;
 }
 
-class GaragePreviewRenderer implements GaragePreviewView {
+type State = { readonly kind: "starting" | "active" } | { readonly kind: "failed" | "disposed" };
+
+/**
+ * Main side of the garage preview (ADR-032). The canvas is transferred once to the preview
+ * worker, which owns WebGL, three, the avatar and the rAF loop; main keeps DOM, size and input.
+ */
+class GaragePreviewWorkerView implements GaragePreviewView {
   readonly #canvas = document.createElement("canvas");
-  readonly #renderer: THREE.WebGLRenderer;
-  readonly #avatar: ReturnType<typeof createAvatarPreview>;
-  readonly #scene = new THREE.Scene();
-  readonly #camera = new THREE.PerspectiveCamera(35, 1, 0.05, 30);
-  readonly #groundGeometry = new THREE.CircleGeometry(1.25, 48);
-  readonly #groundMaterial = new THREE.MeshStandardMaterial({
-    color: 0x173b35,
-    roughness: 0.95,
-    metalness: 0,
+  readonly #observer = new ResizeObserver(() => {
+    this.#link.send({ type: "preview.resize", viewport: this.#viewport() });
   });
-  readonly #observer: ResizeObserver;
-  #angleRad = -0.65;
-  #lastTimeMs: number | undefined;
-  #rafId = 0;
-  #disposed = false;
-  #rendered = false;
-  #autoRotate: boolean;
+  readonly #link;
+  #state: State = { kind: "starting" };
 
   constructor(
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The renderer owns the host's canvas child.
+    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The view owns the host's canvas child.
     private readonly host: HTMLElement,
     wheelCircM: number,
+    unavailable: () => void,
   ) {
     this.#canvas.className = "garage__canvas";
     this.#canvas.setAttribute("role", "img");
     this.#canvas.setAttribute("aria-label", "Provisorische 3D-Vorschau von Fahrer und Rad");
-    this.#renderer = new THREE.WebGLRenderer({
-      canvas: this.#canvas,
-      antialias: true,
-      alpha: true,
-    });
-    this.#avatar = createAvatarPreview(wheelCircM);
-    this.#autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.#observer = new ResizeObserver(() => {
-      this.#resize();
-    });
-    this.#buildScene();
-    this.#renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    this.#renderer.setClearColor(0x000000, 0);
+    this.#canvas.setAttribute("aria-busy", "true");
     this.host.append(this.#canvas);
-    this.#observer.observe(this.host);
-    this.#resize();
-    this.#rafId = requestAnimationFrame(this.#frame);
+    this.#link = createPreviewLink(
+      new BrowserPreviewPort(this.#canvas, wheelCircM, () => this.#viewport()),
+      {
+        failed: () => {
+          const reported = this.#state.kind === "active";
+
+          this.#state = { kind: "failed" };
+          this.#detach();
+
+          if (reported) unavailable();
+        },
+        drawn: () => {
+          this.#canvas.dataset["previewReady"] = "true";
+          this.#canvas.setAttribute("aria-busy", "false");
+        },
+      },
+      {
+        schedule: (callback, delayMs) => window.setTimeout(callback, delayMs),
+        cancel: (id) => {
+          window.clearTimeout(id);
+        },
+      },
+    );
+
+    if (this.#state.kind === "starting") {
+      this.#state = { kind: "active" };
+      this.#observer.observe(this.host);
+    }
+  }
+
+  get failed(): boolean {
+    return this.#state.kind === "failed";
+  }
+
+  #viewport(): PreviewViewport {
+    return {
+      widthCssPx: this.host.clientWidth,
+      heightCssPx: this.host.clientHeight,
+      devicePixelRatio: window.devicePixelRatio,
+    };
   }
 
   setLook(config: AvatarConfig): void {
-    this.#avatar.setLook(config);
+    this.#link.send({ type: "preview.look", look: config });
   }
 
   setAutoRotate(enabled: boolean): void {
-    this.#autoRotate = enabled;
+    this.#link.send({ type: "preview.autoRotate", enabled });
   }
 
   rotateBy(angleRad: number): void {
-    this.#angleRad += angleRad;
-    this.#avatar.root.rotation.y = this.#angleRad;
+    this.#link.send({ type: "preview.rotate", angleRad });
+  }
+
+  #detach(): void {
+    this.#observer.disconnect();
+    this.#canvas.remove();
   }
 
   readonly dispose = (): void => {
-    if (this.#disposed) return;
-
-    this.#disposed = true;
-    cancelAnimationFrame(this.#rafId);
-    this.#observer.disconnect();
-    this.#avatar.dispose();
-    this.#groundGeometry.dispose();
-    this.#groundMaterial.dispose();
-    this.#renderer.dispose();
-    this.#canvas.remove();
+    if (this.#state.kind === "disposed") return;
+    this.#state = { kind: "disposed" };
+    this.#detach();
+    this.#link.dispose();
   };
-
-  #buildScene(): void {
-    this.#camera.position.set(2.5, 1.65, 2.7);
-    this.#camera.lookAt(0, 0.9, 0);
-    this.#scene.add(new THREE.HemisphereLight(0xe9fff4, 0x15342d, 2.2));
-
-    const keyLight = new THREE.DirectionalLight(0xfff1c7, 3);
-    keyLight.position.set(2, 4, 3);
-    const ground = new THREE.Mesh(this.#groundGeometry, this.#groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0.005;
-    this.#avatar.root.position.y = 0.015;
-    this.#scene.add(keyLight, ground, this.#avatar.root);
-  }
-
-  readonly #frame = (timeMs: number): void => {
-    if (this.#disposed) return;
-
-    const elapsedS =
-      this.#lastTimeMs === undefined ? 0 : Math.min((timeMs - this.#lastTimeMs) / 1000, 0.1);
-
-    this.#lastTimeMs = timeMs;
-
-    if (this.#autoRotate) this.#angleRad += elapsedS * 0.22;
-
-    this.#avatar.root.rotation.y = this.#angleRad;
-
-    if (this.host.clientWidth > 0 && this.host.clientHeight > 0) {
-      this.#renderer.render(this.#scene, this.#camera);
-
-      if (!this.#rendered) {
-        this.#rendered = true;
-        this.#canvas.dataset["previewReady"] = "true";
-      }
-    }
-
-    this.#rafId = requestAnimationFrame(this.#frame);
-  };
-
-  #resize(): void {
-    const width = this.host.clientWidth;
-    const height = this.host.clientHeight;
-
-    if (width === 0 || height === 0) return;
-
-    this.#renderer.setSize(width, height, false);
-    this.#camera.aspect = width / height;
-    this.#camera.updateProjectionMatrix();
-  }
 }
 
+/** Null when the browser cannot move the preview off main; there is no main-thread fallback. */
 export function createGaragePreviewView(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The renderer owns the host's canvas child.
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The view owns the host's canvas child.
   host: HTMLElement,
   wheelCircM: number,
+  unavailable: () => void,
 ): GaragePreviewView | null {
-  try {
-    return new GaragePreviewRenderer(host, wheelCircM);
-  } catch {
-    return null;
-  }
+  if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined") return null;
+
+  const view = new GaragePreviewWorkerView(host, wheelCircM, unavailable);
+
+  return view.failed ? null : view;
 }

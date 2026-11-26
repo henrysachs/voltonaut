@@ -4,6 +4,7 @@ import { DEFAULT_AVATAR_CONFIG, defaultInventoryItemIds } from "@voltonaut/rules
 import { LoadoutUpdateSchema, PurchaseRequestSchema, type AvatarConfig } from "@voltonaut/shared";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
+import { previewWorkerPrelude } from "./render-worker.helpers.js";
 
 const API = "http://127.0.0.1:3000";
 const TOKEN = "s".repeat(43);
@@ -255,15 +256,7 @@ test("equipping works without WebGL and a guest sends no loadout request", async
   const server = new LoadoutServer();
 
   server.owned = ["jersey.stripe"];
-  await page.addInitScript({
-    content: `
-      const original = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(type, options) {
-        if (type === "webgl" || type === "webgl2") return null;
-        return original.call(this, type, options);
-      };
-    `,
-  });
+  await previewWorkerPrelude(page, "OffscreenCanvas.prototype.getContext = () => null;");
   await server.attach(page);
   await openGarage(page, "/?sim=1");
   await expect(page.getByTestId("garage-preview")).toHaveAttribute(

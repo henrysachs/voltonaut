@@ -62,6 +62,7 @@ const environment = {
   PATH: process.env["PATH"],
   NODE_ENV: "production",
   AUTH_MODE: "disabled",
+  AUTH_TOMBSTONE_HMAC_KEY: "0".repeat(64),
   HOST: "127.0.0.1",
   PORT: `${port}`,
   DATABASE_PATH: databasePath,

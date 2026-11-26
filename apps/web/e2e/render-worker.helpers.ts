@@ -49,6 +49,18 @@ export async function renderWorkerPrelude(page: Page, source: string): Promise<v
   });
 }
 
+/** Injects only into the real garage preview worker, which owns the preview's WebGL (ADR-032). */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page and route contracts.
+export async function previewWorkerPrelude(page: Page, source: string): Promise<void> {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright's route owns response fulfillment.
+  await page.route("**/src/ui/garage/previewWorker.ts*", async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+
+    await route.fulfill({ response, body: `${source}\n${body}` });
+  });
+}
+
 export const LOSE_RENDER_CONTEXT = `
 const nativeGetContext = OffscreenCanvas.prototype.getContext;
 OffscreenCanvas.prototype.getContext = function (...args) {

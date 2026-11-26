@@ -1,5 +1,7 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
+import { connectSimTrainer, disconnectSimTrainer } from "./helpers/simTrainer.js";
+
 type FunPage = Readonly<
   Pick<Page, "goto" | "getByTestId" | "getByRole" | "getByLabel" | "screenshot">
 > & {
@@ -21,10 +23,16 @@ test("fun mode collects an item box, triggers it with P and lets it expire", asy
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await expect(page.getByTestId("hud-item")).toBeHidden();
 
+  // At 20x the rider covers hundreds of metres while the menu clicks run under load and
+  // could cross a box before the empty slot is read. Pick the mode standing still instead.
+  await disconnectSimTrainer(page);
+  // Without trainer data the rider rolls out; auto-pause then freezes the ride in place.
+  await expect(page.getByTestId("hud-status")).toHaveText("Paused (auto)", { timeout: 20_000 });
   await chooseMode(page, "Spaß (Item-Boxen)");
   await expect(page.getByTestId("hud-item")).toHaveText(EMPTY_SLOT);
 
-  // The first box stands at 300 m.
+  // Boxes stand every 800 m from 300 m; riding on reaches the next one.
+  await connectSimTrainer(page);
   await expect(page.getByTestId("hud-item")).toContainText("bereit", { timeout: 20_000 });
   await page.screenshot({ path: testInfo.outputPath("fun-mode-held-item.png") });
 

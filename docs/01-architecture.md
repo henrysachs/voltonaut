@@ -60,7 +60,7 @@ flowchart LR
 
 - **Engine-Tick:** fest 20 Hz (`dtS = 0.05`) im Dedicated Web Worker, unabhängig vom Render-Loop. Der Akkumulator verarbeitet höchstens 120 Ticks pro Aufwachung. Größere Lücken erzeugen `ride.clockSkipped`; veraltete Trainerdaten führen zum Ausrollen. Entscheidung und Grenzen stehen in ADR-011. Chrome Page Freezing mit aktiver BLE-Verbindung bleibt manuell zu prüfen.
 - **Trainer-Kommandos:** max. 4 Hz, nur bei Änderung (Grade-Delta ≥ 0,1 % oder Gangwechsel), serialisiert (FTMS erlaubt nur eine ausstehende Control-Point-Prozedur).
-- **Render:** `requestAnimationFrame`, interpoliert zwischen den letzten zwei Engine-Snapshots.
+- **Render:** `requestAnimationFrame`, interpoliert zwischen den letzten zwei Engine-Snapshots. Nach einer Frame-Lücke über 250 ms beginnt der `FrameSampler` beim neuesten Snapshot, statt den zuletzt gezeichneten Stand zu wiederholen (E0-16).
 
 ## Kerntypen (Design-Skizzen, keine Implementierung)
 

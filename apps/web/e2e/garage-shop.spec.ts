@@ -9,6 +9,7 @@ import {
 } from "@playwright/test";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
+import { previewWorkerPrelude } from "./render-worker.helpers.js";
 
 interface PageFixture {
   readonly page: Readonly<Page>;
@@ -120,15 +121,7 @@ test("garage keeps item information usable without WebGL and honors reduced moti
   page,
 }: Readonly<PageFixture>, testInfo: Readonly<TestInfo>) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.addInitScript({
-    content: `
-      const original = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(type, options) {
-        if (type === "webgl" || type === "webgl2") return null;
-        return original.call(this, type, options);
-      };
-    `,
-  });
+  await previewWorkerPrelude(page, "OffscreenCanvas.prototype.getContext = () => null;");
   await page.goto("/?sim=1");
   await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
   await openGameMenu(page, "Garage / Shop");

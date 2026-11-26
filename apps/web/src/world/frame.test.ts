@@ -68,4 +68,16 @@ describe("render frame environment and timing", () => {
     expect(sampler.sample(next, 5000).dtS).toBe(0.1);
     expect(sampler.sample(next, 6000).ride.distanceM).toBe(20);
   });
+
+  it("draws the newest snapshot after a long frame gap instead of the last drawn one", () => {
+    const sampler = createFrameSampler();
+    const later = { ...snapshot, tS: 3, distanceM: 15 };
+    const latest = { ...snapshot, tS: 6, distanceM: 30 };
+
+    expect(sampler.sample(snapshot, 100).ride.distanceM).toBe(0);
+    expect(sampler.sample(later, 3100).ride.distanceM).toBe(15);
+    expect(sampler.sample(latest, 3350).ride.distanceM).toBe(15);
+    expect(sampler.sample(latest, 3475).ride.distanceM).toBe(22.5);
+    expect(sampler.sample(latest, 3600).ride.distanceM).toBe(30);
+  });
 });
