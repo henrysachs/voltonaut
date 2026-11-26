@@ -8,12 +8,29 @@ import { surfaceClearance } from "./surface-clearance.js";
 
 const alpine = createRoute(ALPINE_PASS);
 
-/** Apron clearance under the drawn band of a shipped route; Infinity without an apron. */
-function apronClearance(id: string): number {
+const ROUTE_IDS = Object.keys(TEST_ROUTES);
+const clearanceByRoute = new Map<string, number>();
+
+function measureApronClearance(id: string): number {
   const route = createRoute(TEST_ROUTES[id] ?? ALPINE_PASS);
   const plan = createLandscapePlan(route, [route], 42, false);
 
   return surfaceClearance(bandTriangles(route), ribbonTriangles(plan.apron)).minClearanceM;
+}
+
+/** Apron clearance under the drawn band of a shipped route; Infinity without an apron. Planned once per route. */
+function apronClearance(id: string): number {
+  const known = clearanceByRoute.get(id);
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  const measured = measureApronClearance(id);
+
+  clearanceByRoute.set(id, measured);
+
+  return measured;
 }
 
 /** Drop of each left apron edge point under the road at its support point. */
@@ -26,12 +43,15 @@ function apronDrops(): readonly number[] {
   );
 }
 
-it("draws the road apron exactly on the alpine-biome routes (#138)", () => {
-  const ids = Object.keys(TEST_ROUTES);
-  const alpineIds = ids.filter((id) => TEST_ROUTES[id]?.scenery === "alpine");
+it("ships the apron rule for exactly the two alpine-biome routes (#138)", () => {
+  expect(ROUTE_IDS.filter((id) => TEST_ROUTES[id]?.scenery === "alpine")).toEqual([
+    "kom-climb",
+    "alpine-pass",
+  ]);
+});
 
-  expect(ids.filter((id) => Number.isFinite(apronClearance(id)))).toEqual(alpineIds);
-  expect(alpineIds).toEqual(["kom-climb", "alpine-pass"]);
+it.each(ROUTE_IDS)("draws the road apron on %s exactly when it is alpine", (id) => {
+  expect(Number.isFinite(apronClearance(id))).toBe(TEST_ROUTES[id]?.scenery === "alpine");
 });
 
 it("keeps the kom-climb apron under its road band", () => {
