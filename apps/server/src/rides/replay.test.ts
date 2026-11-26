@@ -86,6 +86,22 @@ it("reproduces complete fractional history, partial inputs, shifts and outputs",
   expect(result.source.window.kind).toBe("blocked");
 });
 
+it("replays a complete recording on a newly selectable biome route", () => {
+  const ride = record(
+    [
+      [0, 0, "arm"],
+      [1, 0, "boundary", "start"],
+      [2, 0, "trainer", 250, 90, null],
+      [3, 1000, "advance", 1],
+      [4, 1000, "boundary", "finish"],
+    ],
+    1,
+    "coast-loop",
+  );
+
+  expect(assessRecordingV2(ride).status).toBe("replayed");
+});
+
 it("arms first wake without inventing physics time and excludes warmup from window", () => {
   const ride = record([
     [0, 50, "arm"],
@@ -153,7 +169,7 @@ it("keeps V2 incomplete and unknown revisions unverified", () => {
   for (const initialization of [
     { ...ride.initialization, physicsRevision: "future" },
     { ...ride.initialization, routeRevision: "future" },
-    { ...ride.initialization, routeId: "flat-loop" },
+    { ...ride.initialization, routeId: "missing-route" },
   ]) {
     expect(assessRecordingV2({ ...ride, initialization })).toEqual({
       status: "unverified",
