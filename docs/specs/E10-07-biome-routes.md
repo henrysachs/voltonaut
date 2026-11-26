@@ -4,8 +4,10 @@
   Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit
   Vorschau".
 - **Status:** Review
-- **Betroffene Module:** `apps/web/src/world`, `apps/web/src/ui`,
-  `packages/shared`, Web-Tests und E10-Dokumentation.
+- **Betroffene Module:** `packages/engine` (Route-Daten),
+  `apps/server/src/rides` (Replay auf registrierten Routen),
+  `apps/web/src/world`, `apps/web/src/ui`, `packages/shared`, Web-Tests
+  und E10-Dokumentation.
 
 ## Ziel
 
@@ -38,6 +40,23 @@ Aufnahmen und Zuordnungen bleiben lesbar und werden nicht neu bewertet.
 | AK3 | Unit   | `apps/web/src/ui/routePreview.test.ts`          |
 | AK4 | Replay | bestehende Journal- und Replay-Tests            |
 | AK5 | Gate   | `mise run check` und `check:mutation`           |
+
+## Entscheidungen
+
+- **Alpenpass als Rundkurs (Auftraggeber, 26.11.2026, nach Henrys Review
+  auf #138):** Der Pass ist eine 25,2-km-Runde statt einer 12-km-Strecke
+  mit offenem Ende. Er führt in 8 Kehren 840 m hinauf, 600 m über den
+  Sattel, über eine zweite Serpentine auf der anderen Flanke hinab und
+  600 m über den Talboden zurück. Beide Serpentinen liegen mindestens
+  600 m auseinander und teilen keine Straße. Damit gibt es kein
+  Routenende, an dem Distanz und XP gegen 7 % weiterlaufen. Die Engine
+  bleibt unverändert; nur die Route-Daten ändern sich.
+- **Gelände an Kehren:** Jede Geländereihe endet vor jedem anderen
+  Abschnitt derselben Straße. Die Grenze gilt auch für die Nachbarreihen.
+  Innen an scharfen Ecken ruht das Gelände ohne Relief auf der
+  niedrigsten Nachbarhöhe der Straße. Ein Test prüft auf allen vier
+  Strecken alle 5 m der Fahrbahn (Mitte und ±3,5 m) gegen die echten
+  Gelände-Dreiecke.
 
 ## Nicht-Ziele
 

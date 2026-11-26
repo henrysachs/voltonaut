@@ -49,16 +49,24 @@ const RELIEF_NEIGHBOURS_M = [-20, -10, 10, 20];
 const MIN_TURN_RAD = 0.2;
 const MAX_TURN_RAD = Math.PI / 2;
 
-/** Shrinks lateral terrain offsets at sharp turns so inner rows miss the previous leg. */
-function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number): number {
-  const beforeM = Math.max(0, distanceM - TURN_WINDOW_M / 2);
-  const afterM = Math.min(route.lengthM, distanceM + TURN_WINDOW_M / 2);
+/** Signed heading change across the turn window; positive turns towards positive offsets. */
+function turnAt(route: EngineRoute, distanceM: number): number {
+  // Loops wrap across the lap line, so a turn at the seam is seen like any other.
+  const beforeM = route.loop
+    ? distanceM - TURN_WINDOW_M / 2
+    : Math.max(0, distanceM - TURN_WINDOW_M / 2);
+  const afterM = route.loop
+    ? distanceM + TURN_WINDOW_M / 2
+    : Math.min(route.lengthM, distanceM + TURN_WINDOW_M / 2);
   const beforeRad = route.headingRad(beforeM);
   const afterRad = route.headingRad(afterM);
 
-  const turnRad = Math.abs(
-    Math.atan2(Math.sin(afterRad - beforeRad), Math.cos(afterRad - beforeRad)),
-  );
+  return Math.atan2(Math.sin(afterRad - beforeRad), Math.cos(afterRad - beforeRad));
+}
+
+/** Shrinks lateral terrain offsets at sharp turns so inner rows miss the previous leg. */
+function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number): number {
+  const turnRad = Math.abs(turnAt(route, distanceM));
 
   const blend =
     turnRad <= MIN_TURN_RAD
@@ -69,6 +77,28 @@ function cornerLateralM(route: EngineRoute, distanceM: number, lateralM: number)
   const reachM = Math.min(Math.abs(lateralM * blend), roadClearanceM(route, distanceM, lateralM));
 
   return Math.sign(lateralM) * reachM;
+}
+
+/** Whether an offset lies on the inside of a sharp turn, where the rows fold back. */
+function insideTurn(route: EngineRoute, distanceM: number, lateralM: number): boolean {
+  const turnRad = turnAt(route, distanceM);
+
+  return (
+    lateralM !== 0 && Math.abs(turnRad) > MIN_TURN_RAD && Math.sign(lateralM) === Math.sign(turnRad)
+  );
+}
+
+/**
+ * On the inside of a sharp turn the rows fold back over road already ridden; on a climb that
+ * road is lower than the row. The inner side therefore rests on the lowest neighbouring road
+ * height. The road's own centre line keeps its height.
+ */
+function cornerBaseY(route: EngineRoute, distanceM: number, roadY: number): number {
+  return Math.min(
+    roadY,
+    route.worldPos(distanceM - TURN_WINDOW_M / 2).y,
+    route.worldPos(distanceM + TURN_WINDOW_M / 2).y,
+  );
 }
 
 export function lakeRadius(lake: Lake, position: WorldPos): number {
@@ -97,14 +127,17 @@ export function terrainPosition(
     ),
   );
 
-  const clearanceM = Math.max(0, reachM - 4);
+  const inside = insideTurn(plan.route, distanceM, lateralM);
+  // Folded inner rows get no relief; a raised vertex there would cover the road.
+  const clearanceM = inside ? 0 : Math.max(0, reachM - 4);
   const blend = Math.min(1, clearanceM / 32);
   const phase = (distanceM / plan.route.lengthM) * Math.PI * 2;
 
   const reliefM =
     3 + 5 * Math.sin(phase * 20 + lateralM / 37) + 3 * Math.cos(phase * 11 - lateralM / 23);
 
-  let y = position.y - 0.06 + blend * reliefM;
+  const baseY = inside ? cornerBaseY(plan.route, distanceM, position.y) : position.y;
+  let y = baseY - 0.06 + blend * reliefM;
 
   const radius = lakeRadius(plan.lake, position);
 

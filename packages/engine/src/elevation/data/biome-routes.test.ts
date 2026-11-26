@@ -111,10 +111,10 @@ it("coast-loop is a gentle seaside ring: wobble bounded, grades stay under 2 %",
 });
 
 it("alpine-pass climbs 840 m at a constant 7 % over a real serpentine", () => {
-  expect(ALPINE_PASS.lengthM).toBe(12_000);
-  expect(ALPINE_PASS.loop).toBe(false);
+  expect(ALPINE_PASS.lengthM).toBe(25_200);
+  expect(ALPINE_PASS.loop).toBe(true);
   expect(ALPINE_PASS.scenery).toBe("alpine");
-  expect(ALPINE_PASS.centerline).toHaveLength(1201);
+  expect(ALPINE_PASS.centerline).toHaveLength(2521);
   expect(ALPINE_PASS.segments).toEqual([
     { id: "pass-kom", name: "Pass KOM", kind: "kom", startM: 2000, endM: 10_000 },
   ]);
@@ -138,11 +138,33 @@ it("alpine-pass climbs 840 m at a constant 7 % over a real serpentine", () => {
   expect(legEnd.z).toBeCloseTo(1500 * Math.sin(switchbackRad), 8);
   expect(legStart.x).toBe(0);
 
-  const last = route.worldPos(12_000);
+  const summit = route.worldPos(12_000);
 
-  // 8 legs of ±1500 m cancel laterally: the pass ends back on the valley axis.
-  expect(last.z).toBeCloseTo(0, 8);
-  expect(last.x).toBeCloseTo(8 * 1500 * Math.cos(switchbackRad), 6);
+  // 8 legs of ±1500 m cancel laterally: the climb tops out back on the valley axis.
+  expect(summit.z).toBeCloseTo(0, 8);
+  expect(summit.x).toBeCloseTo(8 * 1500 * Math.cos(switchbackRad), 6);
+});
+
+it("alpine-pass loops over the saddle and down a second serpentine instead of ending", () => {
+  const route = createRoute(ALPINE_PASS);
+
+  // Flat across the saddle, 7 % down the far flank, flat back across the valley floor.
+  expect(route.profile.gradeAt(12_300)).toBeCloseTo(0, 6);
+  expect(route.profile.gradeAt(18_000)).toBeCloseTo(-7, 6);
+  expect(route.profile.elevationAt(24_600)).toBeCloseTo(160, 10);
+  expect(route.profile.gradeAt(24_900)).toBeCloseTo(0, 6);
+
+  // The lap closes exactly: past 25.2 km the ride is back at the start, at the start height.
+  expect(ALPINE_PASS.centerline.at(-1)).toEqual({ x: 0, z: 0 });
+  expect(route.worldPos(25_200 + 100)).toEqual(route.worldPos(100));
+  expect(route.profile.elevationAt(25_200)).toBeCloseTo(160, 10);
+
+  // The climb stays north of the valley axis, the descent at least 600 m south of it.
+  for (let distanceM = 0; distanceM <= 12_000; distanceM += 50)
+    expect(route.worldPos(distanceM).z).toBeGreaterThan(-1e-6);
+
+  for (let distanceM = 12_600; distanceM <= 24_600; distanceM += 50)
+    expect(route.worldPos(distanceM).z).toBeLessThan(-600 + 1e-6);
 });
 
 it("night-city is a flat dark block ring with a seamless lap", () => {
