@@ -102,6 +102,8 @@ it("loads only the configuration graph, not the Nest app or the database driver"
     [],
   );
 
+  expect(result.code).toBe(0);
+
   const loaded = z.array(z.string()).parse(JSON.parse(result.stderr));
 
   const heavy = loaded.filter((url) =>
@@ -110,7 +112,6 @@ it("loads only the configuration graph, not the Nest app or the database driver"
     ),
   );
 
-  expect(result.code).toBe(0);
   expect(heavy).toEqual([]);
   // 13 modules when measured (E0-16); the full app graph is about 970.
   expect(loaded.length).toBeLessThan(30);
