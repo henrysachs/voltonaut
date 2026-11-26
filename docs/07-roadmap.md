@@ -210,7 +210,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 ## E10 – Mehr Spiel: Inhalte & Extras
 
 - [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
-- [ ] Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen ([ADR-032](decisions/ADR-032-connected-worlds.md), #150)
+- [ ] Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen ([ADR-033](decisions/ADR-033-connected-worlds.md), #150)
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
