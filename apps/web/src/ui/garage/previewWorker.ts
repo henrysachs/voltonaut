@@ -3,7 +3,7 @@ import type { PreviewCommand, PreviewReply } from "./previewProtocol.js";
 import { createPreviewScene } from "./previewScene.js";
 
 interface PreviewScope {
-  readonly postMessage: (reply: PreviewReply) => void;
+  readonly postMessage: (reply: Readonly<PreviewReply>) => void;
   readonly addEventListener: (
     type: "message",
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The message carries the native transferred canvas.
@@ -32,8 +32,12 @@ function handleCommand(loop: PreviewLoop, data: PreviewCommand): void {
       loop.setAutoRotate(data.enabled);
 
       return;
-    case "preview.rotate":
-      loop.rotateBy(data.angleRad);
+    case "preview.orbit":
+      loop.setOrbit(data.orbit);
+
+      return;
+    case "preview.capture":
+      void loop.capture(data.requestId);
 
       return;
     case "preview.resize":
@@ -58,7 +62,7 @@ export function startPreviewWorker(scope: PreviewScope): void {
         self.clearTimeout(id);
       },
     },
-    (reply) => {
+    (reply: Readonly<PreviewReply>) => {
       // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Dedicated worker postMessage has no targetOrigin.
       scope.postMessage(reply);
     },

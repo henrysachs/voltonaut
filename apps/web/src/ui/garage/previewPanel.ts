@@ -2,6 +2,12 @@ import type { AvatarConfig } from "@voltonaut/shared";
 
 import { garageButton as button } from "./garageItems.js";
 import { createGaragePreviewView, type GaragePreviewView } from "./preview.js";
+import {
+  DEFAULT_PREVIEW_ORBIT,
+  normalizePreviewOrbit,
+  orbitBy,
+  type PreviewOrbit,
+} from "./previewOrbit.js";
 import type { GarageState } from "./state.js";
 
 /** The garage's 3D preview with its rotate controls; without WebGL it explains the fallback. */
@@ -14,14 +20,20 @@ export class GaragePreviewPanel {
   readonly #rotateToggle = button("Drehung pausieren");
   readonly #view: GaragePreviewView | null;
   #autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  #orbit: Readonly<PreviewOrbit> = DEFAULT_PREVIEW_ORBIT;
 
   /** `unavailable` fires when the preview worker fails after a successful start (ADR-032). */
   constructor(wheelCircM: number, unavailable: () => void) {
     this.#build();
     this.#view = createGaragePreviewView(this.#host, wheelCircM, unavailable);
     this.#view?.setAutoRotate(this.#autoRotate);
-    this.#rotateLeft.addEventListener("click", () => this.#view?.rotateBy(-Math.PI / 6));
-    this.#rotateRight.addEventListener("click", () => this.#view?.rotateBy(Math.PI / 6));
+    this.#applyOrbit(DEFAULT_PREVIEW_ORBIT);
+    this.#rotateLeft.addEventListener("click", () => {
+      this.#changeOrbit({ yawRad: -Math.PI / 6, pitchRad: 0 });
+    });
+    this.#rotateRight.addEventListener("click", () => {
+      this.#changeOrbit({ yawRad: Math.PI / 6, pitchRad: 0 });
+    });
     this.#rotateToggle.addEventListener("click", () => {
       this.#autoRotate = !this.#autoRotate;
       this.#view?.setAutoRotate(this.#autoRotate);
@@ -48,6 +60,18 @@ export class GaragePreviewPanel {
     this.#rotateRight.disabled = !available;
     this.#rotateToggle.disabled = !available;
     this.#renderToggle();
+  }
+
+  #changeOrbit(delta: Readonly<PreviewOrbit>): void {
+    this.#applyOrbit(orbitBy(this.#orbit, delta));
+  }
+
+  #applyOrbit(next: Readonly<PreviewOrbit>): void {
+    if (!Number.isFinite(next.yawRad) || !Number.isFinite(next.pitchRad)) return;
+    this.#orbit = normalizePreviewOrbit(next);
+    this.#host.dataset["orbitYawRad"] = String(this.#orbit.yawRad);
+    this.#host.dataset["orbitPitchRad"] = String(this.#orbit.pitchRad);
+    this.#view?.setOrbit(this.#orbit);
   }
 
   #renderToggle(): void {
