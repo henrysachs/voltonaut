@@ -187,14 +187,11 @@ export function hasOpaquePngPixel(page: Readonly<Page>, bytes: Buffer): Promise<
   }, bytes.toString("base64"));
 }
 
-/** Captures the garage preview worker for its native context-loss fault injection. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 export async function capturePreviewWorker(page: Readonly<Page>): Promise<void> {
   await page.addInitScript(() => {
     const NativeWorker = Worker;
 
     window.Worker = class extends NativeWorker {
-      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The native WorkerOptions is forwarded unchanged to the browser.
       constructor(url: string | URL, options?: WorkerOptions) {
         super(url, options);
 
