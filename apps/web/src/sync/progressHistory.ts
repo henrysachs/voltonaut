@@ -83,3 +83,26 @@ export class ProgressHistory {
     }
   }
 }
+
+/**
+ * Rereads the history once per delivered batch rather than once per receipt in it
+ * (spec E6-11 AK5). `schedule` defaults to a one-second timer.
+ */
+export function rereadOnReceipts(
+  progress: Readonly<{ subscribeReceipts: (listener: () => void) => () => void }>,
+  history: Readonly<Pick<ProgressHistory, "refresh">>,
+  schedule: (callback: () => void) => void = (callback) => {
+    setTimeout(callback, 1000);
+  },
+): () => void {
+  let pending = false;
+
+  return progress.subscribeReceipts(() => {
+    if (pending) return;
+    pending = true;
+    schedule(() => {
+      pending = false;
+      void history.refresh();
+    });
+  });
+}

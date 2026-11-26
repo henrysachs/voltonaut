@@ -1,6 +1,10 @@
 import type { RideProgressCheckpoint } from "@voltonaut/shared";
 
-import { ProgressLive, type ProgressLiveSource } from "./sync/progressLive.js";
+import {
+  ProgressLive,
+  progressCheckpointSink,
+  type ProgressLiveSource,
+} from "./sync/progressLive.js";
 import { mountHudVolts } from "./ui/hudVolts.js";
 
 /**
@@ -18,8 +22,5 @@ export function setupProgressHud(
   window.addEventListener("online", live.refresh);
   window.addEventListener("offline", live.refresh);
 
-  return (checkpoint) => {
-    progress?.accept(checkpoint);
-    live.accept(checkpoint);
-  };
+  return progressCheckpointSink(progress, live);
 }

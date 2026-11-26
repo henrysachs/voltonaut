@@ -27,6 +27,10 @@ export interface ProgressLiveView {
   readonly status: ProgressLiveStatus;
 }
 
+interface ProgressSyncSink {
+  readonly accept: (checkpoint?: RideProgressCheckpoint) => void;
+}
+
 /** The parts of `ProgressSync` the live display reads. */
 export interface ProgressLiveSource {
   readonly view: () => ProgressPanelView;
@@ -83,6 +87,7 @@ export class ProgressLive {
   readonly #source: ProgressLiveSource | undefined;
   readonly #online: () => boolean;
   #journal: RunningJournal | undefined;
+  #published: ProgressLiveView | undefined;
 
   constructor(source: ProgressLiveSource | undefined, online: () => boolean = () => true) {
     this.#source = source;
@@ -149,6 +154,7 @@ export class ProgressLive {
 
   subscribe(listener: (view: ProgressLiveView) => void): () => void {
     this.#listeners.add(listener);
+    this.#published ??= this.view();
     listener(this.view());
 
     return () => {
@@ -186,10 +192,35 @@ export class ProgressLive {
     return delivery === "confirmed" && journal.receipts.size === 0 ? "pending" : delivery;
   }
 
+  /** Notifies only on a changed view: checkpoints arrive many times a second during a ride. */
   private publish(): void {
     const view = this.view();
+    const last = this.#published;
+
+    if (
+      last?.previewVolts === view.previewVolts &&
+      last.confirmedVolts === view.confirmedVolts &&
+      last.withheldVolts === view.withheldVolts &&
+      last.status === view.status
+    )
+      return;
+    this.#published = view;
 
     for (const listener of this.#listeners) listener(view);
   }
+}
+
+/**
+ * The ride's checkpoint sink: the account's progress sync sees each checkpoint first, so the
+ * live display reads the journal binding that this checkpoint just started.
+ */
+export function progressCheckpointSink(
+  progress: Readonly<Pick<ProgressSyncSink, "accept">> | undefined,
+  live: Readonly<Pick<ProgressLive, "accept">>,
+): (checkpoint?: RideProgressCheckpoint) => void {
+  return (checkpoint) => {
+    progress?.accept(checkpoint);
+    live.accept(checkpoint);
+  };
 }
 /* oxlint-enable typescript/prefer-readonly-parameter-types */

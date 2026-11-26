@@ -917,7 +917,30 @@ export class ProgressSync {
       return "failed";
     }
 
+    const stored = await this.storeCovered(database, lease, receipt);
+
+    if (stored === undefined) return "failed";
+
+    if (stored && this.current(lease)) this.announceReceipt(receipt);
+
+    const uncovered = sending.filter((row) => !progressReceiptCoversRow(receipt, row));
+
+    for (const row of uncovered) {
+      if (!this.current(lease)) return "failed";
+      await database.requeue(row, this.rowFence(lease, row), this.nowMs());
+    }
+
+    return uncovered.length === 0 ? "delivered" : "partial";
+  }
+
+  /** Stores every journal row the receipt covers; `undefined` once the lease is no longer current. */
+  private async storeCovered(
+    database: ProgressOutbox,
+    lease: ProgressLease,
+    receipt: Readonly<VoltsRideRangeReceipt>,
+  ): Promise<boolean | undefined> {
     const journalRows = await database.listJournalPending(lease, receipt.journalId);
+    let stored = false;
 
     for (const row of journalRows) {
       if (row.state.kind === "stored" || !progressReceiptCoversRow(receipt, row)) continue;
@@ -930,23 +953,29 @@ export class ProgressSync {
         currentRow = sealed;
       }
 
-      if (!this.current(lease)) return "failed";
+      if (!this.current(lease)) return undefined;
       await database.markStored({
         row: currentRow,
         fence: this.rowFence(lease, currentRow),
         receipt,
       });
+      stored = true;
     }
 
-    if (this.current(lease)) for (const listener of this.#receiptListeners) listener(receipt);
-    const uncovered = sending.filter((row) => !progressReceiptCoversRow(receipt, row));
+    return stored;
+  }
 
-    for (const row of uncovered) {
-      if (!this.current(lease)) return "failed";
-      await database.requeue(row, this.rowFence(lease, row), this.nowMs());
+  /** Listeners run after delivery bookkeeping; a failing display cannot stall the outbox. */
+  private announceReceipt(receipt: VoltsRideRangeReceipt): void {
+    for (const listener of this.#receiptListeners) {
+      queueMicrotask(() => {
+        try {
+          listener(receipt);
+        } catch {
+          // The receipt is stored; a display error must not turn delivery into a failure.
+        }
+      });
     }
-
-    return uncovered.length === 0 ? "delivered" : "partial";
   }
 
   private async failGroup(

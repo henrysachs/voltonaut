@@ -6,7 +6,7 @@ import {
 } from "@voltonaut/shared";
 
 import { PrivateRequestError } from "./apiRoute.js";
-import { ProgressHistory, type ProgressHistoryLease } from "./progressHistory.js";
+import { ProgressHistory, rereadOnReceipts, type ProgressHistoryLease } from "./progressHistory.js";
 import { deferred } from "./testdata/deferred.js";
 import { ScopeDriver, testBinding } from "./testdata/scopeDriver.js";
 
@@ -121,4 +121,47 @@ it("drops the answer of a signed-out or replaced account", async () => {
   await Promise.resolve();
 
   expect(history.view()).toEqual({ kind: "guest" });
+});
+
+it("rereads once per delivered batch of receipts", () => {
+  const listeners: (() => void)[] = [];
+  const scheduled: (() => void)[] = [];
+  let refreshes = 0;
+
+  const stop = rereadOnReceipts(
+    {
+      subscribeReceipts: (listener) => {
+        listeners.push(listener);
+
+        return () => {
+          listeners.length = 0;
+        };
+      },
+    },
+    {
+      refresh: () => {
+        refreshes += 1;
+
+        return Promise.resolve();
+      },
+    },
+    (callback) => {
+      scheduled.push(callback);
+    },
+  );
+
+  for (const listener of [...listeners, ...listeners, ...listeners]) listener();
+
+  expect(scheduled).toHaveLength(1);
+
+  for (const callback of scheduled.splice(0)) callback();
+
+  for (const listener of listeners) listener();
+
+  expect(refreshes).toBe(1);
+  expect(scheduled).toHaveLength(1);
+
+  stop();
+
+  expect(listeners).toEqual([]);
 });

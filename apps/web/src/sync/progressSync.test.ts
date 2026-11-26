@@ -1544,3 +1544,21 @@ it("reports no receipt for a rejected range and an ignored sim journal", async (
   expect(receipts).toEqual([]);
   expect(f.sync.journal()).toBeUndefined();
 });
+
+it("finishes delivery when a receipt listener throws", async () => {
+  const f = new Harness();
+
+  f.sync.subscribeReceipts(() => {
+    throw new Error("display failed");
+  });
+  f.consent = { version: 1, enabled: true, rewardsAvailable: true, sessionGeneration: 1 };
+  f.login();
+  await settle();
+  f.sync.accept(checkpoint());
+  await settle();
+  await f.sync.flush();
+  await settle();
+
+  expect(f.submitted).toHaveLength(1);
+  expect(f.memory.raw()).toEqual([]);
+});

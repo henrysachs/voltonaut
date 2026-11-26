@@ -13,7 +13,7 @@ import { ProgressSync } from "./sync/progressSync.js";
 import { openProgressOutboxDatabase } from "./sync/progressOutboxDatabase.js";
 import type { ProgressOutbox } from "./sync/progressOutbox.js";
 import { mountProgressPanel } from "./ui/progressPanel.js";
-import { ProgressHistory } from "./sync/progressHistory.js";
+import { ProgressHistory, rereadOnReceipts } from "./sync/progressHistory.js";
 import { mountProgressHistoryPanel } from "./ui/progressHistoryPanel.js";
 import { sessionAccountScope, type AccountScope } from "./sync/accountScope.js";
 import type { AccountLease } from "./sync/privateAuthTransport.js";
@@ -50,17 +50,7 @@ function setupProgress(
   const history = new ProgressHistory(scope);
   mountProgressPanel(progress);
   mountProgressHistoryPanel(history);
-  let rereadPending = false;
-
-  // One reread per delivered batch, not per receipt in it (spec E6-11 AK5).
-  progress.subscribeReceipts(() => {
-    if (rereadPending) return;
-    rereadPending = true;
-    setTimeout(() => {
-      rereadPending = false;
-      void history.refresh();
-    }, 1000);
-  });
+  rereadOnReceipts(progress, history);
   window.addEventListener("online", () => {
     void progress.retry("resume");
     void history.refresh();

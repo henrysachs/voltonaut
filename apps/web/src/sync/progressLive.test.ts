@@ -8,7 +8,7 @@ import {
 } from "@voltonaut/shared";
 
 import type { ProgressPanelCounts, ProgressPanelView } from "../ui/progressPanel.js";
-import { ProgressLive, type ProgressLiveSource } from "./progressLive.js";
+import { ProgressLive, progressCheckpointSink, type ProgressLiveSource } from "./progressLive.js";
 import { checkpoint, journalId } from "./progressOutboxTestdata.js";
 
 const OTHER_JOURNAL = JournalIdSchema.parse("650e8400-e29b-41d4-a716-446655440000");
@@ -247,5 +247,45 @@ it("waits while consent for the journal is still loading", () => {
   live.refresh();
 
   expect(live.view().status).toBe("off");
+});
+
+it("notifies only when the shown values change", () => {
+  const sync = new FakeSync();
+  const { live, views } = liveWith(sync);
+
+  live.accept(climb({ startTick: 0 }));
+  live.refresh();
+  sync.show(account());
+  live.accept(climb({ startTick: 1 }));
+
+  expect(views.map(({ previewVolts, status }) => `${previewVolts}:${status}`)).toEqual([
+    "null:off",
+    "0:pending",
+    "2:pending",
+  ]);
+});
+
+it("lets the progress sync bind the journal before the live display reads it", () => {
+  const sync = new FakeSync();
+  const { live, views } = liveWith(sync);
+
+  sync.bound = undefined;
+
+  const sink = progressCheckpointSink(
+    {
+      accept: () => {
+        sync.bound = { journalId, kind: "writing" };
+      },
+    },
+    live,
+  );
+
+  sink(climb({ startTick: 0 }));
+
+  expect(views.at(-1)?.status).toBe("pending");
+
+  const guestSink = progressCheckpointSink(undefined, new ProgressLive(undefined));
+
+  guestSink(climb({ startTick: 0 }));
 });
 /* oxlint-enable typescript/prefer-readonly-parameter-types */
