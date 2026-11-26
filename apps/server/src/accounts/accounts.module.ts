@@ -17,6 +17,8 @@ export interface AccountDataOwnerModules {
   readonly economy: DynamicModule;
   readonly inventory: DynamicModule;
   readonly progress: DynamicModule;
+  /** Per-account export throttling (issue #141), built by the composition root. */
+  readonly exportThrottler: DynamicModule;
 }
 
 @Module({})
@@ -36,6 +38,7 @@ export class AccountsModule {
         owners.economy,
         owners.inventory,
         owners.progress,
+        owners.exportThrottler,
       ],
       controllers: [AccountsController, AdminUsersController],
       providers: [

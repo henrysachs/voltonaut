@@ -38,6 +38,11 @@ export class GaragePurchase {
   #visible = false;
   /** Open confirmation: the item and the price it showed. */
   #open: { readonly itemId: string; readonly offer: PurchaseConfirmation } | undefined;
+  /**
+   * The confirmed purchase until the server answers (issue #142). The confirmation stays in place
+   * with disabled buttons, so the second click of a double click hits nothing that moved up.
+   */
+  #buying = false;
 
   constructor() {
     this.button.setAttribute("class", "btn btn--primary garage__purchase");
@@ -111,9 +116,25 @@ export class GaragePurchase {
   #buy(): void {
     const open = this.#open;
 
-    if (open === undefined) return;
-    this.#close(this.hint);
+    if (open === undefined || this.#buying) return;
+    this.#buying = true;
+    // The shop marks the purchase pending before its first await; the render below sees it.
     void this.#source?.purchase(open.itemId, open.offer.priceVolts);
+    this.#render();
+    // The disabled buttons cannot keep focus; the live hint announces the result.
+    this.hint.focus();
+  }
+
+  /** Ends the in-place pending state once the shop no longer waits for this purchase. */
+  #settleBuying(): void {
+    const view = this.#view;
+    const waiting = view.kind === "ready" && view.pendingItemId === this.#open?.itemId;
+
+    if (!this.#buying || waiting) return;
+    this.#buying = false;
+    this.#open = undefined;
+
+    if (this.confirmation.contains(document.activeElement)) this.hint.focus();
   }
 
   #render(): void {
@@ -126,8 +147,10 @@ export class GaragePurchase {
 
     const hadFocus = this.confirmation.contains(document.activeElement);
 
+    this.#settleBuying();
+
     // The confirmation lives only while the same price is still on offer; the balance text follows the server.
-    if (this.#open !== undefined)
+    if (this.#open !== undefined && !this.#buying)
       this.#open =
         confirmation?.priceVolts === this.#open.offer.priceVolts
           ? { itemId: this.#open.itemId, offer: confirmation }
@@ -140,7 +163,12 @@ export class GaragePurchase {
     this.hint.hidden = !this.#visible;
     this.confirmation.hidden = !open;
     this.#question.textContent = this.#open?.offer.question ?? "";
-    this.#confirm.textContent = this.#open?.offer.confirmText ?? "";
+    this.#confirm.textContent = this.#buying
+      ? "Kauf wird bestätigt …"
+      : (this.#open?.offer.confirmText ?? "");
+    this.#confirm.disabled = this.#buying;
+    this.#confirm.setAttribute("aria-busy", String(this.#buying));
+    this.#cancel.disabled = this.#buying;
     const pending = this.#view.kind === "ready" && this.#view.pendingItemId === item.id;
     this.button.setAttribute("aria-busy", String(pending));
     this.hint.textContent = offer.hint;

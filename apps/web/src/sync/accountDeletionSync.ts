@@ -43,7 +43,7 @@ export async function exportAccountData(
   } catch {
     patch(
       lease,
-      "Datenexport nicht bestätigt. Keine Datei erzeugt; Verbindung und Anmeldung prüfen.",
+      "Datenexport nicht bestätigt. Keine Datei erzeugt; Verbindung und Anmeldung prüfen. Nach einem gerade angeforderten Export ist ein neuer erst nach einer Minute möglich.",
     );
 
     return undefined;

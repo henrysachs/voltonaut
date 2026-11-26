@@ -1,3 +1,4 @@
+import { AccountExportRateLimitGuard } from "./account-export.rate-limit.js";
 import {
   Body,
   Controller,
@@ -61,6 +62,7 @@ export class AccountsController {
 
   @Get("export")
   @Header("Cache-Control", "no-store")
+  @UseGuards(AccountExportRateLimitGuard)
   public export(@CurrentSession() session: SessionPrincipal): AccountExport {
     return this.data.exportData(session.userId, this.clock.nowMs());
   }

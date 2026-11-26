@@ -81,6 +81,8 @@ export type ApiRoute<In, Out, Path extends PrivatePath | SessionPath> =
       readonly path: (input: In) => Path;
       readonly response: ResponseSchema<Out>;
       readonly credentials: RouteCredentials;
+      /** Whole request including the body read; defaults to `DEFAULT_REQUEST_TIMEOUT_MS`. */
+      readonly timeoutMs?: number;
     }
   | {
       readonly method: "PUT" | "POST" | "PATCH" | "DELETE";
@@ -88,6 +90,7 @@ export type ApiRoute<In, Out, Path extends PrivatePath | SessionPath> =
       readonly body: ((input: In) => string) | null;
       readonly response: ResponseSchema<Out>;
       readonly credentials: RouteCredentials;
+      readonly timeoutMs?: number;
     };
 
 export type PrivateRoute<In, Out> = ApiRoute<In, Out, PrivatePath>;
@@ -165,6 +168,13 @@ function requestHeaders(target: RouteTarget, body: string | null): ApiRequestIni
     : { Authorization: authorization };
 }
 
+/** Default budget for an API call, from the request until its JSON body is read. */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
+
+export function requestTimeoutMs(route: Readonly<{ timeoutMs?: number }>): number {
+  return route.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+}
+
 /**
  * The single fetch, parse and failure path of every API call of the browser client. Not async:
  * path and body builders throw synchronously on invalid input.
@@ -181,7 +191,7 @@ export function sendRoute<In, Out, Path extends PrivatePath | SessionPath>(
     method: route.method,
     headers: requestHeaders(target, body),
     body,
-    signal: AbortSignal.any([target.signal, AbortSignal.timeout(8000)]),
+    signal: AbortSignal.any([target.signal, AbortSignal.timeout(requestTimeoutMs(route))]),
     cache: "no-store",
     credentials: route.credentials,
     redirect: "error",

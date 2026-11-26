@@ -103,6 +103,17 @@ it("does not return a late export after the owning session ends", async () => {
   await expect(exporting).resolves.toBeUndefined();
 });
 
+it("explains the one-minute retry window when an export is rejected", async () => {
+  const f = fixture();
+  f.login(A);
+  f.exportFailure = true;
+
+  await expect(f.sync.exportAccount()).resolves.toBeUndefined();
+  expect(JSON.stringify(f.sync.view())).toContain(
+    "Nach einem gerade angeforderten Export ist ein neuer erst nach einer Minute möglich",
+  );
+});
+
 it("reports a persisted session that could not be removed after confirmed deletion", async () => {
   const f = fixture();
   const lease = f.login(A);

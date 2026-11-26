@@ -54,6 +54,9 @@ export interface MembershipPort {
   readonly save: (userId: string, membership: Readonly<Membership>) => Promise<AccountStatus>;
 }
 
+/** The export downloads every own ride at once; the server limits it to one per minute. */
+export const ACCOUNT_EXPORT_TIMEOUT_MS = 120_000;
+
 export const accountRoutes = {
   profile: privateRoute({
     method: "GET",
@@ -93,6 +96,8 @@ export const accountRoutes = {
     path: () => "/v1/me/export",
     response: AccountExportSchema,
     credentials: "omit",
+    // Issue #141: 50 one-hour rides are about 15 MB; on a slow link the body alone exceeds 8 s.
+    timeoutMs: ACCOUNT_EXPORT_TIMEOUT_MS,
   }),
   deleteAccount: privateRoute({
     method: "DELETE",
