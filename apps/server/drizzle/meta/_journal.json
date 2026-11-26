@@ -99,6 +99,13 @@
       "when": 1795637024725,
       "tag": "0013_volts_grant_operators",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1795648439134,
+      "tag": "0014_avatar_loadouts",
+      "breakpoints": true
     }
   ]
 }

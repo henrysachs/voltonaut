@@ -32,6 +32,7 @@ function exportPanel(sync: Readonly<DataControls>): HTMLElement {
 
   const exportButton = button("Datenexport herunterladen", () => {
     exportButton.disabled = true;
+    exportButton.setAttribute("aria-busy", "true");
     status.textContent = "Datenexport wird vorbereitet …";
     void (async () => {
       try {
@@ -49,11 +50,13 @@ function exportPanel(sync: Readonly<DataControls>): HTMLElement {
         status.textContent = "Download fehlgeschlagen. Keine Datei bestätigt.";
       } finally {
         exportButton.disabled = false;
+        exportButton.setAttribute("aria-busy", "false");
       }
     })();
   });
 
   status.setAttribute("role", "status");
+  exportButton.setAttribute("aria-busy", "false");
   host.append(exportButton, status);
 
   return host;
@@ -89,10 +92,16 @@ function deletionPanel(
   const deleteButton = button("Konto endgültig löschen", () => {
     if (confirmation.value.trim().toLowerCase() !== user.email.toLowerCase()) return;
     deleteButton.disabled = true;
+    deleteButton.setAttribute("aria-busy", "true");
     confirmation.disabled = true;
     understood.disabled = true;
-    void sync.deleteAccount(confirmation.value);
+    void sync.deleteAccount(confirmation.value).finally(() => {
+      deleteButton.setAttribute("aria-busy", "false");
+    });
   });
+
+  deleteButton.setAttribute("class", "btn btn--danger");
+  deleteButton.setAttribute("aria-busy", "false");
 
   const updateDeleteState = (): void => {
     deleteButton.disabled =

@@ -15,6 +15,7 @@ import type { ProgressOutbox } from "./sync/progressOutbox.js";
 import { mountProgressPanel } from "./ui/progressPanel.js";
 import { sessionAccountScope, type AccountScope } from "./sync/accountScope.js";
 import type { AccountLease } from "./sync/privateAuthTransport.js";
+import { GarageLoadout } from "./sync/garageLoadout.js";
 import { GarageShop } from "./sync/garageShop.js";
 import { AccountAdministration } from "./sync/accountAdministration.js";
 import { mountAccountMembershipPanel } from "./ui/accountMembershipPanel.js";
@@ -35,6 +36,8 @@ export interface BrowserAccount {
   >;
   readonly progress: ProgressSync;
   readonly shop: GarageShop;
+  /** Server-confirmed equipment for garage and ride (spec E7-05). */
+  readonly loadout: GarageLoadout;
 }
 
 function setupProgress(
@@ -63,15 +66,17 @@ function setupAccountFeatures(
   const links = mountAccountPanels(session, scope, transport);
   const progressOutbox = lazyResource(() => openProgressOutboxDatabase());
   const shop = new GarageShop(scope);
+  const loadout = new GarageLoadout(scope);
   const accounts = setupBrowserAccountData({ scope, session }, profile, progressOutbox);
   mountAccountMembershipPanel(new AccountAdministration(scope));
   void setupBrowserStrava(scope, accounts);
   const progress = setupProgress(scope, progressOutbox);
   window.addEventListener("online", () => {
     void shop.retry();
+    void loadout.retry();
   });
 
-  return { links, accounts, progress, shop };
+  return { links, accounts, progress, shop, loadout };
 }
 
 export function setupBrowserAccount(
@@ -105,7 +110,11 @@ export function setupBrowserAccount(
       },
     });
 
-    const { links, accounts, progress, shop } = setupAccountFeatures(session, transport, profile);
+    const { links, accounts, progress, shop, loadout } = setupAccountFeatures(
+      session,
+      transport,
+      profile,
+    );
 
     if (handoff.kind === "code") void session.exchange(handoff.code);
     else if (handoff.kind === "link") void resumeIdentityLink(session, links, handoff.code);
@@ -113,7 +122,7 @@ export function setupBrowserAccount(
     else if (handoff.kind === "error") host?.append(handoffErrorText(handoff.error));
     else host?.append("Ungültige Anmeldung. Übergabe fehlt oder ist mehrfach vorhanden.");
 
-    return { session, accounts, progress, shop };
+    return { session, accounts, progress, shop, loadout };
   } catch {
     host?.append("Anmeldung nicht konfiguriert. Gastbetrieb bleibt verfügbar.");
 

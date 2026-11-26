@@ -30,6 +30,8 @@ export function mountAccountPanel(
   const logout = document.createElement("button");
   status.setAttribute("role", "status");
   login.textContent = "Anmelden";
+  login.setAttribute("class", "btn btn--primary");
+  login.setAttribute("aria-busy", "false");
   logout.textContent = "Abmelden";
   login.addEventListener("click", () => {
     void session.login();
@@ -41,10 +43,12 @@ export function mountAccountPanel(
     status.textContent = sessionText(view);
     login.hidden = view.kind === "authenticated";
     login.disabled = view.kind === "busy";
+    login.setAttribute("aria-busy", String(view.kind === "busy"));
     logout.hidden = view.kind === "guest";
     choices.replaceChildren(
       ...(view.kind === "guest" ? (view.providers ?? []) : []).map((provider) => {
         const button = document.createElement("button");
+        button.setAttribute("class", "btn btn--primary");
         button.textContent = `Anmelden mit ${provider.displayName}`;
         button.addEventListener("click", () => {
           void session.login(provider.id);

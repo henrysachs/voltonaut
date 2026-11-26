@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import request from "supertest";
 
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import { AccountExportSchema } from "@voltonaut/shared";
 import { bearer, bodyOf } from "../testing/test-app.spec.js";
 import { userOwnedTables } from "../testing/user-owned-tables.js";
@@ -87,6 +88,7 @@ it("exports every own ride and account record without sessions or credentials", 
   // Purchased items only, never another account's; catalog defaults carry no personal data.
   expect(exported.inventory).toEqual({
     items: [{ itemId: "jersey.stripe", source: "shop", acquiredAt: "2026-11-24T12:00:00.000Z" }],
+    loadout: { loadout: DEFAULT_AVATAR_CONFIG, updatedAt: "2026-11-24T12:00:00.000Z" },
   });
   expect(exported.strava.deliveries).toHaveLength(1);
   expect(response.text).not.toContain(f.owner.sessionToken);

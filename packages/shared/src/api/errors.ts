@@ -25,6 +25,7 @@ export const ErrorCodeSchema = z.enum([
   "already_owned",
   "item_not_for_sale",
   "price_changed",
+  "not_owned",
   "payload_too_large",
   "unsupported_media_type",
   "internal_error",

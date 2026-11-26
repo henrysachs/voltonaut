@@ -99,6 +99,8 @@ Die softwaregeprüften Teilschritte [E4-04](specs/E4-04-render-worker-isolation.
 
 [E4-09](specs/E4-09-realistic-procedural-bike.md) ersetzt das Zylinder-Rad in Spiel und Garage durch ein prozedurales Rennrad mit echter Rahmengeometrie, vollständigem Antrieb, Scheibenbremsen und Cockpit. Rahmen und Laufräder sind über `assetRef` datengetriebene, erweiterbare Specs. Die Beine treten per Zwei-Knochen-IK. [E4-10](specs/E4-10-detailed-procedural-rider.md) ersetzt den provisorischen Fahrerkörper durch einen detaillierten, geskinnten Fahrer mit Gesicht, Helm, Handschuhen, Schuhen und gemalten Trikotdesigns. Die Checkbox bleibt offen, bis Oberkörperbewegung, Wiegetritt (henrysachs/voltonaut#69) und ein LOD für Bots folgen.
 
+[E4-11](specs/E4-11-in-ride-menu-redesign.md) vereinheitlicht Fahrtmenü, Gerätedialog und Garage mit gemeinsamen Tokens, klaren Button-Zuständen, einem festen Menüraster und sichtbaren Scrollzuständen. Tabs und Inhalte bleiben von 320 bis 1440 px ohne Überlappung erreichbar. Der begrenzte Umbau ist am tatsächlich gebauten Artefakt softwaregeprüft und unabhängig reviewed. Echte GPU-FPS mit Glas-Look und Henrys Screenshot-Freigabe bleiben offen.
+
 - [ ] `RenderSystem`-Scheduler (ADR-008), Qualitätsstufen Low–Ultra, dynamische Auflösung, Debug-Overlay (`renderer.info`, fps)
 - [ ] PBR-Rendering, HDRI-Umgebung (PMREM), Sonnenlicht mit **Cascaded Shadow Maps**, Kontaktschatten
 - [ ] „Voltonaut Loop" (~12 km: See, Wald, KOM, Sprint) als Route-Daten; Straßen-Mesh mit Markierungen/Randsteinen; Terrain-Chunks mit LOD + Geomorphing; Splat-Texturen
@@ -166,9 +168,11 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 
 [E7-04](specs/E7-04-operator-grant-audit.md) ordnet jede Volts-Gutschrift einem aktiven Admin-Konto zu (`admin credit --operator <adminUserId> …`). Ältere Gutschriften bleiben als „Operator unbekannt (vor Einführung)“ markiert. Stand: implementiert und softwaregeprüft (Integration, Migration, CLI); Merge und Bereitstellung offen.
 
+[E7-05](specs/E7-05-garage-loadout.md) speichert die Ausrüstung pro Konto (`GET`/`PUT /v1/me/loadout`, nur besessene Items und Katalogfarben), zeigt in der Garage je Item „ausgerüstet“, „besessen“, „käuflich“ oder „gesperrt“ und überträgt die Ausrüstung per `render.look` an den Fahrer in der laufenden Fahrt. Stand: implementiert und softwaregeprüft; Merge, Bereitstellung und Henrys Abnahme offen.
+
 - [ ] Modulare Rider-/Bike-Modelle mit Slots und Farbmasken (`05`), Skalierung nach `heightCm`
 - [ ] Item-Katalog (`packages/rules/data/catalog`) + Schema-Test; Start-Katalog
-- [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items
+- [ ] `inventory/` + `POST /v1/shop/purchase` (atomar), Ausrüsten nur besessener Items (E7-02, E7-05 softwaregeprüft; Abnahme offen)
 - [ ] Garage-Showroom (Studio-Licht, Drehteller, Fotomodus), Shop mit Preisen in ⚡, gesperrte Items mit Bedingung
 - [ ] Wiegetritt/Ducken-Posen, Kurvenneigung
       **Abnahme:** Henry kauft ein Laufrad mit Volts und rüstet es aus; nach Reload/anderem Browser identisch; Kauf ohne genug Volts abgelehnt; visuelle Tests der Garage grün.

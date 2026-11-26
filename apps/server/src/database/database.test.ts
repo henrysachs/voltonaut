@@ -31,6 +31,7 @@ it("creates owned tables, enforces foreign keys and closes on Nest shutdown", as
       "account_status",
       "auth_identities",
       "auth_identity_tombstones",
+      "avatar_loadouts",
       "inventory",
       "login_tokens",
       "oidc_handoffs",

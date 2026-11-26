@@ -1,4 +1,5 @@
 import type { RideSnapshot } from "@voltonaut/engine";
+import type { AvatarConfig } from "@voltonaut/shared";
 
 import type { CameraMode } from "./camera.js";
 import type {
@@ -35,6 +36,8 @@ class RenderLink {
   private mailbox: Mailbox = { kind: "idle" };
   private pending: Readonly<RideSnapshot> | undefined;
   private lastSnapshot: Readonly<RideSnapshot> | undefined;
+  /** The latest look; kept until the worker is ready so an early garage result is not lost. */
+  private wornLook: Readonly<AvatarConfig> | undefined;
   private sequence = 0;
   private readonly unsubscribe;
 
@@ -119,6 +122,8 @@ class RenderLink {
       case "render.ready":
         if (this.state.kind === "starting") {
           this.state = { kind: "running" };
+
+          if (this.wornLook !== undefined) this.send({ type: "render.look", look: this.wornLook });
           this.flush();
         }
 
@@ -147,6 +152,13 @@ class RenderLink {
     this.lastSnapshot = snapshot;
     this.pending = snapshot;
     this.flush();
+  }
+
+  look(look: Readonly<AvatarConfig>): void {
+    if (!this.active()) return;
+    this.wornLook = look;
+
+    if (this.state.kind === "running") this.send({ type: "render.look", look });
   }
 
   resize(viewport: RenderViewport): void {

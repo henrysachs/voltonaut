@@ -6,6 +6,9 @@ import { purchaseConfirmation, purchaseOffer, type PurchaseConfirmation } from "
 /** The part of the account's shop sync the garage uses. */
 export type GarageShopSource = Pick<GarageShop, "subscribe" | "purchase" | "retry">;
 
+/** The part of the shop sync the purchase controls use; retrying belongs to user selection. */
+type PurchaseSource = Pick<GarageShopSource, "subscribe" | "purchase">;
+
 const QUESTION_ID = "garage-purchase-question";
 
 function actionButton(text: string, testId: string): HTMLButtonElement {
@@ -30,14 +33,15 @@ export class GaragePurchase {
   readonly #cancel = actionButton("Abbrechen", "garage-purchase-cancel");
   #item: Readonly<ItemDef> | undefined;
   #view: GarageShopView = { kind: "guest" };
-  #source: GarageShopSource | undefined;
+  #source: PurchaseSource | undefined;
   #detach: (() => void) | undefined;
   #visible = false;
   /** Open confirmation: the item and the price it showed. */
   #open: { readonly itemId: string; readonly offer: PurchaseConfirmation } | undefined;
 
   constructor() {
-    this.button.className = "garage__purchase";
+    this.button.setAttribute("class", "btn btn--primary garage__purchase");
+    this.button.setAttribute("aria-busy", "false");
     this.hint.className = "garage__purchase-hint";
     this.hint.dataset["testid"] = "garage-purchase-hint";
     this.hint.setAttribute("aria-live", "polite");
@@ -54,7 +58,7 @@ export class GaragePurchase {
     });
   }
 
-  attach(source: GarageShopSource): void {
+  attach(source: PurchaseSource): void {
     this.#detach?.();
     this.#source = source;
     this.#detach = source.subscribe((view) => {
@@ -67,9 +71,6 @@ export class GaragePurchase {
     if (this.#item?.id !== item.id) this.#open = undefined;
     this.#item = item;
     this.#visible = visible;
-
-    // Selecting an item after a failed load is the rider asking for the shop again.
-    if (this.#view.kind === "failed") void this.#source?.retry();
     this.#render();
   }
 
@@ -82,9 +83,9 @@ export class GaragePurchase {
     this.confirmation.hidden = true;
     this.#question.id = QUESTION_ID;
     this.#question.className = "garage__purchase-question";
-    this.#confirm.className = "garage__purchase";
+    this.#confirm.setAttribute("class", "btn btn--primary garage__purchase");
     this.#confirm.setAttribute("aria-describedby", QUESTION_ID);
-    this.#cancel.className = "garage__purchase";
+    this.#cancel.setAttribute("class", "btn btn--secondary garage__purchase");
     this.#cancel.setAttribute("aria-describedby", QUESTION_ID);
     this.confirmation.append(this.#question, this.#confirm, this.#cancel);
   }
@@ -140,6 +141,8 @@ export class GaragePurchase {
     this.confirmation.hidden = !open;
     this.#question.textContent = this.#open?.offer.question ?? "";
     this.#confirm.textContent = this.#open?.offer.confirmText ?? "";
+    const pending = this.#view.kind === "ready" && this.#view.pendingItemId === item.id;
+    this.button.setAttribute("aria-busy", String(pending));
     this.hint.textContent = offer.hint;
 
     // Closed by a view change (logout, failed load, balance): keep keyboard users in place.

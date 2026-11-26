@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { avatarItemsForSlot } from "@voltonaut/rules";
+import { avatarItemsForSlot, defaultAvatarColors } from "@voltonaut/rules";
 import type { AvatarSlot, ItemDef } from "@voltonaut/shared";
 
-import { defaultPreviewColors } from "./palettes.js";
 import { createInitialGarageState, garageReducer } from "./state.js";
 
 function catalogItem(id: string): ItemDef {
@@ -51,7 +50,7 @@ describe("initial garage state", () => {
 
     for (const slot of slots) {
       for (const item of avatarItemsForSlot(slot)) {
-        expect(defaultPreviewColors(item)).toHaveLength(item.colorable);
+        expect(defaultAvatarColors(item)).toHaveLength(item.colorable);
       }
     }
   });

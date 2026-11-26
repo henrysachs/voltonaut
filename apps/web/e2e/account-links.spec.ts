@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import type { Page, Response, Route } from "@playwright/test";
 import { openGameMenu } from "./helpers/gameMenu.js";
 
@@ -106,6 +106,14 @@ async function signedIn(page: Page, storage: "available" | "denied"): Promise<Fa
   return api;
 }
 
+async function expectDisabledButton(button: Readonly<Locator>): Promise<void> {
+  await expect(button).toHaveCSS("cursor", "default");
+  await expect(button).toHaveCSS("opacity", "0.55");
+  await expect(button).toHaveCSS("background-color", "rgb(37, 67, 61)");
+  await button.hover();
+  await expect(button).toHaveCSS("background-color", "rgb(37, 67, 61)");
+}
+
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("does not leave the tab to link while the session lives only in this tab", async ({
   page,
@@ -130,6 +138,56 @@ test("does not leave the tab to link while the session lives only in this tab", 
   expect(api.calls.filter((call) => call.includes("/link"))).toEqual([]);
   expect(api.calls).not.toContain("POST /v1/auth/identities");
   expect(new URL(page.url()).pathname).toBe("/");
+});
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
+test("matches disabled account button states and preserves keyboard focus", async ({ page }) => {
+  // No colour transition: a forbidden hover colour must show on the first read, not 200 ms later.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await signedIn(page, "denied");
+  const account = page.getByRole("tabpanel", { name: "Konto", exact: true });
+  const connect = account.getByRole("button", { name: "Mit authentik verbinden", exact: true });
+
+  const nativeDisabled = account.getByRole("button", {
+    name: "Serverprofil für nächste Fahrt lokal verwenden",
+    exact: true,
+  });
+
+  await expect(connect).toHaveAttribute("aria-disabled", "true");
+  await expect(nativeDisabled).toBeDisabled();
+
+  await expectDisabledButton(connect);
+  await expectDisabledButton(nativeDisabled);
+
+  await account.getByRole("button", { name: "Abmelden", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(connect).toBeFocused();
+  await expect(connect).toHaveCSS("outline-style", "solid");
+  await expect(connect).toHaveCSS("outline-width", "3px");
+  await expect(connect).toHaveCSS("outline-color", "rgb(255, 214, 10)");
+  await expect(connect).toHaveCSS("outline-offset", "3px");
+});
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
+test("preserves enabled primary and secondary hover colors", async ({ page }) => {
+  // No colour transition: the first read after hover must already be the hover colour.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/?sim=1");
+  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+  await openGameMenu(page, "Profil");
+
+  const menu = page.getByRole("dialog", { name: "Fahrtmenü", exact: true });
+  const primary = menu.getByRole("button", { name: "Zurück zur Fahrt", exact: true });
+
+  await expect(primary).toBeEnabled();
+  await primary.hover();
+  await expect(primary).toHaveCSS("background-color", "rgb(255, 234, 129)");
+
+  const secondary = menu.getByRole("button", { name: "Geräte öffnen", exact: true });
+
+  await expect(secondary).toBeEnabled();
+  await secondary.hover();
+  await expect(secondary).toHaveCSS("background-color", "rgb(53, 87, 76)");
 });
 
 /** Only the completing POST; the initial GET of the same URL may still be in flight. */

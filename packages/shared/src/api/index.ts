@@ -10,6 +10,8 @@ export * from "./progress.js";
 
 export * from "./shop.js";
 
+export * from "./loadout.js";
+
 export * from "./rides.js";
 
 export * from "./strava.js";

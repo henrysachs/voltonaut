@@ -1,5 +1,6 @@
 import { createEngine, createRoute, TEST_LOOP } from "@voltonaut/engine";
 import { DEFAULT_RIDER_PROFILE } from "@voltonaut/shared";
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import { expect, it } from "vitest";
 
 import { createRenderLink, type RenderPort } from "./render-link.js";
@@ -27,6 +28,7 @@ const diagnostics: SceneDiagnostics = {
   widthPx: 800,
   heightPx: 400,
   billboardsInView: { left: 0, right: 0 },
+  look: DEFAULT_AVATAR_CONFIG,
 };
 
 class LinkFixture {
@@ -227,4 +229,35 @@ it("fails once on init error/EOF and terminates an unresponsive worker exactly o
     failures: 1,
     frames: 0,
   });
+});
+
+it("keeps the latest look until ready, sends it before snapshots and forwards later looks", () => {
+  const f = new LinkFixture();
+
+  const stripe = {
+    ...DEFAULT_AVATAR_CONFIG,
+    rider: { ...DEFAULT_AVATAR_CONFIG.rider, jerseyId: "jersey.stripe" },
+  };
+
+  f.link.look(DEFAULT_AVATAR_CONFIG);
+  f.link.look(stripe);
+  f.link.snapshot(snapshot);
+
+  expect(f.sent).toEqual([]);
+
+  f.deliver({ type: "render.ready" });
+
+  expect(f.sent).toEqual([
+    { type: "render.look", look: stripe },
+    { type: "render.snapshot", sequence: 1, snapshot },
+  ]);
+
+  f.link.look(DEFAULT_AVATAR_CONFIG);
+
+  expect(f.sent.at(-1)).toEqual({ type: "render.look", look: DEFAULT_AVATAR_CONFIG });
+
+  f.link.dispose();
+  f.link.look(stripe);
+
+  expect(f.sent.at(-1)).toEqual({ type: "render.dispose" });
 });

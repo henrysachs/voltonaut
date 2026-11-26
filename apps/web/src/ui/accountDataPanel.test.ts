@@ -57,6 +57,8 @@ function setupPanel() {
     Promise.resolve(true),
   );
 
+  const exportAccount = vi.fn<Parameters<typeof mountAccountDataPanel>[0]["exportAccount"]>();
+
   let publish: PublishAccountView | undefined;
 
   const commands: Parameters<typeof mountAccountDataPanel>[0] = {
@@ -72,7 +74,7 @@ function setupPanel() {
     queueProfile: () => Promise.resolve(),
     applyProfile: () => Promise.resolve(),
     nextHistory: () => Promise.resolve(),
-    exportAccount: () => Promise.reject(new Error("not requested")),
+    exportAccount,
     deleteAccount,
   };
 
@@ -91,7 +93,7 @@ function setupPanel() {
 
   const button = required(dom.find("Konto endgültig löschen"));
 
-  return { host, input, checkbox, button, deleteAccount, publish };
+  return { dom, host, input, checkbox, button, deleteAccount, exportAccount, publish };
 }
 
 it("requires the exact email and an explicit acknowledgement before deleting", () => {
@@ -124,4 +126,38 @@ it("requires the exact email and an explicit acknowledgement before deleting", (
 
   publish?.({ kind: "guest", message: "Konto gelöscht. Outbox bereinigt." });
   expect(renderedText(host)).toContain("Konto gelöscht. Outbox bereinigt.");
+});
+
+it("marks account export and deletion as busy only while their requests are pending", async () => {
+  const { dom, input, checkbox, button, deleteAccount } = setupPanel();
+
+  let finishDeletion: ((value: boolean) => void) | undefined;
+
+  const deletionPending = new Promise<boolean>((resolve) => {
+    finishDeletion = resolve;
+  });
+
+  deleteAccount.mockReturnValueOnce(deletionPending);
+
+  const exportButton = dom.find("Datenexport herunterladen");
+  expect(exportButton.getAttribute("aria-busy")).toBe("false");
+  exportButton.click();
+  expect(exportButton.disabled).toBe(true);
+  expect(exportButton.getAttribute("aria-busy")).toBe("true");
+  await Promise.resolve();
+  expect(exportButton.disabled).toBe(false);
+  expect(exportButton.getAttribute("aria-busy")).toBe("false");
+
+  expect(button.getAttribute("class")).toBe("btn btn--danger");
+  expect(button.getAttribute("aria-busy")).toBe("false");
+  input.value = user.email;
+  input.fire("input");
+  checkbox.checked = true;
+  checkbox.fire("change");
+  button.click();
+  expect(button.disabled).toBe(true);
+  expect(button.getAttribute("aria-busy")).toBe("true");
+  finishDeletion?.(true);
+  await deletionPending;
+  expect(button.getAttribute("aria-busy")).toBe("false");
 });

@@ -1,4 +1,5 @@
 import type { RideSnapshot } from "@voltonaut/engine";
+import type { AvatarConfig } from "@voltonaut/shared";
 
 import type {
   RenderFailure,
@@ -109,6 +110,16 @@ class RenderLoop {
 
     try {
       this.state.core.resize(viewport);
+    } catch {
+      this.fail("render-error");
+    }
+  }
+
+  look(look: Readonly<AvatarConfig>): void {
+    if (this.state.kind !== "running") return;
+
+    try {
+      this.state.core.setLook(look);
     } catch {
       this.fail("render-error");
     }

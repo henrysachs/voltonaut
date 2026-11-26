@@ -40,7 +40,7 @@ export class AccountDataService {
         const status = this.accounts.status(userId);
 
         return AccountExportSchema.parse({
-          schemaVersion: 3,
+          schemaVersion: 4,
           exportedAt: new Date(nowMs).toISOString(),
           account: {
             user,

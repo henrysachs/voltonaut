@@ -1,3 +1,4 @@
+import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { afterEach, expect, it } from "vitest";
@@ -159,7 +160,7 @@ it("downloads a validated own export and confirms deletion only from an empty 20
   const f = await fixture();
 
   const exported = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     exportedAt: "2026-11-20T00:00:00.000Z",
     account: {
       user: {
@@ -173,7 +174,7 @@ it("downloads a validated own export and confirms deletion only from an empty 20
     },
     profile: { status: "missing" },
     rides: [],
-    inventory: { items: [] },
+    inventory: { items: [], loadout: { loadout: DEFAULT_AVATAR_CONFIG, updatedAt: null } },
     progression: {
       volts: { balance: 0, journal: [] },
       progress: { consent: { status: "missing" }, journals: [], ranges: [] },
