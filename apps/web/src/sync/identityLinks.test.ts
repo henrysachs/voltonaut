@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { LinkedIdentitiesResponse, OidcLinkStartResponse, User } from "@voltonaut/shared";
-import type { SessionView } from "./applicationSession.js";
+import { ScopeDriver, testBinding } from "./testdata/scopeDriver.js";
 import {
   IdentityLinks,
   TAB_ONLY_TEXT,
@@ -34,15 +34,11 @@ const BOTH: LinkedIdentitiesResponse = {
 class Harness {
   readonly calls: string[] = [];
   readonly redirects: string[] = [];
-  listener: ((view: SessionView) => void) | undefined;
-  signedIn = false;
   completion: Promise<LinkedIdentitiesResponse> = Promise.resolve(BOTH);
   listed: LinkedIdentitiesResponse = CLOUDFLARE_ONLY;
   readonly views: IdentityLinksView[] = [];
-
-  readonly lease: IdentityLinksLease = {
-    generation: 1,
-    current: () => this.signedIn,
+  readonly scope = new ScopeDriver<IdentityLinksLease>((userId, generation) => ({
+    ...testBinding(userId, generation),
     identities: {
       list: () => {
         this.calls.push("list");
@@ -60,20 +56,10 @@ class Harness {
         return this.completion;
       },
     },
-  };
+  }));
 
   readonly links = new IdentityLinks({
-    session: {
-      authorize: () => (this.signedIn ? this.lease : undefined),
-      subscribe: (listener) => {
-        this.listener = listener;
-        listener({ kind: "guest", message: "Gast." });
-
-        return () => {
-          this.listener = undefined;
-        };
-      },
-    },
+    scope: this.scope.scope,
     providers: () => Promise.resolve(PROVIDERS),
     redirect: (location) => {
       this.redirects.push(location);
@@ -87,8 +73,7 @@ class Harness {
   }
 
   async signIn(persistent = true): Promise<void> {
-    this.signedIn = true;
-    this.listener?.({ kind: "authenticated", user, persistent });
+    this.scope.signIn(user.id, persistent);
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
     });

@@ -21,7 +21,7 @@ import {
   type VoltsRideRangeReceipt,
 } from "@voltonaut/shared";
 
-import type { SessionView } from "./applicationSession.js";
+import { AccountScopeSource } from "./accountScope.js";
 import { PrivateRequestError, type SyncFailure } from "./apiRoute.js";
 import type { ProgressPort } from "./progressPort.js";
 import { privateAuthTransport } from "./privateAuthTransport.js";
@@ -503,7 +503,7 @@ function checkpointWithFacts(sequence: number, startTick: number): RideProgressC
 }
 
 class Harness {
-  readonly listeners = new Set<(view: SessionView) => void>();
+  readonly scope = new AccountScopeSource<ProgressLease>();
   readonly memory: MemoryOutbox;
   readonly outbox: ProgressOutbox;
   readonly submitted: ProgressCheckpointBatch[] = [];
@@ -524,7 +524,6 @@ class Harness {
   submitFailure?: PrivateRequestError;
   submitOverride?: (value: ProgressCheckpointBatch) => Promise<VoltsRideRangeReceipt>;
   readonly token = "same-private-token";
-  readonly session: ProgressSyncOptions["session"];
   readonly sync: ProgressSync;
 
   constructor(
@@ -533,19 +532,9 @@ class Harness {
   ) {
     this.memory = memory;
     this.outbox = memory;
-    this.session = {
-      authorize: () => this.active,
-      subscribe: (listener) => {
-        this.listeners.add(listener);
-        listener({ kind: "guest", message: "Gast" });
-
-        return () => {
-          this.listeners.delete(listener);
-        };
-      },
-    };
+    this.scope.signOut({ kind: "guest", message: "Gast" });
     this.sync = new ProgressSync({
-      session: this.session,
+      scope: this.scope,
       outbox: () => Promise.resolve(this.outbox),
       nowMs: () => this.nowMs,
       schedule: (_callback, delayMs) => {
@@ -558,7 +547,7 @@ class Harness {
   }
 
   beginRestore(): void {
-    for (const listener of this.listeners) listener({ kind: "busy", operation: "restoring" });
+    this.scope.signOut({ kind: "busy", operation: "restoring" });
   }
 
   login(): ProgressLease {
@@ -580,12 +569,10 @@ class Harness {
     lease = { ...base, progress: this.progressLease(() => this.active === lease, generation) };
     this.active = lease;
 
-    for (const listener of this.listeners)
-      listener({
-        kind: "authenticated",
-        persistent: true,
-        user: { id: userA, email: "rider@example.com", createdAt: "2026-11-20T00:00:00.000Z" },
-      });
+    this.scope.signIn(lease, {
+      persistent: true,
+      user: { id: userA, email: "rider@example.com", createdAt: "2026-11-20T00:00:00.000Z" },
+    });
 
     return lease;
   }
@@ -642,7 +629,7 @@ class Harness {
     this.active = undefined;
     this.controller?.abort();
 
-    for (const listener of this.listeners) listener({ kind: "guest", message: "Gast" });
+    this.scope.signOut({ kind: "guest", message: "Gast" });
   }
 }
 

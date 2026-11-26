@@ -134,7 +134,7 @@ it.each(cancellations)(
   },
 );
 
-it("unsubscribes from the application session on disposal", async () => {
+it("unsubscribes from the account scope on disposal", async () => {
   const f = new StravaDeliveryFixture();
   f.sync.dispose();
   await f.session.exchange("a");

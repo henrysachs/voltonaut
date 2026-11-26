@@ -2,11 +2,11 @@ import type { StravaDelivery, StravaStatus, StravaRideView } from "@voltonaut/sh
 import type { AccountSync } from "../sync/accountSync.js";
 import type { AccountDataView } from "../sync/accountDataView.js";
 import type { StravaSync, StravaView } from "../sync/stravaSync.js";
-import { stravaDeliveryText, text, button, accountAction } from "./stravaPanelText.js";
+import { stravaDeliveryText, text, button } from "./stravaPanelText.js";
 
 type AccountView = Extract<StravaView, { readonly kind: "account" }>;
 
-type Accounts = Readonly<Pick<AccountSync, "subscribe" | "refresh" | "nextHistory">>;
+type Accounts = Readonly<Pick<AccountSync, "view" | "subscribe" | "refresh" | "nextHistory">>;
 
 type Host = Readonly<Pick<HTMLElement, "append" | "replaceChildren">>;
 
@@ -72,7 +72,7 @@ function appendConsent(
 
   const upload = button(
     "Diese Fahrt einmalig an Strava senden",
-    accountAction(sync, state, () => {
+    sync.guard(() => {
       if (checkbox.checked) void sync.upload(offer.consent);
     }),
     true,
@@ -149,7 +149,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
   host.append(
     button(
       "Strava-Status laden",
-      accountAction(sync, state, () => {
+      sync.guard(() => {
         void sync.refresh();
       }),
       state.busy,
@@ -160,7 +160,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
     host.append(
       button(
         "Mit Strava verbinden",
-        accountAction(sync, state, () => {
+        sync.guard(() => {
           sync.connect();
         }),
         state.busy,
@@ -175,7 +175,7 @@ function appendConnection(host: Host, sync: Readonly<StravaSync>, state: Account
     host.append(
       button(
         "Strava trennen / Widerruf prüfen",
-        accountAction(sync, state, () => {
+        sync.guard(() => {
           void sync.disconnect();
         }),
         state.busy,
@@ -194,25 +194,21 @@ function appendHistory(
   host.append(
     button(
       "Eigene Kontofahrten laden",
-      accountAction(sync, state, () => {
+      sync.guard(() => {
         void accounts.refresh();
       }),
       state.busy,
     ),
   );
 
-  if (
-    account.kind !== "account" ||
-    account.user.id !== state.userId ||
-    account.history.kind !== "ready"
-  )
-    return;
+  // Both stores follow one account scope, so their views always belong to the same account.
+  if (account.kind !== "account" || account.history.kind !== "ready") return;
 
   for (const ride of account.history.value.rides)
     host.append(
       button(
         `Strava-Vorschau ${ride.startedAt} · ${(ride.distanceM / 1000).toFixed(2)} km`,
-        accountAction(sync, state, () => {
+        sync.guard(() => {
           void sync.select(ride.rideId);
         }),
         state.busy,
@@ -223,7 +219,7 @@ function appendHistory(
     host.append(
       button(
         "Weitere Kontofahrten",
-        accountAction(sync, state, () => {
+        sync.guard(() => {
           void accounts.nextHistory();
         }),
         state.busy,
@@ -268,22 +264,14 @@ export function mountStravaPanel(sync: Readonly<StravaSync>, accounts: Accounts)
 
   if (host === null) return () => {};
 
-  let state = sync.view();
-  let account: AccountDataView = { kind: "guest" };
-
+  // Both views are read at render time: a binding change updates every store before any
+  // listener runs, so the pair always belongs to the same account.
   const render = () => {
-    renderPanel(host, sync, accounts, state, account);
+    renderPanel(host, sync, accounts, sync.view(), accounts.view());
   };
 
-  const unsubscribeSync = sync.subscribe((view) => {
-    state = view;
-    render();
-  });
-
-  const unsubscribeAccounts = accounts.subscribe((view) => {
-    account = view;
-    render();
-  });
+  const unsubscribeSync = sync.subscribe(render);
+  const unsubscribeAccounts = accounts.subscribe(render);
 
   return () => {
     unsubscribeSync();

@@ -3,7 +3,7 @@ import type { AccountStatus, AdminUsers } from "@voltonaut/shared";
 import { AdministrationFixture } from "./accountAdministrationFixture.spec.js";
 import { deferred } from "./testdata/deferred.js";
 
-it("uses the real ApplicationSession lease, clears old actions and aborts in-flight directory work on account replacement", async () => {
+it("uses the real ApplicationSession through the account scope, clears old actions and aborts in-flight directory work on account replacement", async () => {
   const f = new AdministrationFixture();
   const pending = deferred<AdminUsers>();
   f.usersPending = pending.promise;
@@ -11,7 +11,7 @@ it("uses the real ApplicationSession lease, clears old actions and aborts in-fli
   await vi.waitFor(() => {
     expect(f.reads).toEqual(["a"]);
   });
-  const old = f.sync.administration.actions();
+  const old = f.administration.actions();
   f.usersPending = undefined;
   f.role = "user";
   await f.session.exchange("b");
@@ -42,10 +42,10 @@ it("ignores out-of-order status reads and removes admin affordances on fresh rol
   });
   const pending = deferred<AccountStatus>();
   f.statusPending = pending.promise;
-  const old = f.sync.administration.actions();
+  const old = f.administration.actions();
   const older = old.refresh();
   f.role = "user";
-  await f.sync.administration.actions().refresh();
+  await f.administration.actions().refresh();
   pending.resolve({ membership: { tier: "pro", vip: true }, authorization: { role: "admin" } });
   await older;
   await old.save("target", { tier: "pro", vip: true });
@@ -64,7 +64,7 @@ it("does not retry an uncertain membership write and reloads authoritative data 
     expect(f.views.at(-1)).toMatchObject({ kind: "ready" });
   });
   f.loseReply = true;
-  await f.sync.administration.actions().save("target", { tier: "premium", vip: true });
+  await f.administration.actions().save("target", { tier: "premium", vip: true });
   expect(f.writes).toEqual(["a:target"]);
   expect(f.views.at(-1)).toMatchObject({
     kind: "ready",
@@ -82,7 +82,7 @@ it("cannot publish an old write reply or reuse a rendered write action in a new 
   });
   const pending = deferred<AccountStatus>();
   f.writePending = pending.promise;
-  const old = f.sync.administration.actions();
+  const old = f.administration.actions();
   const writing = old.save("target", { tier: "pro", vip: true });
   await old.refresh();
   expect(f.reads).toEqual(["a"]);
@@ -106,7 +106,7 @@ it("keeps an uncertain write explicit when the authoritative reload also fails",
   });
   f.loseReply = true;
   f.statusPending = Promise.reject(new Error("server offline"));
-  await f.sync.administration.actions().save("target", { tier: "pro", vip: true });
+  await f.administration.actions().save("target", { tier: "pro", vip: true });
   expect(f.writes).toEqual(["a:target"]);
   expect(f.views.at(-1)).toEqual({
     kind: "failed",
@@ -124,7 +124,7 @@ it.each([false, true])(
     await vi.waitFor(() => {
       expect(f.views.at(-1)).toMatchObject({ kind: "ready" });
     });
-    const old = f.sync.administration.actions();
+    const old = f.administration.actions();
     const status = deferred<AccountStatus>();
     const users = deferred<AdminUsers>();
     f.statusPending = status.promise;
@@ -136,7 +136,7 @@ it.each([false, true])(
     const confirmationViews = f.views.length;
     await old.refresh();
     await old.next();
-    await f.sync.administration.actions().refresh();
+    await f.administration.actions().refresh();
     await old.save("target", { tier: "pro", vip: false });
     expect(f.reads).toEqual(["a", "a"]);
     expect(f.writes).toEqual(["a:target"]);
@@ -153,7 +153,7 @@ it.each([false, true])(
       busy: false,
       directory: { users: [{ membership: { tier: "premium", vip: true } }] },
     });
-    await f.sync.administration.actions().refresh();
+    await f.administration.actions().refresh();
     expect(f.reads).toEqual(["a", "a", "a"]);
     expect(f.writes).toEqual(["a:target"]);
   },
@@ -170,13 +170,13 @@ it.each(["a", "b"])(
     });
     const oldReply = deferred<AccountStatus>();
     f.writePending = oldReply.promise;
-    const oldWriting = f.sync.administration.actions().save("target", { tier: "pro", vip: true });
+    const oldWriting = f.administration.actions().save("target", { tier: "pro", vip: true });
     f.writePending = undefined;
     await f.session.exchange(account);
     await vi.waitFor(() => {
       expect(f.views.at(-1)).toMatchObject({ kind: "ready", busy: false });
     });
-    const current = f.sync.administration.actions();
+    const current = f.administration.actions();
     const confirmation = deferred<AccountStatus>();
     f.statusPending = confirmation.promise;
     const writing = current.save("target", { tier: "premium", vip: false });
