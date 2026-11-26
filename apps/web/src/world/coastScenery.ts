@@ -108,7 +108,8 @@ function createSea(plan: Readonly<LandscapePlan>): THREE.Mesh {
 
   sea.name = "biome-sea";
   sea.rotation.x = -Math.PI / 2;
-  sea.position.set(centerX, minY - 0.4, centerZ);
+  // Keep the sea below the lowest dune relief so it never floods the palm band.
+  sea.position.set(centerX, minY - 8, centerZ);
   sea.receiveShadow = true;
 
   return sea;

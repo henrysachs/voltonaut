@@ -1,4 +1,4 @@
-import { createRoute, TEST_LOOP } from "@voltonaut/engine";
+import { ALPINE_PASS, createRoute, TEST_LOOP } from "@voltonaut/engine";
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
@@ -100,6 +100,21 @@ it("joins both road shoulders across the whole elevation profile and has relief 
 
   expect(maxReliefM).toBeGreaterThan(8);
   expect(terrainPosition(plan, 0, 4)).toEqual(terrainPosition(plan, route.lengthM, 4));
+});
+
+it("pinches alpine terrain offsets at hairpins instead of crossing the previous leg", () => {
+  const alpineRoute = createRoute(ALPINE_PASS);
+  const alpinePlan = createLandscapePlan(alpineRoute, 42, false);
+  const cornerCenter = alpineRoute.worldPos(1500);
+  const corner = terrainPosition(alpinePlan, 1500, 100);
+  const straightCenter = alpineRoute.worldPos(100);
+  const straight = terrainPosition(alpinePlan, 100, 100);
+
+  expect(Math.hypot(corner.x - cornerCenter.x, corner.z - cornerCenter.z)).toBeLessThan(20);
+  expect(corner.y).toBeLessThanOrEqual(cornerCenter.y);
+  expect(Math.hypot(straight.x - straightCenter.x, straight.z - straightCenter.z)).toBeGreaterThan(
+    90,
+  );
 });
 
 it("builds upward-facing bounded terrain which supports the real road at climbs and the loop seam", () => {

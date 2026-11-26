@@ -114,8 +114,8 @@ export function environmentAt(
   });
 }
 
-export function parseWeatherKind(value: string | null): WeatherKind {
-  if (value === null) return "clear";
+export function parseWeatherKind(value: string | null): WeatherKind | undefined {
+  if (value === null) return undefined;
 
   switch (value) {
     case "clear":
@@ -125,7 +125,7 @@ export function parseWeatherKind(value: string | null): WeatherKind {
     case "storm":
       return value;
     default:
-      return "clear";
+      return undefined;
   }
 }
 
