@@ -157,7 +157,7 @@ export interface RiderView {
   readonly crankRad: () => number;
   /** Applies on the next update, after the deferred body exists (spec E7-05 AK8). */
   readonly setLook: (config: Readonly<AvatarConfig>) => void;
-  /** The look the rider wears or will wear on the next update. */
+  /** The look the rider body wears; a requested look counts only once it is applied. */
   readonly look: () => AvatarConfig;
 }
 
@@ -180,9 +180,8 @@ export function createRider(wheelCircM: number): RiderView {
 
   return {
     setLook(config) {
-      // An unchanged look (e.g. a guest's default) must not rebuild bike and body mid-ride.
-      if (sameLook(config, worn)) return;
-      worn = config;
+      // An unchanged look (e.g. a guest's default) must not change bike and body mid-ride.
+      if (sameLook(config, pending ?? worn)) return;
       pending = config;
     },
     look: () => worn,
@@ -206,6 +205,7 @@ export function createRider(wheelCircM: number): RiderView {
         // A look waits for the deferred body; applying it earlier would build the body in frame 1.
         if (pending !== undefined && rider.hasBody()) {
           rider.setLook(pending);
+          worn = pending;
           pending = undefined;
         }
       },

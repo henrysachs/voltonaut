@@ -1,10 +1,8 @@
 import { z } from "zod";
 
+import { ItemIdSchema } from "../avatarCatalog.js";
 import { VoltsBalanceSchema, VoltsDebitAmountSchema } from "../economy.js";
 import { LoadoutResponseSchema } from "./loadout.js";
-
-/** Catalog item id, same bounds as the avatar catalog. */
-const ItemIdSchema = z.string().trim().min(1).max(120);
 
 /** `default` items are owned by every account without a stored row (spec E7-02 AK3). */
 export const InventorySourceSchema = z.enum(["default", "shop"]);

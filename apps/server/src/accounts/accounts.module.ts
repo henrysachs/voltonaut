@@ -7,7 +7,7 @@ import { AccountDataService } from "./account-data.service.js";
 import { AccountsService } from "./accounts.service.js";
 import { AdminUsersController } from "./admin-users.controller.js";
 import { AdminGuard } from "./admin.guard.js";
-import { AdminOriginGuard } from "./admin-origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 import { AuthDirectory } from "../auth/auth-directory.js";
 
 /** Modules that own user data; account export and deletion read and purge through their ports. */
@@ -43,7 +43,7 @@ export class AccountsModule {
         AccountDataService,
         AuthDirectory,
         AdminGuard,
-        AdminOriginGuard,
+        ClientOriginGuard,
         { provide: ACCOUNTS_TABLES, useValue: tables },
       ],
     };

@@ -4,7 +4,7 @@ import type { DynamicModule } from "@nestjs/common";
 import { InventoryController } from "./inventory.controller.js";
 import { INVENTORY_TABLES, type InventoryTables } from "./inventory.schema.js";
 import { InventoryAccountDataService } from "./inventory.account-data.js";
-import { InventoryOriginGuard } from "./inventory-origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 import { LoadoutService } from "./inventory.loadout.js";
 import { InventoryService } from "./inventory.service.js";
 
@@ -24,7 +24,7 @@ export class InventoryModule {
       providers: [
         InventoryService,
         LoadoutService,
-        InventoryOriginGuard,
+        ClientOriginGuard,
         InventoryAccountDataService,
         { provide: INVENTORY_TABLES, useValue: tables },
       ],

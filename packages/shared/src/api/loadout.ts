@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import { AvatarConfigSchema } from "../avatarCatalog.js";
-
-/** Catalog item id, same bounds as the avatar catalog. */
-const ItemIdSchema = z.string().trim().min(1).max(120);
+import { AvatarConfigSchema, ItemIdSchema } from "../avatarCatalog.js";
 
 /** Stored equipment of an account; `updatedAt: null` is the default loadout without a row (spec E7-05 AK4). */
 export const LoadoutResponseSchema = z

@@ -5,7 +5,7 @@ import { ProgressAccountDataService } from "./progress.account-data.js";
 import { ProgressConsentController } from "./progress.consent.controller.js";
 import { ProgressConsentService } from "./progress.consent.service.js";
 import { ProgressController } from "./progress.controller.js";
-import { ProgressOriginGuard } from "./progress.origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 import {
   ProgressCheckpointRateLimitGuard,
   progressCheckpointThrottlerModule,
@@ -26,7 +26,7 @@ export class ProgressModule {
         ProgressConsentService,
         ProgressService,
         ProgressAccountDataService,
-        ProgressOriginGuard,
+        ClientOriginGuard,
         ProgressCheckpointRateLimitGuard,
         { provide: PROGRESS_TABLES, useValue: tables },
       ],

@@ -9,7 +9,7 @@ import { CurrentSession } from "../auth/auth-request.js";
 import type { SessionPrincipal } from "../auth/auth-request.js";
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe.js";
 import { ProgressConsentService } from "./progress.consent.service.js";
-import { ProgressOriginGuard } from "./progress.origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 
 @Controller("v1/me")
 export class ProgressConsentController {
@@ -27,7 +27,7 @@ export class ProgressConsentController {
 
   @Put("progress-consent")
   @Header("Cache-Control", "no-store")
-  @UseGuards(ProgressOriginGuard)
+  @UseGuards(ClientOriginGuard)
   public update(
     @CurrentSession() session: SessionPrincipal,
     @Body(new ZodValidationPipe(ProgressConsentUpdateSchema)) update: ProgressConsentUpdate,

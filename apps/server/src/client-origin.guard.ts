@@ -1,10 +1,10 @@
 import { Inject, Injectable, type CanActivate } from "@nestjs/common";
-import { ApiError, type ExecutionContextPort } from "../api-error.js";
-import { SERVER_CONFIG, type ServerConfig } from "../config.module.js";
+import { ApiError, type ExecutionContextPort } from "./api-error.js";
+import { SERVER_CONFIG, type ServerConfig } from "./config.module.js";
 
-/** Loadout writes come only from the configured client origin (spec E7-05 AK3). */
+/** Browser writes with a session come only from the configured client origin. */
 @Injectable()
-export class InventoryOriginGuard implements CanActivate {
+export class ClientOriginGuard implements CanActivate {
   constructor(@Inject(SERVER_CONFIG) private readonly config: ServerConfig) {}
 
   public canActivate(context: ExecutionContextPort): boolean {

@@ -19,7 +19,7 @@ Ein angemeldeter Fahrer rüstet in der Garage besessene Items und Farben aus. De
 ## Abnahmekriterien
 
 - [x] AK1 – Shared-Verträge sind strikt: `LoadoutResponseSchema` `{ loadout, updatedAt: string | null }`, `LoadoutUpdateSchema` `{ loadout }`. Unbekannte Felder und ungültige Farbformate werden abgewiesen. Neuer Fehlercode `not_owned`.
-- [x] AK2 – `decideLoadout(config, ownedItemIds)` in `packages/rules` lehnt jedes nicht besessene Item in jedem der sieben Slots ab (`not_owned` mit Item-IDs) und jede Farbe außerhalb der Slot-Palette (`invalid_colors`). Property-Test: Eine Konfiguration aus Katalogfarben ist genau dann gültig, wenn sie nur besessene Items enthält. Mutation in `packages/rules` bleibt grün.
+- [x] AK2 – `decideLoadout({ loadout, ownedItemIds })` in `packages/rules` lehnt jedes nicht besessene Item in jedem der sieben Slots ab (`not_owned` mit Item-IDs) und jede Farbe außerhalb der Slot-Palette (`invalid_colors`). Property-Test: Eine Konfiguration aus Katalogfarben ist genau dann gültig, wenn sie nur besessene Items enthält. Mutation in `packages/rules` bleibt grün.
 - [x] AK3 – `PUT /v1/me/loadout` mit nicht besessenem Item ergibt `409 not_owned` ohne Schreibzugriff, mit fremder Farbe `422`. Fehlende Session und falscher Origin werden abgewiesen. Ein gekauftes Item lässt sich direkt danach ausrüsten.
 - [x] AK4 – Ohne gespeicherte Ausrüstung liefert `GET /v1/me/loadout` `DEFAULT_AVATAR_CONFIG` mit `updatedAt: null`. Die Migration lässt bestehende Konten, Inventar und Volts unverändert (Migrationstest).
 - [x] AK5 – Der Kontoexport enthält die Ausrüstung (`schemaVersion` 4). Die Kontolöschung entfernt sie. Späte Schreibversuche nach der Löschung scheitern an den Triggern.
@@ -32,10 +32,10 @@ Ein angemeldeter Fahrer rüstet in der Garage besessene Items und Farben aus. De
 
 | AK   | Ebene                       | Datei                                                                                                |
 | ---- | --------------------------- | ---------------------------------------------------------------------------------------------------- |
-| 1    | Contract                    | `packages/shared/src/api/shop.test.ts`                                                               |
+| 1    | Contract                    | `packages/shared/src/api/loadout.test.ts`                                                            |
 | 2    | Unit, Property, Mutation    | `packages/rules/src/loadout.test.ts`, `loadout.property.test.ts`                                     |
 | 3–5  | Nest-Integration, Migration | `apps/server/src/inventory/inventory.loadout.test.ts`, `accounts/account-data.test.ts`, `database/*` |
-| 6    | Unit                        | `apps/web/src/ui/garage/*.test.ts`, `apps/web/src/sync/garageShop.test.ts`                           |
+| 6    | Unit                        | `apps/web/src/ui/garage/*.test.ts`, `apps/web/src/sync/garageLoadout.test.ts`                        |
 | 7, 9 | E2E                         | `apps/web/e2e/garage-loadout.spec.ts`                                                                |
 | 8    | E2E, Unit                   | `apps/web/e2e/garage-loadout.spec.ts`, `apps/web/src/world/render-link.test.ts`                      |
 
@@ -54,6 +54,8 @@ Kein Showroom, keine Orbit-Kamera, kein Fotomodus (#122). Keine Blender-Slot-Ass
 - Mutation `packages/rules`: `loadout.ts` und `avatarPalettes.ts` je 100 % (Lauf mit `--force`; der inkrementelle Cache meldete zuvor veraltete Überlebende).
 - E2E `garage-loadout.spec.ts`: Der zweite Browser-Kontext lief beim ersten Versuch ins Standard-Timeout für `data-look`, solange der erste Tab parallel per Software-GPU renderte. Der Test schließt den ersten Tab jetzt vor dem zweiten Browser, wie im echten Gebrauch; Timeouts sind unverändert. Danach zweimal grün.
 - Review (zweiter Agent): Ein früh eintreffender Look baute den aufgeschobenen Fahrerkörper schon im ersten Frame (Rückschritt zu E4-10). Der Look wartet jetzt auf den Körper; `rider.look.test.ts` wird ohne die Korrektur rot. Behoben sind außerdem: Ein fehlgeschlagener Speicherversuch verwirft die Vorschau nicht mehr, und „Ausrüsten“ speichert die Vorschau über mehrere Slots, wenn alle Items besessen sind.
+- Früherer Befund „404 auf `GET /v1/me/loadout` verliert ‚Gekauft.‘“ ließ sich im unabhängigen Review nicht reproduzieren (`garage-purchase.spec.ts` ohne Loadout-Mock grün) und ist gestrichen. Nachtrag: Er tritt nur bei einem Doppelklick auf „Ja, … kaufen“ auf und ist als #142 behoben (nächster Punkt).
+- Review (zweiter Agent, Web): Ein fehlgeschlagener Shop-Lesevorgang löste über jedes Rendern einen erneuten Versuch aus, gemessen 3107 GETs in 3 s. Der erneute Versuch hängt jetzt nur an einer Auswahl durch den Fahrer; `garage-loadout.spec.ts` zählt die Anfragen und wird mit dem alten Pfad rot. Behoben sind außerdem: Abmelden setzt die Garage auf die Standardausrüstung zurück, „Ausrüsten“ und „Vorschau verwerfen“ geben den Fokus an den Hinweis weiter, `data-look` meldet erst die tatsächlich angelegte Ausrüstung (`rider.look.test.ts` prüft die Helmfarbe am Körper und wird ohne `setLook` rot), und der abgelehnte Speicherversuch prüft `GET`, `PUT`, `GET` samt neuem Serverstand.
 - Befund #142 (behoben): Ein Doppelklick auf „Ja, … kaufen“ traf mit dem zweiten Klick den nachgerückten Knopf „Vorschau verwerfen“, bei geladener Ausrüstung womöglich „Ausrüsten“. Die Bestätigung bleibt jetzt bis zur Serverantwort gesperrt stehen; zwei E2E-Tests sichern das ab, einer war ohne die Korrektur rot.
 - Lastbefund (26.11.2026): `ride-menu-dismissal.spec.ts` („outside dismissal …“, Distanz +2 m im Standard-Timeout) war auf dem Branch in 7 Dateiläufen zweimal rot, auf `main` in 10 Läufen nie. Mitigation: Der Fahrer ignoriert einen unveränderten Look, sodass Gäste in der Fahrt keinen Look-Wechsel mehr auslösen. Danach 8 von 8 grün. Die Ursache ist damit nicht bewiesen: Ein Unit-Test zeigte, dass ein gleicher Look keine Meshes neu baut. Timeouts und Assertions sind unverändert.
 - Nicht geprüft: echte GPU-Bildrate mit wechselnder Ausrüstung, Abnahme durch Henry mit echten Volts.

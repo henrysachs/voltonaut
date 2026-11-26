@@ -22,7 +22,7 @@ import { CurrentSession, type SessionPrincipal } from "../auth/auth-request.js";
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe.js";
 import { AccountsService } from "./accounts.service.js";
 import { AdminGuard } from "./admin.guard.js";
-import { AdminOriginGuard } from "./admin-origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 
 @Controller("v1/admin/users")
 @UseGuards(AdminGuard)
@@ -39,7 +39,7 @@ export class AdminUsersController {
 
   @Patch(":userId/membership")
   @Header("Cache-Control", "no-store")
-  @UseGuards(AdminOriginGuard)
+  @UseGuards(ClientOriginGuard)
   public update(
     @CurrentSession() session: SessionPrincipal,
     @Param("userId", new ZodValidationPipe(AccountUserIdSchema)) userId: string,

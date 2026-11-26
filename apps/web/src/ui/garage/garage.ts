@@ -1,13 +1,13 @@
-import { avatarItemsForSlot, avatarColorOptions } from "@voltonaut/rules";
+import { DEFAULT_AVATAR_CONFIG, avatarItemsForSlot, avatarColorOptions } from "@voltonaut/rules";
 
 import type { GarageLoadout, GarageLoadoutView } from "../../sync/garageLoadout.js";
 import type { GarageShopView } from "../../sync/garageShop.js";
 import { GarageEquip } from "./equip.js";
 import { equipOffer, ownedItemIds, sameLoadout } from "./equipOffer.js";
-import { colorChoices, garageButton as button, itemRows, slotButtons } from "./garageItems.js";
+import { colorChoices, itemRows, slotButtons } from "./garageItems.js";
 import { itemUnlockText, priceText, rarityText } from "./garageText.js";
+import { GaragePreviewPanel } from "./previewPanel.js";
 import { GaragePurchase, type GarageShopSource } from "./purchase.js";
-import { createGaragePreviewView, type GaragePreviewView } from "./preview.js";
 import {
   createInitialGarageState,
   garageReducer,
@@ -25,8 +25,7 @@ class GaragePanel {
   readonly #slotHost = document.createElement("div");
   readonly #browseSection = document.createElement("section");
   readonly #itemHost = document.createElement("ul");
-  readonly #previewHost = document.createElement("div");
-  readonly #previewNote = document.createElement("p");
+  readonly #preview: GaragePreviewPanel;
   readonly #itemName = document.createElement("h3");
   readonly #itemMeta = document.createElement("p");
   readonly #price = document.createElement("p");
@@ -45,13 +44,8 @@ class GaragePanel {
   #shopView: GarageShopView = { kind: "guest" };
   #loadoutView: GarageLoadoutView = { kind: "guest" };
   #account: GarageAccountSource | undefined;
-  readonly #rotateLeft = button("Links drehen");
-  readonly #rotateRight = button("Rechts drehen");
-  readonly #rotateToggle = button("Drehung pausieren");
   readonly #root = document.createElement("div");
   #state: GarageState;
-  #preview: GaragePreviewView | null = null;
-  #autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The panel owns the host's menu children.
@@ -59,23 +53,11 @@ class GaragePanel {
     wheelCircM: number,
   ) {
     this.#state = createInitialGarageState();
+    this.#preview = new GaragePreviewPanel(wheelCircM);
     this.#build();
-    this.#preview = createGaragePreviewView(this.#previewHost, wheelCircM);
 
-    if (this.#preview === null) {
-      this.#state = garageReducer(this.#state, { kind: "previewUnavailable" });
-    } else {
-      this.#preview.setLook(this.#state.config);
-      this.#preview.setAutoRotate(this.#autoRotate);
-    }
-
-    this.#rotateLeft.addEventListener("click", () => this.#preview?.rotateBy(-Math.PI / 6));
-    this.#rotateRight.addEventListener("click", () => this.#preview?.rotateBy(Math.PI / 6));
-    this.#rotateToggle.addEventListener("click", () => {
-      this.#autoRotate = !this.#autoRotate;
-      this.#preview?.setAutoRotate(this.#autoRotate);
-      this.#renderControls();
-    });
+    if (this.#preview.available) this.#preview.setLook(this.#state.config);
+    else this.#state = garageReducer(this.#state, { kind: "previewUnavailable" });
   }
 
   attachAccount(source: GarageAccountSource): void {
@@ -88,11 +70,19 @@ class GaragePanel {
     source.loadout.subscribe((view) => {
       this.#loadoutView = view;
 
-      // Only a changed confirmed equipment replaces the preview; a failed save keeps it.
-      if (view.kind === "ready" && !sameLoadout(view.loadout, this.#state.equipped))
-        this.#dispatch({ kind: "loadoutConfirmed", loadout: view.loadout });
+      // The garage follows the equipment the ride wears (`wornLoadout`); a failed save keeps the preview.
+      const worn = view.kind === "ready" ? view.loadout : DEFAULT_AVATAR_CONFIG;
+
+      if (view.kind !== "loading" && !sameLoadout(worn, this.#state.equipped))
+        this.#dispatch({ kind: "loadoutConfirmed", loadout: worn });
       else this.#render();
     });
+  }
+
+  /** A rider selection after a failed shop read is the rider asking for the shop again. */
+  #select(action: Readonly<GarageAction>): void {
+    if (this.#shopView.kind === "failed") void this.#account?.shop.retry();
+    this.#dispatch(action);
   }
 
   mount(): void {
@@ -122,30 +112,8 @@ class GaragePanel {
 
     const body = document.createElement("div");
     body.className = "garage__body";
-    body.append(this.#buildPreviewSection(), this.#buildBrowseSection());
+    body.append(this.#preview.section, this.#buildBrowseSection());
     this.#root.append(heading, intro, status, this.#slotHost, body, this.#buildDetails());
-  }
-
-  #buildPreviewSection(): HTMLElement {
-    const section = document.createElement("section");
-    section.className = "garage__preview";
-    section.setAttribute("aria-labelledby", "garage-preview-title");
-
-    const title = document.createElement("h3");
-    title.id = "garage-preview-title";
-    title.textContent = "Vorschau";
-
-    this.#previewHost.className = "garage__preview-host";
-    this.#previewHost.dataset["testid"] = "garage-preview";
-    this.#previewHost.setAttribute("aria-live", "polite");
-    this.#previewNote.className = "garage__preview-note";
-
-    const controls = document.createElement("div");
-    controls.className = "garage__preview-controls";
-    controls.append(this.#rotateLeft, this.#rotateRight, this.#rotateToggle);
-    section.append(title, this.#previewHost, this.#previewNote, controls);
-
-    return section;
   }
 
   #buildBrowseSection(): HTMLElement {
@@ -193,7 +161,7 @@ class GaragePanel {
 
   #dispatch(action: Readonly<GarageAction>): void {
     this.#state = garageReducer(this.#state, action);
-    this.#preview?.setLook(this.#state.config);
+    this.#preview.setLook(this.#state.config);
     this.#render();
   }
 
@@ -204,7 +172,7 @@ class GaragePanel {
     this.#renderSlots();
     this.#renderItems();
     this.#renderDetails();
-    this.#renderControls();
+    this.#preview.render(this.#state.kind);
 
     if (focusKey !== undefined) {
       for (const element of this.#root.querySelectorAll<HTMLElement>("[data-garage-focus]")) {
@@ -219,7 +187,7 @@ class GaragePanel {
   #renderSlots(): void {
     this.#slotHost.replaceChildren(
       ...slotButtons(this.#state.selection.slot, (slot) => {
-        this.#dispatch({ kind: "selectSlot", slot });
+        this.#select({ kind: "selectSlot", slot });
       }),
     );
   }
@@ -232,7 +200,7 @@ class GaragePanel {
         owned: ownedItemIds(this.#shopView),
         equipped: this.#state.equipped,
         select: (item) => {
-          this.#dispatch({ kind: "selectItem", slot: item.slot, item });
+          this.#select({ kind: "selectItem", slot: item.slot, item });
         },
       }),
     );
@@ -266,20 +234,7 @@ class GaragePanel {
         },
       }),
     );
-    this.#equip.render(equipOffer(this.#state, this.#shopView, this.#loadoutView), true);
-  }
-
-  #renderControls(): void {
-    const available = this.#state.kind === "preview";
-    this.#previewHost.dataset["previewState"] = this.#state.kind;
-    this.#previewNote.textContent = available
-      ? "Provisorische Fahrer- und Radgeometrie. Finale Blender-Assets ersetzen sie später."
-      : "3D nicht verfügbar. Item-Auswahl, Farben und Informationen bleiben nutzbar.";
-    this.#rotateLeft.disabled = !available;
-    this.#rotateRight.disabled = !available;
-    this.#rotateToggle.disabled = !available;
-    this.#rotateToggle.textContent = this.#autoRotate ? "Drehung pausieren" : "Drehung starten";
-    this.#rotateToggle.setAttribute("aria-pressed", String(this.#autoRotate));
+    this.#equip.render(equipOffer(this.#state, this.#shopView, this.#loadoutView));
   }
 }
 

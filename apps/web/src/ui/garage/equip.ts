@@ -17,18 +17,40 @@ export class GarageEquip {
     this.#hint.className = "garage__purchase-hint";
     this.#hint.dataset["testid"] = "garage-equip-hint";
     this.#hint.setAttribute("aria-live", "polite");
+    this.#hint.tabIndex = -1;
     this.#equip.addEventListener("click", handlers.equip);
     this.#discard.addEventListener("click", handlers.discard);
     this.root.append(this.#equip, this.#discard, this.#hint);
   }
 
-  render(offer: Readonly<EquipOffer>, visible: boolean): void {
-    this.#equip.hidden = !offer.visible || !visible;
+  render(offer: Readonly<EquipOffer>): void {
+    const focused =
+      document.activeElement === this.#equip
+        ? "equip"
+        : document.activeElement === this.#discard
+          ? "discard"
+          : "none";
+
+    this.#equip.hidden = !offer.visible;
     this.#equip.textContent = offer.equipText;
     this.#equip.disabled = !offer.equipEnabled;
     // Only next to „Ausrüsten“: a lone discard button would sit where the purchase flow just was.
-    this.#discard.hidden = !offer.visible || !visible || !offer.discardEnabled;
-    this.#hint.hidden = !visible || offer.hint === "";
+    this.#discard.hidden = !offer.visible || !offer.discardEnabled;
+    this.#hint.hidden = offer.hint === "";
     this.#hint.textContent = offer.hint;
+
+    // A save disables „Ausrüsten“ and a discard hides its button: keep keyboard users in place.
+    const equipUsable = !this.#equip.hidden && !this.#equip.disabled;
+
+    const lost =
+      (focused === "equip" && !equipUsable) || (focused === "discard" && this.#discard.hidden);
+
+    if (!lost) return;
+
+    if (equipUsable) this.#equip.focus();
+    else if (this.#discard.hidden) {
+      this.#hint.hidden = false;
+      this.#hint.focus();
+    } else this.#discard.focus();
   }
 }

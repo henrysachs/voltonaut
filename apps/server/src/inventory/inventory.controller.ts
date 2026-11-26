@@ -22,7 +22,7 @@ import {
 import { CurrentSession } from "../auth/auth-request.js";
 import type { SessionPrincipal } from "../auth/auth-request.js";
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe.js";
-import { InventoryOriginGuard } from "./inventory-origin.guard.js";
+import { ClientOriginGuard } from "../client-origin.guard.js";
 import { LoadoutService } from "./inventory.loadout.js";
 import { InventoryService } from "./inventory.service.js";
 
@@ -42,7 +42,7 @@ export class InventoryController {
   }
 
   @Put("me/loadout")
-  @UseGuards(InventoryOriginGuard)
+  @UseGuards(ClientOriginGuard)
   @Header("Cache-Control", "no-store")
   public saveLoadout(
     @CurrentSession() session: SessionPrincipal,
