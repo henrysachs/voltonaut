@@ -7,22 +7,41 @@ const ROOT = resolve(import.meta.dirname, "../../../..");
 const DECISIONS = join(ROOT, "docs/decisions");
 
 /**
- * The decision state an ADR status text starts with. The rest of a status (dates, scope, open
- * pilots) is free text and is not compared.
- * - "Vorgeschlagen …": proposed, Henry's approval pending
- * - "Ersetzt …" / "Abgelöst …" (also "⛔ Ersetzt …"): superseded
- * - anything else ("Angenommen …", "Gewählt …", "Umsetzung …", "Von Henry … freigegeben"): decided
+ * The decision state an ADR status text starts with (after leading symbols such as "⛔"). The rest
+ * of a status (dates, scope, open pilots) is free text and is not compared. The prefixes are the
+ * ones the 34 ADRs and their index rows used on 2026-11-27; a new wording must be added here
+ * deliberately, so an unknown prefix fails instead of silently counting as decided.
  */
 type Decision = "proposed" | "superseded" | "decided";
 
-function decisionOf(status: string): Decision {
-  const text = status.replace(/^[^\p{L}]+/u, "").toLowerCase();
+const PREFIXES: readonly (readonly [prefix: string, decision: Decision])[] = [
+  ["Vorgeschlagen", "proposed"],
+  ["Ersetzt", "superseded"],
+  ["Abgelöst", "superseded"],
+  ["Angenommen", "decided"],
+  // Also matches "Gewählte Form …", "Gewählte Softwareform …".
+  ["Gewählt", "decided"],
+  ["Für E10-02 gewählt", "decided"],
+  ["Umsetzung", "decided"],
+  ["Von Henry", "decided"],
+  // Index rows only: they summarize the decided ADR with its delivery state.
+  ["Hosting angenommen", "decided"],
+  ["App und Pilot-Policy eingerichtet", "decided"],
+  ["Softwaregeprüft", "decided"],
+];
 
-  if (text.startsWith("vorgeschlagen")) return "proposed";
+function decisionOf(status: string): Decision | undefined {
+  const text = status.replace(/^[^\p{L}]+/u, "");
 
-  if (text.startsWith("ersetzt") || text.startsWith("abgelöst")) return "superseded";
+  return PREFIXES.find(([prefix]) => text.startsWith(prefix))?.[1];
+}
 
-  return "decided";
+function unknownPrefix(where: string, status: string): readonly string[] {
+  return decisionOf(status) === undefined
+    ? [
+        `${where}: status "${status}" starts with no known prefix (${PREFIXES.map(([prefix]) => prefix).join(", ")}); add it to PREFIXES in apps/web/src/consistency/adr-index.test.ts with its decision`,
+      ]
+    : [];
 }
 
 interface Adr {
@@ -105,6 +124,7 @@ function numberingFindings(): readonly string[] {
     }
 
     if (adr.status === undefined) findings.push(`${adr.file}: no "Status:" line`);
+    else findings.push(...unknownPrefix(adr.file, adr.status));
   }
 
   return findings;
@@ -136,11 +156,15 @@ function indexStatusFindings(): readonly string[] {
   const findings: string[] = [];
 
   for (const row of INDEX) {
-    const status = ADRS.find((adr) => adr.file === row.file)?.status;
+    findings.push(...unknownPrefix(`README.md row ${row.number}`, row.status));
 
-    if (status !== undefined && decisionOf(status) !== decisionOf(row.status)) {
+    const status = ADRS.find((adr) => adr.file === row.file)?.status;
+    const indexed = decisionOf(row.status);
+    const filed = status === undefined ? undefined : decisionOf(status);
+
+    if (indexed !== undefined && filed !== undefined && indexed !== filed) {
       findings.push(
-        `README.md row ${row.number} says ${decisionOf(row.status)} ("${row.status}"), ${row.file} says ${decisionOf(status)} ("${status}")`,
+        `README.md row ${row.number} says ${indexed} ("${row.status}"), ${row.file} says ${filed} ("${status ?? ""}")`,
       );
     }
   }
@@ -157,7 +181,9 @@ function mentionFindings(): readonly string[] {
   const decisions = new Map<string, Decision>();
 
   for (const adr of ADRS) {
-    if (adr.status !== undefined) decisions.set(adr.number, decisionOf(adr.status));
+    const decision = adr.status === undefined ? undefined : decisionOf(adr.status);
+
+    if (decision !== undefined) decisions.set(adr.number, decision);
   }
 
   const linked = /\[ADR-(\d{3})\]\([^)]*\)[^()\n]*\((vorgeschlagen|angenommen)/gu;
@@ -210,4 +236,13 @@ it("keeps the index status in line with each ADR's Status line", () => {
 
 it("keeps approval mentions in the other docs in line with each ADR's Status line", () => {
   expect(mentionFindings()).toEqual([]);
+});
+
+it("maps the known status prefixes and rejects an unknown one", () => {
+  expect(decisionOf("⛔ Ersetzt durch ADR-005")).toBe("superseded");
+  expect(decisionOf("Vorgeschlagen. Henrys Freigabe steht aus.")).toBe("proposed");
+  expect(decisionOf("Gewählte Form für Henrys Auftrag")).toBe("decided");
+  expect(unknownPrefix("probe", "Verworfen am 2026-12-01")).toEqual([
+    expect.stringMatching(/^probe: status "Verworfen am 2026-12-01" starts with no known prefix/u),
+  ]);
 });
