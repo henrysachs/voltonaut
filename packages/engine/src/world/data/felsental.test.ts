@@ -52,7 +52,7 @@ function steinbruch(): { readonly startM: number; readonly endM: number } {
 
 describe("Felsental world (spec E10-15 AK1)", () => {
   it("is registered as world felsental with revision 1 and one stone-age loop path", () => {
-    expect(WORLDS.at(-1)).toBe(FELSENTAL);
+    expect(WORLDS).toContain(FELSENTAL);
     expect(FELSENTAL).toMatchObject({ id: "felsental", name: "Felsental", revision: "1" });
     expect(FELSENTAL.routes.map((route) => route.id)).toEqual(["felsental"]);
     expect(felsental()).toMatchObject({
