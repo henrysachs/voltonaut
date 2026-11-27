@@ -1,6 +1,6 @@
 # ADR-026 – Konfigurierbare OIDC-Provider, Cloudflare Access ist einer davon
 
-**Status:** Vorgeschlagen. Freigabe durch Henry ausstehend (ADR-013 wird erweitert). Spec: [E5-11](../specs/E5-11-multiple-oidc-providers.md). Issue: #46. Kontoverknüpfung (Punkt 7) auf Henrys ausdrückliche Anforderung in #91 ergänzt.
+**Status:** Angenommen (Henrys Freigabe im Chat am 2026-11-27). ADR-013 wird erweitert. Spec: [E5-11](../specs/E5-11-multiple-oidc-providers.md). Issue: #46. Kontoverknüpfung (Punkt 7) auf Henrys ausdrückliche Anforderung in #91 ergänzt.
 
 ## Kontext
 

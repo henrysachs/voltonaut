@@ -1,6 +1,6 @@
 # ADR-030 – WebGPU ohne zweites Render-Backend, Ultra zurückgestellt
 
-- **Status:** Vorgeschlagen für [Issue #79](https://github.com/henrysachs/voltonaut/issues/79). Henrys Freigabe steht aus. Die Entscheidung gilt für den aktuellen Fahr-Renderpfad, nicht für einen späteren WebGPU-Umbau.
+- **Status:** Angenommen (Henrys Freigabe im Chat am 2026-11-27) für [Issue #79](https://github.com/henrysachs/voltonaut/issues/79). Die Entscheidung gilt für den aktuellen Fahr-Renderpfad, nicht für einen späteren WebGPU-Umbau.
 - **Bezug:** ADR-002, ADR-008, ADR-014, ADR-019, Spec [E10-10](../specs/E10-10-webgpu-evaluation.md).
 
 ## Kontext

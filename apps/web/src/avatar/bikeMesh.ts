@@ -175,21 +175,37 @@ export function placed(position: Point3, rotation: Point3 = [0, 0, 0]): THREE.Ma
   );
 }
 
-function copyAttribute(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Writes into the merged buffer owned by the caller.
-  target: Float32Array,
+const MIN_DOUBLE_AREA_M2 = 1e-12;
+
+/**
+ * Whether a triangle covers any area. Zero-area triangles (sweep poles, collinear rim points)
+ * get zero-length normals; the few sliver pixels they still rasterise turn NaN, and the night
+ * bloom spreads one NaN pixel into a white blob (#151).
+ */
+export function hasArea(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three buffer attributes are mutable library objects that are only read here.
-  source: Readonly<THREE.BufferAttribute | THREE.InterleavedBufferAttribute>,
-  offset: number,
-): void {
-  for (let vertex = 0; vertex < source.count; vertex += 1) {
-    target[(offset + vertex) * 3] = source.getX(vertex);
-    target[(offset + vertex) * 3 + 1] = source.getY(vertex);
-    target[(offset + vertex) * 3 + 2] = source.getZ(vertex);
-  }
+  position: Readonly<THREE.BufferAttribute | THREE.InterleavedBufferAttribute>,
+  a: number,
+  b: number,
+  c: number,
+): boolean {
+  const abX = position.getX(b) - position.getX(a);
+  const abY = position.getY(b) - position.getY(a);
+  const abZ = position.getZ(b) - position.getZ(a);
+  const acX = position.getX(c) - position.getX(a);
+  const acY = position.getY(c) - position.getY(a);
+  const acZ = position.getZ(c) - position.getZ(a);
+
+  const crossLength = Math.hypot(
+    abY * acZ - abZ * acY,
+    abZ * acX - abX * acZ,
+    abX * acY - abY * acX,
+  );
+
+  return crossLength > MIN_DOUBLE_AREA_M2;
 }
 
-/** Merges geometries into one non-indexed position/normal buffer so a material costs one draw call. */
+/** Merges geometries into one non-indexed position/normal buffer (one draw call per material), dropping zero-area triangles (hasArea). */
 export function mergeGeometries(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The merge consumes and disposes the temporary Three geometries it is given.
   geometries: readonly THREE.BufferGeometry[],
@@ -199,28 +215,31 @@ export function mergeGeometries(
   for (const geometry of geometries)
     flat.push(geometry.index === null ? geometry : geometry.toNonIndexed());
 
-  let vertexCount = 0;
-
-  for (const geometry of flat) vertexCount += geometry.getAttribute("position").count;
-
-  const positions = new Float32Array(vertexCount * 3);
-  const normals = new Float32Array(vertexCount * 3);
-  let offset = 0;
+  const positions: number[] = [];
+  const normals: number[] = [];
 
   for (const geometry of flat) {
     if (!geometry.hasAttribute("normal")) geometry.computeVertexNormals();
 
-    copyAttribute(positions, geometry.getAttribute("position"), offset);
-    copyAttribute(normals, geometry.getAttribute("normal"), offset);
-    offset += geometry.getAttribute("position").count;
+    const position = geometry.getAttribute("position");
+    const normal = geometry.getAttribute("normal");
+
+    for (let first = 0; first + 2 < position.count; first += 3) {
+      if (!hasArea(position, first, first + 1, first + 2)) continue;
+
+      for (let vertex = first; vertex < first + 3; vertex += 1) {
+        positions.push(position.getX(vertex), position.getY(vertex), position.getZ(vertex));
+        normals.push(normal.getX(vertex), normal.getY(vertex), normal.getZ(vertex));
+      }
+    }
   }
 
   for (const geometry of new Set([...flat, ...geometries])) geometry.dispose();
 
   const merged = new THREE.BufferGeometry();
 
-  merged.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  merged.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  merged.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  merged.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
   merged.computeBoundingSphere();
 
   return merged;

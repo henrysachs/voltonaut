@@ -1,5 +1,10 @@
 import type { Biome } from "./biome.js";
-import { createAlpineScenery, createCoastScenery, createNightCityScenery } from "./biomeScenery.js";
+import {
+  createAlpineScenery,
+  createCoastScenery,
+  createNightCityScenery,
+  createStoneAgeScenery,
+} from "./biomeScenery.js";
 import { planBillboards } from "./billboard-plan.js";
 import { createBillboards } from "./billboards.js";
 import type { DressingGroup } from "./dressing-group.js";
@@ -20,6 +25,7 @@ const DRESSING: Readonly<Record<Biome["kind"], BiomeDressing>> = {
   alpine: (plan) => [createAlpineScenery(plan)],
   "night-city": (plan) => [createNightCityScenery(plan)],
   vineyard: (plan) => [createVineyardScenery(plan)],
+  "stone-age": (plan) => [createStoneAgeScenery(plan)],
 };
 
 /** Lake, plants and props of one biome (#75) on top of the shared world terrain. */

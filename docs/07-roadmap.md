@@ -212,6 +212,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 ## E10 – Mehr Spiel: Inhalte & Extras
 
 - [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
+  - [ ] Nachtstadt als Cyberpunk-Megacity ([E10-15](specs/E10-15-night-city-megacity.md), #151): Türme mit Fenstern, Neon mit Bloom, Laternenlicht auf der Fahrbahn, Tag und Nacht unterscheidbar. Softwaregeprüft; Optik und ADR-035 am 2026-11-27 von Henry freigegeben; Hardware (#86) offen.
 - [ ] Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen ([ADR-033](decisions/ADR-033-connected-worlds.md), #150)
   - [x] Schritt 1 ([E10-11](specs/E10-11-connected-world.md)): Welt-Datentypen mit Knoten, Abschnitten, Wegen und Regionen in `packages/engine`; Höhenstetigkeit an Knoten und Krümmungsgrenze je Sehne geprüft; bestehende Strecken sind je eine Welt mit einem Weg, Golden-Fahrten bit-identisch. Gemergt mit #158.
   - [ ] Schritt 2 ([E10-12](specs/E10-12-world-heightfield.md)): Höhenraster der Welt in 256-m-Kacheln ersetzt den Geländestreifen, auch für Küste, Alpenpass und Nachtstadt (#138); Korridor-Einebnung mit tieferer Straße als Gewinner; exakter Abstandstest für alle sechs Routen (≥ 5 cm, gemessen 6 cm). Softwaregeprüft, CI und Review offen; Render-Budget auf echter Hardware offen (#86).
@@ -219,12 +220,14 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
   - [ ] Schritt 3 ([E10-14](specs/E10-14-voltonaut-world.md), #171): Welt `voltonaut` mit Wald, Küste und Nachtstadt als Regionen, Übergangsstraßen und 23-km-Voltonaut-Tour; Regionsfarben überblenden, Ausstattung je Region nur in Sichtweite, Nebenstraßen gezeichnet. Softwaregeprüft, CI und Review offen; Atmosphäre je Region und Alpenpass folgen.
   - [ ] Region Weinberge ([E10-17](specs/E10-17-region-weinberge.md), #146): Weg „Weinberg-Intervalle“ (12,4 km, neun Rampen mit 3,5–6,8 %, KOM-Segment) als Region zwischen Wald und Küste in Welt `voltonaut` Revision `2`; Rebzeilen entlang der Höhenlinien, Zypressen und Steinhäuser instanziert, Server rechnet Revision `2` nach, Revision `1` bleibt nachrechenbar. Softwaregeprüft, CI und Review offen; Hardware offen; Atmosphäre je Region folgt.
   - [ ] Schritt 5: Abbiegen und Mini-Map (#85)
+- [ ] Themenwelten (#159): originale Fantasiewelten als eigene Welten nach ADR-033 §1
+  - [ ] [E10-16](specs/E10-16-felsental-world.md): Steinzeit-Welt `felsental` mit 9-km-Talrunde, Steinbruch-KOM (2 km, 4–7 %), Felsenhäusern, Palmen und Farnen, Dino-Statuen und vier glühenden Vulkanen; der Server rechnet Weltwege nach. Implementiert; AK1–AK8 durch Tests und Sim-Messläufe belegt, Rundenspitze 122 Draw Calls / 277 k Dreiecke (SwiftShader); Dom, Tunnel und Tür jedes Hauses bestehen die Bodeninvariante aus E10-15 als stehende Teile. CI und Review am neuen Head von PR #182 offen. Offen sind außerdem Henrys Optikfreigabe der Screenshots, das Render-Budget auf echter Hardware (#86) und die Bereitstellung. Dark-Fantasy (#179), Wüstenplanet (#180) und Steinzeit-Rad (#181) folgen in eigenen Issues; die Neon-Megacity geht in #151 auf.
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
 - [ ] Optionale ERG-Workouts (nutzt `ftpW`)
 - [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
-- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung vorgeschlagen: kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis und Freigabe offen.
+- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung angenommen (2026-11-27): kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis offen.
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Installierbare PWA ([E10-09](specs/E10-09-installable-pwa.md), [Issue #88](https://github.com/henrysachs/voltonaut/issues/88))
   - [x] Manifest, Icons, versionierter App-Shell-Cache, kontrolliertes Update und Menü „App" am gebauten Artefakt softwaregeprüft (Offline-Reload, kein Cache für API-Daten).

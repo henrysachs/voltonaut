@@ -64,6 +64,7 @@ it("keeps TEST_ROUTES keyed by route id in shipping order", () => {
     "voltonaut-coast",
     "voltonaut-night-city",
     "voltonaut-vineyard",
+    "felsental",
   ]);
 });
 

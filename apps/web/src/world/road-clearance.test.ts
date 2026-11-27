@@ -1,4 +1,11 @@
-import { createRoute, KOM_CLIMB, TEST_ROUTES, WORLDS, type EngineRoute } from "@voltonaut/engine";
+import {
+  createRoute,
+  KOM_CLIMB,
+  TEST_ROUTES,
+  VOLTONAUT_REVISION_2,
+  WORLDS,
+  type EngineRoute,
+} from "@voltonaut/engine";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { heightAt, type Heightfield } from "./heightfield.js";
@@ -113,6 +120,7 @@ describe("road clearance (AK4)", () => {
     expect([...new Set(shipped.map((entry) => entry.route.id))].toSorted()).toEqual(
       Object.keys(TEST_ROUTES).toSorted(),
     );
+    expect(shipped.map((entry) => entry.id)).toContain("felsental");
   });
 
   it("keeps the terrain under a tight climbing hairpin", () => {
@@ -146,7 +154,7 @@ describe("road clearance (AK4)", () => {
 it("checks the vineyard path in the raster of voltonaut revision 2 (#146)", () => {
   const entry = shippedRoute("voltonaut-vineyard");
 
-  expect(entry.world).toBe(worldViews.at(-1));
+  expect(entry.world).toBe(worldViews[WORLDS.indexOf(VOLTONAUT_REVISION_2)]);
   expect(routesOf(entry.world)).toContain(entry);
   expect(entry.route.lengthM).toBeGreaterThan(12_000);
 });

@@ -32,6 +32,14 @@ it("falls back to the test loop for an invalid route value", () => {
   expect(selection.worldPath.pathId).toBe("test-loop");
 });
 
+it("records Felsental in its own world (spec E10-16 AK3)", () => {
+  expect(selectRouteFromUrl(new URLSearchParams("route=felsental")).worldPath).toEqual({
+    worldId: "felsental",
+    worldRevision: "1",
+    pathId: "felsental",
+  });
+});
+
 it("keeps single-route rides in their own world", () => {
   expect(selectRouteFromUrl(new URLSearchParams("route=night-city")).worldPath).toEqual({
     worldId: "night-city",

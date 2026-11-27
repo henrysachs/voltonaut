@@ -1,11 +1,19 @@
-import { ALPINE_PASS, COAST_LOOP, createRoute, NIGHT_CITY, TEST_LOOP } from "@voltonaut/engine";
+import {
+  ALPINE_PASS,
+  COAST_LOOP,
+  createRoute,
+  NIGHT_CITY,
+  TEST_LOOP,
+  TEST_ROUTES,
+  type RouteData,
+} from "@voltonaut/engine";
 import * as THREE from "three";
-import { expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { worldAtmosphere } from "./biome-atmosphere.js";
 import { createLandscapeSystem } from "./landscape.js";
 import { resolveRenderWorld } from "./render-world.js";
-import { createScheduler } from "./scheduler.js";
+import { createScheduler, type Scheduler } from "./scheduler.js";
 import { PAIR } from "./testdata/pairWorld.js";
 
 const route = createRoute(TEST_LOOP);
@@ -67,20 +75,50 @@ it("releases every shared geometry, material and instance buffer once without to
   expect(scene.children).toEqual([unrelated]);
 });
 
-it.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
-  "the landscape system builds $id from its route and disposes it",
-  (data) => {
-    const scene = new THREE.Scene();
+function felsentalData(): RouteData {
+  const data = TEST_ROUTES["felsental"];
 
-    const scheduler = createScheduler([createLandscapeSystem(resolveRenderWorld(data.id))], {
-      scene,
-      route: createRoute(data),
+  if (data === undefined) throw new TypeError("felsental must be a registered route");
+
+  return data;
+}
+
+interface BuiltLandscape {
+  readonly scene: THREE.Scene;
+  readonly scheduler: Scheduler;
+}
+
+describe.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY, felsentalData()])(
+  "the landscape system on $id",
+  (data) => {
+    // One build per route in its own hook, so the check below only reads and disposes it.
+    let built: BuiltLandscape | undefined;
+
+    beforeAll(() => {
+      const scene = new THREE.Scene();
+
+      const scheduler = createScheduler([createLandscapeSystem(resolveRenderWorld(data.id))], {
+        scene,
+        route: createRoute(data),
+      });
+
+      built = { scene, scheduler };
     });
 
-    expect(scene.children).toHaveLength(1);
-    expect(scene.children[0]).toBeInstanceOf(THREE.Group);
-    scheduler.dispose();
-    expect(scene.children).toHaveLength(0);
+    function landscape(): BuiltLandscape {
+      if (built === undefined) throw new Error(`${data.id} landscape was not built`);
+
+      return built;
+    }
+
+    it("builds from its route and disposes it", () => {
+      const { scene, scheduler } = landscape();
+
+      expect(scene.children).toHaveLength(1);
+      expect(scene.children[0]).toBeInstanceOf(THREE.Group);
+      scheduler.dispose();
+      expect(scene.children).toHaveLength(0);
+    });
   },
 );
 

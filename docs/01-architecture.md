@@ -10,7 +10,7 @@
 | `WorldData` (Straßennetz, Wege, Revision; ADR-033)                         | `packages/engine/src/world` (reine Daten, `createWorld`)     | engine (Route je Weg), rides/progress (Verweis)  | unveränderlich; jede Geometrieänderung erhöht die Revision                         |
 | `AvatarConfig` (gespeicherte Ausrüstung)                                   | **Server** `inventory/`, Client-Spiegel `sync/GarageLoadout` | ui (Garage), avatar (über `render.look`)         | „Ausrüsten“ → `PUT /v1/me/loadout`; Garage-Vorschau bleibt lokal                   |
 | `RiderProfile` (Gewicht, Größe, FTP, Kettenblatt …)                        | Server `accounts/`, Client-Cache in `sync/`                  | engine (zu Fahrtbeginn), avatar (Größe), ui      | Intent `profile.update` → `sync/` → `PUT /v1/me/profile`                           |
-| Mitgliedsstufe, VIP und getrennte Adminberechtigung                        | Server `accounts/`, Spiegel unter `AccountSync`              | Konto-Menü, geschützte Adminrouten               | Mitgliedschaft über Admin-PATCH, Rolle ausschließlich per Operator-CLI             |
+| Mitgliedsstufe, VIP und getrennte Adminberechtigung                        | Server `accounts/`, Spiegel `sync/AccountAdministration`     | Konto-Menü, geschützte Adminrouten               | Mitgliedschaft über Admin-PATCH, Rolle ausschließlich per Operator-CLI             |
 | `Progression`, Inventar, Volts (verbindlich)                               | **Server** (`progression/`, `inventory/`, `economy/`)        | Client über `sync/`-Cache                        | nur Server, ausgelöst durch akzeptierte Fahrt-Uploads, Progress-Bereiche und Käufe |
 | Progress-Consent, Journalbindung, Session-Generation, Highwater            | **Server** (`progress/`)                                     | Client über `sync/progressSync`                  | explizite Zustimmung, authentifizierte Checkpoint-Annahme                          |
 | Lokale Progress-Outbox                                                     | `apps/web/src/sync`                                          | UI über schmales Statusport                      | `progressSync`, nach Zustimmung und nur für BLE                                    |
@@ -213,7 +213,7 @@ interface WorldData {
   paths: ReadonlyArray<WorldPath>; // steps: { edgeId, direction: "forward" | "reverse" }[], loop, segments; scenery = Region des ersten Abschnitts
 }
 // createWorld liefert zusätzlich die Render-Sicht: regions (mit homePathId, dem Weg, entlang dessen die Region ausgestattet wird)
-// und edges (Mittellinie, Profil, Region, Biom, pathIds). Erste verbundene Welt: VOLTONAUT (E10-14); Revision 2 (E10-17) fügt die Region Weinberge ein. WORLDS listet Revisionen einer Welt von alt nach neu; `worldPathOf`, TEST_ROUTES und die Render-Sicht nehmen die neueste, `worldPathRoute` verlangt Welt und Revision genau.
+// und edges (Mittellinie, Profil, Region, Biom, pathIds). Erste verbundene Welt: VOLTONAUT (E10-14); Revision 2 (E10-17) fügt die Region Weinberge ein. WORLDS listet Revisionen einer Welt von alt nach neu; `WORLD_REGISTRY` (und damit `routeWorldPath`), TEST_ROUTES und die Render-Sicht nehmen die neueste, `worldPathRoute` verlangt Welt und Revision genau.
 interface WorldViews {
   regions: ReadonlyArray<{ id: string; scenery: string; homePathId: string | undefined }>;
   edges: ReadonlyArray<{

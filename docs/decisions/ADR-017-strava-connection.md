@@ -1,6 +1,6 @@
 # ADR-017 – Strava-Verbindung und verschlüsselte Zugangsdaten
 
-- Status: Vorgeschlagen, Implementierung lokal prüfbar
+- Status: Angenommen (Henrys Freigabe im Chat am 2026-11-27). Serverseitiger Teilschnitt integriert und mit [E10-06](../specs/E10-06-real-strava-activation.md) serverseitig aktiviert; echter Pilot offen.
 - Datum: 2026-11-20
 - Bezug: [E10-03](../specs/E10-03-strava-connection.md)
 
