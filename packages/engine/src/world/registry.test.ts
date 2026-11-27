@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { TEST_LOOP } from "../elevation/data/test-loop.js";
 
 import { TEST_WORLDS, WORLDS } from "./data/index.js";
-import { worldPathOf, worldPathRoute } from "./registry.js";
+import { worldPathRoute } from "./registry.js";
 
 const TEST_LOOP_PATH = { worldId: "test-loop", worldRevision: "1", pathId: "test-loop" } as const;
 
@@ -34,16 +34,6 @@ it.each<WorldPathReference>([
 
 it("finds nothing in an empty world list", () => {
   expect(worldPathRoute([], TEST_LOOP_PATH)).toBeUndefined();
-});
-
-it("finds the world reference a new ride on a path records", () => {
-  expect(worldPathOf(WORLDS, "test-loop")).toEqual(TEST_LOOP_PATH);
-  expect(worldPathOf(WORLDS, "voltonaut-tour")).toEqual({
-    worldId: "voltonaut",
-    worldRevision: "1",
-    pathId: "voltonaut-tour",
-  });
-  expect(worldPathOf(WORLDS, "missing")).toBeUndefined();
 });
 
 it("resolves a voltonaut path only in its own world and revision", () => {

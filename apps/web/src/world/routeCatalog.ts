@@ -1,3 +1,5 @@
+import { parseRouteId, type RouteId } from "@voltonaut/engine";
+
 import {
   DEFAULT_ENVIRONMENT_SETTINGS,
   parseEnvironmentSettings,
@@ -12,7 +14,7 @@ export interface RenderBudget {
 
 /** Presentation of one selectable route: identity, mood defaults and budget. */
 export interface RoutePresentation {
-  readonly id: string;
+  readonly id: RouteId;
   readonly title: string;
   readonly description: string;
   readonly environment: EnvironmentSettings;
@@ -84,23 +86,25 @@ export const ROUTE_CATALOG: readonly RoutePresentation[] = [
 ];
 
 /** Catalog entry by route id; undefined for engine-only test fixtures. */
-export function routePresentation(routeId: string): RoutePresentation | undefined {
+export function routePresentation(routeId: RouteId): RoutePresentation | undefined {
   return ROUTE_CATALOG.find((entry) => entry.id === routeId);
 }
 
-const DEFAULT_ROUTE_ID = "test-loop";
+const DEFAULT_ROUTE_ID: RouteId = "test-loop";
 
-/** Route URL parameter (#75); unknown ids keep the default ride. */
-export function resolveRouteId(value: string | null): string {
-  if (value !== null && routePresentation(value) !== undefined) return value;
+/** Route URL parameter (#75); unknown ids and engine-only fixtures keep the default ride. */
+export function resolveRouteId(value: string | null): RouteId {
+  const routeId = value === null ? undefined : parseRouteId(value);
 
-  return DEFAULT_ROUTE_ID;
+  return routeId !== undefined && routePresentation(routeId) !== undefined
+    ? routeId
+    : DEFAULT_ROUTE_ID;
 }
 
 /** URL environment parameters over the route's catalog default (#75). */
 export function routeEnvironmentSettings(
   query: Readonly<URLSearchParams>,
-  routeId: string,
+  routeId: RouteId,
 ): EnvironmentSettings {
   const base = routePresentation(routeId)?.environment ?? DEFAULT_ENVIRONMENT_SETTINGS;
 
