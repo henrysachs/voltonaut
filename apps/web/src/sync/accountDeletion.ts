@@ -2,7 +2,7 @@ import { HealthResponseSchema, MeResponseSchema } from "@voltonaut/shared";
 
 const text = HealthResponseSchema.shape.version;
 
-export const AccountDataOwnerSchema = HealthResponseSchema.pick({})
+const AccountDataOwnerSchema = HealthResponseSchema.pick({})
   .extend({
     apiOrigin: text.max(512).regex(/^https?:\/\/[^\s/?#@]+$/iu),
     userId: MeResponseSchema.shape.user.shape.id,

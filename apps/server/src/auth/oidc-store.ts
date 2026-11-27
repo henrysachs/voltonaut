@@ -18,7 +18,7 @@ export type OidcTransactionRow = Readonly<typeof oidcTransactions.$inferSelect>;
  * `(issuer, subject)`; an email match alone never links accounts. A provider's email
  * verification only gates creating a new account; a known identity signs in regardless.
  */
-export function resolveIdentityUser(
+function resolveIdentityUser(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
   auth: Pick<AuthService, "currentUser">,
@@ -159,7 +159,7 @@ export function claimTransaction(
 }
 
 /** Removes the claimed reservation inside the caller's transaction; fails once it expired. */
-export function consumeReservation(
+function consumeReservation(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Drizzle owns the mutable SQLite connection.
   db: ServerDatabase,
   transaction: OidcTransactionRow,

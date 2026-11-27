@@ -8,7 +8,7 @@ import type { GattProperty } from "./transport.js";
  * docs/specs/E1-01-ble-sniffer-pulse-ftms.md "Fixture-Format & Replay-Tests").
  */
 
-export const BLE_FIXTURE_SCHEMA_VERSION = 1;
+const BLE_FIXTURE_SCHEMA_VERSION = 1;
 
 export type BleProtocol = "ftms" | "hrs" | "cps" | "zwift-play" | "raw";
 

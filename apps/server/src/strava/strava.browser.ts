@@ -6,7 +6,7 @@ import type { ServerConfig } from "../config.js";
 import type { ExecutionContextPort } from "../api-error.js";
 import { invalidStrava, hasWriteScope } from "./strava.provider.js";
 
-export const StravaOpaqueSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
+const StravaOpaqueSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
 const COOKIE_NAME = "voltonaut-strava";
 
 export function stravaCallbackUrl(originalUrl: string, redirectUri: string) {

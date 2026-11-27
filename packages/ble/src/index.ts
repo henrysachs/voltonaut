@@ -50,8 +50,6 @@ export * from "./simDevices.js";
 
 export * from "./replay/ReplayTransport.js";
 
-export * from "./replay/clock.js";
-
 export * from "./sim/index.js";
 
 export * from "./transport.js";

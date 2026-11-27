@@ -72,7 +72,7 @@ function credit(services: AdminServices, order: CreditOrder) {
   return JSON.stringify({ userId, receipt, voltsBalance: services.economy.balance(userId) });
 }
 
-export function runAdminCommand(args: readonly string[], services: AdminServices): string {
+function runAdminCommand(args: readonly string[], services: AdminServices): string {
   const command = CommandSchema.parse(args);
   const { accounts } = services;
 

@@ -66,7 +66,7 @@ function visibleRideMenu(): boolean {
   return false;
 }
 
-export function createWindowKeyboardSource(window: WindowKeyboardTarget): KeyboardSource {
+function createWindowKeyboardSource(window: WindowKeyboardTarget): KeyboardSource {
   return {
     subscribe(listener) {
       // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- DOM KeyboardEvent is the native listener contract; it is inspected, never modified.

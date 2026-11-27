@@ -131,7 +131,7 @@ function addHandlebar(bucket: Readonly<PartBucket>, g: Readonly<BikeGeometry>): 
 }
 
 /** Front-to-back cross-section of the saddle: flat base, crowned top, soft edges. */
-export function saddleSection(t: number): Point2[] {
+function saddleSection(t: number): Point2[] {
   const widen = Math.min(1, Math.max(0, (t - 0.28) / 0.55));
   const smooth = widen * widen * (3 - 2 * widen);
   const tailRound = t > 0.93 ? Math.sqrt(Math.max(0, 1 - ((t - 0.93) / 0.07) ** 2)) : 1;

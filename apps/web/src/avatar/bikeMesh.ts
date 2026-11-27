@@ -111,7 +111,7 @@ const CORNERS = [
 ] as const;
 
 /** Rounded rectangle outline centred on the origin. */
-export function roundedRect(widthM: number, heightM: number, radiusM: number): Point2[] {
+function roundedRect(widthM: number, heightM: number, radiusM: number): Point2[] {
   const halfW = widthM / 2 - radiusM;
   const halfH = heightM / 2 - radiusM;
 

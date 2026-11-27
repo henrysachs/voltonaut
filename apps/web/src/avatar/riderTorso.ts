@@ -72,7 +72,7 @@ function squared(value: number): number {
 }
 
 /** Spine curve through the bind joints, extended straight below the pelvis and above the neck. */
-export class TorsoSurface {
+class TorsoSurface {
   private readonly curve: THREE.CatmullRomCurve3;
   readonly lengthM: number;
 

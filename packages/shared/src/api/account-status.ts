@@ -25,7 +25,7 @@ export const AdminUsersQuerySchema = z
   })
   .strict();
 
-export const AdminUserSchema = z
+const AdminUserSchema = z
   .object({
     id: AccountUserIdSchema,
     email: z.string().email(),

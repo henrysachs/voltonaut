@@ -15,7 +15,7 @@ export type StravaConfig =
       };
     };
 
-export function validTokenKey(value: string): boolean {
+function validTokenKey(value: string): boolean {
   return (
     /^[a-f0-9]{64}$/u.test(value) ||
     (/^[A-Za-z0-9+/]{43}=$/u.test(value) &&

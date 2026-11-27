@@ -18,7 +18,7 @@ const BAR_GAP_PX = 14;
 type Rgb = readonly [number, number, number];
 
 export const MOTIF_BORDER: Rgb = [0xf3, 0xe7, 0xb8];
-export const MOTIF_BOLT: Rgb = [0xff, 0xd2, 0x3f];
+const MOTIF_BOLT: Rgb = [0xff, 0xd2, 0x3f];
 
 /** One background per variant; the bar count (1, 2, 3) tells the motifs apart without colour. */
 export const MOTIF_VARIANT_BACKGROUNDS: readonly Rgb[] = [

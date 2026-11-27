@@ -9,11 +9,11 @@ import type { TrackerRequest } from "../auth/auth-request.js";
  * One account export per minute and account (issue #141). The export reads every own ride at
  * once; a repeated request right after the first only loads the server again.
  */
-export const ACCOUNT_EXPORT_THROTTLER = "account-export";
-export const ACCOUNT_EXPORT_LIMIT = 1;
-export const ACCOUNT_EXPORT_TTL_MS = 60_000;
+const ACCOUNT_EXPORT_THROTTLER = "account-export";
+const ACCOUNT_EXPORT_LIMIT = 1;
+const ACCOUNT_EXPORT_TTL_MS = 60_000;
 
-export function accountExportTracker(request: TrackerRequest): string {
+function accountExportTracker(request: TrackerRequest): string {
   if (request.session === undefined) throw new ApiError(401, "unauthorized", "missing session");
 
   return request.session.userId;

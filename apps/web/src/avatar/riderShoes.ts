@@ -11,11 +11,11 @@ import { rigid } from "./riderWeights.js";
 import type { ShoeSpec } from "./riderSpecs.js";
 
 /** Shoe space: origin at the cleat face, +X along the sole to the toe, +Y up, +Z outwards. */
-export const HEEL_X = -0.19;
-export const TOE_X = 0.088;
+const HEEL_X = -0.19;
+const TOE_X = 0.088;
 const CLEAT_M = 0.008;
 const SOLE_M = 0.011;
-export const SOLE_TOP_M = CLEAT_M + SOLE_M;
+const SOLE_TOP_M = CLEAT_M + SOLE_M;
 
 /** Half width of the footprint at x: narrow heel, wide ball, rounded ends. */
 function halfWidth(x: number): number {
@@ -26,7 +26,7 @@ function halfWidth(x: number): number {
 }
 
 /** Upper height above the sole along t (heel → toe): heel cup, instep, low toe box. */
-export function upperHeight(t: number): number {
+function upperHeight(t: number): number {
   if (t < 0.38) return lerp(0.084, 0.08, t / 0.38);
 
   return lerp(0.08, 0.024, ((t - 0.38) / 0.62) ** 1.2);

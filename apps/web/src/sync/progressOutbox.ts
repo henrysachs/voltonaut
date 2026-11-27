@@ -1,7 +1,6 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Public inputs are readonly contracts; Oxlint does not follow cross-module domain aliases. */
 import type { RideProgressCheckpoint, VoltsRideRangeReceipt } from "@voltonaut/shared";
 
-import type { ProgressBatch } from "./progressBatch.js";
 import type {
   ProgressAccountOwner,
   ProgressBlockCause,
@@ -9,11 +8,7 @@ import type {
   ProgressOutboxRow,
 } from "./progressOutboxSchema.js";
 
-export {
-  PROGRESS_OUTBOX_MAX_ATTEMPTS,
-  PROGRESS_OUTBOX_MAX_ROWS,
-  ProgressOutboxRowSchema,
-} from "./progressOutboxSchema.js";
+export { PROGRESS_OUTBOX_MAX_ROWS, ProgressOutboxRowSchema } from "./progressOutboxSchema.js";
 
 export { progressPayloadHash } from "./progressOutboxHash.js";
 
@@ -24,21 +19,12 @@ export {
 } from "./progressOutboxRow.js";
 
 export type {
-  NewProgressOutboxRowInput,
   ProgressAccountOwner,
   ProgressBlockCause,
-  ProgressBlockedState,
   ProgressJournalOwner,
   ProgressOutboxRow,
   ProgressOutboxState,
-  ProgressQueuedState,
-  ProgressSendingState,
-  ProgressStoredState,
 } from "./progressOutboxSchema.js";
-
-export type { ProgressBatch };
-
-export type ProgressBatchPhase = ProgressOutboxRow["phase"];
 
 export type ProgressPendingPageCursor = Readonly<{
   journalId: string;

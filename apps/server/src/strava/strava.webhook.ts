@@ -12,7 +12,7 @@ export type WebhookHint =
   | { readonly kind: "ignored" }
   | { readonly kind: "authorization"; readonly athleteId: string };
 
-export function webhookHint(
+function webhookHint(
   event: Readonly<StravaWebhookEvent>,
   subscriptionId: string | null,
 ): WebhookHint {
@@ -25,7 +25,7 @@ export function webhookHint(
     : { kind: "ignored" };
 }
 
-export function webhookChallenge(originalUrl: string, verifyToken: string) {
+function webhookChallenge(originalUrl: string, verifyToken: string) {
   const query = new URL(originalUrl, "http://webhook.invalid").searchParams;
   const keys = ["hub.mode", "hub.challenge", "hub.verify_token"];
 
