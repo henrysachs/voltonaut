@@ -1,7 +1,9 @@
 import * as THREE from "three";
 
 import { biomeObjects } from "./biome-landscape.js";
+import { nightLightsOf } from "./biomeScenery.js";
 import { DressingGroup } from "./dressing-group.js";
+import { nightAmount, type EnvironmentState } from "./environment.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { regionInView, type RegionBounds } from "./region-visibility.js";
 import type { RenderWorld } from "./render-world.js";
@@ -15,6 +17,8 @@ export interface CulledPart {
 export interface RegionDressing {
   readonly group: DressingGroup;
   readonly parts: readonly CulledPart[];
+  /** Fades the dressing's emitters with the dark (0 day … 1 night). */
+  readonly lightForNight: (night: number) => void;
 }
 
 /** Ground area of an object's geometry, all instances included. */
@@ -61,8 +65,10 @@ export function regionDressings(
     group.name = `region-${region?.id ?? index}`;
     group.add(...biomeObjects(region?.biome ?? { kind: "forest" }, plan));
 
+    const lightForNight = nightLightsOf(group);
+
     // A single region is never culled, so it needs no ground areas (no extra start-up work).
-    if (!several) return { group, parts: [] };
+    if (!several) return { group, parts: [], lightForNight };
 
     group.updateMatrixWorld(true);
 
@@ -70,6 +76,7 @@ export function regionDressings(
       group,
       // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each part keeps its mutable Three object to switch its visibility later.
       parts: drawables(group).map((object) => ({ object, bounds: groundBounds(object) })),
+      lightForNight,
     };
   });
 }
@@ -85,4 +92,15 @@ export function showInView(dressings: readonly RegionDressing[], x: number, z: n
   for (const { parts } of dressings) {
     for (const { object, bounds } of parts) object.visible = regionInView(bounds, x, z);
   }
+}
+
+/** Fades every dressing's emitters with how dark env is. */
+export function lightDressings(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The dressings own the mutable Three materials whose light this fades.
+  dressings: readonly RegionDressing[],
+  env: Readonly<Pick<EnvironmentState, "sunDirection">>,
+): void {
+  const night = nightAmount(env);
+
+  for (const dressing of dressings) dressing.lightForNight(night);
 }

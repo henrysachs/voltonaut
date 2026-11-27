@@ -6,28 +6,37 @@ import {
   chunkedMeshes,
   groundPosition,
   seededRandom,
-  type ChunkLayer,
   type ChunkItem,
+  type ChunkLayer,
 } from "./biomeSceneryShared.js";
-import { CARRIED, DressingGroup, STANDS } from "./dressing-group.js";
+import { CARRIED, DressingGroup, ROAD, STANDS } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
+import {
+  buildingLayer,
+  NEON,
+  NEON_HUES,
+  planBuildings,
+  type NeonTubeItem,
+} from "./nightCityBuildings.js";
+import { createLampLight, neonLayer, type NeonItem, type StreetLamp } from "./nightCityLights.js";
+
+export { nightLightsOf } from "./nightCityLights.js";
 
 interface StreetFixture extends ChunkItem {
   readonly position: WorldPos;
   readonly rotationRad: number;
   readonly heightM: number;
   readonly kind: "lamp" | "sign";
-  readonly hue: number;
-}
-
-interface StreetHead extends ChunkItem {
-  readonly position: WorldPos;
-  readonly rotationRad: number;
+  readonly side: 1 | -1;
   readonly hue: number;
 }
 
 const LAMP_INTERVAL_M = 40;
 const SIGN_INTERVAL_M = 90;
+const LAMP_LATERAL_M = 8.2;
+const SIGN_LATERAL_M = 10;
+const LAMP_HEIGHT_M = 5.5;
+const SIGN_HEIGHT_M = 4;
 
 function streetFixtures(
   plan: Readonly<LandscapePlan>,
@@ -36,28 +45,30 @@ function streetFixtures(
   const fixtures: StreetFixture[] = [];
 
   for (let distanceM = 0; distanceM < plan.route.lengthM; distanceM += LAMP_INTERVAL_M) {
-    const side = (Math.floor(distanceM / LAMP_INTERVAL_M) % 2 === 0 ? 1 : -1) * 8.2;
+    const side: 1 | -1 = Math.floor(distanceM / LAMP_INTERVAL_M) % 2 === 0 ? 1 : -1;
 
     fixtures.push({
       routeDistanceM: distanceM,
-      position: groundPosition(plan, distanceM, side),
-      rotationRad: plan.route.headingRad(distanceM),
-      heightM: 5.5,
+      position: groundPosition(plan, distanceM, side * LAMP_LATERAL_M),
+      rotationRad: -plan.route.headingRad(distanceM),
+      heightM: LAMP_HEIGHT_M,
       kind: "lamp",
-      hue: 0,
+      side,
+      hue: NEON.amber,
     });
   }
 
   for (let distanceM = 45; distanceM < plan.route.lengthM; distanceM += SIGN_INTERVAL_M) {
-    const side = (Math.floor(distanceM / SIGN_INTERVAL_M) % 2 === 0 ? -1 : 1) * 10;
+    const side: 1 | -1 = Math.floor(distanceM / SIGN_INTERVAL_M) % 2 === 0 ? -1 : 1;
 
     fixtures.push({
       routeDistanceM: distanceM,
-      position: groundPosition(plan, distanceM, side),
-      rotationRad: plan.route.headingRad(distanceM),
-      heightM: 4,
+      position: groundPosition(plan, distanceM, side * SIGN_LATERAL_M),
+      rotationRad: -plan.route.headingRad(distanceM),
+      heightM: SIGN_HEIGHT_M,
       kind: "sign",
-      hue: random(),
+      side,
+      hue: NEON_HUES[Math.floor(random() * NEON_HUES.length) % NEON_HUES.length] ?? NEON.amber,
     });
   }
 
@@ -86,68 +97,70 @@ function streetPoleLayer(fixtures: readonly StreetFixture[]): ChunkLayer<StreetF
   };
 }
 
-function headsOfKind(
-  fixtures: readonly StreetFixture[],
-  kind: Readonly<StreetFixture["kind"]>,
-): readonly StreetHead[] {
-  const heads: StreetHead[] = [];
+function fixtureNeon(fixture: Readonly<StreetFixture>): NeonItem {
+  const lamp = fixture.kind === "lamp";
+  const { position } = fixture;
 
-  for (const fixture of fixtures) {
-    if (fixture.kind !== kind) continue;
-
-    heads.push({
-      routeDistanceM: fixture.routeDistanceM,
-      position: fixture.position,
-      rotationRad: fixture.rotationRad,
-      hue: fixture.hue,
-    });
-  }
-
-  return heads;
-}
-
-function lampHeadLayer(heads: readonly StreetHead[]): ChunkLayer<StreetHead> {
   return {
-    geometry: new THREE.BoxGeometry(0.55, 0.16, 0.24),
-    material: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-    items: heads,
-    transform(head: Readonly<StreetHead>, object: Readonly<THREE.Object3D>) {
-      object.position.set(head.position.x, head.position.y + 5.5, head.position.z);
-      object.rotation.set(0, head.rotationRad, 0);
+    routeDistanceM: fixture.routeDistanceM,
+    position: {
+      x: position.x,
+      y: position.y + fixture.heightM - (lamp ? 0 : 0.4),
+      z: position.z,
     },
-    tint(head: Readonly<StreetHead>, color: Readonly<THREE.Color>) {
-      color.setHSL(0.11, 0.9, 0.7 + head.hue * 0.05);
-    },
+    rotationRad: fixture.rotationRad + (lamp ? 0 : 0.35),
+    sizeM: lamp ? { x: 0.55, y: 0.16, z: 0.24 } : { x: 2.1, y: 0.9, z: 0.12 },
+    hue: fixture.hue,
+    saturation: lamp ? 0.9 : 1,
+    luminance: lamp ? 1.5 : 1.3,
   };
 }
 
-function signHeadLayer(signs: readonly StreetHead[]): ChunkLayer<StreetHead> {
+function tubeNeon(tube: Readonly<NeonTubeItem>): NeonItem {
   return {
-    geometry: new THREE.BoxGeometry(2.1, 0.9, 0.12),
-    material: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-    items: signs,
-    transform(sign: Readonly<StreetHead>, object: Readonly<THREE.Object3D>) {
-      object.position.set(sign.position.x, sign.position.y + 3.6, sign.position.z);
-      object.rotation.set(0, sign.rotationRad + 0.35, 0);
+    routeDistanceM: tube.routeDistanceM,
+    position: {
+      x: tube.position.x,
+      y: tube.position.y + 3 + tube.heightM / 2,
+      z: tube.position.z,
     },
-    tint(sign: Readonly<StreetHead>, color: Readonly<THREE.Color>) {
-      color.setHSL(sign.hue, 0.95, 0.6);
-    },
+    rotationRad: 0,
+    sizeM: { x: 0.45, y: tube.heightM, z: 0.45 },
+    hue: tube.hue,
+    saturation: 1,
+    luminance: 1.4,
   };
 }
 
-/** Night city: streetlights and neon signs glowing on dark asphalt; the glow is its atmosphere. */
+function streetLamps(fixtures: readonly StreetFixture[]): readonly StreetLamp[] {
+  return fixtures.flatMap((fixture) =>
+    fixture.kind === "lamp" ? [{ routeDistanceM: fixture.routeDistanceM, side: fixture.side }] : [],
+  );
+}
+
+/**
+ * Night city: lit towers, neon and lamp light on the asphalt; bloom.ts makes the neon glow at
+ * night, and the blue glow is its atmosphere (biome-atmosphere.ts).
+ */
 export function createNightCityScenery(plan: Readonly<LandscapePlan>): DressingGroup {
   const root = new DressingGroup();
   const fixtures = streetFixtures(plan, seededRandom(23));
+  const random = seededRandom(151);
+  const { buildings, tubes } = planBuildings(plan, random);
 
   root.name = "biome-night-city";
+  root.place(STANDS, ...chunkedMeshes(buildingLayer(buildings, random)));
   root.place(STANDS, ...chunkedMeshes(streetPoleLayer(fixtures)));
   root.place(
     CARRIED,
-    ...chunkedMeshes(lampHeadLayer(headsOfKind(fixtures, "lamp"))),
-    ...chunkedMeshes(signHeadLayer(headsOfKind(fixtures, "sign"))),
+    ...chunkedMeshes(
+      neonLayer([
+        ...fixtures.map((fixture) => fixtureNeon(fixture)),
+        ...tubes.map((tube) => tubeNeon(tube)),
+      ]),
+    ),
   );
+  root.place(ROAD, createLampLight(plan.route, streetLamps(fixtures)));
 
   return root;
 }

@@ -14,7 +14,7 @@ const box: RegionBounds = { minX: 0, maxX: 100, minZ: 0, maxZ: 100 };
 function part(bounds: RegionBounds): RegionDressing {
   const object = new THREE.Mesh();
 
-  return { group: new DressingGroup(), parts: [{ object, bounds }] };
+  return { group: new DressingGroup(), parts: [{ object, bounds }], lightForNight: () => {} };
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The dressing holds mutable Three objects whose visibility the test reads.

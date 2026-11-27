@@ -2,7 +2,12 @@ import * as THREE from "three";
 
 import type { Biome } from "./biome.js";
 import { worldAtmosphere } from "./biome-atmosphere.js";
-import { regionDressings, showInView, type RegionDressing } from "./region-dressing.js";
+import {
+  lightDressings,
+  regionDressings,
+  showInView,
+  type RegionDressing,
+} from "./region-dressing.js";
 import type { RenderWorld } from "./render-world.js";
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
@@ -66,6 +71,7 @@ export function createLandscapeSystem(world: RenderWorld): RenderSystem {
     },
     update(frame) {
       showInView(dressings, frame.ride.worldPos.x, frame.ride.worldPos.z);
+      lightDressings(dressings, frame.env);
     },
     setQuality() {},
     dispose() {
