@@ -7,10 +7,12 @@ import type {
   PreviewTimer,
   PreviewViewport,
 } from "./previewProtocol.js";
+import { DEFAULT_PREVIEW_ORBIT, normalizePreviewOrbit, type PreviewOrbit } from "./previewOrbit.js";
 
 /** The worker-owned three scene; `render` returns undefined when nothing was drawn. */
 export interface PreviewScene {
-  readonly render: (angleRad: number) => PreviewDraw | undefined;
+  readonly render: (angleRad: number, orbit: Readonly<PreviewOrbit>) => PreviewDraw | undefined;
+  readonly capture: (angleRad: number, orbit: Readonly<PreviewOrbit>) => Promise<Blob>;
   readonly resize: (viewport: PreviewViewport) => void;
   readonly setLook: (look: Readonly<AvatarConfig>) => void;
   readonly dispose: () => void;
@@ -39,6 +41,7 @@ class PreviewLoop {
   private state: State = { kind: "waiting" };
   private firstDraw: FirstDraw = { kind: "pending" };
   private angleRad = -0.65;
+  private orbit: Readonly<PreviewOrbit> = DEFAULT_PREVIEW_ORBIT;
   private autoRotate = false;
   private lastFrameMs: number | undefined;
   private frameId = 0;
@@ -46,7 +49,7 @@ class PreviewLoop {
 
   constructor(
     private readonly clock: PreviewClock,
-    private readonly send: (reply: PreviewReply) => void,
+    private readonly send: (reply: Readonly<PreviewReply>) => void,
   ) {}
 
   private release(next: Extract<State, { kind: "failed" | "disposed" }>): void {
@@ -78,7 +81,7 @@ class PreviewLoop {
     if (this.autoRotate) this.angleRad += elapsedS * AUTO_ROTATE_RAD_PER_S;
 
     try {
-      const draw = this.state.scene.render(this.angleRad);
+      const draw = this.state.scene.render(this.angleRad, this.orbit);
 
       if (draw !== undefined) this.confirmFirstDraw(draw);
     } catch {
@@ -139,8 +142,30 @@ class PreviewLoop {
     this.autoRotate = enabled;
   }
 
-  rotateBy(angleRad: number): void {
-    if (Number.isFinite(angleRad)) this.angleRad += angleRad;
+  setOrbit(candidate: Readonly<PreviewOrbit>): void {
+    if (!Number.isFinite(candidate.yawRad) || !Number.isFinite(candidate.pitchRad)) return;
+    this.orbit = normalizePreviewOrbit(candidate);
+  }
+
+  async capture(requestId: number): Promise<void> {
+    if (this.state.kind !== "running") return;
+
+    const scene = this.state.scene;
+    const angleRad = this.angleRad;
+    const orbit = this.orbit;
+
+    try {
+      const blob = await scene.capture(angleRad, orbit);
+
+      if (this.state.kind !== "running" || this.state.scene !== scene) return;
+
+      if (blob.type !== "image/png") throw new Error("Preview capture must be a PNG");
+      this.send({ type: "preview.captured", requestId, blob });
+    } catch {
+      if (this.state.kind === "running" && this.state.scene === scene) {
+        this.fail("capture-error");
+      }
+    }
   }
 
   resize(viewport: PreviewViewport): void {
@@ -148,6 +173,13 @@ class PreviewLoop {
 
     try {
       this.state.scene.resize(viewport);
+
+      const draw = this.state.scene.render(this.angleRad, this.orbit);
+
+      if (draw !== undefined) {
+        if (this.firstDraw.kind === "reported") this.send({ type: "preview.drawn", draw });
+        else this.confirmFirstDraw(draw);
+      }
     } catch {
       this.fail("render-error");
     }
@@ -162,7 +194,7 @@ class PreviewLoop {
 
 export function createPreviewLoop(
   clock: PreviewClock,
-  send: (reply: PreviewReply) => void,
+  send: (reply: Readonly<PreviewReply>) => void,
 ): PreviewLoop {
   return new PreviewLoop(clock, send);
 }
