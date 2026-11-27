@@ -18,11 +18,15 @@ export * from "./world/types.js";
 
 export * from "./world/world.js";
 
+export * from "./world/regions.js";
+
 export * from "./world/singleRouteWorld.js";
 
 export * from "./world/registry.js";
 
 export * from "./world/data/index.js";
+
+export * from "./world/build/regionTour.js";
 
 export * from "./trainer/gradeMap.js";
 

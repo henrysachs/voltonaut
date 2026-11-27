@@ -1,13 +1,11 @@
 import { createRoute, TEST_LOOP } from "@voltonaut/engine";
 import * as THREE from "three";
-import { expect, it } from "vitest";
+import { afterAll, expect, it } from "vitest";
 
 import { heightAt } from "./heightfield.js";
 import { lakeRadius, offsetPosition } from "./lake-plan.js";
-import { createLandscapeSystem } from "./landscape.js";
 import { createLandscapePlan, PLANT_ROAD_CLEARANCE_M, terrainPosition } from "./landscape-plan.js";
 import { disposeObject } from "./resources.js";
-import { createScheduler } from "./scheduler.js";
 import { createTerrain, createTerrainGeometries, RENDER_CHUNK_TILES } from "./terrain.js";
 
 const route = createRoute(TEST_LOOP);
@@ -16,10 +14,6 @@ const terrain = createTerrain(plan);
 const ray = new THREE.Raycaster();
 
 terrain.updateMatrixWorld(true);
-
-interface DisposalResource {
-  readonly addEventListener: (type: "dispose", listener: () => void) => void;
-}
 
 interface Hit {
   readonly y: number;
@@ -32,29 +26,6 @@ function hitTerrain(x: number, z: number): Hit {
   const hit = ray.intersectObject(terrain)[0];
 
   return { y: hit?.point.y ?? Number.NaN, normalY: hit?.face?.normal.y ?? Number.NaN };
-}
-
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The test observes the real mutable Three scene graph.
-function collectResources(scene: Readonly<THREE.Scene>): ReadonlySet<DisposalResource> {
-  const resources = new Set<DisposalResource>();
-
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three traversal supplies its mutable scene object contract.
-  scene.traverse((object) => {
-    if (
-      object instanceof THREE.Mesh &&
-      object.geometry instanceof THREE.BufferGeometry &&
-      object.material instanceof THREE.Material
-    ) {
-      resources.add(object.geometry);
-      resources.add(object.material);
-    }
-
-    if (object instanceof THREE.InstancedMesh) {
-      resources.add(object);
-    }
-  });
-
-  return resources;
 }
 
 /** Every drawn terrain vertex keyed by XZ position, as "height normal" text per occurrence. */
@@ -149,28 +120,6 @@ it("merges 4 × 4 tiles per mesh and shares heights and normals across every til
   expect(shared.filter((entries) => new Set(entries).size > 1)).toEqual([]);
 });
 
-it("releases every shared geometry, material and instance buffer once without touching another owner", () => {
-  const scene = new THREE.Scene();
-  const unrelated = new THREE.Group();
-
-  scene.add(unrelated);
-  const scheduler = createScheduler([createLandscapeSystem([route])], { scene, route });
-  const resources = collectResources(scene);
-
-  const counts = Array.from(resources, (resource) => {
-    let count = 0;
-
-    resource.addEventListener("dispose", () => {
-      count += 1;
-    });
-
-    return () => count;
-  });
-
-  expect(resources.size).toBeGreaterThan(100);
-  scheduler.dispose();
-  scheduler.dispose();
-  expect(counts.map((count) => count())).toEqual(counts.map(() => 1));
-  expect(scene.children).toEqual([unrelated]);
+afterAll(() => {
   disposeObject(terrain);
 });

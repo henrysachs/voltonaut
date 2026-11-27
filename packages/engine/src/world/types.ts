@@ -66,10 +66,25 @@ export interface WorldData {
   readonly paths: readonly WorldPath[];
 }
 
+/** A region as the renderer sees it: its biome and the path its dressing follows. */
+export interface WorldRegionView extends WorldRegion {
+  readonly homePathId: string | undefined;
+}
+
+/** An edge as the renderer sees it: its chords and the biome of its region. */
+export interface WorldEdgeView {
+  readonly id: string;
+  readonly regionId: string;
+  readonly scenery: string;
+  readonly centerline: readonly CenterlinePoint[];
+}
+
 export interface World {
   readonly id: string;
   readonly name: string;
   readonly revision: string;
+  readonly regions: readonly WorldRegionView[];
+  readonly edges: readonly WorldEdgeView[];
   /**
    * Route data of every path in declaration order; each one feeds createRoute unchanged.
    * Its scenery is the region of the first edge.

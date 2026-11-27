@@ -6,7 +6,7 @@ import { ROUTE_CATALOG } from "../src/world/routeCatalog.js";
 const CATALOG_IDS: readonly string[] = ROUTE_CATALOG.map((entry) => entry.id);
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
-test("Strecke tab offers the four catalog routes with previews and marks the current one", async ({
+test("Strecke tab offers the five catalog routes with previews and marks the current one", async ({
   page,
 }) => {
   await page.goto("/?sim=1&debug=1");
@@ -15,7 +15,7 @@ test("Strecke tab offers the four catalog routes with previews and marks the cur
 
   const panel = page.getByRole("tabpanel", { name: "Strecke", exact: true });
 
-  await expect(panel.locator(".route-card")).toHaveCount(4);
+  await expect(panel.locator(".route-card")).toHaveCount(5);
   await expect(panel.getByText(/lädt die Seite neu/u)).toBeVisible();
 
   await Promise.all(

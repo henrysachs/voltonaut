@@ -1,4 +1,4 @@
-import { TEST_ROUTES, TEST_WORLDS, worldPathRoute, type RouteData } from "@voltonaut/engine";
+import { TEST_ROUTES, WORLDS, worldPathRoute, type RouteData } from "@voltonaut/engine";
 import {
   isWorldPathReference,
   WORLD_PATH_REPLAY_REVISION,
@@ -19,9 +19,13 @@ const REPLAYABLE_WORLDS: readonly { readonly worldId: string; readonly worldRevi
   { worldId: "coast-loop", worldRevision: "1" },
   { worldId: "alpine-pass", worldRevision: "1" },
   { worldId: "night-city", worldRevision: "1" },
+  { worldId: "voltonaut", worldRevision: "1" },
 ];
 
-const REPLAYABLE_ROUTE_IDS = new Set(REPLAYABLE_WORLDS.map((world) => world.worldId));
+/** Recordings from before worlds only exist for the single-route worlds (ADR-033 §8). */
+const REPLAYABLE_ROUTE_IDS = new Set(
+  REPLAYABLE_WORLDS.flatMap((world) => (world.worldId === "voltonaut" ? [] : [world.worldId])),
+);
 
 /**
  * Resolves the recorded reference internally (ADR-016). Unknown worlds, revisions, paths and
@@ -45,7 +49,7 @@ export function replayRoute(
       world.worldRevision === initialization.worldRevision,
   );
 
-  const route = replayable ? worldPathRoute(TEST_WORLDS, initialization) : undefined;
+  const route = replayable ? worldPathRoute(WORLDS, initialization) : undefined;
 
   return route === undefined ? undefined : { route, replayRevision: WORLD_PATH_REPLAY_REVISION };
 }

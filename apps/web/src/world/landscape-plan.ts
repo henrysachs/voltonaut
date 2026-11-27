@@ -2,6 +2,7 @@ import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 
 import { heightAt, type Heightfield } from "./heightfield.js";
 import { lakeRadius, offsetPosition, planLake, type Lake } from "./lake-plan.js";
+import { dominantRegion, type RegionMap } from "./region-map.js";
 import { nearestRoadM, type CorridorIndex } from "./road-corridor.js";
 import { apronSamples } from "./road-apron.js";
 import type { RoadSample } from "./road-plan.js";
@@ -54,7 +55,7 @@ function seededRandom(seed: number): () => number {
 
 interface Scatter {
   readonly random: () => number;
-  readonly lake: Lake;
+  readonly lakes: readonly Lake[];
   readonly terrain: Heightfield;
   readonly corridor: CorridorIndex;
 }
@@ -70,7 +71,7 @@ function standsFree(scatter: Scatter, plant: Plant): boolean {
   const reachM = PLANT_ROAD_CLEARANCE_M + plant.radiusM;
 
   return (
-    lakeRadius(scatter.lake, plant.position) >= 1.2 &&
+    scatter.lakes.every((lake) => lakeRadius(lake, plant.position) >= 1.2) &&
     nearestRoadM(scatter.corridor, x, z, reachM) > reachM
   );
 }
@@ -117,27 +118,65 @@ function scatterAlong(scatter: Scatter, road: EngineRoute, roadIndex: number): F
   return { trees, rocks };
 }
 
+/** One region of the landscape: the path its dressing follows and whether it has a lake. */
+export interface LandscapeRegion {
+  readonly home: EngineRoute;
+  readonly withLake: boolean;
+}
+
+/** The world terrain with one plan per region (ADR-033 §6); all plans share one raster. */
+export interface RegionalLandscape {
+  readonly terrain: Heightfield;
+  readonly lakes: readonly Lake[];
+  readonly plans: readonly LandscapePlan[];
+}
+
 /**
- * Landscape of the world the route belongs to: one terrain raster for all roads, the lake at
- * the start of the ridden route and a seeded forest along every road.
+ * Landscape of a world: one terrain raster for all roads with every region's lake, a seeded
+ * forest along every road, and per region a plan whose plants are those the region map gives
+ * to it. Region order follows the map's region order.
  */
+export function createRegionalLandscape(
+  roads: readonly EngineRoute[],
+  regions: readonly LandscapeRegion[],
+  regionMap: RegionMap,
+  seed = 42,
+): RegionalLandscape {
+  const lakes = regions.map((region) => planLake(region.home, region.withLake));
+  const carved = lakes.filter((_, index) => regions[index]?.withLake === true);
+  const { field, corridor } = planTerrain(roads, carved, seed);
+  const scatter: Scatter = { random: seededRandom(seed), lakes, terrain: field, corridor };
+  const forests = roads.map((road, roadIndex) => scatterAlong(scatter, road, roadIndex));
+
+  const owns = (index: number, plant: Plant): boolean =>
+    dominantRegion(regionMap, plant.position.x, plant.position.z) === index;
+
+  return {
+    terrain: field,
+    lakes,
+    plans: regions.map((region, index) => ({
+      route: region.home,
+      lake: lakes[index] ?? planLake(region.home, false),
+      terrain: field,
+      apron: region.home.scenery === "alpine" ? apronSamples(region.home) : [],
+      trees: forests.flatMap((forest) => forest.trees).filter((plant) => owns(index, plant)),
+      rocks: forests.flatMap((forest) => forest.rocks).filter((plant) => owns(index, plant)),
+    })),
+  };
+}
+
+/** Landscape of a single-region world whose dressing follows the given route. */
 export function createLandscapePlan(
   route: EngineRoute,
   roads: readonly EngineRoute[] = [route],
   seed = 42,
   withLake = true,
 ): LandscapePlan {
-  const lake = planLake(route, withLake);
-  const { field, corridor } = planTerrain(roads, withLake ? [lake] : [], seed);
-  const scatter: Scatter = { random: seededRandom(seed), lake, terrain: field, corridor };
-  const forests = roads.map((road, roadIndex) => scatterAlong(scatter, road, roadIndex));
+  const regionMap: RegionMap = { regionIds: [route.id], weightsAt: () => [1] };
+  const landscape = createRegionalLandscape(roads, [{ home: route, withLake }], regionMap, seed);
+  const plan = landscape.plans[0];
 
-  return {
-    route,
-    lake,
-    terrain: field,
-    apron: route.scenery === "alpine" ? apronSamples(route) : [],
-    trees: forests.flatMap((forest) => forest.trees),
-    rocks: forests.flatMap((forest) => forest.rocks),
-  };
+  if (plan === undefined) throw new Error("single-region landscape has no plan");
+
+  return plan;
 }

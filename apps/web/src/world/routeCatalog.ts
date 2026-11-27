@@ -32,8 +32,9 @@ function environment(
 
 /**
  * Presentable routes (#75). The engine registry also carries the test fixtures
- * flat-loop and kom-climb; the menu only offers the curated rides below, and
- * the four cards are the Strecke tab's source of truth.
+ * flat-loop and kom-climb and the region loops of the voltonaut world; the menu
+ * only offers the curated rides below, and these cards are the Strecke tab's
+ * source of truth.
  */
 export const ROUTE_CATALOG: readonly RoutePresentation[] = [
   {
@@ -62,6 +63,14 @@ export const ROUTE_CATALOG: readonly RoutePresentation[] = [
     title: "Night City",
     description: "6 km flache nächtliche Runde durch Neonschilder und Laternen.",
     environment: environment(23, 20 * 60 * 60, "clear"),
+    budget: STANDARD_BUDGET,
+  },
+  {
+    id: "voltonaut-tour",
+    title: "Voltonaut-Tour",
+    description:
+      "31 km durch die Welt Voltonaut: Wald und See, Küste und Nachtstadt ohne Ladepause.",
+    environment: environment(31, 12 * 60 * 60, "clear"),
     budget: STANDARD_BUDGET,
   },
 ];

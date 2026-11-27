@@ -12,6 +12,7 @@ import {
 import { BILLBOARD_VARIANTS, planBillboards } from "./billboard-plan.js";
 import { billboardsInView, createBillboards, withVariantUv } from "./billboards.js";
 import { createLandscapeSystem } from "./landscape.js";
+import { resolveRenderWorld } from "./render-world.js";
 import { createLandscapePlan } from "./landscape-plan.js";
 import { createScheduler } from "./scheduler.js";
 
@@ -123,7 +124,7 @@ it("paints distinct, bordered placeholder motifs per atlas cell", () => {
 it("is part of the landscape scene", () => {
   const scene = new THREE.Scene();
 
-  createScheduler([createLandscapeSystem([loop])], { scene, route: loop });
+  createScheduler([createLandscapeSystem(resolveRenderWorld(loop.id))], { scene, route: loop });
   expect(scene.getObjectByName("billboards")).toBeInstanceOf(THREE.Group);
 });
 

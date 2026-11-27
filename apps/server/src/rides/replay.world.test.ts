@@ -103,3 +103,28 @@ it("rejects a recording that names a world path and a route at once", () => {
     assessRecordingV2({ ...ride, initialization: { ...ride.initialization, ...TEST_LOOP_ROUTE } }),
   ).toEqual({ status: "rejected", reason: "invalid_contract" });
 });
+
+const TOUR_WORLD_PATH: RideReference = {
+  worldId: "voltonaut",
+  worldRevision: "1",
+  pathId: "voltonaut-tour",
+};
+
+it("replays a ride on the voltonaut tour in its connected world (ADR-033 step 3)", () => {
+  const result = replayed(recordReplay(SEGMENT_RIDE, 1, TOUR_WORLD_PATH));
+
+  expect(result).toMatchObject({ status: "replayed", replayRevision: "world-path-1" });
+  expect(result.summary.distanceM).toBeGreaterThan(0);
+});
+
+it.each<RideReference>([
+  { ...TOUR_WORLD_PATH, worldRevision: "2" },
+  { ...TOUR_WORLD_PATH, pathId: "voltonaut-alpine" },
+  { routeId: "voltonaut-tour", routeRevision: "1" },
+  { routeId: "voltonaut", routeRevision: "1" },
+])("keeps the voltonaut reference %o unverified as an unknown revision", (reference) => {
+  expect(assessRecordingV2(recordReplay(SEGMENT_RIDE, 1, reference))).toEqual({
+    status: "unverified",
+    reason: "unknown_revision",
+  });
+});

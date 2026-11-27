@@ -6,7 +6,7 @@ import { planBillboards } from "./billboard-plan.js";
 import { createBillboards } from "./billboards.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { createScenery } from "./scenery.js";
-import { createLake } from "./terrain.js";
+import { createLake } from "./lake.js";
 
 type BiomeDressing = (plan: LandscapePlan) => readonly THREE.Object3D[];
 

@@ -1,20 +1,14 @@
-import {
-  createRoute,
-  KOM_CLIMB,
-  TEST_ROUTES,
-  TEST_WORLDS,
-  type EngineRoute,
-} from "@voltonaut/engine";
-import { describe, expect, it } from "vitest";
+import { createRoute, KOM_CLIMB, TEST_ROUTES, WORLDS, type EngineRoute } from "@voltonaut/engine";
+import { beforeAll, describe, expect, it } from "vitest";
 
-import { biomeFromScenery, biomeHasLake } from "./biome.js";
 import { heightAt, type Heightfield } from "./heightfield.js";
 import { planLake } from "./lake-plan.js";
-import { createLandscapePlan } from "./landscape-plan.js";
 import { roadClearance } from "./road-clearance.js";
 import { roadSampleDistances, SHOULDER_WIDTH_M } from "./road-plan.js";
 import { hairpinRoad } from "./road-test-routes.js";
+import { renderWorldOf, type RenderWorld } from "./render-world.js";
 import { planTerrain } from "./terrain-plan.js";
+import { planWorldLandscape } from "./world-landscape.js";
 
 /** Smallest clearance the AK4 gate accepts: the shoulder is drawn 0.005 m above the profile. */
 const MIN_CLEARANCE_M = 0.05;
@@ -22,14 +16,29 @@ const MIN_CLEARANCE_M = 0.05;
 interface ShippedRoute {
   readonly id: string;
   readonly route: EngineRoute;
-  readonly roads: readonly EngineRoute[];
+  readonly world: RenderWorld;
 }
 
-const shipped: readonly ShippedRoute[] = TEST_WORLDS.flatMap((world) => {
-  const roads = world.routes.map((data) => createRoute(data));
+const worldViews: readonly RenderWorld[] = WORLDS.map((world) => renderWorldOf(world));
 
-  return roads.map((route): ShippedRoute => ({ id: route.id, route, roads }));
-});
+const shipped: readonly ShippedRoute[] = worldViews.flatMap((view) =>
+  view.roads.map((route): ShippedRoute => ({ id: route.id, route, world: view })),
+);
+
+const terrainOfWorld = new Map<RenderWorld, Heightfield>();
+
+/** The world raster as drawn, planned once per world. */
+function drawnTerrain(world: RenderWorld): Heightfield {
+  const known = terrainOfWorld.get(world);
+
+  if (known !== undefined) return known;
+
+  const field = planWorldLandscape(world).landscape.terrain;
+
+  terrainOfWorld.set(world, field);
+
+  return field;
+}
 
 function shippedRoute(id: string): ShippedRoute {
   const found = shipped.find((entry) => entry.id === id);
@@ -84,13 +93,11 @@ function withRaisedPoint(field: Heightfield): Heightfield {
   return Object.assign({}, field, { tiles });
 }
 
-/** Raster clearance of every road in the route's world, as the landscape draws it. */
-function clearanceOfShipped(id: string): readonly number[] {
-  const { route, roads } = shippedRoute(id);
-  const withLake = biomeHasLake(biomeFromScenery(route.scenery));
-  const terrain = createLandscapePlan(route, roads, 42, withLake).terrain;
+/** Raster clearance of the route in its world, as the landscape draws it. */
+function clearanceOfShipped(id: string): number {
+  const { route, world } = shippedRoute(id);
 
-  return roads.map((road) => roadClearance(terrain, road).minClearanceM);
+  return roadClearance(drawnTerrain(world), route).minClearanceM;
 }
 
 describe("road clearance (AK4)", () => {
@@ -100,13 +107,6 @@ describe("road clearance (AK4)", () => {
     );
   });
 
-  it.each(shipped.map((entry) => entry.id))(
-    "keeps the terrain under every road band of %s",
-    (id) => {
-      expect(Math.min(...clearanceOfShipped(id))).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
-    },
-  );
-
   it("keeps the terrain under a tight climbing hairpin", () => {
     const hairpin = hairpinRoad(12, 6);
     const field = planTerrain([hairpin], [planLake(hairpin)], 42).field;
@@ -115,8 +115,8 @@ describe("road clearance (AK4)", () => {
   });
 
   it("finds a minimum at least as low as dense random probes", () => {
-    const { route, roads } = shippedRoute("test-loop");
-    const field = createLandscapePlan(route, roads).terrain;
+    const { route, world } = shippedRoute("test-loop");
+    const field = drawnTerrain(world);
     const exact = roadClearance(field, route).minClearanceM;
 
     expect(exact).toBeLessThanOrEqual(sampledMinimum(field, route, 20_000) + 1e-9);
@@ -134,3 +134,20 @@ describe("road clearance (AK4)", () => {
     expect({ x: raised.x, z: raised.z }).toEqual({ x: 1048, z: 0 });
   });
 });
+
+describe.each(worldViews.map((view, index) => [WORLDS[index]?.id, view] as const))(
+  "road clearance in world %s (AK4)",
+  (_worldId, view) => {
+    // One raster per world, planned before its routes are checked against it.
+    beforeAll(() => {
+      drawnTerrain(view);
+    });
+
+    it.each(view.roads.map((road) => road.id))(
+      "keeps the terrain under every road band of %s",
+      (id) => {
+        expect(clearanceOfShipped(id)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
+      },
+    );
+  },
+);

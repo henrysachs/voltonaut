@@ -59,6 +59,10 @@ it("keeps TEST_ROUTES keyed by route id in shipping order", () => {
     "coast-loop",
     "alpine-pass",
     "night-city",
+    "voltonaut-tour",
+    "voltonaut-forest",
+    "voltonaut-coast",
+    "voltonaut-night-city",
   ]);
 });
 

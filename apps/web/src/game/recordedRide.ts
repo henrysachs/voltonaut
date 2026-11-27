@@ -16,7 +16,7 @@ import {
   createEngine,
   createRoute,
   PHYSICS_REVISION,
-  TEST_WORLDS,
+  WORLDS,
   worldPathRoute,
   type Engine,
   type RideSnapshot,
@@ -213,7 +213,7 @@ export function startRecordedRide(
   timeOriginMs: number,
   newId: () => string,
 ): StartedRide {
-  const routeData = worldPathRoute(TEST_WORLDS, init.worldPath);
+  const routeData = worldPathRoute(WORLDS, init.worldPath);
 
   if (routeData === undefined)
     throw new Error(`unknown world path: ${describeRideReference(init.worldPath)}`);
