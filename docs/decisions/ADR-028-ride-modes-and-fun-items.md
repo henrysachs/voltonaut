@@ -1,6 +1,6 @@
 # ADR-028 – Spielmodi und Trainerwirkung von Spaß-Modus-Items
 
-- **Status:** Vorgeschlagen für Phase 1 von E9-01. Phase 2 (Malus) benötigt Henrys Freigabe.
+- **Status:** Angenommen (Henrys Freigabe im Chat am 2026-11-27) für Phase 1 von E9-01 und für Phase 2 (Malus) mit den Grenzen aus Punkt 3.
 - **Bezug:** Issue #45, Spec E9-01, AGENTS.md §3.9, Issue #78 (ERG als nächster Modus), Issue #84 (getrennte normale Power-ups).
 
 ## Kontext
@@ -26,7 +26,7 @@ Ein neuer Modus wie ERG braucht damit: einen Eintrag in `RideMode` und `RIDE_MOD
 
 1. **Phase 1 wirkt nur in der Fahrphysik.** Power-ups verändern `cdaM2`, Fahrer- und Radmasse (Leichtgewicht nur bei Steigung ≥ 0) und den Wind ausschließlich für die Geschwindigkeitsberechnung. Das Trainerkommando rechnet weiter mit den unveränderten Profilparametern. Ein Test sichert, dass das Kommando mit und ohne aktives Item bei gleichem Zustand identisch ist.
 2. **Kein neuer Kommandopfad.** Aktivierung, Verbindung und Messwertempfang lösen kein eigenes Kommando aus. Das bestehende `nextCommand` mit Klemmung und Ratenbegrenzung bleibt unberührt.
-3. **Malus mit Lasterhöhung (Phase 2) ist nicht freigegeben.** Vorschlag zur späteren Freigabe: höchstens +2 % effektive Steigung, höchstens 10 s, Opt-out „nur visuell“, gleiche Klemmung. Bis zur Freigabe wirkt ein Malus nur auf Bots.
+3. **Malus mit Lasterhöhung (Phase 2) ist freigegeben** (Henry im Chat am 2026-11-27) mit diesen Grenzen: höchstens +2 % effektive Steigung, höchstens 10 s, Opt-out „nur visuell“, gleiche Klemmung. Die Umsetzung bleibt eine physische Wirkung nach AGENTS.md §3.9 und braucht eine Hardwareprobe. Bis sie umgesetzt ist, wirkt ein Malus nur auf Bots.
 4. **Getrennt von #84.** Spaß-Modus-Items haben eigene Kennungen und vergeben keine Belohnungen. Die Effektrechnung (`physics/effects.ts`, `PhysicsEffect`) kennt keine Items, damit #84 sie ohne zweite Effekttabelle wiederverwenden kann.
 5. **Aufnahmen.** Das Aufnahmeprotokoll beginnt mit der Sitzung, und der Server rechnet es ohne Modus nach. Wer einen Modus ohne `recordable` betritt, macht deshalb alle späteren Aufnahmen dieser Sitzung zu rein lokalen Aufnahmen (Grund `ride_mode`), statt eine nicht nachrechenbare Fahrt als prüfbar auszugeben. Während einer laufenden oder noch nicht freigegebenen Aufnahme lassen sich solche Modi nicht wählen.
 

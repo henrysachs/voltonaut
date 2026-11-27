@@ -2,7 +2,7 @@
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E8, Teilschritt der Checkbox „Day/Night-Zyklus und Wetter"
 - **Status:** Implementiert und softwaregeprüft. Unabhängiges Review, vollständiges Gate und Build sind grün; Merge und CI stehen noch aus.
-- **Betroffene Module:** `apps/web/src/world`, `apps/web/src/main.ts`, `apps/web/src/ridePresentation.ts`
+- **Betroffene Module:** `apps/web/src/world`, `apps/web/src/main.ts`, ~~`apps/web/src/ridePresentation.ts`~~ (heute `apps/web/src/rideViews.ts`)
 
 ## Ziel
 

@@ -26,7 +26,7 @@ Reihenfolge: Schalten anwenden → Messwerte glätten (EMA, τ ≈ 1 s für Anze
 
 Datenausfall: kein `trainer.data` seit > 3 s → `powerW = 0` (Ausrollen), HUD-Warnung. Pause automatisch, wenn `speedMps < 0.5` und `cadence = 0` für 5 s.
 
-Ab E3 läuft die Engine im Dedicated Web Worker (ADR-011, Freigabe ausstehend). `advance(elapsedS)` verarbeitet feste 0,05-s-Ticks mit einem Akkumulator. Pro Aufwachung sind höchstens 120 Ticks erlaubt. Der Rest erzeugt `ride.clockSkipped`. Ohne frische Trainerdaten setzt die Engine nach mehr als 3 s auch die Rohkadenz auf null. Nach 100 stehenden Ticks greift Auto-Pause am Anfang von Tick 101. Leistung oder Kadenz lösen die Pause.
+Ab E3 läuft die Engine im Dedicated Web Worker (ADR-011, angenommen). `advance(elapsedS)` verarbeitet feste 0,05-s-Ticks mit einem Akkumulator. Pro Aufwachung sind höchstens 120 Ticks erlaubt. Der Rest erzeugt `ride.clockSkipped`. Ohne frische Trainerdaten setzt die Engine nach mehr als 3 s auch die Rohkadenz auf null. Nach 100 stehenden Ticks greift Auto-Pause am Anfang von Tick 101. Leistung oder Kadenz lösen die Pause.
 
 [E6-03](specs/E6-03-native-ride-facts.md) gibt zusätzlich zu jedem tatsächlich verarbeiteten Tick `NativeTickFacts` zurück. Die Werte enthalten effektive Rohleistung und Rohkadenz nach Frischeprüfung sowie die lokalen Beiträge zu Zeit, Strecke, positiver Höhe und mechanischer Arbeit. Pausierte Ticks haben vier Nullbeiträge. Das äußere Array und jeder Eintrag sind eingefroren. Die Fakten ändern weder Advancepartition noch Snapshots, Events oder Trainerkommandos. Sie sind keine Quellenfreigabe und keine Belohnungsbuchung.
 
