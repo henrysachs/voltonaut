@@ -1,6 +1,6 @@
 # Zwift Hub One und Zwift Click v2, Hardwaremitschnitte vom 27.11.2026
 
-Echte Geräteantworten, aufgezeichnet im geführten BLE-Labor ([E2-04](../../docs/specs/E2-04-hub-click-v2-guided-lab.md)) an der Hardware eines Bekannten. Keine synthetischen Hardware-Fixtures. Beide Originale bleiben unverändert außerhalb des Repositories. Henry hat die Übernahme am 27.11.2026 freigegeben; vorhandene Fixtures bleiben unverändert.
+Echte Geräteantworten, aufgezeichnet im geführten BLE-Labor ([E2-04](../../docs/specs/E2-04-hub-click-v2-guided-lab.md)) an der Hardware eines Bekannten. Keine synthetischen Hardware-Fixtures. Beide Originale bleiben unverändert außerhalb des Repositories. Henry hat die Übernahme am 27.11.2026 freigegeben; Aufnahme nach [ADR-034](../../docs/decisions/ADR-034-hardware-capture-fixtures.md). Vorhandene Fixtures bleiben unverändert.
 
 | Gerät | Originaldatei | SHA-256 des Originals |
 | --- | --- | --- |
