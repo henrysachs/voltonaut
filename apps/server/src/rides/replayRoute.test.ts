@@ -84,6 +84,11 @@ it("replays exactly the shipped references and nothing else (ADR-016, ADR-033 §
       "world voltonaut@1/voltonaut-night-city → voltonaut-night-city world-path-1",
       "world felsental@1/felsental → felsental world-path-1",
       "world voltonaut@1/voltonaut-tour → voltonaut-tour world-path-1",
+      "world voltonaut@2/voltonaut-coast → voltonaut-coast world-path-1",
+      "world voltonaut@2/voltonaut-forest → voltonaut-forest world-path-1",
+      "world voltonaut@2/voltonaut-night-city → voltonaut-night-city world-path-1",
+      "world voltonaut@2/voltonaut-tour → voltonaut-tour world-path-1",
+      "world voltonaut@2/voltonaut-vineyard → voltonaut-vineyard world-path-1",
     ].toSorted(),
   );
 });

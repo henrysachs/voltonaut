@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import { TEST_ROUTES } from "../../elevation/data/index.js";
+import { worldPathRoute } from "../registry.js";
 
 import { WORLD_REGISTRY, WORLDS } from "./index.js";
 import { parseRouteId, registeredRoute, ROUTE_REGISTRY, routeWorldPath } from "./routes.js";
@@ -13,7 +14,7 @@ const ROUTE_IDS = Object.keys(ROUTE_REGISTRY).flatMap((id) => {
 
 it("registers every path of every shipped world, in world order", () => {
   expect(Object.keys(ROUTE_REGISTRY)).toEqual(
-    WORLDS.flatMap((world) => world.routes.map((route) => route.id)),
+    Object.values(WORLD_REGISTRY).flatMap((world) => world.routes.map((route) => route.id)),
   );
   expect(ROUTE_IDS).toEqual(Object.keys(ROUTE_REGISTRY));
 });
@@ -34,20 +35,21 @@ it("pins the replay policy of every shipped route (ADR-016, ADR-033 §7–8)", (
     ROUTE_IDS.map((routeId) => {
       const { worldId, replay } = ROUTE_REGISTRY[routeId];
 
-      return [routeId, worldId, replay.worldRevision, replay.legacyRouteRevision];
+      return [routeId, worldId, replay.worldRevisions, replay.legacyRouteRevision];
     }),
   ).toEqual([
-    ["flat-loop", "flat-loop", "1", "1"],
-    ["test-loop", "test-loop", "1", "1"],
-    ["kom-climb", "kom-climb", "1", "1"],
-    ["coast-loop", "coast-loop", "1", "1"],
-    ["alpine-pass", "alpine-pass", "1", "1"],
-    ["night-city", "night-city", "1", "1"],
-    ["voltonaut-tour", "voltonaut", "1", undefined],
-    ["voltonaut-forest", "voltonaut", "1", undefined],
-    ["voltonaut-coast", "voltonaut", "1", undefined],
-    ["voltonaut-night-city", "voltonaut", "1", undefined],
-    ["felsental", "felsental", "1", undefined],
+    ["flat-loop", "flat-loop", ["1"], "1"],
+    ["test-loop", "test-loop", ["1"], "1"],
+    ["kom-climb", "kom-climb", ["1"], "1"],
+    ["coast-loop", "coast-loop", ["1"], "1"],
+    ["alpine-pass", "alpine-pass", ["1"], "1"],
+    ["night-city", "night-city", ["1"], "1"],
+    ["voltonaut-tour", "voltonaut", ["1", "2"], undefined],
+    ["voltonaut-forest", "voltonaut", ["1", "2"], undefined],
+    ["voltonaut-vineyard", "voltonaut", ["2"], undefined],
+    ["voltonaut-coast", "voltonaut", ["1", "2"], undefined],
+    ["voltonaut-night-city", "voltonaut", ["1", "2"], undefined],
+    ["felsental", "felsental", ["1"], undefined],
   ]);
 });
 
@@ -55,7 +57,19 @@ it("replays the current revision of every world, so new rides stay scorable", ()
   for (const routeId of ROUTE_IDS) {
     const { worldId, replay } = ROUTE_REGISTRY[routeId];
 
-    expect(replay.worldRevision).toBe(WORLD_REGISTRY[worldId].revision);
+    expect(replay.worldRevisions.at(-1)).toBe(WORLD_REGISTRY[worldId].revision);
+  }
+});
+
+it("keeps every replayable revision of a route resolvable in the shipped worlds", () => {
+  for (const routeId of ROUTE_IDS) {
+    const { worldId, replay } = ROUTE_REGISTRY[routeId];
+
+    for (const worldRevision of replay.worldRevisions) {
+      expect(worldPathRoute(WORLDS, { worldId, worldRevision, pathId: routeId })).toMatchObject({
+        id: routeId,
+      });
+    }
   }
 });
 
@@ -67,8 +81,13 @@ it("records new rides on the route's own world and revision (ADR-033 §7)", () =
   });
   expect(routeWorldPath("voltonaut-tour")).toEqual({
     worldId: "voltonaut",
-    worldRevision: "1",
+    worldRevision: "2",
     pathId: "voltonaut-tour",
+  });
+  expect(routeWorldPath("voltonaut-vineyard")).toEqual({
+    worldId: "voltonaut",
+    worldRevision: "2",
+    pathId: "voltonaut-vineyard",
   });
 });
 

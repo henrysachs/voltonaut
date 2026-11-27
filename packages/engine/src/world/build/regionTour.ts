@@ -1,8 +1,9 @@
-import type { CenterlinePoint, RouteData } from "../../elevation/route.js";
+import type { CenterlinePoint, RouteData, SegmentDef } from "../../elevation/route.js";
 import type { PathStep, RoadEdge, WorldData, WorldNode, WorldPath } from "../types.js";
 
 import {
   chordHeadingRad,
+  cumulativeLengths,
   cutPiece,
   type RoadPiece,
   type SourceRoad,
@@ -17,6 +18,10 @@ export interface TourRegion {
   readonly scenery: string;
   readonly loop: RouteData;
   readonly offset: CenterlinePoint;
+  /** Catalog name of the region's own loop path; defaults to the region name. */
+  readonly pathName?: string;
+  /** Carries the loop's segments over to its path, moved to start at the region's entry. */
+  readonly keepSegments?: boolean;
 }
 
 export interface TourWorldSpec {
@@ -28,6 +33,8 @@ export interface TourWorldSpec {
   /** Visited in this order; the tour returns from the last region to the first. */
   readonly regions: readonly TourRegion[];
   readonly chordM: number;
+  /** Transitions keep the grade of the loops at their junctions instead of levelling out. */
+  readonly matchGrades?: boolean;
 }
 
 interface PlacedRegion {
@@ -90,11 +97,24 @@ function edge(id: string, regionId: string, from: string, to: string, piece: Roa
   return { id, regionId, fromNodeId: from, toNodeId: to, ...piece };
 }
 
+/** Grade of a piece along its travel direction at its first or last chord. */
+function pieceSlope(piece: RoadPiece, end: "start" | "end"): number {
+  const samples =
+    end === "start" ? piece.profileSamples.slice(0, 2) : piece.profileSamples.slice(-2);
+
+  const [from, to] = samples;
+
+  return from === undefined || to === undefined
+    ? 0
+    : (to.elevationM - from.elevationM) / (to.distanceM - from.distanceM);
+}
+
 function roadEnd(
   placed: PlacedRegion,
   vertex: number,
   piece: RoadPiece,
   end: "start" | "end",
+  matchGrade: boolean,
 ): RoadEnd {
   const point = end === "start" ? piece.centerline[0] : piece.centerline.at(-1);
   const sample = end === "start" ? piece.profileSamples[0] : piece.profileSamples.at(-1);
@@ -103,6 +123,7 @@ function roadEnd(
     point: point ?? { x: 0, z: 0 },
     headingRad: chordHeadingRad(placed.road.centerline, vertex),
     elevationM: sample?.elevationM ?? 0,
+    slope: matchGrade ? pieceSlope(piece, end) : undefined,
   };
 }
 
@@ -139,7 +160,12 @@ function forward(edgeId: string): PathStep {
 }
 
 /** The region's two loop halves and the transition to the next region, split at its border. */
-function regionEdges(here: PlacedRegion, next: PlacedRegion, chordM: number): readonly RoadEdge[] {
+function regionEdges(
+  here: PlacedRegion,
+  next: PlacedRegion,
+  chordM: number,
+  matchGrade: boolean,
+): readonly RoadEdge[] {
   const id = here.region.id;
   const nextId = next.region.id;
   const pieces = regionPieces(here);
@@ -147,8 +173,8 @@ function regionEdges(here: PlacedRegion, next: PlacedRegion, chordM: number): re
 
   const [out, inbound] = halves(
     transitionRoad(
-      roadEnd(here, here.exit, pieces.through, "end"),
-      roadEnd(next, next.entry, regionPieces(next).through, "start"),
+      roadEnd(here, here.exit, pieces.through, "end", matchGrade),
+      roadEnd(next, next.entry, regionPieces(next).through, "start", matchGrade),
       chordM,
     ),
   );
@@ -161,9 +187,27 @@ function regionEdges(here: PlacedRegion, next: PlacedRegion, chordM: number): re
   ];
 }
 
+/** The loop's segments as distances from the region's entry vertex, where its path starts. */
+function segmentsFromEntry(placed: PlacedRegion): readonly SegmentDef[] {
+  const lengths = cumulativeLengths(placed.road.centerline);
+  const lapM = lengths.at(-1) ?? 0;
+  const entryM = lengths[placed.entry] ?? 0;
+
+  return placed.region.loop.segments.map((segment) => {
+    const startM = (segment.startM - entryM + lapM) % lapM;
+    const endM = startM + segment.endM - segment.startM;
+
+    if (endM > lapM) {
+      throw new RangeError(`segment ${segment.id} of region ${placed.region.id} crosses its entry`);
+    }
+
+    return { ...segment, startM, endM };
+  });
+}
+
 function regionShare(spec: TourWorldSpec, here: PlacedRegion, next: PlacedRegion): RegionShare {
   const id = here.region.id;
-  const edges = regionEdges(here, next, spec.chordM);
+  const edges = regionEdges(here, next, spec.chordM, spec.matchGrades === true);
   const [through, around, out] = edges;
 
   if (through === undefined || around === undefined || out === undefined) {
@@ -180,9 +224,9 @@ function regionShare(spec: TourWorldSpec, here: PlacedRegion, next: PlacedRegion
     tour: edges.flatMap((road) => (road === around ? [] : [forward(road.id)])),
     loop: {
       id: `${spec.id}-${id}`,
-      name: here.region.name,
+      name: here.region.pathName ?? here.region.name,
       loop: true,
-      segments: [],
+      segments: here.region.keepSegments === true ? segmentsFromEntry(here) : [],
       steps: [forward(through.id), forward(around.id)],
     },
   };

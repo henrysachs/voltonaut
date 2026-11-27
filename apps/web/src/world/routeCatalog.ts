@@ -71,8 +71,16 @@ export const ROUTE_CATALOG: readonly RoutePresentation[] = [
     id: "voltonaut-tour",
     title: "Voltonaut-Tour",
     description:
-      "23 km durch die Welt Voltonaut: Wald und See, Küste und Nachtstadt ohne Ladepause.",
+      "28 km durch die Welt Voltonaut: Wald und See, Weinberge, Küste und Nachtstadt ohne Ladepause.",
     environment: environment(31, 12 * 60 * 60, "clear"),
+    budget: STANDARD_BUDGET,
+  },
+  {
+    id: "voltonaut-vineyard",
+    title: "Weinberg-Intervalle",
+    description:
+      "Neun kurze Rampen mit 3 bis 7 Prozent über 12 km Weinberge, dazwischen Abfahrten – im warmen Abendlicht.",
+    environment: environment(37, 17 * 60 * 60 + 30 * 60, "clear"),
     budget: STANDARD_BUDGET,
   },
   {

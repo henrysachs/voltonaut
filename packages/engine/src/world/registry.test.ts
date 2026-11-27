@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 
 import { TEST_LOOP } from "../elevation/data/test-loop.js";
 
-import { TEST_WORLDS, WORLDS } from "./data/index.js";
+import { TEST_WORLDS, VOLTONAUT, VOLTONAUT_REVISION_2, WORLDS } from "./data/index.js";
 import { worldPathRoute } from "./registry.js";
 
 const TEST_LOOP_PATH = { worldId: "test-loop", worldRevision: "1", pathId: "test-loop" } as const;
@@ -34,6 +34,16 @@ it.each<WorldPathReference>([
 
 it("finds nothing in an empty world list", () => {
   expect(worldPathRoute([], TEST_LOOP_PATH)).toBeUndefined();
+});
+
+it("keeps resolving a recording of the voltonaut tour in revision 1", () => {
+  const old = { worldId: "voltonaut", worldRevision: "1", pathId: "voltonaut-tour" } as const;
+  const current = { ...old, worldRevision: "2" } as const;
+
+  expect(worldPathRoute(WORLDS, old)).toBe(VOLTONAUT.route("voltonaut-tour"));
+  expect(worldPathRoute(WORLDS, current)).toBe(VOLTONAUT_REVISION_2.route("voltonaut-tour"));
+  expect(worldPathRoute(WORLDS, old)?.lengthM).not.toBe(worldPathRoute(WORLDS, current)?.lengthM);
+  expect(worldPathRoute(WORLDS, { ...old, pathId: "voltonaut-vineyard" })).toBeUndefined();
 });
 
 it("resolves a voltonaut path only in its own world and revision", () => {

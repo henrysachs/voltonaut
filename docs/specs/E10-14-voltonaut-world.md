@@ -55,6 +55,10 @@ Die erste zusammenhängende Welt `voltonaut`: Wald und See (Testrunde), Küste u
 - **Atmosphäre und Alpenpass:** Folgeschritt; Henry entscheidet, ob vor Schritt 5.
 - **Weltrevision:** Jede Geometrieänderung an `voltonaut` braucht eine neue Revision und einen Eintrag in der Server-Liste nachrechenbarer Welten.
 
+## Revisionsnote
+
+Revision `1` (Wald, Küste, Nachtstadt) bleibt unverändert und nachrechenbar. [E10-17](E10-17-region-weinberge.md) fügt in Revision `2` die Region Weinberge ein; neue Fahrten laufen auf Revision `2`, die Tour ist dort 28,0 km lang.
+
 ## Nachweisstand
 
 - **Implementiert:** ja.

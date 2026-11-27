@@ -10,6 +10,7 @@ import { createBillboards } from "./billboards.js";
 import type { DressingGroup } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { createScenery } from "./scenery.js";
+import { createVineyardScenery } from "./vineyardScenery.js";
 import { createLake } from "./lake.js";
 
 type BiomeDressing = (plan: LandscapePlan) => readonly DressingGroup[];
@@ -23,6 +24,7 @@ const DRESSING: Readonly<Record<Biome["kind"], BiomeDressing>> = {
   coast: (plan) => [createLake(plan), createCoastScenery(plan)],
   alpine: (plan) => [createAlpineScenery(plan)],
   "night-city": (plan) => [createNightCityScenery(plan)],
+  vineyard: (plan) => [createVineyardScenery(plan)],
   "stone-age": (plan) => [createStoneAgeScenery(plan)],
 };
 

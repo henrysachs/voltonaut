@@ -30,6 +30,8 @@ export interface LandscapePlan {
   readonly route: EngineRoute;
   readonly lake: Lake;
   readonly terrain: Heightfield;
+  /** Every road of the world once, for decor that must stay out of all of them. */
+  readonly roads: readonly EngineRoute[];
   /** Alpine road apron edges (#138); empty for every other biome. */
   readonly apron: readonly RoadSample[];
   readonly trees: readonly Plant[];
@@ -204,6 +206,7 @@ export function createRegionalLandscape(
       route: region.home,
       lake: lakes[index] ?? planLake(region.home, false),
       terrain: field,
+      roads,
       apron: region.home.scenery === "alpine" ? apronSamples(region.home) : [],
       trees: forests.flatMap((forest) => forest.trees).filter((plant) => owns(index, plant)),
       rocks: forests.flatMap((forest) => forest.rocks).filter((plant) => owns(index, plant)),

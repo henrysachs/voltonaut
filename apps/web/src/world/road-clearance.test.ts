@@ -1,4 +1,11 @@
-import { createRoute, KOM_CLIMB, TEST_ROUTES, WORLDS, type EngineRoute } from "@voltonaut/engine";
+import {
+  createRoute,
+  KOM_CLIMB,
+  TEST_ROUTES,
+  VOLTONAUT_REVISION_2,
+  WORLDS,
+  type EngineRoute,
+} from "@voltonaut/engine";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { heightAt, type Heightfield } from "./heightfield.js";
@@ -30,9 +37,9 @@ const shipped: readonly ShippedRoute[] = WORLDS.flatMap((world, index) =>
   })),
 );
 
-/** Ids of the routes ridden in a world. */
-function routeIdsOf(view: RenderWorld): readonly string[] {
-  return shipped.flatMap((entry) => (entry.world === view ? [entry.id] : []));
+/** The routes ridden in a world; a path id may repeat across revisions of one world. */
+function routesOf(view: RenderWorld): readonly ShippedRoute[] {
+  return shipped.filter((entry) => entry.world === view);
 }
 
 const terrainOfWorld = new Map<RenderWorld, Heightfield>();
@@ -104,15 +111,13 @@ function withRaisedPoint(field: Heightfield): Heightfield {
 }
 
 /** Raster clearance of the route in its world, as the landscape draws it. */
-function clearanceOfShipped(id: string): number {
-  const { route, world } = shippedRoute(id);
-
+function clearanceOfShipped({ route, world }: ShippedRoute): number {
   return roadClearance(drawnTerrain(world), route).minClearanceM;
 }
 
 describe("road clearance (AK4)", () => {
   it("covers every shipped route", () => {
-    expect(shipped.map((entry) => entry.route.id).toSorted()).toEqual(
+    expect([...new Set(shipped.map((entry) => entry.route.id))].toSorted()).toEqual(
       Object.keys(TEST_ROUTES).toSorted(),
     );
     expect(shipped.map((entry) => entry.id)).toContain("felsental");
@@ -146,16 +151,28 @@ describe("road clearance (AK4)", () => {
   });
 });
 
-describe.each(worldViews.map((view, index) => [WORLDS[index]?.id, view] as const))(
-  "road clearance in world %s (AK4)",
-  (_worldId, view) => {
-    // One raster per world, planned before its routes are checked against it.
-    beforeAll(() => {
-      drawnTerrain(view);
-    });
+it("checks the vineyard path in the raster of voltonaut revision 2 (#146)", () => {
+  const entry = shippedRoute("voltonaut-vineyard");
 
-    it.each(routeIdsOf(view))("keeps the terrain under every road band of %s", (id) => {
-      expect(clearanceOfShipped(id)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
-    });
-  },
-);
+  expect(entry.world).toBe(worldViews[WORLDS.indexOf(VOLTONAUT_REVISION_2)]);
+  expect(routesOf(entry.world)).toContain(entry);
+  expect(entry.route.lengthM).toBeGreaterThan(12_000);
+});
+
+describe.each(
+  worldViews.map(
+    (view, index) => [`${WORLDS[index]?.id} ${WORLDS[index]?.revision}`, view] as const,
+  ),
+)("road clearance in world %s (AK4)", (_world, view) => {
+  // One raster per world, planned before its routes are checked against it.
+  beforeAll(() => {
+    drawnTerrain(view);
+  });
+
+  it.each(routesOf(view).map((entry) => [entry.id, entry] as const))(
+    "keeps the terrain under every road band of %s",
+    (_id, entry) => {
+      expect(clearanceOfShipped(entry)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
+    },
+  );
+});

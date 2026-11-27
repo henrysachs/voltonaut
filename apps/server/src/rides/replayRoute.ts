@@ -45,7 +45,10 @@ export function replayRoute(
   if (routeId === undefined) return undefined;
   const { worldId, replay } = ROUTE_REGISTRY[routeId];
 
-  if (worldId !== initialization.worldId || replay.worldRevision !== initialization.worldRevision)
+  if (
+    worldId !== initialization.worldId ||
+    !replay.worldRevisions.includes(initialization.worldRevision)
+  )
     return undefined;
   // The shipped world must still carry the recorded revision; geometry never falls back.
   const route = worldPathRoute(WORLDS, initialization);

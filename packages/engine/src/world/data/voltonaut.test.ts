@@ -5,7 +5,7 @@ import { TEST_ROUTES } from "../../elevation/data/index.js";
 import type { RoadEdge } from "../types.js";
 import { createWorld } from "../world.js";
 
-import { VOLTONAUT, WORLDS } from "./index.js";
+import { VOLTONAUT, VOLTONAUT_REVISION_2, WORLDS } from "./index.js";
 import { VOLTONAUT_WORLD } from "./voltonaut.js";
 
 /** Junction surroundings where roads meet or merge on purpose. */
@@ -88,7 +88,7 @@ it("offers the tour and one loop per region as routes", () => {
     ["voltonaut-coast", true, "coast"],
     ["voltonaut-night-city", true, "night-city"],
   ]);
-  expect(TEST_ROUTES["voltonaut-tour"]).toBe(VOLTONAUT.route("voltonaut-tour"));
+  expect(TEST_ROUTES["voltonaut-tour"]).toBe(VOLTONAUT_REVISION_2.route("voltonaut-tour"));
 });
 
 it("rides the tour through every region without a break", () => {

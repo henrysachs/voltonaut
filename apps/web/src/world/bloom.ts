@@ -14,6 +14,8 @@ const BIOME_BLOOM: Readonly<Record<Biome["kind"], number>> = {
   coast: 0,
   alpine: 0,
   "night-city": 0.7,
+  vineyard: 0,
+  "stone-age": 0,
 };
 
 /** Linear HDR luminance above which a pixel blooms. */

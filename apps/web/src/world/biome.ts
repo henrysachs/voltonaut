@@ -8,6 +8,7 @@ export type Biome =
   | { readonly kind: "coast" }
   | { readonly kind: "alpine" }
   | { readonly kind: "night-city" }
+  | { readonly kind: "vineyard" }
   | { readonly kind: "stone-age" };
 
 /** Derives the biome from RouteData.scenery; unknown scenery keeps the forest. */
@@ -19,6 +20,8 @@ export function biomeFromScenery(scenery: string): Biome {
       return { kind: "alpine" };
     case "night-city":
       return { kind: "night-city" };
+    case "vineyard":
+      return { kind: "vineyard" };
     case "stone-age":
       return { kind: "stone-age" };
     default:

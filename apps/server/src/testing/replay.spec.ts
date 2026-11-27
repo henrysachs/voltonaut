@@ -5,7 +5,10 @@ import {
   PHYSICS_REVISION,
   projectReplaySnapshot,
   TEST_ROUTES,
+  WORLDS,
+  worldPathRoute,
   type Engine,
+  type RouteData,
 } from "@voltonaut/engine";
 import {
   DEFAULT_RIDER_PROFILE,
@@ -21,12 +24,23 @@ import {
 
 import { assessRecordingV2, type RecordingV2Assessment } from "../rides/replay.js";
 
-export function replayEngine(routeId = "test-loop"): Engine {
-  const routeData = TEST_ROUTES[routeId];
-
-  if (routeData === undefined) throw new RangeError(`unknown replay route ${routeId}`);
+function replayEngineOf(routeData: RouteData | undefined, label: string): Engine {
+  if (routeData === undefined) throw new RangeError(`unknown replay route ${label}`);
 
   return createEngine({ route: createRoute(routeData), profile: DEFAULT_RIDER_PROFILE });
+}
+
+export function replayEngine(routeId = "test-loop"): Engine {
+  return replayEngineOf(TEST_ROUTES[routeId], routeId);
+}
+
+/** The engine of the exact world revision a world path names; unknown references ride the test loop. */
+function referencedEngine(reference: RideReference): Engine {
+  const known = isWorldPathReference(reference)
+    ? worldPathRoute(WORLDS, reference)
+    : TEST_ROUTES[reference.routeId];
+
+  return known === undefined ? replayEngine() : replayEngineOf(known, "reference");
 }
 
 /** The world path every new client ride references (ADR-033 §7). */
@@ -44,8 +58,7 @@ export function recordReplay(
   clockScale = 1,
   reference: RideReference = TEST_LOOP_WORLD_PATH,
 ): RecordingV2 {
-  const routeId = isWorldPathReference(reference) ? reference.pathId : reference.routeId;
-  const live = replayEngine(TEST_ROUTES[routeId] === undefined ? "test-loop" : routeId);
+  const live = referencedEngine(reference);
   const observations: ReplayObservationV2[] = [];
   const events: ReplayObservationV2["events"][number][] = [];
   const commands: ReplayObservationV2["commands"][number][] = [];

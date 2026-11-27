@@ -1,7 +1,8 @@
 import { expect, it } from "vitest";
 
 import { NIGHT_CITY } from "../../elevation/data/night-city.js";
-import type { RouteData } from "../../elevation/route.js";
+import { createRoute, type RouteData } from "../../elevation/route.js";
+
 import { createWorld } from "../world.js";
 
 import { regionTourWorld, type TourRegion, type TourWorldSpec } from "./regionTour.js";
@@ -75,4 +76,37 @@ it("rejects a region that would enter and leave at the same vertex", () => {
   expect(() => regionTourWorld(spec([region("a", 0)]))).toThrow(
     "region a enters and leaves at the same vertex",
   );
+});
+
+function required<T>(value: T | undefined): T {
+  if (value === undefined) throw new RangeError("test data is missing");
+
+  return value;
+}
+
+it("names a region's loop path and keeps its segments only on request", () => {
+  const plain = createWorld(regionTourWorld(spec([region("a", 0), region("b", 6000)])));
+
+  const named = createWorld(
+    regionTourWorld(
+      spec([
+        region("a", 0),
+        { ...region("b", 6000), pathName: "Eigener Name", keepSegments: true },
+      ]),
+    ),
+  );
+
+  const route = required(named.route("t-b"));
+  const kept = required(route.segments[0]);
+  const original = required(NIGHT_CITY.segments[0]);
+
+  expect(required(plain.route("t-b")).segments).toEqual([]);
+  expect(route.name).toBe("Eigener Name");
+  expect(kept).toMatchObject({ id: original.id, kind: original.kind });
+  expect(kept.endM - kept.startM).toBeCloseTo(original.endM - original.startM, 6);
+
+  const start = createRoute(route).worldPos(kept.startM);
+  const at = createRoute(NIGHT_CITY).worldPos(original.startM);
+
+  expect(Math.hypot(start.x - 6000 - at.x, start.z - at.z)).toBeLessThan(1e-6);
 });
