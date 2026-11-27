@@ -137,4 +137,4 @@ Die Voltonaut-Tour ([E10-14](specs/E10-14-voltonaut-world.md)) bleibt über die 
 
 ## 12. Tests
 
-Routen-Daten (Bogenlänge, stetige Steigung, Loop schließt), exakter Abstandstest Gelände unter Fahrbahn für jede Route (E10-12), deterministische `EnvironmentState`, Bots deterministisch (Golden), visuelle Regression der Kernszenen, Performance-Budget-Szene, Asset-Budget-Check.
+Routen-Daten (Bogenlänge, stetige Steigung, Loop schließt), exakter Abstandstest Gelände unter Fahrbahn für jede Route (E10-12), Bodeninvariante der Ausstattung für jede Welt aus `WORLDS` ([E10-15](specs/E10-15-dressing-ground.md)), deterministische `EnvironmentState`, Bots deterministisch (Golden), visuelle Regression der Kernszenen, Performance-Budget-Szene, Asset-Budget-Check.

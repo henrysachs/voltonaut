@@ -9,6 +9,7 @@ import {
   type Billboard,
   type BillboardSide,
 } from "./billboard-plan.js";
+import { CARRIED, DressingGroup, type Footing } from "./dressing-group.js";
 
 const FRAME_DEPTH_M = 0.12;
 const FRAME_MARGIN_M = 0.1;
@@ -18,6 +19,9 @@ const POST_SIZE_M = 0.16;
 /** Posts reach below the sampled ground so they never float on uneven terrain. */
 const POST_SINK_M = 1;
 const STRUCTURE_PARTS = 3;
+
+/** Structure instances per board: the frame, carried by its two standing posts. */
+const STRUCTURE_FOOTING: Footing = { kind: "prop", roles: ["carried", "stands", "stands"] };
 
 function structureInstances(billboards: readonly Billboard[]): THREE.InstancedMesh {
   const material = new THREE.MeshStandardMaterial({ color: 0x2f3437, roughness: 0.8 });
@@ -142,11 +146,12 @@ function faceInstances(billboards: readonly Billboard[]): THREE.InstancedMesh {
 }
 
 /** All roadside billboards in two instanced draw calls: structure and motif faces. */
-export function createBillboards(billboards: readonly Billboard[]): THREE.Group {
-  const root = new THREE.Group();
+export function createBillboards(billboards: readonly Billboard[]): DressingGroup {
+  const root = new DressingGroup();
 
   root.name = "billboards";
-  root.add(structureInstances(billboards), faceInstances(billboards));
+  root.place(STRUCTURE_FOOTING, structureInstances(billboards));
+  root.place(CARRIED, faceInstances(billboards));
 
   return root;
 }
