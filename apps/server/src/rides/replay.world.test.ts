@@ -71,7 +71,7 @@ it("replays a sim ride on the felsental world path with the world path replay re
   const sim = { ...ride, initialization: { ...ride.initialization, source: "sim" as const } };
   const result = replayed(sim);
 
-  expect(result.replayRevision).toBe("world-path-1");
+  expect(result).toMatchObject({ replayRevision: "world-path-1" });
   expect(result.summary.distanceM).toBeGreaterThan(0);
   expect(result.source.window.kind).toBe("blocked");
   expect(windowFailures(sim)).toContain("sim");
