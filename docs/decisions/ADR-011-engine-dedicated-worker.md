@@ -1,6 +1,6 @@
 # ADR-011 – Engine im Dedicated Web Worker
 
-**Status:** Vorgeschlagen (2026-11-20). Implementiert in E3, Freigabe durch Henry ausstehend.
+**Status:** Angenommen (Henrys Freigabe im Chat am 2026-11-27). Vorgeschlagen am 2026-11-20, implementiert in E3.
 
 ## Kontext
 

@@ -68,7 +68,7 @@ Früherer Umsetzungsplan, bei künftigem Mailbedarf erneut prüfen: `MailModule`
 
 Nur der Operatorbefehl `node dist/main.js admin grant <bestehendeUserId>` vergibt die Rolle. `admin list [cursor]` zeigt die begrenzte Kontoliste, `admin revoke <bestehendeUserId>` entzieht die Rolle. Der Befehl startet weder HTTP-Server noch Strava-Scheduler. E-Mail dient der Anzeige, niemals der automatischen Zuordnung. Der erste Login erhält keine Adminrechte. Henrys tatsächliches bestehendes Konto muss vor dem ersten Produktionsgrant bestätigt werden.
 
-Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitzer unter `AccountSync` hält die Operation bis zum autoritativen Nachlesen gesperrt. Gehaltene Refresh-, Next- und Save-Aktionen dürfen diese Bestätigung nicht überholen. Ein verlorener Schreibbeleg bleibt unbestätigt, ohne automatischen Retry. Die gebaute Gesamtprüfung und unabhängige Gegenproben bestehen lokal. Bereitstellung und persönlicher Erstzugang sind noch offen.
+Die Oberfläche bleibt im Konto-Overlay. Ein generationsgebundener Schreibbesitzer in `AccountAdministration` (folgt seit [E0-10](specs/E0-10-account-scope.md) dem Kontobereich selbst, nicht `AccountSync`) hält die Operation bis zum autoritativen Nachlesen gesperrt. Gehaltene Refresh-, Next- und Save-Aktionen dürfen diese Bestätigung nicht überholen. Ein verlorener Schreibbeleg bleibt unbestätigt, ohne automatischen Retry. Die gebaute Gesamtprüfung und unabhängige Gegenproben bestehen lokal. Bereitstellung und persönlicher Erstzugang sind noch offen.
 
 ## Datenexport und Kontolöschung
 

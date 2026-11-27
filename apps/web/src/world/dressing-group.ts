@@ -14,11 +14,17 @@ export type Footing =
   /** Lake and sea surfaces and what floats on them. */
   | { readonly kind: "water" }
   /** Roles repeat instance by instance, one cycle per prop (a billboard: frame, post, post). */
-  | { readonly kind: "prop"; readonly roles: readonly [PartRole, ...PartRole[]] };
+  | { readonly kind: "prop"; readonly roles: readonly [PartRole, ...PartRole[]] }
+  /**
+   * Overlays that follow the road ribbon's own support points within the shoulder band (lamp
+   * light), so they lie on the road, not on the terrain the ground probe checks.
+   */
+  | { readonly kind: "road" };
 
 export const WATER: Footing = { kind: "water" };
 export const STANDS: Footing = { kind: "prop", roles: ["stands"] };
 export const CARRIED: Footing = { kind: "prop", roles: ["carried"] };
+export const ROAD: Footing = { kind: "road" };
 
 /**
  * A group of region dressing. It takes drawables only with their footing, and other dressing

@@ -49,19 +49,19 @@ Hardware wurde nicht getestet. Page Freezing über fünf Minuten mit aktivem BLE
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK                  | Ebene                              | Datei / Fixture                                                                                         |
-| ------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| AK1                 | Unit + Property                    | `packages/engine/src/physics/physics.test.ts`, `physics.property.test.ts`                               |
-| AK1 (Determinismus) | Unit                               | `packages/engine/src/internal/determinism.test.ts`                                                      |
-| AK2                 | Golden                             | `fixtures/rides/*.input.json` → `*.golden.json`, Runner `packages/engine/src/golden/golden.test.ts`     |
-| AK3                 | Property (fast-check)              | `packages/engine/src/{physics,gears,trainer}/*.property.test.ts`                                        |
-| AK4                 | Mutation + Coverage                | `mise run check:mutation` (Pfadfilter engine), Vitest-Coverage-Schwellen aus E0                         |
-| AK5                 | Unit                               | `packages/engine/src/elevation/profile.test.ts`, `route.test.ts`                                        |
-| AK6                 | Unit                               | `packages/engine/src/internal/{sums,autopause}.test.ts`                                                 |
-| AK7                 | Unit + Golden                      | `packages/engine/src/trainer/gradeMap.test.ts` + Kommando-Hashes in AK2                                 |
-| AK8                 | Unit + E2E                         | `packages/shared/src/profile.schema.test.ts`, `apps/web/e2e/profile.spec.ts`                            |
-| AK9                 | Unit + E2E (best effort) + manuell | `packages/engine/src/internal/catchup.test.ts`, `apps/web/e2e/background-tab.spec.ts`, Henry-Check §5.8 |
-| AK10                | Golden                             | `fixtures/rides/flat-200w-60min.*`                                                                      |
+| AK                  | Ebene                              | Datei / Fixture                                                                                                                                                |
+| ------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AK1                 | Unit + Property                    | `packages/engine/src/physics/physics.test.ts`, `physics.property.test.ts`                                                                                      |
+| AK1 (Determinismus) | Unit                               | `packages/engine/src/internal/determinism.test.ts`                                                                                                             |
+| AK2                 | Golden                             | `fixtures/rides/*.input.json` → `*.golden.json`, Runner `apps/web/src/golden/golden.test.ts`                                                                   |
+| AK3                 | Property (fast-check)              | `packages/engine/src/{physics,gears,trainer}/*.property.test.ts`                                                                                               |
+| AK4                 | Mutation + Coverage                | `mise run check:mutation` (Pfadfilter engine), Vitest-Coverage-Schwellen aus E0                                                                                |
+| AK5                 | Unit                               | `packages/engine/src/elevation/profile.test.ts`, `route.test.ts`                                                                                               |
+| AK6                 | Unit                               | `packages/engine/src/internal/{sums,autopause}.test.ts`                                                                                                        |
+| AK7                 | Unit + Golden                      | `packages/engine/src/trainer/gradeMap.test.ts` + Kommando-Hashes in AK2                                                                                        |
+| AK8                 | Unit + E2E                         | `apps/web/src/ui/profile/profileScreen.test.ts` (Grenzen über `RiderProfileSchema`), `apps/web/src/sync/profile-store.test.ts`, `apps/web/e2e/profile.spec.ts` |
+| AK9                 | Unit + E2E (best effort) + manuell | `packages/engine/src/internal/catchup.test.ts`, `apps/web/e2e/background-tab.spec.ts`, Henry-Check §5.8                                                        |
+| AK10                | Golden                             | `fixtures/rides/flat-200w-60min.*`                                                                                                                             |
 
 E2E-Flüsse (Playwright, `?sim=1&clock=fast`): (1) Profil-Screen: ungültige Masse abgewiesen, gültige gespeichert, Reload stellt her. (2) Fahrt auf Test-Route: HUD zeigt Distanz/Tempo aus der Physik, 2× hoch schalten ändert Ganganzeige, Distanz wächst mit beschleunigter Sim-Uhr. (3) Background-Tab: Distanz läuft weiter (falls in headless CI instabil → Unit-Tests + manueller Henry-Test tragen das Kriterium, E2E wird dokumentiert entfernt, nicht gelockert).
 
@@ -246,7 +246,7 @@ Overlap in `packages/engine`: E2 liefert `gears/` (24er-Preset, Shift-Intents) u
 
 ## Offene Fragen / Risiken
 
-- T1-Entscheidung (Engine im Worker) bestätigen? → ADR-011 liegt als Vorschlag vor (CODEOWNERS `docs/decisions/**` ⇒ Henrys Freigabe).
+- T1-Entscheidung (Engine im Worker): ADR-011 von Henry im Chat am 2026-11-27 angenommen.
 - CdA-Schätzfaktor: Anker-reproduzierend (0,32 bei 185 cm/75 kg) statt Literaturwert – ok?
 - Mutation-Scope um `elevation/`+`internal/` erweitern (Doku-Update §9, keine Lockerung)?
 - Strategie-B-Delta (2 W Vorschlag) und `gradeEff`-Clamp [−10, +20] aus `03` §4-Skizze vs. echtem FTMS-Bereich (±40 %) – E2-Messung klärt.
@@ -259,5 +259,5 @@ Overlap in `packages/engine`: E2 liefert `gears/` (24er-Preset, Shift-Intents) u
 - [ ] Roadmap-Checkboxen E3 abhaken; Abnahmezeile mit Sim-Ergebnis + Hardware-Vermerk füllen.
 - [x] `docs/03-engine-physics.md`: Worker, CdA-Schätzformel, `gradeAt` (25 m), Catch-up und `clockSkipped` dokumentiert. `mT = 83 kg` bleibt bis zur E2-Kalibrierung vorläufig.
 - [x] `docs/open-questions.md`: T1-Implementierung mit ausstehender ADR-Freigabe, T9-Laufzeit und manuelle Prüfungen dokumentiert.
-- [x] ADR-011 „Engine im Dedicated Web Worker" als Vorschlag angelegt; Henrys Freigabe ausstehend.
+- [x] ADR-011 „Engine im Dedicated Web Worker" als Vorschlag angelegt; von Henry im Chat am 2026-11-27 angenommen.
 - [x] `docs/10-testing.md` §9: Tatsächlichen Mutation-Scope einschließlich `elevation/`, Routendaten und `internal/` dokumentiert; Konfiguration unverändert.

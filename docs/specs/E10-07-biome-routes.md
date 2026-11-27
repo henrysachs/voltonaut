@@ -32,15 +32,15 @@ Aufnahmen und Zuordnungen bleiben lesbar und werden nicht neu bewertet.
 
 ## Testplan
 
-| AK  | Ebene   | Datei / Fixture                                 |
-| --- | ------- | ----------------------------------------------- |
-| AK1 | E2E     | `apps/web/e2e/routes.spec.ts`                   |
-| AK2 | Unit    | `packages/engine/.../data/biome-routes.test.ts` |
-| AK2 | Unit    | `apps/web/src/world/routeCatalog.test.ts`       |
-| AK2 | Raycast | `apps/web/src/world/alpineLandscape.test.ts`    |
-| AK3 | Unit    | `apps/web/src/ui/routePreview.test.ts`          |
-| AK4 | Replay  | bestehende Journal- und Replay-Tests            |
-| AK5 | Gate    | `mise run check` und `check:mutation`           |
+| AK  | Ebene   | Datei / Fixture                                           |
+| --- | ------- | --------------------------------------------------------- |
+| AK1 | E2E     | `apps/web/e2e/routes.spec.ts`                             |
+| AK2 | Unit    | `packages/engine/src/elevation/data/biome-routes.test.ts` |
+| AK2 | Unit    | `apps/web/src/world/routeCatalog.test.ts`                 |
+| AK2 | Raycast | `apps/web/src/world/alpineLandscape.test.ts`              |
+| AK3 | Unit    | `apps/web/src/ui/routePreview.test.ts`                    |
+| AK4 | Replay  | bestehende Journal- und Replay-Tests                      |
+| AK5 | Gate    | `mise run check` und `check:mutation`                     |
 
 ## Nicht-Ziele
 

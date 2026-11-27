@@ -198,7 +198,9 @@ git commit -m "docs(rules): specify season pass (E6-06)"
 
 ### Task 6 (Phase B, blockiert): Client-Spiegel
 
-**Files:** `apps/web/src/sync/season.ts` + Test
+**Files:**
+
+- Create: `apps/web/src/sync/season.ts` + Test
 
 **Interfaces:** `loadSeasonStatus(): Promise<SeasonStatus>` parst mit `SeasonStatusResponseSchema`. Vorläufige Vorschau während der Fahrt: `applySeasonSection` auf die laufenden Checkpoints anwenden, klar als „vorläufig" markiert, getrennt vom bestätigten Stand.
 
@@ -207,7 +209,10 @@ git commit -m "docs(rules): specify season pass (E6-06)"
 
 ### Task 7 (Phase C, blockiert): Pass-Übersicht im Ingame-Menü
 
-**Files:** `apps/web/index.html` (neuer Tab „Saison" neben den vorhandenen `role="tab"`), `apps/web/src/ui/seasonPanel.ts` + Test, `apps/web/e2e/season-pass.spec.ts`
+**Files:**
+
+- Modify: `apps/web/index.html` (neuer Tab „Saison" neben den vorhandenen `role="tab"`)
+- Create: `apps/web/src/ui/seasonPanel.ts` + Test, `apps/web/e2e/season-pass.spec.ts`
 
 - [ ] Panel zeigt Stufen, aktuelle Stufe, Punkte bis zur nächsten Stufe und Restlaufzeit. Ohne aktive Saison steht dort „Keine aktive Saison".
 - [ ] Bedienung per Tastatur wie die vorhandenen Tabs (`gameMenu.ts` `mountTabs`), Fahrt läuft bei geöffnetem Menü weiter.

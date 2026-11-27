@@ -75,6 +75,14 @@ export const ROUTE_CATALOG: readonly RoutePresentation[] = [
     environment: environment(31, 12 * 60 * 60, "clear"),
     budget: STANDARD_BUDGET,
   },
+  {
+    id: "felsental",
+    title: "Felsental",
+    description:
+      "9 km Steinzeit-Talrunde mit Felsenhäusern, Dino-Statuen, Steinbruch und glühenden Vulkanen.",
+    environment: environment(15, 16 * 60 * 60, "clear"),
+    budget: STANDARD_BUDGET,
+  },
 ];
 
 /** Catalog entry by route id; undefined for engine-only test fixtures. */

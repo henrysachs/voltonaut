@@ -23,8 +23,8 @@ export interface RouteEntry {
 /** Routes that shipped before worlds: their stored single-route rides stay replayable. */
 const SINGLE_ROUTE_REPLAY: ReplayPolicy = { worldRevision: "1", legacyRouteRevision: "1" };
 
-/** Paths of connected worlds never had single-route recordings. */
-const CONNECTED_WORLD_REPLAY: ReplayPolicy = { worldRevision: "1", legacyRouteRevision: undefined };
+/** Paths of native worlds (connected or themed) never had single-route recordings. */
+const NATIVE_WORLD_REPLAY: ReplayPolicy = { worldRevision: "1", legacyRouteRevision: undefined };
 
 /**
  * Every path of every shipped world by its stable route id (ADR-033 §8). An entry cannot omit its
@@ -37,10 +37,11 @@ export const ROUTE_REGISTRY = {
   "coast-loop": { worldId: "coast-loop", replay: SINGLE_ROUTE_REPLAY },
   "alpine-pass": { worldId: "alpine-pass", replay: SINGLE_ROUTE_REPLAY },
   "night-city": { worldId: "night-city", replay: SINGLE_ROUTE_REPLAY },
-  "voltonaut-tour": { worldId: "voltonaut", replay: CONNECTED_WORLD_REPLAY },
-  "voltonaut-forest": { worldId: "voltonaut", replay: CONNECTED_WORLD_REPLAY },
-  "voltonaut-coast": { worldId: "voltonaut", replay: CONNECTED_WORLD_REPLAY },
-  "voltonaut-night-city": { worldId: "voltonaut", replay: CONNECTED_WORLD_REPLAY },
+  "voltonaut-tour": { worldId: "voltonaut", replay: NATIVE_WORLD_REPLAY },
+  "voltonaut-forest": { worldId: "voltonaut", replay: NATIVE_WORLD_REPLAY },
+  "voltonaut-coast": { worldId: "voltonaut", replay: NATIVE_WORLD_REPLAY },
+  "voltonaut-night-city": { worldId: "voltonaut", replay: NATIVE_WORLD_REPLAY },
+  felsental: { worldId: "felsental", replay: NATIVE_WORLD_REPLAY },
 } as const satisfies Readonly<Record<string, RouteEntry>>;
 
 export type RouteId = keyof typeof ROUTE_REGISTRY;

@@ -47,6 +47,7 @@ it("pins the replay policy of every shipped route (ADR-016, ADR-033 §7–8)", (
     ["voltonaut-forest", "voltonaut", "1", undefined],
     ["voltonaut-coast", "voltonaut", "1", undefined],
     ["voltonaut-night-city", "voltonaut", "1", undefined],
+    ["felsental", "felsental", "1", undefined],
   ]);
 });
 
