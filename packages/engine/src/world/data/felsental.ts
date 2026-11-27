@@ -11,14 +11,18 @@ const RAMP_M = 200;
 const CLIMB_M = 2000;
 
 /** Grade where the climb starts and ends; the ramps ease from and to 0 % around it. */
-const CLIMB_BASE_GRADE = 0.04;
+const CLIMB_BASE_GRADE_PCT = 4;
 
 /** Extra grade of the three quarry steps (sin⁴ peaks, so 4–7 % and a mean of 5.125 %). */
-const CLIMB_STEP_GRADE = 0.03;
+const CLIMB_STEP_GRADE_PCT = 3;
+
+/** The same grades as rise per metre run. */
+const CLIMB_BASE_RISE = CLIMB_BASE_GRADE_PCT / 100;
+const CLIMB_STEP_RISE = CLIMB_STEP_GRADE_PCT / 100;
 const CLIMB_STEPS = 3;
 
-const RAMP_RISE_M = (CLIMB_BASE_GRADE * RAMP_M) / 2;
-const CLIMB_RISE_M = CLIMB_M * (CLIMB_BASE_GRADE + (CLIMB_STEP_GRADE * 3) / 8);
+const RAMP_RISE_M = (CLIMB_BASE_RISE * RAMP_M) / 2;
+const CLIMB_RISE_M = CLIMB_M * (CLIMB_BASE_RISE + (CLIMB_STEP_RISE * 3) / 8);
 const TOP_M = FLOOR_M + 2 * RAMP_RISE_M + CLIMB_RISE_M;
 
 /**
@@ -51,12 +55,12 @@ function sinPow4Integral(x: number): number {
   return (3 * x) / 8 - Math.sin(2 * x) / 4 + Math.sin(4 * x) / 32;
 }
 
-/** Grade CLIMB_BASE_GRADE + CLIMB_STEP_GRADE · sin⁴(CLIMB_STEPS · πu), normalized to CLIMB_RISE_M. */
+/** Rise CLIMB_BASE_RISE + CLIMB_STEP_RISE · sin⁴(CLIMB_STEPS · πu), normalized to CLIMB_RISE_M. */
 const quarrySteps: Ease = (u) => {
   const frequency = CLIMB_STEPS * Math.PI;
 
   const riseFraction =
-    CLIMB_BASE_GRADE * u + (CLIMB_STEP_GRADE * sinPow4Integral(frequency * u)) / frequency;
+    CLIMB_BASE_RISE * u + (CLIMB_STEP_RISE * sinPow4Integral(frequency * u)) / frequency;
 
   return (riseFraction * CLIMB_M) / CLIMB_RISE_M;
 };
