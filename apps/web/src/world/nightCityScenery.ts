@@ -11,13 +11,8 @@ import {
 } from "./biomeSceneryShared.js";
 import { CARRIED, DressingGroup, ROAD, STANDS } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
-import {
-  buildingLayer,
-  NEON,
-  NEON_HUES,
-  planBuildings,
-  type NeonTubeItem,
-} from "./nightCityBuildings.js";
+import { NEON, NEON_HUES, planBuildings, type NeonTubeItem } from "./nightCityBuildings.js";
+import { buildingLayer } from "./nightCityTowers.js";
 import { createLampLight, neonLayer, type NeonItem, type StreetLamp } from "./nightCityLights.js";
 
 export { nightLightsOf } from "./nightCityLights.js";
