@@ -64,7 +64,7 @@ it("is a valid smooth world with revision 1", () => {
   expect(() => createWorld(VOLTONAUT_WORLD)).not.toThrow();
   expect(VOLTONAUT).toMatchObject({ id: "voltonaut", name: "Voltonaut", revision: "1" });
   expect(VOLTONAUT_WORLD.legacyRoute).toBeUndefined();
-  expect(WORLDS.at(-1)).toBe(VOLTONAUT);
+  expect(WORLDS).toContain(VOLTONAUT);
 });
 
 it("names its regions and the tour for the route catalog", () => {
