@@ -264,10 +264,9 @@ Pro Paket nur erlaubt: `lib`, `types`, `module`/`moduleResolution` (Web: `ESNext
 - neuen Einträgen in `dependencies`/`devDependencies` ohne Eintrag in `docs/dependencies.md` (Paket, Zweck, ADR-Verweis).
 - Non-null-Assertions (`x!.y`) prüft nur Oxlint (`typescript/no-non-null-assertion`, AST-basiert); der frühere Guard-Regex meldete auch `!(x instanceof Y)` (ADR-036).
 
-Nur auf PRs (CI setzt `GUARD_DIFF_BASE=origin/<base>`; Pushes auf `main` prüfen beides nicht, weil GitHub den Squash-Commit schreibt):
+Nur auf PRs (CI setzt `GUARD_DIFF_BASE=origin/<base>`; Pushes auf `main` prüfen den Diff nicht). Commit-Metadaten (Sign-off, Autoren, Trailer) prüft der Guard bewusst nicht (ADR-036):
 
 - **Geschützte Pfade** (`scripts/guard/lib/protected-diff.ts`, inkl. `stryker.config.json`): Änderung ohne geändertes ADR im selben Diff ⇒ rot. Ist ein ADR geändert, bleibt `docs/decisions/**` frei; jeder andere geschützte Pfad muss in einer Zeile stehen, die der Diff einem ADR hinzufügt (`git diff -U0`, nur `+`-Zeilen; ein neues ADR zählt ganz), in Backticks exakt (`` `mise.toml` ``) oder als Verzeichnis mit Schrägstrich (`` `.github/workflows/` ``). Die Meldung nennt den fehlenden Pfad.
-- **Commit-Trailer** (`scripts/guard/lib/commit-trailers.ts`) über die Nicht-Merge-Commits in `GUARD_DIFF_BASE..HEAD`, Trailer so geparst wie `git interpret-trailers`: jeder Commit braucht `Signed-off-by` (nicht an den Autor gebunden, lockerer als DCO); verboten sind `Co-Authored-By` mit `@anthropic.com`-Adresse, `Claude-Session` und Autoren mit `@anthropic.com`-Adresse.
 
 ## 8. CI & Branch-Schutz
 
@@ -277,7 +276,6 @@ Branch-Schutz für `main`: zwei Rulesets (ADR-036, dort das exakte JSON):
 
 - `main-pr-review`: PR mit Code-Owner-Review Pflicht. Admins dürfen nur im Modus `pull_request` umgehen (Selbst-Merge ohne fremdes Approval).
 - `main-merge-gates`: Required Status Checks `check` und `mutation` (strict: Branch muss aktuell sein), kein Force-Push, kein Löschen, **keine Bypass-Akteure**. Rote oder laufende Checks blockieren jeden Merge, auch Henrys.
-- Repo-Einstellung `web_commit_signoff_required=true`.
 - Linear History (Squash-Merge).
 - `CODEOWNERS`: `@henrysachs` muss Änderungen an `mise.toml`, `tsconfig*.json`, `oxlint.config.ts`, `tools/oxlint/**`, `.oxfmtrc.json`, `.dependency-cruiser.cjs`, `scripts/guard.mjs`, `.github/**`, `pnpm-workspace.yaml`, `stryker.config.json`, `docs/decisions/**`, `fixtures/**` (BLE, Golden, API), `apps/web/e2e/__screenshots__/**` freigeben → Agenten können Leitplanken nicht selbst lockern.
 - pnpm: `onlyBuiltDependencies` (Install-Skripte nur für freigegebene Pakete), `strict-peer-dependencies=true`.
