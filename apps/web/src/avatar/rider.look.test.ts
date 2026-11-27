@@ -50,13 +50,27 @@ it("keeps the rider body out of the first frame even when a look arrives first",
   scheduler.update({ ride: snapshot, dtS: 0, alpha: 1, env });
 
   expect(skinnedMeshes(scene)).toBe(0);
-  // Requested, not yet worn: the diagnostics must not claim a look the body does not show.
-  expect(rider.look()).toEqual(DEFAULT_AVATAR_CONFIG);
+  // No body, no look: the diagnostics must not claim the default kit is shown before the body is.
+  expect(rider.look()).toBeUndefined();
 
   scheduler.update({ ride: snapshot, dtS: 0.05, alpha: 1, env });
 
   expect(skinnedMeshes(scene)).toBeGreaterThan(0);
   expect(rider.look()).toEqual(STRIPE);
   expect(wornHelmetHex(scene)).toBe(STRIPE.rider.helmetColor);
+  scheduler.dispose();
+});
+
+it("wears the default look once the deferred body exists when no look was requested", () => {
+  const scene = new THREE.Scene();
+  const rider = createRider(2.105);
+  const scheduler = createScheduler([rider.system], { scene, route });
+
+  scheduler.update({ ride: snapshot, dtS: 0, alpha: 1, env });
+  expect(rider.look()).toBeUndefined();
+
+  scheduler.update({ ride: snapshot, dtS: 0.05, alpha: 1, env });
+  expect(skinnedMeshes(scene)).toBeGreaterThan(0);
+  expect(rider.look()).toEqual(DEFAULT_AVATAR_CONFIG);
   scheduler.dispose();
 });
