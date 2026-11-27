@@ -73,46 +73,59 @@ const REPO_FOLDERS: ReadonlySet<string> = new Set([
 const SOURCE_EXTENSION = /\.(?:ts|mts|js|mjs|cjs|json|md|html|css|sql|ya?ml|toml|sh)$/u;
 
 /**
- * Whether a backticked text names a file that must exist. Repo paths (`apps/…`, `docs/…`) must
- * exist as written; workspace-relative paths (`sim/fakeTrainer.ts`) must end some workspace file.
- * Globs, placeholders and generated outputs (`dist/main.js`) are not file references.
+ * What a backticked text names. Repo paths (`apps/…`, `docs/…`) are checked as written;
+ * workspace-relative paths (`sim/fakeTrainer.ts`) must end some workspace file. Globs,
+ * placeholders and generated outputs (`dist/main.js`) are not file references.
  */
-function missingFile(text: string): boolean {
+function fileReference(text: string): "none" | "present" | "missing" {
   const path = text.replace(/(?::\d+(?:[-–]\d+)?|#[\w-]+)$/u, "");
 
-  if (!/^[\w.@-]+(?:\/[\w.@-]+)+$/u.test(path) || !SOURCE_EXTENSION.test(path)) return false;
+  if (!/^[\w.@-]+(?:\/[\w.@-]+)+$/u.test(path) || !SOURCE_EXTENSION.test(path)) return "none";
 
   const folder = path.split("/", 1)[0] ?? "";
 
-  if (REPO_FOLDERS.has(folder)) return !existsSync(join(ROOT, path));
+  if (REPO_FOLDERS.has(folder)) return existsSync(join(ROOT, path)) ? "present" : "missing";
 
-  return SOURCE_FOLDERS.has(folder) && !WORKSPACE_FILES.some((file) => file.endsWith(`/${path}`));
+  if (!SOURCE_FOLDERS.has(folder)) return "none";
+
+  return WORKSPACE_FILES.some((file) => file.endsWith(`/${path}`)) ? "present" : "missing";
 }
 
 /**
- * Two forms are exempt (docs/10-testing.md §10):
- * - a plan line `- Create: …` names files that do not exist yet;
- * - a removed file is struck through, ~~`path`~~, so history stays readable.
+ * Findings for one doc line (docs/10-testing.md §10):
+ * - a plan line `- Create: …` names files that do not exist yet and is skipped;
+ * - a removed file is struck through, ~~`path`~~, so history stays readable; a struck path that
+ *   still exists hides a live reference and fails;
+ * - every other named file must exist.
  */
+function lineFindings(where: string, line: string): readonly string[] {
+  if (/^\s*- Create:/u.test(line)) return [];
+
+  const findings: string[] = [];
+
+  for (const match of line.matchAll(/`([^`\n]+)`/gu)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    const struck = line.slice(start - 2, start) === "~~" && line.slice(end, end + 2) === "~~";
+    const text = match[1] ?? "";
+    const reference = fileReference(text);
+
+    if (struck && reference === "present") {
+      findings.push(`${where}: struck but present: \`${text}\`; drop the strike-through`);
+    } else if (!struck && reference === "missing") {
+      findings.push(`${where}: \`${text}\` is missing; name its new path or strike it`);
+    }
+  }
+
+  return findings;
+}
+
 function brokenReferences(): readonly string[] {
   const findings: string[] = [];
 
   for (const doc of DOCS) {
     for (const [index, line] of readFileSync(join(ROOT, doc), "utf8").split("\n").entries()) {
-      if (/^\s*- Create:/u.test(line)) continue;
-
-      for (const match of line.matchAll(/`([^`\n]+)`/gu)) {
-        const start = match.index;
-        const end = start + match[0].length;
-        const struck = line.slice(start - 2, start) === "~~" && line.slice(end, end + 2) === "~~";
-        const text = match[1] ?? "";
-
-        if (!struck && missingFile(text)) {
-          findings.push(
-            `${doc}:${index + 1}: \`${text}\` is missing; name its new path or strike it`,
-          );
-        }
-      }
+      findings.push(...lineFindings(`${doc}:${index + 1}`, line));
     }
   }
 
@@ -121,4 +134,19 @@ function brokenReferences(): readonly string[] {
 
 it("names only files that exist in docs, AGENTS.md, README.md and GLOSSARY.md", () => {
   expect(brokenReferences()).toEqual([]);
+});
+
+it("rejects a missing path unless it is struck through or planned", () => {
+  expect(lineFindings("probe", "see `apps/web/src/ridePresentation.ts`")).toEqual([
+    "probe: `apps/web/src/ridePresentation.ts` is missing; name its new path or strike it",
+  ]);
+  expect(lineFindings("probe", "see ~~`apps/web/src/ridePresentation.ts`~~")).toEqual([]);
+  expect(lineFindings("probe", "- Create: `apps/web/src/ridePresentation.ts`")).toEqual([]);
+});
+
+it("rejects a struck-through path that still exists", () => {
+  expect(lineFindings("probe", "see ~~`apps/web/src/main.ts`~~ and ~~`sim/clock.ts`~~")).toEqual([
+    "probe: struck but present: `apps/web/src/main.ts`; drop the strike-through",
+    "probe: struck but present: `sim/clock.ts`; drop the strike-through",
+  ]);
 });
