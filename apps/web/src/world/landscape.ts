@@ -1,12 +1,13 @@
-import type { EngineRoute } from "@voltonaut/engine";
 import * as THREE from "three";
 
-import { biomeFromScenery, biomeHasLake, type Biome } from "./biome.js";
-import { biomeObjects } from "./biome-landscape.js";
-import { createLandscapePlan } from "./landscape-plan.js";
+import type { Biome } from "./biome.js";
+import { regionDressings, showInView, type RegionDressing } from "./region-dressing.js";
+import type { RenderWorld } from "./render-world.js";
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
-import { createTerrain, FOREST_TERRAIN, type TerrainPalette } from "./terrain.js";
+import { createWorldTerrain } from "./terrain.js";
+import { blendedShades, FOREST_TERRAIN, shadesOf, type TerrainPalette } from "./terrain-shades.js";
+import { planWorldLandscape } from "./world-landscape.js";
 
 export { billboardsInView } from "./billboards.js";
 
@@ -17,22 +18,52 @@ const BIOME_TERRAIN: Readonly<Record<Biome["kind"], TerrainPalette>> = {
   "night-city": { low: 0x22262e, high: 0x303540, shore: 0x2a2e36, ground: 0x191c22 },
 };
 
-/** Terrain of the world whose roads are given (spec E10-12), dressed for the route's biome (#75). */
-export function createLandscapeSystem(roads: readonly EngineRoute[]): RenderSystem {
+/** Terrain palette of a biome (#75). */
+export function biomeTerrain(biome: Biome): TerrainPalette {
+  return BIOME_TERRAIN[biome.kind];
+}
+
+/**
+ * The world landscape (spec E10-12, ADR-033 §6): one terrain for all roads whose colours blend
+ * between regions, and every region's dressing along its home path.
+ */
+export function createLandscapeSystem(world: RenderWorld): RenderSystem {
   const root = new THREE.Group();
+  const dressings: RegionDressing[] = [];
 
   return {
     id: "landscape",
     order: 15,
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- This system installs its owned static meshes into the Three scene.
     init(context) {
-      const biome = biomeFromScenery(context.route.scenery);
-      const plan = createLandscapePlan(context.route, roads, 42, biomeHasLake(biome));
+      const { landscape, regionMap } = planWorldLandscape(world);
+      const palettes = world.regions.map((region) => biomeTerrain(region.biome));
+      const shades = palettes.map((palette) => shadesOf(palette));
 
-      root.add(createTerrain(plan, BIOME_TERRAIN[biome.kind]), ...biomeObjects(biome, plan));
+      const terrain = createWorldTerrain(
+        landscape.terrain,
+        {
+          lakes: landscape.lakes,
+          shadesAt: (x, z) => blendedShades(shades, regionMap.weightsAt(x, z)),
+        },
+        landscape.plans.map((plan, index) => ({
+          samples: plan.apron,
+          groundColor: palettes[index]?.ground ?? FOREST_TERRAIN.ground,
+        })),
+      );
+
+      root.add(terrain);
+
+      for (const dressing of regionDressings(world, landscape.plans)) {
+        root.add(dressing.group);
+        dressings.push(dressing);
+      }
+
       context.scene.add(root);
     },
-    update() {},
+    update(frame) {
+      showInView(dressings, frame.ride.worldPos.x, frame.ride.worldPos.z);
+    },
     setQuality() {},
     dispose() {
       disposeObject(root);

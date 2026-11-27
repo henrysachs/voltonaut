@@ -4,6 +4,7 @@ import type { CenterlinePoint, RouteData } from "../elevation/route.js";
 import { assertSmoothCenterline } from "./curvature.js";
 import type { EdgeLookup, OrientedEdge, RegionLookup } from "./edges.js";
 import { assertUniqueIds, orient, validateEdge } from "./edges.js";
+import { edgeViews, regionViews } from "./regions.js";
 import type { World, WorldData, WorldPath } from "./types.js";
 
 function orientedSteps(path: WorldPath, edgeById: EdgeLookup): OrientedEdge[] {
@@ -125,6 +126,8 @@ export function createWorld(data: WorldData): World {
     id: data.id,
     name: data.name,
     revision: data.revision,
+    regions: regionViews(data),
+    edges: edgeViews(data),
     routes,
     route: (pathId: string): RouteData | undefined => routesById.get(pathId),
   };

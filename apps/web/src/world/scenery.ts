@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-import type { LandscapePlan, Plant } from "./landscape-plan.js";
+import { HOME_STRETCH_M, type LandscapePlan, type Plant } from "./landscape-plan.js";
 
 interface PlantLayer {
   readonly geometry: THREE.BufferGeometry;
@@ -95,12 +95,15 @@ function createLayers(): readonly PlantLayer[] {
   ];
 }
 
-/** Plants grouped per road in 250 m stretches, so each instanced mesh culls compactly. */
-function chunkPlants(plants: readonly Plant[]): ReadonlyMap<string, readonly Plant[]> {
+/** Plants grouped per road in stretches, so each instanced mesh culls compactly. */
+function chunkPlants(
+  plants: readonly Plant[],
+  stretchesM: readonly number[],
+): ReadonlyMap<string, readonly Plant[]> {
   const chunks = new Map<string, Plant[]>();
 
   for (const plant of plants) {
-    const key = `${plant.roadIndex}:${Math.floor(plant.routeDistanceM / 250)}`;
+    const key = `${plant.roadIndex}:${Math.floor(plant.routeDistanceM / (stretchesM[plant.roadIndex] ?? HOME_STRETCH_M))}`;
     const chunk = chunks.get(key) ?? [];
 
     chunk.push(plant);
@@ -117,7 +120,10 @@ export function createScenery(plan: LandscapePlan): THREE.Group {
   root.name = "forest-and-rocks";
 
   for (const [index, layer] of layers.entries()) {
-    for (const plants of chunkPlants(index === 3 ? plan.rocks : plan.trees).values()) {
+    for (const plants of chunkPlants(
+      index === 3 ? plan.rocks : plan.trees,
+      plan.stretchesM,
+    ).values()) {
       root.add(plantInstances(plants, layer));
     }
   }

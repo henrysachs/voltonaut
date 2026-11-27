@@ -8,6 +8,8 @@ import { singleRouteWorld } from "../singleRouteWorld.js";
 import type { World } from "../types.js";
 import { createWorld } from "../world.js";
 
+import { VOLTONAUT_WORLD } from "./voltonaut.js";
+
 /** Revision of the migrated single-route worlds; matches the recorded routeRevision "1". */
 export const SINGLE_ROUTE_WORLD_REVISION = "1";
 
@@ -20,3 +22,9 @@ export const TEST_WORLDS: readonly World[] = [
   ALPINE_PASS,
   NIGHT_CITY,
 ].map((route) => createWorld(singleRouteWorld(route, SINGLE_ROUTE_WORLD_REVISION)));
+
+/** The connected world voltonaut (ADR-033 step 3) with its tour and region loops. */
+export const VOLTONAUT: World = createWorld(VOLTONAUT_WORLD);
+
+/** Every shipped world: the single-route worlds first, then the connected worlds. */
+export const WORLDS: readonly World[] = [...TEST_WORLDS, VOLTONAUT];

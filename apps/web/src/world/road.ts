@@ -7,24 +7,29 @@ import { createItemBoxSystem } from "./itemBoxes.js";
 import { sampleRoad, type RoadSample } from "./road-plan.js";
 import { createWaymarks } from "./waymarks.js";
 
-function roadGeometry(samples: readonly RoadSample[]): THREE.BufferGeometry {
+/** One indexed geometry for any number of road ribbons; each ribbon stays its own strip. */
+function roadGeometry(ribbons: readonly (readonly RoadSample[])[]): THREE.BufferGeometry {
   const vertices: number[] = [];
   const indices: number[] = [];
 
-  for (const [index, sample] of samples.entries()) {
-    vertices.push(
-      sample.left.x,
-      sample.left.y,
-      sample.left.z,
-      sample.right.x,
-      sample.right.y,
-      sample.right.z,
-    );
+  for (const samples of ribbons) {
+    const first = vertices.length / 3;
 
-    if (index > 0) {
-      const start = index * 2;
+    for (const [index, sample] of samples.entries()) {
+      vertices.push(
+        sample.left.x,
+        sample.left.y,
+        sample.left.z,
+        sample.right.x,
+        sample.right.y,
+        sample.right.z,
+      );
 
-      indices.push(start - 2, start - 1, start, start, start - 1, start + 1);
+      if (index > 0) {
+        const start = first + index * 2;
+
+        indices.push(start - 2, start - 1, start, start, start - 1, start + 1);
+      }
     }
   }
 
@@ -70,7 +75,72 @@ function roadsidePosts(
   return posts;
 }
 
-export function createRoadSystem(): RenderSystem {
+type RoadMaterials = Readonly<Record<"shoulder" | "asphalt" | "paint", THREE.MeshStandardMaterial>>;
+
+/** One drawn layer: ribbons of the given widths and offsets at one height in one material. */
+type RoadLayer = readonly [
+  readonly (readonly [number, number])[],
+  number,
+  THREE.MeshStandardMaterial,
+];
+
+/** The ridden road: shoulder, asphalt and each edge line as its own mesh, as before worlds. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library resources owned by this system.
+function riddenLayers(materials: RoadMaterials): readonly RoadLayer[] {
+  return [
+    [[[8, 0]], -0.02, materials.shoulder],
+    [[[7, 0]], 0, materials.asphalt],
+    [[[0.09, -3.1]], 0.01, materials.paint],
+    [[[0.09, 3.1]], 0.01, materials.paint],
+  ];
+}
+
+/** Side roads share one mesh per material: both edge lines together. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library resources owned by this system.
+function sideLayers(materials: RoadMaterials): readonly RoadLayer[] {
+  return [
+    [[[8, 0]], -0.02, materials.shoulder],
+    [[[7, 0]], 0, materials.asphalt],
+    [
+      [
+        [0.09, -3.1],
+        [0.09, 3.1],
+      ],
+      0.01,
+      materials.paint,
+    ],
+  ];
+}
+
+/** The given roads drawn in the given layers, one merged mesh per layer. */
+function roadLayers(
+  roads: readonly EngineRoute[],
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each layer carries its mutable Three material into the new mesh.
+  layers: readonly RoadLayer[],
+): readonly THREE.Mesh[] {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each layer carries its mutable Three material into the new mesh.
+  return layers.map(([ribbons, heightM, material]) => {
+    const mesh = new THREE.Mesh(
+      roadGeometry(
+        roads.flatMap((road) =>
+          ribbons.map(([widthM, offsetM]) => sampleRoad(road, widthM, offsetM)),
+        ),
+      ),
+      material,
+    );
+
+    mesh.position.y = heightM;
+    mesh.receiveShadow = true;
+
+    return mesh;
+  });
+}
+
+/**
+ * The ridden road with posts and waymarks, plus the world's side roads off the ridden path
+ * (ADR-033 step 3) as plain road in three merged meshes.
+ */
+export function createRoadSystem(sideRoads: readonly EngineRoute[] = []): RenderSystem {
   const root = new THREE.Group();
   // Fun-mode item boxes float over this road and follow its lifecycle (spec E9-01).
   const itemBoxes = createItemBoxSystem();
@@ -83,22 +153,11 @@ export function createRoadSystem(): RenderSystem {
       const asphalt = new THREE.MeshStandardMaterial({ color: 0x38444a, roughness: 0.95 });
       const paint = new THREE.MeshStandardMaterial({ color: 0xf0eacb, roughness: 0.8 });
       const shoulder = new THREE.MeshStandardMaterial({ color: 0xb9ae8a, roughness: 1 });
+      const materials = { shoulder, asphalt, paint };
 
-      for (const [widthM, offsetM, heightM, material] of [
-        [8, 0, -0.02, shoulder],
-        [7, 0, 0, asphalt],
-        [0.09, -3.1, 0.01, paint],
-        [0.09, 3.1, 0.01, paint],
-      ] satisfies [number, number, number, THREE.MeshStandardMaterial][]) {
-        const mesh = new THREE.Mesh(
-          roadGeometry(sampleRoad(context.route, widthM, offsetM)),
-          material,
-        );
+      root.add(...roadLayers([context.route], riddenLayers(materials)));
 
-        mesh.position.y = heightM;
-        mesh.receiveShadow = true;
-        root.add(mesh);
-      }
+      if (sideRoads.length > 0) root.add(...roadLayers(sideRoads, sideLayers(materials)));
 
       root.add(roadsidePosts(context.route, paint), createWaymarks(context.route));
       context.scene.add(root);

@@ -1,5 +1,5 @@
 import type { TrainerControl } from "@voltonaut/ble";
-import { TEST_WORLDS, worldPathRoute, type RideSnapshot } from "@voltonaut/engine";
+import { WORLDS, worldPathRoute, type RideSnapshot } from "@voltonaut/engine";
 import {
   describeRideReference,
   type DeviceEvent,
@@ -133,7 +133,7 @@ export function createRideSession(
   newPort: () => EngineWorkerPort = createWorkerPort,
   newId?: () => string,
 ): RideSession {
-  const route = worldPathRoute(TEST_WORLDS, options.worldPath);
+  const route = worldPathRoute(WORLDS, options.worldPath);
 
   if (route === undefined)
     throw new Error(`Unknown world path: ${describeRideReference(options.worldPath)}`);

@@ -1,10 +1,4 @@
-import {
-  createRoute,
-  TEST_ROUTES,
-  TEST_WORLDS,
-  type EngineRoute,
-  type RideSnapshot,
-} from "@voltonaut/engine";
+import { createRoute, TEST_ROUTES, type EngineRoute, type RideSnapshot } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import { createRider } from "../avatar/rider.js";
@@ -15,6 +9,9 @@ import { billboardsInView, createLandscapeSystem } from "./landscape.js";
 import type { RenderViewport, SceneDiagnostics } from "./render-protocol.js";
 import { createRoadSystem } from "./road.js";
 import { createScheduler, QUALITY_SETTINGS } from "./scheduler.js";
+
+/** The world the landscape draws (render-world.ts), named through its one consumer. */
+type RenderWorld = Parameters<typeof createLandscapeSystem>[0];
 
 export interface SceneCore {
   readonly render: (snapshot: Readonly<RideSnapshot>, nowMs: number) => SceneDiagnostics;
@@ -32,15 +29,6 @@ export function resolveRenderRoute(routeId: string): EngineRoute {
   return createRoute(data);
 }
 
-/** Every road of the world the route belongs to; the terrain flattens all of them (ADR-033 §5). */
-export function resolveRenderRoads(routeId: string): readonly EngineRoute[] {
-  const world = TEST_WORLDS.find((candidate) => candidate.route(routeId) !== undefined);
-
-  if (world === undefined) throw new Error(`Unsupported render route: ${routeId}`);
-
-  return world.routes.map((data) => createRoute(data));
-}
-
 class ThreeSceneCore implements SceneCore {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1500);
@@ -54,7 +42,7 @@ class ThreeSceneCore implements SceneCore {
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's native renderer is mutable and exclusively owned here.
     private readonly renderer: THREE.WebGLRenderer,
     route: EngineRoute,
-    roads: readonly EngineRoute[],
+    world: RenderWorld,
     wheelCircM: number,
     environment: Readonly<EnvironmentSettings>,
   ) {
@@ -67,8 +55,8 @@ class ThreeSceneCore implements SceneCore {
     this.scheduler = createScheduler(
       [
         createEnvironmentSystem(),
-        createLandscapeSystem(roads),
-        createRoadSystem(),
+        createLandscapeSystem(world),
+        createRoadSystem(world.sideRoads(route.id)),
         this.rider.system,
         this.rideCamera.system,
       ],
@@ -139,9 +127,9 @@ export function createSceneCore(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Ownership of Three's mutable native renderer transfers to the core.
   renderer: THREE.WebGLRenderer,
   route: EngineRoute,
-  roads: readonly EngineRoute[],
+  world: RenderWorld,
   wheelCircM: number,
   environment: Readonly<EnvironmentSettings>,
 ): SceneCore {
-  return new ThreeSceneCore(renderer, route, roads, wheelCircM, environment);
+  return new ThreeSceneCore(renderer, route, world, wheelCircM, environment);
 }

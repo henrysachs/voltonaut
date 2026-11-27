@@ -13,8 +13,14 @@ import {
 const CATALOG_IDS: readonly string[] = ROUTE_CATALOG.map((entry) => entry.id);
 
 describe("route presentation catalog (#75)", () => {
-  it("offers the four presentable rides in a stable order", () => {
-    expect(CATALOG_IDS).toEqual(["test-loop", "coast-loop", "alpine-pass", "night-city"]);
+  it("offers the five presentable rides in a stable order", () => {
+    expect(CATALOG_IDS).toEqual([
+      "test-loop",
+      "coast-loop",
+      "alpine-pass",
+      "night-city",
+      "voltonaut-tour",
+    ]);
   });
 
   it("references only routes the engine actually registers", () => {

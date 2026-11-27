@@ -1,15 +1,14 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Three's scene graph objects are mutable by contract; these helpers only traverse them. */
-import { ALPINE_PASS, COAST_LOOP, NIGHT_CITY, TEST_LOOP, createRoute } from "@voltonaut/engine";
+import { ALPINE_PASS, COAST_LOOP, NIGHT_CITY, createRoute } from "@voltonaut/engine";
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
 import { biomeFromScenery } from "./biome.js";
 import { createAlpineScenery, createCoastScenery, createNightCityScenery } from "./biomeScenery.js";
 import { routeClearanceM, routeCorridorSamples } from "./biomeSceneryShared.js";
-import { createLandscapeSystem } from "./landscape.js";
 import { createLandscapePlan, type LandscapePlan } from "./landscape-plan.js";
-import { createScheduler } from "./scheduler.js";
-import { FOREST_TERRAIN, createTerrainGeometries, type TerrainPalette } from "./terrain.js";
+import { createTerrainGeometries } from "./terrain.js";
+import { FOREST_TERRAIN, type TerrainPalette } from "./terrain-shades.js";
 
 function instanceCount(root: Readonly<THREE.Object3D>): number {
   let count = 0;
@@ -167,23 +166,6 @@ it("night city scenery wires streetlights and neon without real light sources", 
   expect(instanceCount(scenery)).toBeGreaterThan(100);
   expect(basicMaterials(scenery).length).toBeGreaterThan(0);
 });
-
-it.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
-  "the landscape system builds $id from its route and disposes it",
-  (data) => {
-    const scene = new THREE.Scene();
-
-    const scheduler = createScheduler([createLandscapeSystem([createRoute(data)])], {
-      scene,
-      route: createRoute(data),
-    });
-
-    expect(scene.children).toHaveLength(1);
-    expect(scene.children[0]).toBeInstanceOf(THREE.Group);
-    scheduler.dispose();
-    expect(scene.children).toHaveLength(0);
-  },
-);
 
 it("terrain palettes color the raster per biome", () => {
   const route = createRoute(NIGHT_CITY);

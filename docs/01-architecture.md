@@ -212,6 +212,17 @@ interface WorldData {
   edges: ReadonlyArray<RoadEdge>; // regionId, fromNodeId, toNodeId, lengthM, centerline (knickfreie Sehnen), profileSamples
   paths: ReadonlyArray<WorldPath>; // steps: { edgeId, direction: "forward" | "reverse" }[], loop, segments; scenery = Region des ersten Abschnitts
 }
+// createWorld liefert zusätzlich die Render-Sicht: regions (mit homePathId, dem Weg, entlang dessen die Region ausgestattet wird)
+// und edges (Mittellinie, Profil, Region, Biom, pathIds). Erste verbundene Welt: VOLTONAUT (E10-14).
+interface WorldViews {
+  regions: ReadonlyArray<{ id: string; scenery: string; homePathId: string | undefined }>;
+  edges: ReadonlyArray<{
+    id: string;
+    regionId: string;
+    scenery: string;
+    pathIds: ReadonlyArray<string>;
+  }>;
+}
 
 // avatar
 interface AvatarConfig {

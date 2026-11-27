@@ -1,7 +1,7 @@
 # Spec E10-11 – Zusammenhängende Welt, Schritt 1: Datentypen
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, „Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen“
-- **Issue:** [#150](https://github.com/henrysachs/voltonaut/issues/150), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) (vorgeschlagen, Henrys Freigabe ausstehend)
+- **Issue:** [#150](https://github.com/henrysachs/voltonaut/issues/150), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) (angenommen am 2026-11-27)
 - **Status:** Schritt 1 implementiert und lokal softwaregeprüft; CI und Review offen; Schritte 2–5 offen
 - **Betroffene Module:** `packages/engine` (Schritt 1); später `apps/web/src/world`, `packages/shared`, `apps/server/src/rides`
 
@@ -64,4 +64,4 @@ ADR-033 Schritt 1: Datentypen `World`, Abschnitt, Knoten, Weg und Region in `pac
 
 ## Doku-Updates (Pflicht beim Abschluss)
 
-- [x] Roadmap-Eintrag · [x] `docs/01-architecture.md` · [ ] ADR-033 Freigabe (Henry)
+- [x] Roadmap-Eintrag · [x] `docs/01-architecture.md` · [x] ADR-033 Freigabe (Henry, 2026-11-27)

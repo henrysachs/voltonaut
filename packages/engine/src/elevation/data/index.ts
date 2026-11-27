@@ -1,5 +1,5 @@
 import type { RouteData } from "../route.js";
-import { TEST_WORLDS } from "../../world/data/index.js";
+import { WORLDS } from "../../world/data/index.js";
 
 import { ALPINE_PASS } from "./alpine-pass.js";
 import { COAST_LOOP } from "./coast-loop.js";
@@ -14,7 +14,7 @@ interface TestRouteRegistry {
 
 /** Route data registry derived from the world paths; golden fixtures reference routes by id. */
 export const TEST_ROUTES: TestRouteRegistry = Object.fromEntries(
-  TEST_WORLDS.flatMap((world) => world.routes).map((route) => [route.id, route]),
+  WORLDS.flatMap((world) => world.routes).map((route) => [route.id, route]),
 );
 
 export { ALPINE_PASS, COAST_LOOP, FLAT_LOOP, KOM_CLIMB, NIGHT_CITY, TEST_LOOP };

@@ -1,4 +1,4 @@
-import { TEST_ROUTES, TEST_WORLDS, worldPathRoute, type RouteData } from "@voltonaut/engine";
+import { TEST_ROUTES, WORLDS, worldPathRoute, type RouteData } from "@voltonaut/engine";
 import {
   isWorldPathReference,
   WORLD_PATH_REPLAY_REVISION,
@@ -11,17 +11,26 @@ export interface ReplayRoute {
   readonly replayRevision: typeof WORLD_PATH_REPLAY_REVISION | undefined;
 }
 
-/** World revisions this server replays. Each one needs its own replay tests (ADR-033). */
-const REPLAYABLE_WORLDS: readonly { readonly worldId: string; readonly worldRevision: string }[] = [
-  { worldId: "flat-loop", worldRevision: "1" },
-  { worldId: "test-loop", worldRevision: "1" },
-  { worldId: "kom-climb", worldRevision: "1" },
-  { worldId: "coast-loop", worldRevision: "1" },
-  { worldId: "alpine-pass", worldRevision: "1" },
-  { worldId: "night-city", worldRevision: "1" },
+/**
+ * Single routes recorded before worlds existed (routeRevision "1"); each is also its own world
+ * with revision "1" (ADR-033 §8). Connected worlds never had route recordings.
+ */
+const LEGACY_ROUTE_IDS: readonly string[] = [
+  "flat-loop",
+  "test-loop",
+  "kom-climb",
+  "coast-loop",
+  "alpine-pass",
+  "night-city",
 ];
 
-const REPLAYABLE_ROUTE_IDS = new Set(REPLAYABLE_WORLDS.map((world) => world.worldId));
+/** World revisions this server replays. Each one needs its own replay tests (ADR-033). */
+const REPLAYABLE_WORLDS: readonly { readonly worldId: string; readonly worldRevision: string }[] = [
+  ...LEGACY_ROUTE_IDS.map((worldId) => ({ worldId, worldRevision: "1" })),
+  { worldId: "voltonaut", worldRevision: "1" },
+];
+
+const REPLAYABLE_ROUTE_IDS = new Set(LEGACY_ROUTE_IDS);
 
 /**
  * Resolves the recorded reference internally (ADR-016). Unknown worlds, revisions, paths and
@@ -45,7 +54,7 @@ export function replayRoute(
       world.worldRevision === initialization.worldRevision,
   );
 
-  const route = replayable ? worldPathRoute(TEST_WORLDS, initialization) : undefined;
+  const route = replayable ? worldPathRoute(WORLDS, initialization) : undefined;
 
   return route === undefined ? undefined : { route, replayRevision: WORLD_PATH_REPLAY_REVISION };
 }

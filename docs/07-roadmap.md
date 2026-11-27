@@ -216,7 +216,8 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
   - [x] Schritt 1 ([E10-11](specs/E10-11-connected-world.md)): Welt-Datentypen mit Knoten, Abschnitten, Wegen und Regionen in `packages/engine`; Höhenstetigkeit an Knoten und Krümmungsgrenze je Sehne geprüft; bestehende Strecken sind je eine Welt mit einem Weg, Golden-Fahrten bit-identisch. Gemergt mit #158.
   - [ ] Schritt 2 ([E10-12](specs/E10-12-world-heightfield.md)): Höhenraster der Welt in 256-m-Kacheln ersetzt den Geländestreifen, auch für Küste, Alpenpass und Nachtstadt (#138); Korridor-Einebnung mit tieferer Straße als Gewinner; exakter Abstandstest für alle sechs Routen (≥ 5 cm, gemessen 6 cm). Softwaregeprüft, CI und Review offen; Render-Budget auf echter Hardware offen (#86).
   - [x] Schritt 4 ([E10-13](specs/E10-13-world-recording-contract.md)): Aufnahme-, Spur- und Progress-Vertrag mit `worldId`, `worldRevision` und `pathId`; Server rechnet Weltwege mit `replayRevision: "world-path-1"` nach; Altaufnahmen mit `routeId`/`routeRevision` bleiben lesbar und werden nicht neu bewertet; Migration `0015` erhält alle Progress-Journale. Gemergt mit #164.
-  - [ ] Schritt 3: Welt `voltonaut` mit Regionen (nach PR #138) · Schritt 5: Abbiegen und Mini-Map (#85)
+  - [ ] Schritt 3 ([E10-14](specs/E10-14-voltonaut-world.md), #171): Welt `voltonaut` mit Wald, Küste und Nachtstadt als Regionen, Übergangsstraßen und 23-km-Voltonaut-Tour; Regionsfarben überblenden, Ausstattung je Region nur in Sichtweite, Nebenstraßen gezeichnet. Softwaregeprüft, CI und Review offen; Atmosphäre je Region und Alpenpass folgen.
+  - [ ] Schritt 5: Abbiegen und Mini-Map (#85)
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)

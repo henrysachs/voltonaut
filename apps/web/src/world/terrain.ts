@@ -1,35 +1,20 @@
 import * as THREE from "three";
 
 import { FINE_SPACING_M, heightAt, type Heightfield, type TerrainTile } from "./heightfield.js";
-import { LAKE_SHORE_RADIUS, lakeRadius } from "./lake-plan.js";
+import { LAKE_SHORE_RADIUS, lakeRadius, type Lake } from "./lake-plan.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import type { RoadSample } from "./road-plan.js";
+import {
+  FOREST_TERRAIN,
+  shadesOf,
+  mix,
+  type Rgb,
+  type Shades,
+  type TerrainPalette,
+} from "./terrain-shades.js";
 
 /** Tiles merged into one mesh per side: 4 × 4 tiles (1024 m) keep draw calls low. */
 export const RENDER_CHUNK_TILES = 4;
-
-/** Terrain vertex colors per biome (#75); the forest values are the original ones. */
-export interface TerrainPalette {
-  readonly low: number;
-  readonly high: number;
-  readonly shore: number;
-  /** Colour of the alpine road apron. */
-  readonly ground: number;
-}
-
-export const FOREST_TERRAIN: TerrainPalette = {
-  low: 0x466848,
-  high: 0x72925a,
-  shore: 0xc9bb8a,
-  ground: 0x59744d,
-};
-
-interface ChunkStyle {
-  readonly plan: LandscapePlan;
-  readonly low: Rgb;
-  readonly high: Rgb;
-  readonly shore: Rgb;
-}
 
 interface ChunkBuffers {
   readonly vertices: number[];
@@ -38,34 +23,22 @@ interface ChunkBuffers {
   readonly indices: number[];
 }
 
-interface Rgb {
-  readonly r: number;
-  readonly g: number;
-  readonly b: number;
-}
-
-function rgb(hex: number): Rgb {
-  const color = new THREE.Color(hex);
-
-  return { r: color.r, g: color.g, b: color.b };
-}
-
-function mix(from: Rgb, to: Rgb, amount: number): Rgb {
-  return {
-    r: from.r + (to.r - from.r) * amount,
-    g: from.g + (to.g - from.g) * amount,
-    b: from.b + (to.b - from.b) * amount,
-  };
+interface ChunkStyle {
+  readonly field: Heightfield;
+  readonly lakes: readonly Lake[];
+  /** Terrain shades at a world point; regions blend theirs across a border (ADR-033 §6). */
+  readonly shadesAt: (x: number, z: number) => Shades;
 }
 
 /** Vertex colour: low–high shading in world space, sand inside the lake shore. */
 function terrainColor(style: ChunkStyle, x: number, z: number): Rgb {
+  const shades = style.shadesAt(x, z);
   const shade = (Math.sin(x / 53 + z / 29) + 1) / 2;
-  const color = mix(style.low, style.high, shade * 0.65 + 0.25);
-  const radius = lakeRadius(style.plan.lake, { x, z });
+  const color = mix(shades.low, shades.high, shade * 0.65 + 0.25);
+  const radius = Math.min(...style.lakes.map((lake) => lakeRadius(lake, { x, z })));
 
   return radius < LAKE_SHORE_RADIUS
-    ? mix(color, style.shore, Math.min(1, (LAKE_SHORE_RADIUS - radius) * 9))
+    ? mix(color, shades.shore, Math.min(1, (LAKE_SHORE_RADIUS - radius) * 9))
     : color;
 }
 
@@ -117,7 +90,7 @@ function appendTile(style: ChunkStyle, tile: TerrainTile, buffers: ChunkBuffers)
 
     buffers.vertices.push(x, heightM, z);
     buffers.normals.push(
-      ...tileNormal(style.plan.terrain, tile, index % stride, Math.floor(index / stride)),
+      ...tileNormal(style.field, tile, index % stride, Math.floor(index / stride)),
     );
     buffers.colors.push(color.r, color.g, color.b);
   }
@@ -148,15 +121,31 @@ function chunkGeometry(style: ChunkStyle, tiles: readonly TerrainTile[]): THREE.
   return geometry;
 }
 
+/** Terrain colouring of a world: its lakes and the shades each point takes. */
+export interface TerrainLook {
+  readonly lakes: readonly Lake[];
+  readonly shadesAt: (x: number, z: number) => Shades;
+}
+
 /** One geometry per 4 × 4 tiles of the world raster, in tile order (spec E10-12). */
 export function createTerrainGeometries(
   plan: LandscapePlan,
   palette: TerrainPalette = FOREST_TERRAIN,
 ): readonly THREE.BufferGeometry[] {
-  const chunks = new Map<string, TerrainTile[]>();
-  const style = { plan, low: rgb(palette.low), high: rgb(palette.high), shore: rgb(palette.shore) };
+  const shades = shadesOf(palette);
 
-  for (const tile of plan.terrain.tiles) {
+  return createWorldTerrainGeometries(plan.terrain, { lakes: [plan.lake], shadesAt: () => shades });
+}
+
+/** World raster geometries with per-point shades (ADR-033 §6). */
+export function createWorldTerrainGeometries(
+  field: Heightfield,
+  look: TerrainLook,
+): readonly THREE.BufferGeometry[] {
+  const chunks = new Map<string, TerrainTile[]>();
+  const style: ChunkStyle = { field, ...look };
+
+  for (const tile of field.tiles) {
     const column = Math.floor(tile.column / RENDER_CHUNK_TILES);
     const key = `${column}:${Math.floor(tile.row / RENDER_CHUNK_TILES)}`;
     const chunk = chunks.get(key) ?? [];
@@ -206,17 +195,24 @@ function apronGeometry(apron: readonly RoadSample[], groundColor: number): THREE
   return geometry;
 }
 
+/** The alpine road apron of one region in its palette's ground colour (#138). */
+export interface TerrainApron {
+  readonly samples: readonly RoadSample[];
+  readonly groundColor: number;
+}
+
 /** The world terrain: one mesh per render chunk sharing one vertex-coloured material. */
-export function createTerrain(
-  plan: LandscapePlan,
-  palette: TerrainPalette = FOREST_TERRAIN,
+export function createWorldTerrain(
+  field: Heightfield,
+  look: TerrainLook,
+  aprons: readonly TerrainApron[],
 ): THREE.Group {
   const root = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
 
   root.name = "world-terrain";
 
-  for (const geometry of createTerrainGeometries(plan, palette)) {
+  for (const geometry of createWorldTerrainGeometries(field, look)) {
     const mesh = new THREE.Mesh(geometry, material);
 
     mesh.name = "terrain-chunk";
@@ -224,60 +220,25 @@ export function createTerrain(
     root.add(mesh);
   }
 
-  if (plan.apron.length > 0) {
-    const apron = new THREE.Mesh(apronGeometry(plan.apron, palette.ground), material);
+  for (const apron of aprons.filter((entry) => entry.samples.length > 0)) {
+    const mesh = new THREE.Mesh(apronGeometry(apron.samples, apron.groundColor), material);
 
-    apron.name = "road-terrain";
-    apron.receiveShadow = true;
-    root.add(apron);
+    mesh.name = "road-terrain";
+    mesh.receiveShadow = true;
+    root.add(mesh);
   }
 
   return root;
 }
 
-export function createLake(plan: LandscapePlan): THREE.Group {
-  const root = new THREE.Group();
+/** The terrain of a single-region plan in one palette. */
+export function createTerrain(
+  plan: LandscapePlan,
+  palette: TerrainPalette = FOREST_TERRAIN,
+): THREE.Group {
+  const shades = shadesOf(palette);
 
-  const glints = new THREE.InstancedMesh(
-    new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshStandardMaterial({
-      color: 0x80bec0,
-      roughness: 0.4,
-      transparent: true,
-      opacity: 0.3,
-      depthWrite: false,
-    }),
-    28,
-  );
-
-  const transform = new THREE.Object3D();
-
-  for (let index = 0; index < 28; index += 1) {
-    const angle = index * 2.4;
-    const radius = Math.sqrt((index + 0.5) / 28) * 0.83;
-
-    transform.position.set(
-      Math.cos(angle) * radius * plan.lake.alongRadiusM,
-      0.025,
-      Math.sin(angle) * radius * plan.lake.acrossRadiusM,
-    );
-    transform.rotation.x = -Math.PI / 2;
-    transform.scale.set(2 + (index % 4), 0.12, 1);
-    transform.updateMatrix();
-    glints.setMatrixAt(index, transform.matrix);
-  }
-
-  const water = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 96),
-    new THREE.MeshStandardMaterial({ color: 0x328c98, roughness: 0.26, metalness: 0.2 }),
-  );
-
-  water.name = "lake-water";
-  water.rotation.x = -Math.PI / 2;
-  water.scale.set(plan.lake.alongRadiusM, plan.lake.acrossRadiusM, 1);
-  root.rotation.y = -plan.lake.headingRad;
-  root.position.set(plan.lake.center.x, plan.lake.waterYM, plan.lake.center.z);
-  root.add(water, glints);
-
-  return root;
+  return createWorldTerrain(plan.terrain, { lakes: [plan.lake], shadesAt: () => shades }, [
+    { samples: plan.apron, groundColor: palette.ground },
+  ]);
 }
