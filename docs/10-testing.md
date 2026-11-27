@@ -91,8 +91,8 @@ Sim-Modus hat eine **Test-Uhr** (`?sim=1&clock=fast`), damit Fahrten in Sekunden
 ## 9. Coverage & Mutation
 
 - Coverage (Vitest v8), Fehlschlag unter Schwelle: `packages/engine`, `packages/rules`: Lines/Statements/Functions ≥ 90 %, Branches ≥ 85 %; `packages/shared`, `packages/ble` (Parser): ≥ 85/80 %; `apps/server`: ≥ 75/70 %; `apps/web`: ≥ 60 % (Rendering wird visuell/E2E geprüft).
-- Mutation (Stryker, Vitest-Runner, `incremental`): Die Konfiguration prüft alle Produktionsdateien unter `packages/engine/src/**` und `packages/rules/src/**`, außer den jeweiligen `index.ts`-Einstiegspunkten. Damit sind ab E3 auch `elevation/`, Routendaten und `internal/` enthalten. **Mutation Score ≥ 80 % (break-Schwelle)**, Ziel 90 %.
-- CI: Job `mutation` läuft auf PRs, die diese Pfade ändern (Pfadfilter), und nächtlich; ist dann **zusätzlicher Required Check**. `mise run check` bleibt das universelle Gate; `mise run check:mutation` lokal verfügbar. (Bewusste Ausnahme von „CI = genau `mise run check`", weil Mutationstests zu langsam für jeden Lauf sind.)
+- Mutation (Stryker, Vitest-Runner, `incremental`): Die Konfiguration prüft alle Produktionsdateien unter `packages/engine/src/**` und `packages/rules/src/**`, außer den jeweiligen `index.ts`-Einstiegspunkten. Damit sind ab E3 auch `elevation/`, Routendaten und `internal/` enthalten. Seit ADR-036 zusätzlich `packages/ble/src/ftms/controlCodec.ts`, `controlConnection.ts` und `apps/server/src/strava/strava.rate-store.ts`; die übrigen Trainer-Control- und Strava-Dateien folgen, sobald ihre Tests die Schwelle halten (ADR-036). **Mutation Score ≥ 80 % (break-Schwelle)**, Ziel 90 %.
+- CI: `mutation.yml` läuft auf jedem PR; der Job `mutation` läuft bei Änderungen im Mutationsumfang oder an `stryker.config.json` und nächtlich, sonst wird er übersprungen. `mutation` ist **Required Check** ohne Bypass (ADR-036). `mise run check` bleibt das universelle Gate; `mise run check:mutation` lokal verfügbar. (Bewusste Ausnahme von „CI = genau `mise run check`", weil Mutationstests zu langsam für jeden Lauf sind.)
 
 ## 10. Regeln für Agenten (Prozess)
 

@@ -3,7 +3,7 @@
 Du arbeitest an **Voltonaut**, einem browserbasierten 3D-Indoor-Cycling-Spiel (Zwift-Ersatz) mit eigenem Backend. Dieses Repo ist ein **enges Konstrukt**: Leitplanken werden maschinell durchgesetzt. Lies diese Datei zuerst, dann die für deine Aufgabe relevanten Dateien unter `docs/`.
 
 ## 0. Die drei harten Regeln
-1. **Vor dem Abschluss jeder Aufgabe: `mise run check` muss grün sein** (Format, Oxlint + anti-slop, Typecheck, dependency-cruiser, guard, Tests). Ändert dein PR `packages/engine` oder `packages/rules`: zusätzlich `mise run check:mutation`. Rot = nicht fertig.
+1. **Vor dem Abschluss jeder Aufgabe: `mise run check` muss grün sein** (Format, Oxlint + anti-slop, Typecheck, dependency-cruiser, guard, Tests). Ändert dein PR den Mutationsfilter (`packages/engine`, `packages/rules`, `packages/ble/src/ftms`, `apps/server/src/strava`, `stryker.config.json`): zusätzlich `mise run check:mutation`. Rot = nicht fertig. `check` und `mutation` sind Required Checks ohne Bypass (ADR-036): ein roter oder laufender Check blockiert jeden Merge. Jeder Commit braucht `Signed-off-by` (`git commit -s`); KI-Trailer (`Co-Authored-By: Claude …`, `Claude-Session:`) und KI-Autoren lehnt `guard` auf PRs ab. Wer eine geschützte Datei ändert, nennt ihren Pfad in Backticks im ADR desselben Diffs.
 2. **Leitplanken nie lockern:** keine Änderung an `oxlint.config.ts`, `tools/oxlint/**` (anti-slop), `tsconfig*.json`, `.dependency-cruiser.cjs`, `.oxfmtrc.json`, `mise.toml`, `scripts/guard.mjs`, `.github/**`, Golden-Dateien, Screenshot-Baselines oder BLE-Fixtures, um Fehler „wegzumachen". Kein Deaktivieren/Abschwächen einer Regel (auch keiner anti-slop-Regel), keine `@ts-ignore`/`@ts-nocheck`, kein `oxlint-disable` ohne Begründung. Änderungen an Leitplanken nur mit ADR + Henrys Freigabe (CODEOWNERS).
 3. **Keine neue Abhängigkeit ohne ADR** (und Eintrag in `docs/dependencies.md`).
 
@@ -59,7 +59,7 @@ mise run dev            # Web (http://localhost:5173) + Server (http://localhost
 #   Web Bluetooth nur über localhost/HTTPS – nicht über LAN-IP
 mise run fix            # oxlint --fix → oxfmt → oxlint
 mise run check          # DAS Gate (lokal = CI)
-mise run check:mutation # Stryker auf engine/rules
+mise run check:mutation # Stryker auf engine/rules + Trainer-Control/Strava-Teile (ADR-036)
 mise run test:e2e       # Playwright im Sim-Modus (Teil von check)
 mise run perf           # manueller fps-Report auf echter Hardware
 mise run assets         # Asset-Pipeline
@@ -99,5 +99,5 @@ Doku Deutsch; Code, Identifier, Kommentare, Commits Englisch (Conventional Commi
 - Isolierte Entwicklung, Rendererarbeit und Tests können ohne Neuladen fremder Tabs erfolgen. Für möglicherweise verlorene Mitschnitte den Umfang einmal klären. Ist das Neuladen im laufenden Auftrag freigegeben, nicht nach jeder Zwischenmeldung erneut fragen. Die Freigabe nicht auf Datenlöschung oder Produktionsdeploys ausweiten.
 - Bekannte Protokollfakten und vorhandene Hardware-Captures zuerst auswerten. Keine erneute Tastenvermessung verlangen, wenn die notwendige Zuordnung bereits belegt ist. Firmware- und Kalibrierungslücken getrennt benennen.
 - Eine Lastkorrektur braucht einen tatsächlich passenden roten Lauf und denselben geprüften Erfolgsfall. Keine Timeouts, Assertions, Sim-Uhr, Datenfrische oder Grafikqualität zum Bestehen verbiegen. Ressourcenbegrenzung als Mitigation benennen, solange keine App-Ursache und Korrektur bewiesen sind. Schwarze Bilder und andere Fehlversuche erhalten, nicht als Weltbeleg verkaufen.
-- In GitHub auch **Rulesets** prüfen, nicht nur klassische Branch-Protection. Agentenreview und formale GitHub-Approval sind verschiedene Nachweise. Ein Owner-Merge benötigt ausdrückliche Freigabe und weiterhin grüne Checks des exakten Heads sowie unabhängiges Review. Keine Schutzregel dafür ändern.
+- In GitHub auch **Rulesets** prüfen, nicht nur klassische Branch-Protection. Agentenreview und formale GitHub-Approval sind verschiedene Nachweise. Ein Owner-Merge benötigt ausdrückliche Freigabe und weiterhin grüne Checks des exakten Heads sowie unabhängiges Review. Seit ADR-036 erzwingt `main-merge-gates` grünes `check` und `mutation` ohne Bypass; der Admin-Bypass von `main-pr-review` ersetzt nur das fremde Approval. Keine Schutzregel dafür ändern.
 - Bei Unterbrechung einen knappen Handoff mit Worktree, Commit, geänderten Dateien, tatsächlichen Prüfungen, offenen Fehlern und eigenen Prozessen hinterlassen. Unfertige WIP-Zweige nicht in den Fahrstand mischen.
