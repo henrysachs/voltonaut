@@ -11,10 +11,14 @@ import { planTerrain } from "./terrain-plan.js";
 /** Tree crowns and rocks keep at least this much air to every road centerline. */
 export const PLANT_ROAD_CLEARANCE_M = 7;
 
+/** Plants stand at least this elliptic lake radius out: on the dry shore, never in the water. */
+export const PLANT_LAKE_CLEARANCE = 1.2;
+
 export interface Plant {
   /** Index of the road in the world's road list the plant was scattered along. */
   readonly roadIndex: number;
   readonly routeDistanceM: number;
+  /** Drawn ground under the plant's centre. */
   readonly position: WorldPos;
   readonly radiusM: number;
   readonly heightM: number;
@@ -78,7 +82,7 @@ function standsFree(scatter: Scatter, plant: Plant): boolean {
   const reachM = PLANT_ROAD_CLEARANCE_M + plant.radiusM;
 
   return (
-    scatter.lakes.every((lake) => lakeRadius(lake, plant.position) >= 1.2) &&
+    scatter.lakes.every((lake) => lakeRadius(lake, plant.position) >= PLANT_LAKE_CLEARANCE) &&
     nearestRoadM(scatter.corridor, x, z, reachM) > reachM
   );
 }

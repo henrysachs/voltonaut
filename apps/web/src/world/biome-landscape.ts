@@ -1,14 +1,13 @@
-import type * as THREE from "three";
-
 import type { Biome } from "./biome.js";
 import { createAlpineScenery, createCoastScenery, createNightCityScenery } from "./biomeScenery.js";
 import { planBillboards } from "./billboard-plan.js";
 import { createBillboards } from "./billboards.js";
+import type { DressingGroup } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { createScenery } from "./scenery.js";
 import { createLake } from "./lake.js";
 
-type BiomeDressing = (plan: LandscapePlan) => readonly THREE.Object3D[];
+type BiomeDressing = (plan: LandscapePlan) => readonly DressingGroup[];
 
 const DRESSING: Readonly<Record<Biome["kind"], BiomeDressing>> = {
   forest: (plan) => [
@@ -22,6 +21,6 @@ const DRESSING: Readonly<Record<Biome["kind"], BiomeDressing>> = {
 };
 
 /** Lake, plants and props of one biome (#75) on top of the shared world terrain. */
-export function biomeObjects(biome: Biome, plan: LandscapePlan): readonly THREE.Object3D[] {
+export function biomeObjects(biome: Biome, plan: LandscapePlan): readonly DressingGroup[] {
   return DRESSING[biome.kind](plan);
 }

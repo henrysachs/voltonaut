@@ -9,6 +9,7 @@ import {
   type ChunkLayer,
   type ChunkItem,
 } from "./biomeSceneryShared.js";
+import { CARRIED, DressingGroup, STANDS } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 
 interface StreetFixture extends ChunkItem {
@@ -135,16 +136,15 @@ function signHeadLayer(signs: readonly StreetHead[]): ChunkLayer<StreetHead> {
   };
 }
 
-/** Night city: streetlights and neon signs glowing on dark asphalt. */
-export function createNightCityScenery(plan: Readonly<LandscapePlan>): THREE.Group {
-  const root = new THREE.Group();
+/** Night city: streetlights and neon signs glowing on dark asphalt; the glow is its atmosphere. */
+export function createNightCityScenery(plan: Readonly<LandscapePlan>): DressingGroup {
+  const root = new DressingGroup();
   const fixtures = streetFixtures(plan, seededRandom(23));
-  const glow = new THREE.AmbientLight(0x35405e, 1.1);
 
   root.name = "biome-night-city";
-  root.add(
-    glow,
-    ...chunkedMeshes(streetPoleLayer(fixtures)),
+  root.place(STANDS, ...chunkedMeshes(streetPoleLayer(fixtures)));
+  root.place(
+    CARRIED,
     ...chunkedMeshes(lampHeadLayer(headsOfKind(fixtures, "lamp"))),
     ...chunkedMeshes(signHeadLayer(headsOfKind(fixtures, "sign"))),
   );

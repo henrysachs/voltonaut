@@ -2,6 +2,7 @@ import { ALPINE_PASS, COAST_LOOP, createRoute, NIGHT_CITY, TEST_LOOP } from "@vo
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
+import { worldAtmosphere } from "./biome-atmosphere.js";
 import { createLandscapeSystem } from "./landscape.js";
 import { resolveRenderWorld } from "./render-world.js";
 import { createScheduler } from "./scheduler.js";
@@ -82,6 +83,44 @@ it.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
     expect(scene.children).toHaveLength(0);
   },
 );
+
+/** Lights the landscape system puts into a scene, as [type, colour, intensity]. */
+function landscapeLights(routeId: string): readonly (readonly [string, string, number])[] {
+  const scene = new THREE.Scene();
+  const ridden = resolveRenderWorld(routeId);
+
+  const scheduler = createScheduler([createLandscapeSystem(ridden)], {
+    scene,
+    route: ridden.roads[0] ?? route,
+  });
+
+  const lights: (readonly [string, string, number])[] = [];
+
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three traversal supplies its mutable scene objects.
+  scene.traverse((object) => {
+    if (object instanceof THREE.Light)
+      lights.push([object.type, object.color.getHexString(), object.intensity]);
+  });
+  scheduler.dispose();
+
+  return lights;
+}
+
+it("lights the night city route with its blue glow", () => {
+  expect(landscapeLights(NIGHT_CITY.id)).toEqual([["AmbientLight", "35405e", 1.1]]);
+});
+
+it("adds no light to the forest route", () => {
+  expect(landscapeLights(TEST_LOOP.id)).toEqual([]);
+});
+
+// The connected world's dressing carries no light either (dressing-ground.test.ts).
+it("keeps the night city glow out of the connected world's atmosphere", () => {
+  const voltonaut = resolveRenderWorld("voltonaut-tour");
+
+  expect(voltonaut.regions.map((region) => region.biome.kind)).toContain("night-city");
+  expect(worldAtmosphere(voltonaut)).toEqual([]);
+});
 
 function tourRoad(): typeof route {
   return PAIR.roads[0] ?? route;
