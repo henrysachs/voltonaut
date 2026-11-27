@@ -9,6 +9,7 @@ import {
 } from "@playwright/test";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
+import { drawnDistanceM } from "./helpers/rideWorld.js";
 import { previewWorkerPrelude } from "./render-worker.helpers.js";
 
 interface PageFixture {
@@ -82,7 +83,7 @@ test("garage previews items and colors, keeps guest purchases disabled and the r
   await expect(panel).toContainText("Shop · ab Level 5 (Prüfung folgt)");
 
   const diagnostics = page.getByLabel("Render diagnostics");
-  const distanceM = Number(await diagnostics.getAttribute("data-distance-m"));
+  const distanceM = await drawnDistanceM(page);
   expect(Number.isFinite(distanceM)).toBe(true);
   await expect
     .poll(async () => Number(await diagnostics.getAttribute("data-distance-m")))
