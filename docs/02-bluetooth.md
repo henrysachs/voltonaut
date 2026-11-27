@@ -73,7 +73,8 @@ GATT-Export vom 26.11.2026 (Gerät eines Bekannten; Bytes nicht als Fixture übe
 - Zweiter Erwerb auf derselben Verbindung: `00` → `80 00 01`, `07` → **`80 07 04`** (Operation Failed), offenbar weil die Maschine schon läuft. qdomyos-zwift und Incyclist werten das Start-Ergebnis ebenfalls nicht als Abbruch. Die genaue FTMS-v1.0-Stelle ist hier nicht geprüft (**UNVERIFIED**). Der Erwerb akzeptiert für `0x07` deshalb `success` **und** `failed`. Das folgende neutrale `0x11` muss weiterhin `success` liefern; jeder andere Fehler sperrt wie bisher ([E2-04](specs/E2-04-hub-click-v2-guided-lab.md)).
 - Der Picker findet den Hub über `0x1826`, `0x1818` oder den Namen „Zwift Hub“. ⚠️ Ob `0x1826` im Advertising steht, ist unbelegt.
 - Der proprietäre Zwift-Service (Schalten im Hub) bleibt ungenutzt (ADR-001). Auch das Labor abonniert ihn auf einem Trainer nicht automatisch. Ein Controller-Slot lehnt Geräte mit FTMS/CPS ab, damit der Hub dort nicht als „Controller“ verbunden wird.
-- **UNVERIFIED:** Widerstandsgefühl, Reconnect-Verhalten nach Trennung, Firmware.
+- Hardwarebeleg 27.11.2026 ([Fixture](../fixtures/ble/zwift-hub-click-hardware-20261127.md)): Firmware 5.2.2, Modell `06`. Ziele `0x0000e00c` mit Simulation; alle Indoor-Bike-Data-Frames fehlerfrei, Leistung bis 114 W, Kadenz bis 28 U/min. Erste Freigabe `00`/`07`/`11` je `success`; zweite Freigabe `07` → `80 07 04`, danach `0x11` erneut `success`. Replay durch den echten Trainer-Adapter: kein Write vor der Freigabe.
+- **UNVERIFIED:** Widerstandsgefühl, das neutrale App-`0x11` mit Crr/Cw 0, Reconnect-Verhalten nach Trennung.
 
 ### Fallback: Cycling Power Service `0x1818` ✅
 
@@ -226,7 +227,11 @@ Die Softwarebelege verwenden echte Capture-Bytes, Replay und injizierte native G
 
 GATT-Export beider Pucks vom 26.11.2026 (Bytes nicht übernommen): Name „Zwift Click“, Battery `0x180F`, Device Information, Service **`fc82`** mit `…02` notify, `…03` writeWithoutResponse, `…04` read/indicate sowie `…0100`, `…0101` (write/notify) und `…0102` (writeWithoutResponse/notify) mit `0x2901`-Beschreibung. Deren Zweck ist unbekannt; Adapter und Labor schreiben dort nie und abonnieren sie nicht automatisch.
 
-Implementiert nach übereinstimmenden Quellen (SwiftControl/BikeControl, pizero_bikecomputer, RideControl, JustFabi), **UNVERIFIED** an Hardware:
+Hardwarebeleg 27.11.2026, **rechter Puck**, Firmware 1.2.0 ([Fixture](../fixtures/ble/zwift-hub-click-hardware-20261127.md)): Handshake und Antwort `52 69 64 65 4f 6e 02 03` (ohne Gerätekey), + = `0x1000`, B = `0x20`, A = `0x10`, Y = `0x40`, Z = `0x80`, inverse Logik. Replay durch den echten Adapter ergibt genau einen Handshake, + → `shiftUp`, B → `shiftDown`. Keine Sperrmeldung in rund 90 s.
+
+Der Click v2 besteht aus zwei getrennten Pucks (+ rechts, − links), die einzeln verbunden werden. Mit nur dem rechten Puck schaltet + hoch und B runter.
+
+Implementiert nach übereinstimmenden Quellen (SwiftControl/BikeControl, pizero_bikecomputer, RideControl, JustFabi); ohne Hardwarebeleg bleiben linker Puck (−, Steuerkreuz) und Sperrverhalten **UNVERIFIED**:
 
 - Handshake: `…02` und `…04` abonnieren, dann `52 69 64 65 4f 6e 02 03` per writeWithoutResponse auf `…03`. Antwort auf `…04` beginnt mit denselben acht Bytes, danach folgt ein Gerätekey. Kein verschlüsselter Pfad.
 - Tasten: Typ `0x23`, Protobuf-Feld 1 = uint32-Bitmap, **inverse Logik** (Bit 0 = gedrückt; nichts gedrückt = `23 08 ff ff ff ff 0f`). Feld 3 (Paddel) wird übersprungen.

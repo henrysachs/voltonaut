@@ -1,0 +1,1592 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "ua": "anonymized hardware capture browser",
+    "date": "2026-11-27T07:47:32.085Z",
+    "deviceName": "Zwift Click",
+    "deviceId": "hardware-zwift-click-v2-right-20261127",
+    "firmware": "1.2.0",
+    "protocol": "raw",
+    "notes": ""
+  },
+  "gatt": [
+    {
+      "service": "0000180f-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00002a19-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00000003-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "writeWithoutResponse"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00000004-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "read",
+            "indicate"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00000100-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "write",
+            "writeWithoutResponse",
+            "notify"
+          ],
+          "descriptors": [
+            "00002901-0000-1000-8000-00805f9b34fb",
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00000101-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "write",
+            "writeWithoutResponse",
+            "notify"
+          ],
+          "descriptors": [
+            "00002901-0000-1000-8000-00805f9b34fb",
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00000102-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "writeWithoutResponse",
+            "notify"
+          ],
+          "descriptors": [
+            "00002901-0000-1000-8000-00805f9b34fb",
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00002a26-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a27-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a29-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        }
+      ]
+    }
+  ],
+  "log": [
+    {
+      "tMs": 1765.8000000000466,
+      "device": "Zwift Click",
+      "event": "connected",
+      "marker": ""
+    },
+    {
+      "tMs": 2033.4000000001397,
+      "device": "Zwift Click",
+      "service": "0000180f-0000-1000-8000-00805f9b34fb",
+      "char": "00002a19-0000-1000-8000-00805f9b34fb",
+      "hex": "50",
+      "ascii": "P",
+      "decoded": "Akku 80 %",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 2033.6999999999534,
+      "device": "Zwift Click",
+      "service": "0000180f-0000-1000-8000-00805f9b34fb",
+      "char": "00002a19-0000-1000-8000-00805f9b34fb",
+      "hex": "50",
+      "ascii": "P",
+      "decoded": "Akku 80 %",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 2093.3000000000466,
+      "device": "Zwift Click",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a26-0000-1000-8000-00805f9b34fb",
+      "hex": "31 2e 32 2e 30",
+      "ascii": "1.2.0",
+      "decoded": "Firmware: 1.2.0",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 2155,
+      "device": "Zwift Click",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a27-0000-1000-8000-00805f9b34fb",
+      "hex": "42 2e 30",
+      "ascii": "B.0",
+      "decoded": "Hardware: B.0",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 2213.3000000000466,
+      "device": "Zwift Click",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a29-0000-1000-8000-00805f9b34fb",
+      "hex": "5a 77 69 66 74 20 49 6e 63",
+      "ascii": "Zwift Inc",
+      "decoded": "Hersteller: Zwift Inc",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 27706.800000000047,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000003-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "52 69 64 65 4f 6e 02 03",
+      "ascii": "RideOn..",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 27707.300000000047,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": "Preset abgeschlossen: Zwift-Controller-Handshake"
+    },
+    {
+      "tMs": 27743.699999999953,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000004-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "52 69 64 65 4f 6e 02 03",
+      "ascii": "RideOn..",
+      "decoded": "RideOn + 02 03",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 49837.60000000009,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": ""
+    },
+    {
+      "tMs": 51720.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff df ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"plus\",\"buttonMap\":\"0xffffefff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 51803.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff df ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"plus\",\"buttonMap\":\"0xffffefff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 51923.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52013.60000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52133.5,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52228.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52343.5,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52464,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52523.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52643.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52735.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52853.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 57071,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": ""
+    },
+    {
+      "tMs": 58343.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 df ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"b\",\"buttonMap\":\"0xffffffdf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58464.10000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 df ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"b\",\"buttonMap\":\"0xffffffdf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58554,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58673.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58764.10000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58853.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58974,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59064.10000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59183.60000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59273.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59396.60000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59483.60000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 62655.19999999995,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": ""
+    },
+    {
+      "tMs": 64164,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ef ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"a\",\"buttonMap\":\"0xffffffef\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64253.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ef ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"a\",\"buttonMap\":\"0xffffffef\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64373.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64464,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64584,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64673.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64763.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64884,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64973.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65093.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65184.10000000009,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65303.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 68144.80000000005,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": ""
+    },
+    {
+      "tMs": 69714,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 bf ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"y\",\"buttonMap\":\"0xffffffbf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 69803.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 bf ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"y\",\"buttonMap\":\"0xffffffbf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 69923.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70013.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70133.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70224.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70374.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70433.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70523.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70643.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70733.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70853.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 73470.6000000001,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": ""
+    },
+    {
+      "tMs": 88224.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff df ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"plus\",\"buttonMap\":\"0xffffefff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88314,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff df ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"plus\",\"buttonMap\":\"0xffffefff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88404,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88523.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88613.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88733.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88823.5,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88913.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89033.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89123.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89244,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89334.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 93531.30000000005,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": "+"
+    },
+    {
+      "tMs": 94224.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff df ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"plus\",\"buttonMap\":\"0xffffefff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94344.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff df ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"plus\",\"buttonMap\":\"0xffffefff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94434.30000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94554,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94703.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94734.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94853.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94944,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95064.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95154,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95274,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95364.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 98075.5,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": "b"
+    },
+    {
+      "tMs": 99054,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 df ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"b\",\"buttonMap\":\"0xffffffdf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99174.30000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 df ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"b\",\"buttonMap\":\"0xffffffdf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99266.40000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99383.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99473.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99593.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99683.6000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99803.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99893.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99984,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 100103.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 100193.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 105187.40000000014,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": "a"
+    },
+    {
+      "tMs": 105713.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ef ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"a\",\"buttonMap\":\"0xffffffef\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 105833.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ef ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"a\",\"buttonMap\":\"0xffffffef\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 105923.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106044.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106133.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106223.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106344.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106434,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106553.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106644,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106764.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 106854.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 109731.6000000001,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": "y"
+    },
+    {
+      "tMs": 110213.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 bf ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"y\",\"buttonMap\":\"0xffffffbf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110333.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 bf ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"y\",\"buttonMap\":\"0xffffffbf\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110423.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110545.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110633.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110753.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110843.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 110934,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 111054.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 111144,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 111264.30000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 111354.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 114599.1000000001,
+      "device": "Zwift Click",
+      "event": "marker",
+      "marker": "z"
+    },
+    {
+      "tMs": 115284.19999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff fe ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"z\",\"buttonMap\":\"0xffffff7f\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 115404.1000000001,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff fe ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"z\",\"buttonMap\":\"0xffffff7f\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 115494.30000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 115645.5,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 115703.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 115794.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 115913.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 116003.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 116123.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 116213.69999999995,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 116303.80000000005,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 116423.90000000014,
+      "device": "Zwift Click",
+      "service": "0000fc82-0000-1000-8000-00805f9b34fb",
+      "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+      "hex": "23 08 ff ff ff ff 0f",
+      "ascii": "#......",
+      "decoded": "{\"clickV2\":\"keine Taste\",\"buttonMap\":\"0xffffffff\"}",
+      "marker": "",
+      "dir": "rx"
+    }
+  ]
+}
