@@ -14,6 +14,7 @@ import {
   replayed,
   TEST_LOOP_ROUTE,
   TEST_LOOP_WORLD_PATH,
+  windowFailures,
 } from "../testing/replay.spec.js";
 
 const SEGMENT_RIDE: readonly RecordingEntryV2[] = [
@@ -59,7 +60,35 @@ it("recomputes the same window from the same journal as world path and as route"
   expect(world.source).toEqual(route.source);
 });
 
+const FELSENTAL_WORLD_PATH = {
+  worldId: "felsental",
+  worldRevision: "1",
+  pathId: "felsental",
+} as const;
+
+it("replays a sim ride on the felsental world path with the world path replay revision", () => {
+  const ride = normalReplay(FELSENTAL_WORLD_PATH);
+  const sim = { ...ride, initialization: { ...ride.initialization, source: "sim" as const } };
+  const result = replayed(sim);
+
+  expect(result.replayRevision).toBe("world-path-1");
+  expect(result.summary.distanceM).toBeGreaterThan(0);
+  expect(result.source.window.kind).toBe("blocked");
+  expect(windowFailures(sim)).toContain("sim");
+});
+
+it("recomputes felsental on its own route, not on the test loop", () => {
+  const felsental = replayed(recordReplay(SEGMENT_RIDE, 1, FELSENTAL_WORLD_PATH));
+  const testLoop = replayed(recordReplay(SEGMENT_RIDE, 1, TEST_LOOP_WORLD_PATH));
+
+  expect(felsental.summary.distanceM).toBeGreaterThan(50);
+  expect(felsental.summary).not.toEqual(testLoop.summary);
+});
+
 it.each<RideReference>([
+  { routeId: "felsental", routeRevision: "1" },
+  { ...FELSENTAL_WORLD_PATH, worldRevision: "2" },
+  { ...FELSENTAL_WORLD_PATH, pathId: "test-loop" },
   { ...TEST_LOOP_WORLD_PATH, worldId: "missing-world", pathId: "missing-world" },
   { ...TEST_LOOP_WORLD_PATH, worldId: "voltonaut" },
   { ...TEST_LOOP_WORLD_PATH, worldRevision: "2" },
