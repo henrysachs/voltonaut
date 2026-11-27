@@ -4,6 +4,7 @@ import { DEFAULT_AVATAR_CONFIG } from "@voltonaut/rules";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
 import { LoadoutServer } from "./helpers/loadoutServer.js";
+import { riderShown } from "./helpers/rideWorld.js";
 import { previewWorkerPrelude } from "./render-worker.helpers.js";
 
 async function openGarage(page: Page, url = "/?sim=1&debug=1"): Promise<void> {
@@ -47,6 +48,7 @@ test("buys and equips a jersey that survives reload, a second browser and shows 
   // The disabled „Ausrüsten“ hands focus to the hint instead of dropping it to the page.
   await expect(page.getByTestId("garage-equip-hint")).toBeFocused();
   expect(server.loadout.rider.jerseyId).toBe("jersey.stripe");
+  await riderShown(page);
   await expect(lookOf(page)).toHaveAttribute("data-look", /"jerseyId":"jersey\.stripe"/u);
   await expect.poll(() => distanceOf(page)).toBeGreaterThan(distanceM);
 
@@ -65,6 +67,7 @@ test("buys and equips a jersey that survives reload, a second browser and shows 
   await server.attach(other);
   await openGarage(other);
   await expect(other.getByTestId("garage-item-status-jersey.stripe")).toHaveText("Ausgerüstet");
+  await riderShown(other);
   await expect(lookOf(other)).toHaveAttribute("data-look", /"jerseyId":"jersey\.stripe"/u);
   await second.close();
 });
@@ -88,6 +91,7 @@ test("a rejected save shows the server state and a discard returns to the equipm
   await page.getByTestId("garage-equip").click();
   await expect(page.getByTestId("garage-equip-hint")).toContainText("Ausrüsten abgelehnt");
   await expect(page.getByTestId("garage-item-status-jersey.classic")).toHaveText("Ausgerüstet");
+  await riderShown(page);
   await expect(lookOf(page)).toHaveAttribute("data-look", /"helmetColor":"#ec6b48"/u);
   expect(server.loadoutRequests).toEqual(["GET", "PUT", "GET"]);
 
@@ -137,6 +141,7 @@ test("logging out returns the garage to the default equipment", async ({ page })
   await openGameMenu(page, "Garage / Shop");
   await expect(page.getByTestId("garage-item-status-jersey.classic")).toHaveText("Ausgerüstet");
   await expect(page.getByTestId("garage-item-status-jersey.stripe")).not.toHaveText("Ausgerüstet");
+  await riderShown(page);
   await expect(lookOf(page)).toHaveAttribute("data-look", /"jerseyId":"jersey\.classic"/u);
 });
 
