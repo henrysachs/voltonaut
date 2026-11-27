@@ -50,7 +50,7 @@ function steinbruch(): { readonly startM: number; readonly endM: number } {
   return segment;
 }
 
-describe("Felsental world (spec E10-15 AK1)", () => {
+describe("Felsental world (spec E10-16 AK1)", () => {
   it("is registered as world felsental with revision 1 and one stone-age loop path", () => {
     expect(WORLDS).toContain(FELSENTAL);
     expect(FELSENTAL).toMatchObject({ id: "felsental", name: "Felsental", revision: "1" });
@@ -121,7 +121,7 @@ describe("Felsental revision 1 geometry", () => {
   });
 });
 
-describe("Felsental profile (spec E10-15 AK2)", () => {
+describe("Felsental profile (spec E10-16 AK2)", () => {
   it("starts and ends on a flat valley floor", () => {
     const samples = felsental().profileSamples;
 

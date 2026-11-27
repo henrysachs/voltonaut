@@ -10,7 +10,7 @@ export { SINGLE_ROUTE_WORLD_REVISION, TEST_WORLDS } from "./singleRouteWorlds.js
 /** The connected world voltonaut (ADR-033 step 3) with its tour and region loops. */
 export const VOLTONAUT: World = createWorld(VOLTONAUT_WORLD);
 
-/** The stone-age theme world Felsental (#159, spec E10-15) with its valley loop. */
+/** The stone-age theme world Felsental (#159, spec E10-16) with its valley loop. */
 export const FELSENTAL: World = createWorld(FELSENTAL_WORLD);
 
 /** Every shipped world: the single-route worlds first, then the native worlds in shipping order. */

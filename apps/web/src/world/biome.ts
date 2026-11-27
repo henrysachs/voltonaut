@@ -28,7 +28,7 @@ export function biomeFromScenery(scenery: string): Biome {
 
 /**
  * The forest and the coast keep their lake; the alpine pass, the night city (#75) and the stone
- * age valley (spec E10-15) drop it.
+ * age valley (spec E10-16) drop it.
  */
 export function biomeHasLake(biome: Biome): boolean {
   return biome.kind === "forest" || biome.kind === "coast";

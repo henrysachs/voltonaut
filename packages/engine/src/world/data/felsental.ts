@@ -110,7 +110,7 @@ function startNode(): WorldNode {
 }
 
 /**
- * Felsental: a 9 km stone-age valley loop with the 2 km Steinbruch climb (spec E10-15). A native
+ * Felsental: a 9 km stone-age valley loop with the 2 km Steinbruch climb (spec E10-16). A native
  * world, so createWorld checks its curvature and node elevations.
  */
 export const FELSENTAL_WORLD: WorldData = {

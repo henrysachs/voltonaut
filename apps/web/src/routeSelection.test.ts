@@ -10,7 +10,7 @@ it("records the voltonaut tour in its world (ADR-033 §7)", () => {
   });
 });
 
-it("records Felsental in its own world (spec E10-15 AK3)", () => {
+it("records Felsental in its own world (spec E10-16 AK3)", () => {
   expect(selectRouteFromUrl(new URLSearchParams("route=felsental")).worldPath).toEqual({
     worldId: "felsental",
     worldRevision: "1",

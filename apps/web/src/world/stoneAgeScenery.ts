@@ -157,10 +157,10 @@ function boulderLayer(boulders: readonly Placed[]): ChunkLayer<Placed> {
 const PLANT_CHUNK_M = 500;
 
 /**
- * Stone age (spec E10-15): rock houses with entrance tunnels and dark doors, palms, ferns and
+ * Stone age (spec E10-16): rock houses with entrance tunnels and dark doors, palms, ferns and
  * boulders, long-necked dino statues and glowing volcanoes. Houses, statues and volcanoes are few,
  * so each layer is one mesh over the whole lap. Plants use 500 m chunks: with four plant layers,
- * 250 m chunks took the Steinbruch view to 140 of the 150 draw calls (spec E10-15 AK6).
+ * 250 m chunks took the Steinbruch view to 140 of the 150 draw calls (spec E10-16 AK6).
  */
 export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Group {
   const root = new THREE.Group();

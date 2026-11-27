@@ -264,7 +264,7 @@ export interface StoneAgeDecor {
 }
 
 /**
- * Seeded stone age layout (spec E10-15). Volcanoes claim their ground first, then houses and
+ * Seeded stone age layout (spec E10-16). Volcanoes claim their ground first, then houses and
  * statues; plants from the forest plan fill the rest.
  */
 export function planStoneAge(plan: Readonly<LandscapePlan>): StoneAgeDecor {

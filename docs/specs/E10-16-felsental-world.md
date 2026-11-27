@@ -1,4 +1,4 @@
-# Spec E10-15 – Steinzeit-Welt Felsental
+# Spec E10-16 – Steinzeit-Welt Felsental
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, Checkbox „Themenwelten (#159)“, erster Teil
 - **Status:** Implementiert und auf `main` mit #174 rebased. AK1–AK8 sind durch Tests und Sim-Messläufe belegt, siehe [Nachweise](#nachweise). Softwaregeprüft erst mit grüner CI am PR-Head. An echter Hardware nicht geprüft, nicht bereitgestellt. Henrys Optikfreigabe offen.
@@ -32,7 +32,7 @@ Namen, Figuren, Orte und Musik der Vorbilder kommen nicht vor. Alle Objekte sind
 - [x] AK6 – Über die ganze Runde bleiben Draw Calls ≤ 150 und Dreiecke ≤ 500 k, im Sim-E2E gemessen.
 - [x] AK7 – Der Server rechnet eine Sim-Fahrt auf `felsental` mit `replayRevision: "world-path-1"` nach. Eine Altreferenz `routeId: "felsental"` mit `routeRevision: "1"` lehnt er ab, weil es für diese Welt keine Aufnahmen vor ADR-033 gibt.
 - [x] AK8 – Bestehende Strecken, Aufnahmen, Golden-Dateien und Screenshot-Baselines bleiben unverändert.
-- [ ] AK9 – Drei Screenshots im Sim-Modus (Verfolgerkamera im Dorf, am Anstieg und mit Blick auf die Vulkane) liegen unter `docs/specs/E10-15/`. Sie sind Nachweise, keine Baselines. Henry gibt die Optik frei.
+- [ ] AK9 – Drei Screenshots im Sim-Modus (Verfolgerkamera im Dorf, am Anstieg und mit Blick auf die Vulkane) liegen unter `docs/specs/E10-16/`. Sie sind Nachweise, keine Baselines. Henry gibt die Optik frei.
 - [ ] AK10 – `mise run check` und `mise run check:mutation` sind grün.
 
 ## Testplan (`docs/10-testing.md`)
@@ -46,7 +46,7 @@ Namen, Figuren, Orte und Musik der Vorbilder kommen nicht vor. Alle Objekte sind
 | AK6      | E2E, manuell | erster Frame: Budget-Test je Katalogstrecke in `apps/web/e2e/routes.spec.ts`; ganze Runde: manuelle Playwright-Messfahrt mit `clock=fast`, nicht im Repo |
 | AK7      | Integration  | `apps/server/src/rides/replay.world.test.ts`                                                                                                             |
 | AK8      | Golden, Gate | bestehende Golden- und Replay-Tests, `mise run guard`                                                                                                    |
-| AK9      | manuell      | Screenshots unter `docs/specs/E10-15/`                                                                                                                   |
+| AK9      | manuell      | Screenshots unter `docs/specs/E10-16/`                                                                                                                   |
 | AK10     | Gate         | `mise run check`, `mise run check:mutation`                                                                                                              |
 
 ## Nicht-Ziele
@@ -74,7 +74,7 @@ Stand 27.11.2026, Branch `feat/issue-159-felsental` auf `main` `a470bd1` (#174) 
 | `mise run check:mutation`                                | grün: Score 95,26 % (Schwelle 80 %), `felsental.ts` 95,71 %. Überlebt haben nur Mutanten an zwei Schutz-`throw`s. Gemessen vor dem Wechsel `WORLDS.at(-1)` → `toContain` in `felsental.test.ts`; der Engine-Quellcode ist seitdem unverändert.                                                                                                                                                                                                                                                                                                                                                                     |
 | AK6 erster Frame (wie im E2E-Budgettest)                 | 86 Draw Calls, 185 k Dreiecke                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | AK6 ganze Runde (Messfahrt mit `clock=fast`, 601 Proben) | Spitze 122 Draw Calls bei 2,3 km (Steinbruch), 280 k Dreiecke bei 5,4 km                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| AK9 Screenshots                                          | `E10-15/dorf.png` (0,02 km), `E10-15/steinbruch.png` (2,06 km), `E10-15/vulkane.png` (3,63 km), nach dem Rebase und mit Eingangstunneln neu aufgenommen                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| AK9 Screenshots                                          | `E10-16/dorf.png` (0,02 km), `E10-16/steinbruch.png` (2,06 km), `E10-16/vulkane.png` (3,63 km), nach dem Rebase und mit Eingangstunneln neu aufgenommen                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 Zwei Fehlaufnahmen sind kein Weltbeleg und liegen nicht im Repo, sondern lokal unter `/tmp/v159-shots/`: eine vor dem Laden der 3D-Welt (schwarz) und eine vor dem Laden des Fahrers.
 
