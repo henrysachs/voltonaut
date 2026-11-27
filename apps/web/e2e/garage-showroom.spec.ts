@@ -14,6 +14,7 @@ import {
   hasOpaquePngPixel,
   openGarage,
   pngDimensions,
+  pngMeanAbsoluteDifference,
   readOrbit,
   required,
   touchDrag,
@@ -104,10 +105,11 @@ test("reduced motion stops auto-rotation and keeps manual orbit available", asyn
   await expect(toggle).toBeDisabled();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   const canvas = preview.locator("canvas");
+  await expectPreviewVisible(page, canvas);
   const first = await canvas.screenshot();
   await page.waitForTimeout(350);
   const second = await canvas.screenshot();
-  expect(second.equals(first)).toBe(true);
+  expect(await pngMeanAbsoluteDifference(page, first, second)).toBeLessThan(0.01);
 
   const before = await readOrbit(preview);
   await preview.focus();

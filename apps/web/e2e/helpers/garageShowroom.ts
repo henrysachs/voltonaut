@@ -206,6 +206,57 @@ export async function capturePreviewWorker(page: Readonly<Page>): Promise<void> 
   });
 }
 
+export function pngMeanAbsoluteDifference(
+  page: Readonly<Page>,
+  first: Buffer,
+  second: Buffer,
+): Promise<number> {
+  return page.evaluate(
+    async ({ firstPng, secondPng }) => {
+      const [before, after] = await Promise.all(
+        [firstPng, secondPng].map(async (base64) => {
+          const binary = atob(base64);
+          const pixels = Uint8Array.from(binary, (character) => character.codePointAt(0) ?? 0);
+          const url = URL.createObjectURL(new Blob([pixels], { type: "image/png" }));
+
+          try {
+            const image = new Image();
+            image.src = url;
+            await image.decode();
+            const canvas = document.createElement("canvas");
+            canvas.width = image.naturalWidth;
+            canvas.height = image.naturalHeight;
+            const context = canvas.getContext("2d");
+
+            if (context === null) throw new Error("PNG decode context unavailable");
+
+            context.drawImage(image, 0, 0);
+
+            return context.getImageData(0, 0, canvas.width, canvas.height);
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        }),
+      );
+
+      if (before === undefined || after === undefined) throw new Error("PNG decode failed");
+
+      if (before.width !== after.width || before.height !== after.height) {
+        throw new Error("PNG dimensions changed");
+      }
+
+      let difference = 0;
+
+      for (let index = 0; index < before.data.length; index += 1) {
+        difference += Math.abs((before.data[index] ?? 0) - (after.data[index] ?? 0));
+      }
+
+      return difference / (before.data.length * 255);
+    },
+    { firstPng: first.toString("base64"), secondPng: second.toString("base64") },
+  );
+}
+
 export function brightPngPixelRatio(page: Readonly<Page>, bytes: Buffer): Promise<number> {
   return page.evaluate(async (base64: string) => {
     const binary = atob(base64);
