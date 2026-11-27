@@ -196,7 +196,7 @@ function geometryFingerprint(): string {
 
 it("pins the geometry of revision 2: any change needs a new revision (ADR-033 §8)", () => {
   expect(VOLTONAUT_REVISION_2.revision).toBe("2");
-  expect(geometryFingerprint()).toBe("7bb98226:198112");
+  expect(geometryFingerprint()).toBe("5e9943c4:177499");
 });
 
 /** Tour distances where the vineyard region begins and ends; apps/web/e2e/routes.spec.ts rides them. */
@@ -211,10 +211,10 @@ function vineyardSpanOfTourM(): readonly [number, number] {
   return [sum(first), sum(last + 1)];
 }
 
-it("rides the vineyard region of the tour from 4.7 km to 13.9 km", () => {
+it("rides the vineyard region of the tour from 3.6 km to 12.7 km", () => {
   const [entryM, exitM] = vineyardSpanOfTourM();
 
-  expect(entryM).toBeCloseTo(4675, -1);
-  expect(exitM).toBeCloseTo(13_855, -1);
-  expect(requireRoute("voltonaut-tour").lengthM).toBeCloseTo(32_086, -1);
+  expect(entryM).toBeCloseTo(3560, -1);
+  expect(exitM).toBeCloseTo(12_739, -1);
+  expect(requireRoute("voltonaut-tour").lengthM).toBeCloseTo(28_047, -1);
 });

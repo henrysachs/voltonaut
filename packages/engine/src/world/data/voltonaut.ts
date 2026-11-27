@@ -43,9 +43,9 @@ export const VOLTONAUT_WORLD: WorldData = regionTourWorld({
 });
 
 /**
- * Revision 2 (#146): the vineyard region sits between forest and coast, so the tour rides
- * forest → vineyard → coast → night city → forest. The coast moves east to keep 1.8 km between
- * all loops; revision 1 keeps its geometry and stays replayable.
+ * Revision 2 (#146): the vineyard region sits south of the forest, between forest and coast, so
+ * the tour rides forest → vineyard → coast → night city → forest. Coast and night city keep
+ * their revision 1 places; revision 1 keeps its geometry and stays replayable.
  */
 export const VOLTONAUT_WORLD_REVISION_2: WorldData = regionTourWorld({
   id: "voltonaut",
@@ -68,7 +68,7 @@ export const VOLTONAUT_WORLD_REVISION_2: WorldData = regionTourWorld({
       name: "Weinberge",
       scenery: "vineyard",
       loop: VINEYARD_INTERVALS,
-      offset: { x: 2200, z: -5200 },
+      offset: { x: 1000, z: -4300 },
       pathName: "Weinberg-Intervalle",
       keepSegments: true,
     },
@@ -77,7 +77,7 @@ export const VOLTONAUT_WORLD_REVISION_2: WorldData = regionTourWorld({
       name: "Küste",
       scenery: "coast",
       loop: COAST_LOOP,
-      offset: { x: 7000, z: -2400 },
+      offset: { x: 4800, z: -1800 },
     },
     {
       id: "night-city",

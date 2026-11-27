@@ -114,18 +114,74 @@ function elevationM(distanceM: number): number {
   return legElevationM(distanceM);
 }
 
+/** Distance between the centres of the two end bends, before the loop is scaled to its length. */
+const STRAIGHT_M = 4776;
+
+/** Radius of the end bends: wide hairpins at both ends of the long oval. */
+const BEND_RADIUS_M = 500;
+
+/** Height of the terrace wobbles on the long sides; they fade out into the bends. */
+const WOBBLE_M = 60;
+
+/** Wobbles along the upper and the lower side; whole or half counts end without a kink. */
+const UPPER_WOBBLES = 4;
+const LOWER_WOBBLES = 4.5;
+
+/** The oval runs east-south-east, so its east end keeps 1.8 km from the coast loop. */
+const TILT_RAD = (-10.3 * Math.PI) / 180;
+
+const OVAL_M = 2 * STRAIGHT_M + 2 * Math.PI * BEND_RADIUS_M;
+
+/** Sideways offset of a long side at a share of its length: zero, and level, at both ends. */
+function wobbleM(share: number, count: number): number {
+  return WOBBLE_M * Math.sin(2 * Math.PI * count * share) * Math.sin(Math.PI * share);
+}
+
+function bendPoint(centreX: number, angleRad: number): CenterlinePoint {
+  return {
+    x: centreX + Math.cos(angleRad) * BEND_RADIUS_M,
+    z: Math.sin(angleRad) * BEND_RADIUS_M,
+  };
+}
+
+/** Point of the untilted oval, distanceM counter-clockwise from its east tip. */
+function ovalPoint(distanceM: number): CenterlinePoint {
+  const eastX = STRAIGHT_M / 2;
+  const upperM = distanceM - (Math.PI * BEND_RADIUS_M) / 2;
+  const westM = upperM - STRAIGHT_M;
+  const lowerM = westM - Math.PI * BEND_RADIUS_M;
+  const backM = lowerM - STRAIGHT_M;
+
+  if (upperM < 0) return bendPoint(eastX, distanceM / BEND_RADIUS_M);
+
+  if (westM < 0) {
+    const share = upperM / STRAIGHT_M;
+
+    return { x: eastX - share * STRAIGHT_M, z: BEND_RADIUS_M + wobbleM(share, UPPER_WOBBLES) };
+  }
+
+  if (lowerM < 0) return bendPoint(-eastX, Math.PI / 2 + westM / BEND_RADIUS_M);
+
+  if (backM < 0) {
+    const share = lowerM / STRAIGHT_M;
+
+    return { x: share * STRAIGHT_M - eastX, z: -BEND_RADIUS_M - wobbleM(share, LOWER_WOBBLES) };
+  }
+
+  return bendPoint(eastX, (3 * Math.PI) / 2 + backM / BEND_RADIUS_M);
+}
+
 /**
- * Winding ring along the slopes: an elongated oval whose four gentle bulges read as terraced
- * vineyard roads. Radius of curvature stays far above the 62 m the smoothness check allows.
+ * Winding ring along the slopes: a long oval with wide bends at both ends and gentle wobbles
+ * on its long sides that read as terraced vineyard roads. It stays narrow, so the world around
+ * it stays small (the terrain raster covers the world's bounding box).
  */
 function vineyardCurve(t: number): CenterlinePoint {
-  const angleRad = t * Math.PI * 2;
-  const wobble = 1 + 0.1 * Math.sin(angleRad * 4 + 0.6);
+  const point = ovalPoint(t * OVAL_M);
+  const cos = Math.cos(TILT_RAD);
+  const sin = Math.sin(TILT_RAD);
 
-  return {
-    x: Math.cos(angleRad) * 1150 * wobble,
-    z: Math.sin(angleRad) * 1000 * wobble,
-  };
+  return { x: point.x * cos - point.z * sin, z: point.x * sin + point.z * cos };
 }
 
 /** The ramp that carries the KOM segment: the second, 700 m at 5 %. */

@@ -137,8 +137,8 @@ function trackRide(
 }
 
 /** Distances (m) along the voltonaut tour of revision 2 where the vineyard region begins and ends. */
-const TOUR_VINEYARD_ENTRY_M = 4675;
-const TOUR_VINEYARD_EXIT_M = 13_855;
+const TOUR_VINEYARD_ENTRY_M = 3560;
+const TOUR_VINEYARD_EXIT_M = 12_739;
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
 test("the tour rides into the vineyard region and out again without a break (#146)", async ({
