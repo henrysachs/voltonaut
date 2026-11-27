@@ -11,7 +11,11 @@ export { checkDependencyRegister } from "./lib/dependencies.ts";
 
 export { checkLintConfigs } from "./lib/lint-configs.ts";
 
-export { checkProtectedDiff, protectedDiffFindings } from "./lib/protected-diff.ts";
+export {
+  addedLinesByFile,
+  checkProtectedDiff,
+  protectedDiffFindings,
+} from "./lib/protected-diff.ts";
 
 export { checkTypeScriptConfigs } from "./lib/tsconfig.ts";
 

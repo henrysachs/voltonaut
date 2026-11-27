@@ -13,13 +13,50 @@ const protectedPatterns: readonly Readonly<RegExp>[] = [
   /^scripts\/guard(\.mjs|\.test\.mjs|\/|$)/u,
   /^\.github\//u,
   /^pnpm-workspace\.yaml$/u,
+  /^stryker\.config\.json$/u,
   /^docs\/decisions\//u,
   /^fixtures\//u,
   /^apps\/web\/e2e\/__screenshots__\//u,
 ];
 
-/** Content of a changed ADR at HEAD, or undefined when the diff deleted it. */
-type AdrReader = (path: string) => string | undefined;
+/**
+ * Lines the diff adds to each ADR. Only these may name protected paths: a typo fix in ADR-007 must not
+ * unlock every path ADR-007 has ever named. A new ADR adds all of its lines, so it counts whole.
+ */
+export interface AdrAddition {
+  readonly path: string;
+  readonly added: string;
+}
+
+/** Parses `git diff -U0` output into the added lines per post-image path. */
+export function addedLinesByFile(unifiedDiff: string): readonly AdrAddition[] {
+  const additions: { readonly path: string; readonly lines: string[] }[] = [];
+  let current: string[] | undefined;
+  // `+++ b/<path>` is a header only between `diff --git` and the first hunk; inside a hunk it is an added line.
+  let inHeader = false;
+
+  for (const line of unifiedDiff.split(/\r?\n/u)) {
+    if (line.startsWith("diff --git ")) {
+      inHeader = true;
+      current = undefined;
+    } else if (inHeader && line.startsWith("+++ b/")) {
+      current = [];
+      additions.push({ path: line.slice("+++ b/".length), lines: current });
+    } else if (line.startsWith("@@")) {
+      inHeader = false;
+    } else if (!inHeader && line.startsWith("+") && current !== undefined) {
+      current.push(line.slice(1));
+    }
+  }
+
+  const result: AdrAddition[] = [];
+
+  for (const addition of additions) {
+    result.push({ path: addition.path, added: addition.lines.join("\n") });
+  }
+
+  return result;
+}
 
 function backtickedPaths(text: string): readonly string[] {
   const paths: string[] = [];
@@ -40,10 +77,14 @@ function namesPath(named: readonly string[], file: string): boolean {
 
 export function protectedDiffFindings(
   changed: readonly string[],
-  readAdr: AdrReader,
+  additions: readonly AdrAddition[],
 ): readonly string[] {
   const changedAdrs = changed.filter((file) => adrPattern.test(file));
-  const named = changedAdrs.flatMap((adr) => backtickedPaths(readAdr(adr) ?? ""));
+
+  const named = additions
+    .filter(({ path }) => changedAdrs.includes(path))
+    .flatMap(({ added }) => backtickedPaths(added));
+
   const findings: string[] = [];
 
   for (const file of changed) {
@@ -55,7 +96,7 @@ export function protectedDiffFindings(
       findings.push(`${file}: protected file changed without an ADR in the same diff`);
     } else if (!file.startsWith(decisionsDirectory) && !namesPath(named, file)) {
       findings.push(
-        `${file}: protected file changed, but no ADR in the same diff names \`${file}\` or its directory prefix (changed ADRs: ${changedAdrs.join(", ")})`,
+        `${file}: protected file changed, but no line the diff adds to an ADR names \`${file}\` or its directory prefix (changed ADRs: ${changedAdrs.join(", ")})`,
       );
     }
   }
@@ -63,27 +104,23 @@ export function protectedDiffFindings(
   return findings;
 }
 
-function readAdrAtHead(path: string): string | undefined {
-  try {
-    return execFileSync("git", ["show", `HEAD:${path}`], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-  } catch {
-    return undefined;
-  }
-}
-
-export function checkProtectedDiff(base: string): readonly string[] {
+export function checkProtectedDiff(base: string, cwd: string = process.cwd()): readonly string[] {
   if (process.env.GUARD_ALLOW_PROTECTED === "baseline-update") {
     return [];
   }
 
-  const output = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
-    encoding: "utf8",
-  });
+  const range = `${base}...HEAD`;
 
-  const changed = output.split(/\r?\n/u).filter((line) => line.length > 0);
+  const changed = execFileSync("git", ["diff", "--name-only", range], { cwd, encoding: "utf8" })
+    .split(/\r?\n/u)
+    .filter((line) => line.length > 0);
 
-  return protectedDiffFindings(changed, readAdrAtHead);
+  // Rename detection over the whole directory, so a renamed ADR adds only its edited lines.
+  const adrDiff = execFileSync(
+    "git",
+    ["diff", "-U0", "-M", "--no-color", "--no-ext-diff", range, "--", decisionsDirectory],
+    { cwd, encoding: "utf8" },
+  );
+
+  return protectedDiffFindings(changed, addedLinesByFile(adrDiff));
 }

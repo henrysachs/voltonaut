@@ -19,7 +19,8 @@ const recordSeparator = "\u001E";
 /** Git parses the trailer block itself, so GitHub's squash bodies with inline sign-offs read the same as `git interpret-trailers --parse`. */
 const logFormat = `%H%x1f%ae%x1f%s%x1f%(trailers:only=true,unfold=true,separator=%x1d)%x1e`;
 
-const aiIdentityPattern = /claude|anthropic/iu;
+/** Anthropic's agent identities write from this domain (`noreply@anthropic.com`); a person named Claude does not. */
+const aiEmailPattern = /@anthropic\.com>?$/iu;
 
 function parseTrailer(line: string): CommitTrailer | undefined {
   const colon = line.indexOf(":");
@@ -93,13 +94,12 @@ export function checkCommitTrailers(commits: readonly CommitRecord[]): readonly 
     }
 
     // GitHub turns every PR commit author into a `Co-authored-by:` line of the squash commit.
-    if (aiIdentityPattern.test(commit.authorEmail)) {
+    if (aiEmailPattern.test(commit.authorEmail)) {
       findings.push(`${label}: author ${commit.authorEmail} is an AI identity; commit as a person`);
     }
 
     for (const trailer of commit.trailers) {
-      const isAiCoAuthor =
-        keyIs(trailer, "Co-Authored-By") && aiIdentityPattern.test(trailer.value);
+      const isAiCoAuthor = keyIs(trailer, "Co-Authored-By") && aiEmailPattern.test(trailer.value);
 
       if (isAiCoAuthor || keyIs(trailer, "Claude-Session")) {
         findings.push(`${label}: forbidden trailer '${trailer.key}: ${trailer.value}'`);

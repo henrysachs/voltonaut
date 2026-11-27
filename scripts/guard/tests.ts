@@ -10,7 +10,7 @@ import {
   expectedBaseCompilerOptions,
   scanEscapeHatches,
 } from "./main.ts";
-import { withTempDir } from "./temp-dir.ts";
+import { withTempDir } from "./test-support.ts";
 
 await test("scanEscapeHatches rejects every documented escape hatch", () => {
   withTempDir((root) => {
