@@ -213,7 +213,7 @@ interface WorldData {
   paths: ReadonlyArray<WorldPath>; // steps: { edgeId, direction: "forward" | "reverse" }[], loop, segments; scenery = Region des ersten Abschnitts
 }
 // createWorld liefert zusätzlich die Render-Sicht: regions (mit homePathId, dem Weg, entlang dessen die Region ausgestattet wird)
-// und edges (Mittellinie, Profil, Region, Biom, pathIds). Erste verbundene Welt: VOLTONAUT (E10-14); Revision 2 (E10-15) fügt die Region Weinberge ein. WORLDS listet Revisionen einer Welt von alt nach neu; `worldPathOf`, TEST_ROUTES und die Render-Sicht nehmen die neueste, `worldPathRoute` verlangt Welt und Revision genau.
+// und edges (Mittellinie, Profil, Region, Biom, pathIds). Erste verbundene Welt: VOLTONAUT (E10-14); Revision 2 (E10-17) fügt die Region Weinberge ein. WORLDS listet Revisionen einer Welt von alt nach neu; `worldPathOf`, TEST_ROUTES und die Render-Sicht nehmen die neueste, `worldPathRoute` verlangt Welt und Revision genau.
 interface WorldViews {
   regions: ReadonlyArray<{ id: string; scenery: string; homePathId: string | undefined }>;
   edges: ReadonlyArray<{

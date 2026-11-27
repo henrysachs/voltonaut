@@ -57,7 +57,7 @@ Die erste zusammenhängende Welt `voltonaut`: Wald und See (Testrunde), Küste u
 
 ## Revisionsnote
 
-Revision `1` (Wald, Küste, Nachtstadt) bleibt unverändert und nachrechenbar. [E10-15](E10-15-region-weinberge.md) fügt in Revision `2` die Region Weinberge ein; neue Fahrten laufen auf Revision `2`, die Tour ist dort 28,0 km lang.
+Revision `1` (Wald, Küste, Nachtstadt) bleibt unverändert und nachrechenbar. [E10-17](E10-17-region-weinberge.md) fügt in Revision `2` die Region Weinberge ein; neue Fahrten laufen auf Revision `2`, die Tour ist dort 28,0 km lang.
 
 ## Nachweisstand
 
