@@ -8,7 +8,7 @@ import { planWaymarks } from "./waymark-plan.js";
 export const BILLBOARD_LATERAL_M = 10.5;
 
 /** Henry's decision on #42: three billboards per kilometre. */
-export const BILLBOARDS_PER_KM = 3;
+const BILLBOARDS_PER_KM = 3;
 
 /** Placeholder motifs rotate in route order: every board shows the next one (#42). */
 export const BILLBOARD_VARIANTS = 3;

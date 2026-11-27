@@ -107,7 +107,7 @@ function sideNames(side: 1 | -1): {
       };
 }
 
-export const SIDE_BONES = { right: sideNames(1), left: sideNames(-1) } as const;
+const SIDE_BONES = { right: sideNames(1), left: sideNames(-1) } as const;
 
 export function bonesOfSide(side: 1 | -1): ReturnType<typeof sideNames> {
   return side === 1 ? SIDE_BONES.right : SIDE_BONES.left;
@@ -142,7 +142,7 @@ function limbSegments(arm: Readonly<ArmPose>, leg: Readonly<LegPose>): LimbSegme
 }
 
 /** Bone segments of every bone for a set of joints. */
-export function boneSegments(joints: Readonly<RiderJoints>): Record<BoneName, BoneSegment> {
+function boneSegments(joints: Readonly<RiderJoints>): Record<BoneName, BoneSegment> {
   const [pelvis, spine1, spine2, spine3, neck] = joints.spine;
   const right = limbSegments(joints.arms[0], joints.legs[0]);
   const left = limbSegments(joints.arms[1], joints.legs[1]);

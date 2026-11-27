@@ -246,8 +246,6 @@ export const ProgressionAccountExportSchema = z
   .object({ volts: VoltsAccountExportSchema, progress: ProgressAccountExportSchema })
   .strict();
 
-export type ProgressSessionGeneration = z.infer<typeof ProgressSessionGenerationSchema>;
-
 export type ProgressConsentState = z.infer<typeof ProgressConsentStateSchema>;
 
 export type ProgressConsentUpdate = z.infer<typeof ProgressConsentUpdateSchema>;

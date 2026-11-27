@@ -5,9 +5,9 @@ import { RewardFactsSchema } from "./rewards.js";
 const DAY_MS = 86_400_000;
 
 /** Season length bounds from issue #44: 8 to 12 weeks. */
-export const SEASON_MIN_DAYS = 56;
-export const SEASON_MAX_DAYS = 84;
-export const SEASON_MIN_TIERS = 20;
+const SEASON_MIN_DAYS = 56;
+const SEASON_MAX_DAYS = 84;
+const SEASON_MIN_TIERS = 20;
 
 export const SeasonIdSchema = z.string().regex(/^season-\d{2}$/u);
 
@@ -15,7 +15,7 @@ const seasonPointsValue = z.number().finite().int().min(0).max(Number.MAX_SAFE_I
 
 export const SeasonPointsSchema = seasonPointsValue.brand<"SeasonPoints">();
 
-export const SeasonRewardSchema = z.union([
+const SeasonRewardSchema = z.union([
   z
     .object({ kind: z.literal("item"), itemId: z.string().trim().min(1).max(120) })
     .strict()
@@ -26,7 +26,7 @@ export const SeasonRewardSchema = z.union([
     .readonly(),
 ]);
 
-export const SeasonTierSchema = z
+const SeasonTierSchema = z
   .object({
     tier: z.number().finite().int().min(1),
     pointsRequired: seasonPointsValue,

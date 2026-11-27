@@ -9,7 +9,7 @@ export const ROAD_SINK_M = 0.06;
 /** Embankment: flat to the shoulder edge, then a smooth blend into the natural ground. */
 export const EMBANKMENT_FLAT_M = 4;
 
-export const EMBANKMENT_BLEND_M = 32;
+const EMBANKMENT_BLEND_M = 32;
 
 /**
  * Bank cap: within this distance no terrain point rises above the corridor floor; beyond it the
@@ -18,7 +18,7 @@ export const EMBANKMENT_BLEND_M = 32;
  */
 export const CAP_FLAT_M = 17;
 
-export const CAP_SLOPE = 1;
+const CAP_SLOPE = 1;
 
 /** Roads farther away neither blend (ends at 36 m) nor cap (31 m above the floor) the ground. */
 export const CORRIDOR_RANGE_M = 48;

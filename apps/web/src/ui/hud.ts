@@ -147,7 +147,7 @@ function itemText(mode: ModeSnapshot): string {
 }
 
 /** Data-loss warning threshold from docs/03 section 1 (> 3 s without data). */
-export const DATA_AGE_WARNING_S = 3;
+const DATA_AGE_WARNING_S = 3;
 
 export function hudText(model: RideHudModel, connectedLabel = "Sim connected"): HudText {
   const status = model.paused

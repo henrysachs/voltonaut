@@ -9,7 +9,7 @@ export function invalidOidcLogin(): ApiError {
   return new ApiError(401, "invalid_oidc_login", "login is invalid, used, or expired");
 }
 
-export function oidcCookieName(secure: boolean): string {
+function oidcCookieName(secure: boolean): string {
   return secure ? "__Host-voltonaut-oidc" : "voltonaut-oidc";
 }
 

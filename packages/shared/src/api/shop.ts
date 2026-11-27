@@ -5,7 +5,7 @@ import { VoltsBalanceSchema, VoltsDebitAmountSchema } from "../economy.js";
 import { LoadoutResponseSchema } from "./loadout.js";
 
 /** `default` items are owned by every account without a stored row (spec E7-02 AK3). */
-export const InventorySourceSchema = z.enum(["default", "shop"]);
+const InventorySourceSchema = z.enum(["default", "shop"]);
 
 export const InventoryItemSchema = z
   .object({
@@ -66,8 +66,6 @@ export const PurchaseDecisionInputSchema = z
   .readonly();
 
 export type PurchaseDecisionInput = z.input<typeof PurchaseDecisionInputSchema>;
-
-export type InventorySource = z.infer<typeof InventorySourceSchema>;
 
 export type InventoryItem = z.infer<typeof InventoryItemSchema>;
 

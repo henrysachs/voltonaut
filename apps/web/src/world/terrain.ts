@@ -138,7 +138,7 @@ export function createTerrainGeometries(
 }
 
 /** World raster geometries with per-point shades (ADR-033 §6). */
-export function createWorldTerrainGeometries(
+function createWorldTerrainGeometries(
   field: Heightfield,
   look: TerrainLook,
 ): readonly THREE.BufferGeometry[] {

@@ -187,7 +187,7 @@ function validateExportEntry(
   }
 }
 
-export const VoltsLedgerExportEntrySchema = z
+const VoltsLedgerExportEntrySchema = z
   .discriminatedUnion("reason", [
     VoltsLedgerEntryBaseSchema.extend({
       reason: z.literal("ride_reward"),

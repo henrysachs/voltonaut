@@ -34,10 +34,6 @@ export const loginTokens = sqliteTable("login_tokens", {
 
 export type UsersRow = typeof users.$inferSelect;
 
-export type SessionsRow = typeof sessions.$inferSelect;
-
-export type LoginTokensRow = typeof loginTokens.$inferSelect;
-
 export const authIdentities = sqliteTable(
   "auth_identities",
   {

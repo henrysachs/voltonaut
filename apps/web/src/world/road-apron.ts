@@ -1,6 +1,6 @@
 import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 
-import { bandSurfaceAt, createBandIndex, ribbonTriangles, type BandTriangle } from "./road-band.js";
+import { bandSurfaceAt, createBandIndex } from "./road-band.js";
 import type { RoadSample } from "./road-plan.js";
 
 /** Mitered inside corners overlap; the apron stays below the higher neighbour (#138). */
@@ -52,8 +52,4 @@ export function apronSamples(route: EngineRoute): readonly RoadSample[] {
 
     return { left: edge(-APRON_HALF_WIDTH_M), right: edge(APRON_HALF_WIDTH_M) };
   });
-}
-
-export function apronTriangles(route: EngineRoute): readonly BandTriangle[] {
-  return ribbonTriangles(apronSamples(route));
 }

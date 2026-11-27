@@ -69,7 +69,7 @@ export const OidcLinkStartResponseSchema = z.object({ location: z.string().url()
 export type OidcLinkStartResponse = z.infer<typeof OidcLinkStartResponseSchema>;
 
 /** A login identity connected to the signed-in account; the provider subject stays private. */
-export const LinkedIdentitySchema = z
+const LinkedIdentitySchema = z
   .object({
     providerId: OidcProviderChoiceSchema.shape.id.nullable(),
     displayName: z.string().min(1).max(255),

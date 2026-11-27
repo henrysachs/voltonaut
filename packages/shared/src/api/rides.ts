@@ -8,7 +8,7 @@ const nonnegative = z.number().finite().nonnegative();
 /** Replay revision of world path recordings; a new path semantics needs a new revision. */
 export const WORLD_PATH_REPLAY_REVISION = "world-path-1";
 
-export const WindowFailureSchema = z.enum([
+const WindowFailureSchema = z.enum([
   "sim",
   "clock_scale",
   "trainer_not_ready",
@@ -18,7 +18,7 @@ export const WindowFailureSchema = z.enum([
   "clock_skipped",
 ]);
 
-export const WindowQualitySchema = z.union([
+const WindowQualitySchema = z.union([
   z
     .object({ kind: z.literal("continuous") })
     .strict()
@@ -32,7 +32,7 @@ export const WindowQualitySchema = z.union([
     .readonly(),
 ]);
 
-export const SourceAssessmentSchema = z
+const SourceAssessmentSchema = z
   .object({
     assurance: z.literal("client_declared"),
     declaredSource: z.enum(["sim", "ble"]),
@@ -146,8 +146,6 @@ export const RideListSchema = z
 export type RideAssessment = z.infer<typeof RideAssessmentSchema>;
 
 export type WindowFailure = z.infer<typeof WindowFailureSchema>;
-
-export type WindowQuality = z.infer<typeof WindowQualitySchema>;
 
 export type SourceAssessment = z.infer<typeof SourceAssessmentSchema>;
 

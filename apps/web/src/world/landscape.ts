@@ -20,7 +20,7 @@ const BIOME_TERRAIN: Readonly<Record<Biome["kind"], TerrainPalette>> = {
 };
 
 /** Terrain palette of a biome (#75). */
-export function biomeTerrain(biome: Biome): TerrainPalette {
+function biomeTerrain(biome: Biome): TerrainPalette {
   return BIOME_TERRAIN[biome.kind];
 }
 

@@ -3,7 +3,7 @@ import type { TickSource } from "./sim/tick.js";
 import { createCell, type Cell } from "./cell.js";
 
 /** Attempt deadlines in seconds after the disconnect (attempts at t=1/2/5/10/15). */
-export const RECONNECT_ATTEMPT_DEADLINES_S: readonly number[] = [1, 2, 5, 10, 15];
+const RECONNECT_ATTEMPT_DEADLINES_S: readonly number[] = [1, 2, 5, 10, 15];
 
 export interface ReconnectControllerOptions {
   readonly clock: SimClock;

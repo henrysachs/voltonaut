@@ -18,7 +18,7 @@ export interface GattServices {
   readonly services: Map<string, WebBluetoothService>;
 }
 
-export function toGattProperties(
+function toGattProperties(
   properties: WebBluetoothCharacteristicProperties,
 ): readonly GattProperty[] {
   const gattProperties: GattProperty[] = [];
