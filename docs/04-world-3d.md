@@ -136,7 +136,7 @@ Das Höhenraster aus [E10-12](specs/E10-12-world-heightfield.md) zeichnet nur di
 
 Die Voltonaut-Tour ([E10-14](specs/E10-14-voltonaut-world.md)) bleibt über die ganze Runde bei höchstens 137 Draw Calls und 359 k Dreiecken (E2E-Messfahrt im Sim mit `clock=fast`); Ausstattung fern liegender Regionen kostet keine Draw Calls. Auf echter Hardware offen (#86).
 
-Felsental ([E10-16](specs/E10-16-felsental-world.md)) bündelt Häuser, Statuen und Vulkane je Schicht in einem Mesh für die ganze Runde und Pflanzen in Abschnitten zu 500 m. Mit 250-m-Abschnitten lag die Spitze bei 140 Draw Calls. Gemessen headless mit SwiftShader im Sim-Modus auf `main` mit #185: erster Frame 84 Draw Calls / 181 k Dreiecke, Spitze über die ganze Runde mit `clock=fast` 122 Draw Calls (am Steinbruch) und 278 k Dreiecke. Auf echter Hardware offen (#86).
+Felsental ([E10-16](specs/E10-16-felsental-world.md)) bündelt Häuser, Statuen und Vulkane je Schicht in einem Mesh für die ganze Runde und Pflanzen in Abschnitten zu 500 m. Mit 250-m-Abschnitten lag die Spitze bei 140 Draw Calls. Gemessen headless mit SwiftShader im Sim-Modus auf `main` mit #185: erster Frame 86 Draw Calls / 182 k Dreiecke, Spitze über die ganze Runde mit `clock=fast` 122 Draw Calls (am Steinbruch) und 277 k Dreiecke. Auf echter Hardware offen (#86).
 
 ## 12. Tests
 
