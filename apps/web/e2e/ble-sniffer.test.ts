@@ -25,7 +25,8 @@ async function openReplay(page: Page): Promise<void> {
   );
   await page.goto("/debug/ble.html?replay=/replay.json");
   await page.getByRole("button", { name: "Gerät hinzufügen", exact: true }).click();
-  await expect(page.locator("#status")).toContainText("ready");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
+  await page.getByText("GATT-Explorer für Fortgeschrittene", { exact: true }).click();
 }
 
 function parseDownload(text: string): BleFixture {
@@ -43,10 +44,10 @@ async function runFtmsPresets(page: Page): Promise<void> {
   await page
     .getByRole("button", { name: "FTMS Request Control + Start + Sim 0 %", exact: true })
     .click();
-  await expect(page.locator("#log")).toContainText('"hex":"00"');
+  await expect(page.locator("#log")).toContainText("tx  FTMS Control Point  00");
   // Each step processes one reply (00 at 1000 ms, 07 at 1250 ms, 11 at 1500 ms) and its polling tick.
   await page.clock.runFor(600);
-  await expect(page.locator("#log")).toContainText('"hex":"07"');
+  await expect(page.locator("#log")).toContainText("tx  FTMS Control Point  07");
   await expect(page.locator("#log")).not.toContainText("11 00 00 00 00 28 33");
   await page.clock.runFor(250);
   await expect(page.locator("#log")).toContainText("11 00 00 00 00 28 33");
@@ -66,15 +67,21 @@ test("replay sniffer explores, captures, waits for preset indications and export
   await openReplay(page);
   await expect(page.getByText("Descriptors: 00002901", { exact: false })).toBeVisible();
   await expect(page.getByText("Presets verändern den Widerstand", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Read", exact: true }).click();
-  await page.getByRole("button", { name: "Subscribe", exact: true }).nth(0).click();
-  await page.getByRole("button", { name: "Subscribe", exact: true }).nth(2).click();
+  // Standard notify/indicate channels record from connect on; 0x2ACC is read automatically.
+  // The trainer's proprietary Zwift channels (…02, …04) stay manual (ADR-001).
+  await expect(page.getByRole("button", { name: "Subscribe", exact: true })).toHaveCount(5);
+  await expect(page.locator("#gatt button:enabled", { hasText: /^Unsubscribe$/u })).toHaveCount(3);
+  await expect(page.locator("#gatt button:enabled", { hasText: /^Subscribe$/u })).toHaveCount(2);
+
+  await expect(page.locator("#log")).toContainText("FTMS Fähigkeiten  2b 14");
   await page.clock.runFor(500);
-  await expect(page.locator("#log")).toContainText('\\"powerW\\":250');
-  await expect(page.locator("#log")).toContainText('\\"bpm\\":64');
+  await expect(page.locator("#log")).toContainText('"powerW":250');
+  await expect(page.locator("#log")).toContainText('"bpm":64');
   await runFtmsPresets(page);
-  await page.getByRole("button", { name: "Zwift-Controller-Handshake", exact: true }).click();
-  await expect(page.locator("#log")).toContainText("52 69 64 65 4f 6e");
+  // A trainer's proprietary Zwift service stays unused (ADR-001).
+  await expect(
+    page.getByRole("button", { name: "Zwift-Controller-Handshake", exact: true }),
+  ).toBeDisabled();
   await page.getByLabel("Marker", { exact: true }).fill("RS gedrückt");
   await page.getByRole("button", { name: "Marker setzen" }).click();
   await page.getByLabel("Filter", { exact: true }).fill("RS gedrückt");
@@ -88,7 +95,7 @@ test("replay sniffer explores, captures, waits for preset indications and export
   await page.getByRole("button", { name: "Anzeige fortsetzen" }).click();
   await expect(page.locator("#log")).toContainText("paused capture");
   const downloaded = page.waitForEvent("download");
-  await page.getByRole("button", { name: "JSON exportieren" }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
   const path = await (await downloaded).path();
   const parsed = parseDownload(readFileSync(path, "utf8"));
   expect(parsed.gatt).toHaveLength(3);
@@ -107,7 +114,7 @@ test("explorer validates hex and ASCII writes, unsubscribes and disconnects", as
   await expect(page.locator("#status")).toContainText("Ungültige Hex-Bytes");
   await payload.fill("00");
   await page.getByRole("button", { name: "Write", exact: true }).first().click();
-  await expect(page.locator("#log")).toContainText('"hex":"00"');
+  await expect(page.locator("#log")).toContainText("tx  FTMS Control Point  00");
   await encoding.selectOption({ label: "ASCII" });
   await payload.fill("ä");
   await page.getByRole("button", { name: "Write", exact: true }).first().click();
@@ -115,13 +122,14 @@ test("explorer validates hex and ASCII writes, unsubscribes and disconnects", as
   await payload.fill("RideOn");
   await page.getByRole("button", { name: "Write", exact: true }).first().click();
   await expect(page.locator("#log")).toContainText("52 69 64 65 4f 6e");
-  await page.getByRole("button", { name: "Subscribe", exact: true }).first().click();
+  // 0x2AD2 records from connect on; unsubscribing stops it before its first frame.
   await page.getByRole("button", { name: "Unsubscribe", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Subscribe", exact: true }).first()).toBeEnabled();
   await page.clock.fastForward(500);
-  await expect(page.locator("#log")).not.toContainText('\\"powerW\\"');
+  await expect(page.locator("#log")).not.toContainText('"powerW"');
   await page.getByRole("button", { name: "Trennen", exact: true }).click();
-  await expect(page.locator("#status")).toHaveText("disconnected");
-  await expect(page.locator("#log")).toContainText("disconnected-manual");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "disconnected");
+  await expect(page.locator("#log")).toContainText("○ getrennt");
 });
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns its mutable browser fixture.
@@ -136,10 +144,10 @@ test("native picker stays in the synchronous click; remembered reconnect never s
   await choose.click();
   await expect(page.locator("#picker-status")).toContainText("radio unavailable");
   await choose.click();
-  await expect(page.locator("#status")).toContainText("ready");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
   await expect(page.locator("body")).toHaveAttribute("data-trainer-selections", "3");
   await page.getByRole("button", { name: "Erneut verbinden", exact: true }).click();
-  await expect(page.locator("#status")).toHaveText("ready");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
   await expect(page.locator("body")).toHaveAttribute("data-trainer-selections", "3");
   await choose.click();
   await expect(page.locator("#selected-device")).toContainText("Test trainer");

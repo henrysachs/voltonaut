@@ -30,7 +30,19 @@ export * from "./keyboard.js";
 
 export * from "./zwift-play/parse.js";
 
+export * from "./zwift-play/clickV2.js";
+
+export * from "./zwift-play/controller.js";
+
+export * from "./zwift-play/handshake.js";
+
 export * from "./zwift-play/adapter.js";
+
+export * from "./labDecode.js";
+
+export * from "./labLabels.js";
+
+export * from "./labProfile.js";
 
 export * from "./reconnect.js";
 

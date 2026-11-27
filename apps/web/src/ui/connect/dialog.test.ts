@@ -157,7 +157,7 @@ it("shows unconfirmed side, actionable adapter details and allows cancelling han
   };
 
   vi.stubGlobal("document", document);
-  mountConnectDialog([{ label: "Linker Play-Griff", adapter }], bus);
+  mountConnectDialog([{ label: "Linker Controller", adapter }], bus);
   expect(document.find("Seite noch unbekannt")).toBeDefined();
   expect(document.find("Gerät wählen").disabled).toBe(true);
   document.find("Trennen").click();

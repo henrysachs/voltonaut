@@ -8,13 +8,13 @@ import {
   FITNESS_MACHINE_SERVICE,
   FITNESS_MACHINE_STATUS,
 } from "../uuids.js";
-import { RIDE_ON } from "../zwift-play/handshake.js";
+import { RIDE_ON, RIDE_ON_CLICK_V2 } from "../zwift-play/handshake.js";
 import { settle } from "./controlTestRig.js";
 import { createFtmsLabControl, isFtmsControlPoint } from "./labControl.js";
 import {
   FTMS_REQUEST_CONTROL_AND_SIM_ZERO_PRESET,
   FTMS_SIM_FIVE_PRESET,
-  ZWIFT_PLAY_HANDSHAKE_PRESET,
+  ZWIFT_CONTROLLER_HANDSHAKE_PRESET,
 } from "./presets.js";
 
 const PROFILE: GattProfile = {
@@ -89,7 +89,8 @@ describe("lab preset definitions", () => {
       "11 00 00 f4 01 28 33",
     ]);
     expect(toHex(RIDE_ON)).toBe("52 69 64 65 4f 6e");
-    expect(ZWIFT_PLAY_HANDSHAKE_PRESET).toHaveProperty("write.bytes", RIDE_ON);
+    expect(toHex(RIDE_ON_CLICK_V2)).toBe("52 69 64 65 4f 6e 02 03");
+    expect(ZWIFT_CONTROLLER_HANDSHAKE_PRESET.kind).toBe("zwiftController");
   });
 
   it("recognises only the FTMS control point", () => {
@@ -123,6 +124,23 @@ describe("FtmsLabControl happy path", () => {
       "11 00 00 f4 01 28 33",
     ]);
     expect(r.control.view()).toEqual({ kind: "granted" });
+  });
+});
+
+describe("FtmsLabControl with a Zwift Hub", () => {
+  it("grants control when Start answers failed on an already started machine (80 07 04)", async () => {
+    const r = labRig();
+    r.ack(false);
+    const running = r.control.run(FTMS_REQUEST_CONTROL_AND_SIM_ZERO_PRESET);
+    await settle();
+    r.notify([0x80, 0x00, 0x01]);
+    await settle();
+    r.notify([0x80, 0x07, 0x04]);
+    await settle();
+    r.notify([0x80, 0x11, 0x01]);
+    await running;
+    expect(r.control.view()).toEqual({ kind: "granted" });
+    expect(r.writes).toEqual(["00", "07", "11 00 00 00 00 28 33"]);
   });
 });
 

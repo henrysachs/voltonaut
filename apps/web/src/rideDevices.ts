@@ -142,7 +142,7 @@ export function setupRideDevices(
     { label: "Trainer", adapter: trainer },
     { label: "Pulsgurt", adapter: heartRate },
     ...play.map((adapter) => ({
-      label: adapter.side === "left" ? "Linker Play-Griff" : "Rechter Play-Griff",
+      label: adapter.side === "left" ? "Linker Controller" : "Rechter Controller",
       adapter,
     })),
   ];
