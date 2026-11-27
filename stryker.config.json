@@ -14,7 +14,10 @@
     "!packages/engine/src/index.ts",
     "packages/rules/src/**/*.ts",
     "!packages/rules/src/**/*.test.ts",
-    "!packages/rules/src/index.ts"
+    "!packages/rules/src/index.ts",
+    "packages/ble/src/ftms/controlCodec.ts",
+    "packages/ble/src/ftms/controlConnection.ts",
+    "apps/server/src/strava/strava.rate-store.ts"
   ],
   "reporters": ["clear-text", "progress", "html"],
   "thresholds": {

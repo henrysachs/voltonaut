@@ -29,6 +29,11 @@ jobs:
       - name: Install pinned tools
         uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5
 
+      # This job also reports the required `check` context on PRs, so it runs the same PR-range guard (ADR-036).
+      - name: Set guard diff base
+        if: github.event_name == 'pull_request'
+        run: echo "GUARD_DIFF_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: mise run install
 
