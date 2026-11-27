@@ -123,7 +123,7 @@ it("paints distinct, bordered placeholder motifs per atlas cell", () => {
 it("is part of the landscape scene", () => {
   const scene = new THREE.Scene();
 
-  createScheduler([createLandscapeSystem()], { scene, route: loop });
+  createScheduler([createLandscapeSystem([loop])], { scene, route: loop });
   expect(scene.getObjectByName("billboards")).toBeInstanceOf(THREE.Group);
 });
 

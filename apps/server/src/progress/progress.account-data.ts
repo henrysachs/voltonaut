@@ -8,6 +8,7 @@ import {
 } from "@voltonaut/shared";
 import { DRIZZLE, type ServerDatabase } from "../database/drizzle.provider.js";
 import { ProgressRangeStore } from "./progress.range-store.js";
+import { storedRideReference } from "./progress.reference.js";
 import {
   PROGRESS_TABLES,
   type ProgressConsentRow,
@@ -97,8 +98,7 @@ export class ProgressAccountDataService {
       source: row.source,
       clockScale: row.clockScale,
       physicsRevision: row.physicsRevision,
-      routeId: row.routeId,
-      routeRevision: row.routeRevision,
+      ...storedRideReference(row),
       physics: storedPhysics(row.physicsJson),
       startedAtMs: row.startedAtMs,
       lastEndTick: row.lastEndTick,

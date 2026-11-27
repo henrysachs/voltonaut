@@ -1,32 +1,30 @@
 import { z } from "zod";
 
 import { RiderProfileSchema } from "./profile.js";
+import { withRideReference } from "./rideReference.js";
 
 export const MAX_LOCAL_RIDE_MS = 6 * 60 * 60 * 1000;
 export const MAX_LOCAL_RIDES = 20;
 
-export const LocalRideMetadataSchema = z
-  .object({
-    source: z.enum(["sim", "ble"]),
-    routeId: z
-      .string()
-      .min(1)
-      .max(100)
-      .regex(/^[^\p{Cc}\p{Cs}\uFFFE\uFFFF]+$/u),
-    routeRevision: z
-      .string()
-      .min(1)
-      .max(100)
-      .regex(/^[^\p{Cc}\p{Cs}\uFFFE\uFFFF]+$/u),
+const referenceText = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(/^[^\p{Cc}\p{Cs}\uFFFE\uFFFF]+$/u);
+
+/** New tracks name a world path; stored single-route tracks stay readable (ADR-033 §7). */
+export const LocalRideMetadataSchema = withRideReference(
+  { source: z.enum(["sim", "ble"]) },
+  {
     physicsClockScale: z.number().finite().min(1).max(20),
     profile: RiderProfileSchema.extend({
       bike: RiderProfileSchema.shape.bike.strict().readonly(),
     })
       .strict()
       .readonly(),
-  })
-  .strict()
-  .readonly();
+  },
+  referenceText,
+);
 
 export const LocalRidePointSchema = z
   .object({

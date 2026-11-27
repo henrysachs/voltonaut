@@ -7,9 +7,9 @@ import { biomeFromScenery } from "./biome.js";
 import { createAlpineScenery, createCoastScenery, createNightCityScenery } from "./biomeScenery.js";
 import { routeClearanceM, routeCorridorSamples } from "./biomeSceneryShared.js";
 import { createLandscapeSystem } from "./landscape.js";
-import { createLandscapePlan } from "./landscape-plan.js";
+import { createLandscapePlan, type LandscapePlan } from "./landscape-plan.js";
 import { createScheduler } from "./scheduler.js";
-import { FOREST_TERRAIN, createTerrain } from "./terrain.js";
+import { FOREST_TERRAIN, createTerrainGeometries, type TerrainPalette } from "./terrain.js";
 
 function instanceCount(root: Readonly<THREE.Object3D>): number {
   let count = 0;
@@ -21,32 +21,44 @@ function instanceCount(root: Readonly<THREE.Object3D>): number {
   return count;
 }
 
-function groundColor(group: Readonly<THREE.Group>): number {
-  const mesh = group.children[0];
+/** Vertex colours of every terrain chunk as [r, g, b, …]. */
+function terrainColors(
+  plan: Readonly<LandscapePlan>,
+  palette: Readonly<TerrainPalette>,
+): readonly number[] {
+  return createTerrainGeometries(plan, palette).flatMap((geometry) => {
+    const colors = Array.from(geometry.getAttribute("color").array);
 
-  if (mesh instanceof THREE.Mesh && mesh.material instanceof THREE.MeshStandardMaterial) {
-    return mesh.material.color.getHex();
-  }
+    geometry.dispose();
 
-  throw new TypeError("the terrain group must own a ground mesh first");
+    return colors;
+  });
 }
 
-function terrainPositions(group: Readonly<THREE.Group>): readonly number[] {
-  const mesh = group.getObjectByName("route-terrain");
+/** Colour channels of the raster outside the palette's low–high range (no lake, no shore). */
+function colorsOutside(
+  plan: Readonly<LandscapePlan>,
+  palette: Readonly<TerrainPalette>,
+): readonly number[] {
+  const bounds = channelBounds(palette);
 
-  if (mesh instanceof THREE.Mesh) {
-    const geometry: unknown = mesh.geometry;
+  return terrainColors(plan, palette).filter((value, index) => {
+    const [low = 0, high = 0] = bounds[index % 3] ?? [];
 
-    if (geometry instanceof THREE.BufferGeometry) {
-      const attribute: unknown = geometry.getAttribute("position");
+    return value < low - 1e-6 || value > high + 1e-6;
+  });
+}
 
-      if (attribute instanceof THREE.BufferAttribute) {
-        return Array.from(attribute.array);
-      }
-    }
-  }
+/** Linear channel bounds between the palette's low and high colours. */
+function channelBounds(palette: Readonly<TerrainPalette>): readonly (readonly [number, number])[] {
+  const low = new THREE.Color(palette.low);
+  const high = new THREE.Color(palette.high);
 
-  throw new TypeError("route-terrain must own a position buffer attribute");
+  return [
+    [Math.min(low.r, high.r), Math.max(low.r, high.r)],
+    [Math.min(low.g, high.g), Math.max(low.g, high.g)],
+    [Math.min(low.b, high.b), Math.max(low.b, high.b)],
+  ];
 }
 
 function seaPositionY(root: Readonly<THREE.Object3D>): number {
@@ -106,7 +118,7 @@ it("keeps the forest terrain palette byte-identical to the original colors", () 
 
 it("coast scenery spreads palms, the sea and one lighthouse deterministically", () => {
   const route = createRoute(COAST_LOOP);
-  const plan = createLandscapePlan(route, 42, true);
+  const plan = createLandscapePlan(route, [route], 42, true);
   const first = createCoastScenery(plan);
   const second = createCoastScenery(plan);
 
@@ -120,7 +132,7 @@ it("coast scenery spreads palms, the sea and one lighthouse deterministically", 
 
 it("alpine scenery keeps the serpentine flanks rocky, snowy and sparse", () => {
   const route = createRoute(ALPINE_PASS);
-  const plan = createLandscapePlan(route, 42, false);
+  const plan = createLandscapePlan(route, [route], 42, false);
   const scenery = createAlpineScenery(plan);
 
   expect(scenery.name).toBe("biome-alpine");
@@ -135,7 +147,7 @@ it("alpine scenery keeps the serpentine flanks rocky, snowy and sparse", () => {
 
 it("keeps alpine rocks and pines off every road leg after the hairpins", () => {
   const route = createRoute(ALPINE_PASS);
-  const plan = createLandscapePlan(route, 42, false);
+  const plan = createLandscapePlan(route, [route], 42, false);
   const scenery = createAlpineScenery(plan);
   const roadSamples = routeCorridorSamples(route);
 
@@ -146,7 +158,7 @@ it("keeps alpine rocks and pines off every road leg after the hairpins", () => {
 
 it("night city scenery wires streetlights and neon without real light sources", () => {
   const route = createRoute(NIGHT_CITY);
-  const plan = createLandscapePlan(route, 42, false);
+  const plan = createLandscapePlan(route, [route], 42, false);
   const scenery = createNightCityScenery(plan);
   const glow = scenery.children.find((child) => child instanceof THREE.AmbientLight);
 
@@ -161,7 +173,7 @@ it.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
   (data) => {
     const scene = new THREE.Scene();
 
-    const scheduler = createScheduler([createLandscapeSystem()], {
+    const scheduler = createScheduler([createLandscapeSystem([createRoute(data)])], {
       scene,
       route: createRoute(data),
     });
@@ -173,14 +185,11 @@ it.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
   },
 );
 
-it("terrain palettes color the ground per biome and keep the forest default identical", () => {
+it("terrain palettes color the raster per biome", () => {
   const route = createRoute(NIGHT_CITY);
-  const plan = createLandscapePlan(route, 42, false);
+  const plan = createLandscapePlan(route, [route], 42, false);
   const cityPalette = { low: 0x22262e, high: 0x303540, shore: 0x2a2e36, ground: 0x191c22 };
-  const city = createTerrain(plan, cityPalette);
-  const explicitForest = createTerrain(plan, FOREST_TERRAIN);
-  const implicitForest = createTerrain(plan);
 
-  expect(groundColor(city)).toBe(cityPalette.ground);
-  expect(terrainPositions(explicitForest)).toEqual(terrainPositions(implicitForest));
+  expect(colorsOutside(plan, cityPalette)).toEqual([]);
+  expect(terrainColors(plan, FOREST_TERRAIN)).not.toEqual(terrainColors(plan, cityPalette));
 });

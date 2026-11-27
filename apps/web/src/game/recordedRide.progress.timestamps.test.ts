@@ -4,7 +4,11 @@ import { expect, it } from "vitest";
 
 import { ProgressCheckpointBatchSchema, type RideProgressCheckpoint } from "@voltonaut/shared";
 
-import { createRideHarness, TRAINER_READING } from "./testdata/recordedRideHarness.js";
+import {
+  createRideHarness,
+  singleRouteWorldPath,
+  TRAINER_READING,
+} from "./testdata/recordedRideHarness.js";
 
 function contractCheckpoint(): RideProgressCheckpoint {
   const contract = ProgressCheckpointBatchSchema.parse(
@@ -29,7 +33,7 @@ it("posts rounded epoch timestamps from real ride output with a nonzero time ori
   const run = createRideHarness({
     startMs: 0.4,
     timeOriginMs: expected.startedAtMs,
-    init: { source: "ble", routeId: "flat-loop" },
+    init: { source: "ble", worldPath: singleRouteWorldPath("flat-loop") },
   });
 
   run.ingest(TRAINER_READING);

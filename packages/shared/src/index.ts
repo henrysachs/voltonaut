@@ -12,6 +12,8 @@ export * from "./profile.js";
 
 export * from "./ride.js";
 
+export * from "./rideReference.js";
+
 export * from "./rideProgress.js";
 
 export * from "./localRide.js";
