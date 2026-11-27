@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import type { Biome } from "./biome.js";
+import { worldAtmosphere } from "./biome-atmosphere.js";
 import { regionDressings, showInView, type RegionDressing } from "./region-dressing.js";
 import type { RenderWorld } from "./render-world.js";
 import { disposeObject } from "./resources.js";
@@ -58,6 +59,8 @@ export function createLandscapeSystem(world: RenderWorld): RenderSystem {
         root.add(dressing.group);
         dressings.push(dressing);
       }
+
+      for (const light of worldAtmosphere(world)) root.add(light);
 
       context.scene.add(root);
     },

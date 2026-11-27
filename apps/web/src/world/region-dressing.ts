@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import { biomeObjects } from "./biome-landscape.js";
+import { DressingGroup } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { regionInView, type RegionBounds } from "./region-visibility.js";
 import type { RenderWorld } from "./render-world.js";
@@ -12,7 +13,7 @@ export interface CulledPart {
 }
 
 export interface RegionDressing {
-  readonly group: THREE.Group;
+  readonly group: DressingGroup;
   readonly parts: readonly CulledPart[];
 }
 
@@ -44,9 +45,8 @@ function drawables(root: THREE.Object3D): readonly THREE.Object3D[] {
 }
 
 /**
- * Each region's dressing in a group of its own, with every drawable's ground area. In a world of
- * several regions the dressing brings no lights: one region's light would light the whole
- * scene; per-region atmosphere follows separately (spec E10-14).
+ * Each region's dressing in a group of its own, with every drawable's ground area. Dressing groups
+ * hold no lights (dressing-group.ts); a biome's lights are its atmosphere (biome-atmosphere.ts).
  */
 export function regionDressings(
   world: RenderWorld,
@@ -55,22 +55,11 @@ export function regionDressings(
   const several = plans.length > 1;
 
   return plans.map((plan, index) => {
-    const group = new THREE.Group();
+    const group = new DressingGroup();
     const region = world.regions[index];
 
     group.name = `region-${region?.id ?? index}`;
     group.add(...biomeObjects(region?.biome ?? { kind: "forest" }, plan));
-
-    if (several) {
-      const lights: THREE.Object3D[] = [];
-
-      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three traversal supplies its mutable scene objects.
-      group.traverse((object) => {
-        if (object instanceof THREE.Light) lights.push(object);
-      });
-
-      for (const light of lights) light.removeFromParent();
-    }
 
     // A single region is never culled, so it needs no ground areas (no extra start-up work).
     if (!several) return { group, parts: [] };

@@ -2,6 +2,7 @@ import { createRoute, type EngineRoute } from "@voltonaut/engine";
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
+import { DressingGroup } from "./dressing-group.js";
 import { planWorldLandscape } from "./world-landscape.js";
 import { regionDressings, showInView, type RegionDressing } from "./region-dressing.js";
 import { regionInView, VIEW_RANGE_M, type RegionBounds } from "./region-visibility.js";
@@ -13,7 +14,7 @@ const box: RegionBounds = { minX: 0, maxX: 100, minZ: 0, maxZ: 100 };
 function part(bounds: RegionBounds): RegionDressing {
   const object = new THREE.Mesh();
 
-  return { group: new THREE.Group(), parts: [{ object, bounds }] };
+  return { group: new DressingGroup(), parts: [{ object, bounds }] };
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The dressing holds mutable Three objects whose visibility the test reads.

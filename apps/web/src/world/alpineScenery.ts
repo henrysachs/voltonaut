@@ -12,9 +12,24 @@ import {
   type ChunkLayer,
   type ChunkItem,
 } from "./biomeSceneryShared.js";
+import { DressingGroup, STANDS } from "./dressing-group.js";
+import { settledHeightAt, type Foot } from "./heightfield.js";
 import type { LandscapePlan, Plant } from "./landscape-plan.js";
 
 const MAX_CHUNKS_PER_LAYER = 70;
+
+/** Rock centres sit this fraction of the rock's height above their ground point. */
+const ROCK_LIFT = 0.35;
+
+/**
+ * IcosahedronGeometry(1, 0) rests on its two lowest vertices, 0.851 below its centre and 0.526 off
+ * its axis; rounded so the foot reaches no less far and sinks no deeper than the drawn rock.
+ */
+const ROCK_FOOT_DROP = 0.85;
+const ROCK_FOOT_REACH = 0.53;
+
+/** Pine cones sit this far into the ground they stand on. */
+const PINE_SINK_M = 0.1;
 
 interface AlpineRock extends ChunkItem {
   readonly position: WorldPos;
@@ -27,6 +42,28 @@ interface AlpineRock extends ChunkItem {
 interface AlpineFlora {
   readonly rocks: readonly AlpineRock[];
   readonly pines: readonly Plant[];
+}
+
+/** A rock or pine on the steep flanks sinks until its foot meets the downhill ground too (#138). */
+function settled(plan: Readonly<LandscapePlan>, ground: Readonly<WorldPos>, foot: Foot): WorldPos {
+  return { ...ground, y: settledHeightAt(plan.terrain, ground.x, ground.z, foot) };
+}
+
+/** Size of a rock and its ground point, settled so its lowest corners touch the slope. */
+function rockBody(
+  plan: Readonly<LandscapePlan>,
+  ground: Readonly<WorldPos>,
+  shade: number,
+): Pick<AlpineRock, "position" | "radiusM" | "heightM"> {
+  const radiusM = 0.6 + shade * 2.4;
+  const heightM = 0.6 + shade * 1.8;
+  const sinkM = heightM * (ROCK_FOOT_DROP - ROCK_LIFT);
+
+  return {
+    radiusM,
+    heightM,
+    position: settled(plan, ground, { radiusM: radiusM * ROCK_FOOT_REACH, sinkM }),
+  };
 }
 
 function alpineFlora(plan: Readonly<LandscapePlan>, random: () => number): AlpineFlora {
@@ -45,9 +82,7 @@ function alpineFlora(plan: Readonly<LandscapePlan>, random: () => number): Alpin
       if (routeClearanceM(rockPosition, roadSamples) >= 8) {
         rocks.push({
           routeDistanceM: alongM,
-          position: rockPosition,
-          radiusM: 0.6 + shade * 2.4,
-          heightM: 0.6 + shade * 1.8,
+          ...rockBody(plan, rockPosition, shade),
           rotationRad: random() * Math.PI * 2,
           // Far-placed rocks read as snow fields; near ones as bare rock.
           shade: Math.abs(lateralM) > 90 ? 0.75 + shade * 0.25 : shade * 0.5,
@@ -58,11 +93,13 @@ function alpineFlora(plan: Readonly<LandscapePlan>, random: () => number): Alpin
         const pinePosition = groundPosition(plan, alongM, side * (25 + random() * 145));
 
         if (routeClearanceM(pinePosition, roadSamples) >= 8) {
+          const radiusM = 1.4 + pineShade;
+
           pines.push({
             roadIndex: 0,
             routeDistanceM: alongM,
-            position: pinePosition,
-            radiusM: 1.4 + pineShade,
+            position: settled(plan, pinePosition, { radiusM, sinkM: PINE_SINK_M }),
+            radiusM,
             heightM: 5 + pineShade * 6,
             rotationRad: random() * Math.PI * 2,
             shade: pineShade,
@@ -81,7 +118,11 @@ function rockLayer(rocks: readonly AlpineRock[]): ChunkLayer<AlpineRock> {
     material: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }),
     items: rocks,
     transform(rock: Readonly<AlpineRock>, object: Readonly<THREE.Object3D>) {
-      object.position.set(rock.position.x, rock.position.y + rock.heightM * 0.35, rock.position.z);
+      object.position.set(
+        rock.position.x,
+        rock.position.y + rock.heightM * ROCK_LIFT,
+        rock.position.z,
+      );
       object.rotation.set(0, rock.rotationRad, 0);
       object.scale.set(rock.radiusM, rock.heightM, rock.radiusM);
     },
@@ -99,7 +140,7 @@ function pineLayer(pines: readonly Plant[]): ChunkLayer<Plant> {
     transform(pine: Readonly<Plant>, object: Readonly<THREE.Object3D>) {
       object.position.set(
         pine.position.x,
-        pine.position.y + pine.heightM * 0.5 - 0.1,
+        pine.position.y + pine.heightM * 0.5 - PINE_SINK_M,
         pine.position.z,
       );
       object.rotation.set(0, pine.rotationRad, 0);
@@ -112,8 +153,8 @@ function pineLayer(pines: readonly Plant[]): ChunkLayer<Plant> {
 }
 
 /** Alpine: rock and snow in one instanced layer, sparse dark pines above. */
-export function createAlpineScenery(plan: Readonly<LandscapePlan>): THREE.Group {
-  const root = new THREE.Group();
+export function createAlpineScenery(plan: Readonly<LandscapePlan>): DressingGroup {
+  const root = new DressingGroup();
   const flora = alpineFlora(plan, seededRandom(11));
 
   const chunkSizeM = Math.max(
@@ -122,7 +163,8 @@ export function createAlpineScenery(plan: Readonly<LandscapePlan>): THREE.Group 
   );
 
   root.name = "biome-alpine";
-  root.add(
+  root.place(
+    STANDS,
     ...chunkedMeshes(rockLayer(flora.rocks), chunkSizeM),
     ...chunkedMeshes(pineLayer(flora.pines), chunkSizeM),
   );

@@ -83,6 +83,34 @@ it.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
   },
 );
 
+/** Lights the landscape system puts into a scene, as [type, colour, intensity]. */
+function landscapeLights(routeId: string): readonly (readonly [string, string, number])[] {
+  const scene = new THREE.Scene();
+  const ridden = resolveRenderWorld(routeId);
+
+  const scheduler = createScheduler([createLandscapeSystem(ridden)], {
+    scene,
+    route: ridden.roads[0] ?? route,
+  });
+
+  const lights: (readonly [string, string, number])[] = [];
+
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three traversal supplies its mutable scene objects.
+  scene.traverse((object) => {
+    if (object instanceof THREE.Light)
+      lights.push([object.type, object.color.getHexString(), object.intensity]);
+  });
+  scheduler.dispose();
+
+  return lights;
+}
+
+it("keeps the night city's blue glow on its own route and out of connected worlds", () => {
+  expect(landscapeLights(NIGHT_CITY.id)).toEqual([["AmbientLight", "35405e", 1.1]]);
+  expect(landscapeLights(TEST_LOOP.id)).toEqual([]);
+  expect(landscapeLights("voltonaut-tour")).toEqual([]);
+});
+
 function tourRoad(): typeof route {
   return PAIR.roads[0] ?? route;
 }

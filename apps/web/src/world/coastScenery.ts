@@ -10,7 +10,10 @@ import {
   type ChunkLayer,
   type ChunkItem,
 } from "./biomeSceneryShared.js";
-import type { LandscapePlan } from "./landscape-plan.js";
+import { CARRIED, DressingGroup, STANDS, WATER } from "./dressing-group.js";
+import { settledHeightAt } from "./heightfield.js";
+import { lakeRadius } from "./lake-plan.js";
+import { PLANT_LAKE_CLEARANCE, type LandscapePlan } from "./landscape-plan.js";
 
 interface Palm extends ChunkItem {
   readonly position: WorldPos;
@@ -26,20 +29,55 @@ interface Frond extends ChunkItem {
 
 const PALM_FRONDS = 6;
 
+/** Trunk radius at its foot, where the palm meets the sand. */
+const PALM_FOOT_RADIUS_M = 0.62;
+
+/** A palm leans up to this far either way, pivoting at half its height. */
+const PALM_MAX_LEAN_RAD = 0.025;
+
+function palmLeanRad(shade: number): number {
+  return 2 * PALM_MAX_LEAN_RAD * (shade - 0.5);
+}
+
+/** Tower radius at its foot. */
+const LIGHTHOUSE_FOOT_RADIUS_M = 2.1;
+
+/** Ground height a round foot rests on without floating on the downhill side (#138). */
+function footHeight(
+  plan: Readonly<LandscapePlan>,
+  ground: Readonly<WorldPos>,
+  radiusM: number,
+): number {
+  return settledHeightAt(plan.terrain, ground.x, ground.z, { radiusM, sinkM: 0 });
+}
+
 function palmsAlong(plan: Readonly<LandscapePlan>, random: () => number): readonly Palm[] {
   const palms: Palm[] = [];
 
   for (let distanceM = 0; distanceM < plan.route.lengthM; distanceM += 35) {
     for (const side of [-1, 1]) {
       const alongM = Math.min(plan.route.lengthM - 0.01, distanceM + random() * 20);
-      const lateralM = side * (13 + random() * 46);
+      const ground = groundPosition(plan, alongM, side * (13 + random() * 46));
+      const heightM = 6 + random() * 4;
+      const rotationRad = random() * Math.PI * 2;
+      const shade = random();
+
+      if (lakeRadius(plan.lake, ground) < PLANT_LAKE_CLEARANCE) continue;
 
       palms.push({
         routeDistanceM: alongM,
-        position: groundPosition(plan, alongM, lateralM),
-        heightM: 6 + random() * 4,
-        rotationRad: random() * Math.PI * 2,
-        shade: random(),
+        // The lean swings the foot off the ground point; the foot settles over that reach too.
+        position: {
+          ...ground,
+          y: footHeight(
+            plan,
+            ground,
+            PALM_FOOT_RADIUS_M + (heightM / 2) * Math.sin(Math.abs(palmLeanRad(shade))),
+          ),
+        },
+        heightM,
+        rotationRad,
+        shade,
       });
     }
   }
@@ -61,12 +99,12 @@ function palmFronds(palms: readonly Palm[]): readonly Frond[] {
 
 function palmTrunkLayer(palms: readonly Palm[]): ChunkLayer<Palm> {
   return {
-    geometry: new THREE.CylinderGeometry(0.42, 0.62, 1, 6),
+    geometry: new THREE.CylinderGeometry(0.42, PALM_FOOT_RADIUS_M, 1, 6),
     material: new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 1, flatShading: true }),
     items: palms,
     transform(palm: Readonly<Palm>, object: Readonly<THREE.Object3D>) {
       object.position.set(palm.position.x, palm.position.y + palm.heightM / 2, palm.position.z);
-      object.rotation.set(0, palm.rotationRad, 0.05 * (palm.shade - 0.5));
+      object.rotation.set(0, palm.rotationRad, palmLeanRad(palm.shade));
       object.scale.set(1, palm.heightM, 1);
     },
     tint(palm: Readonly<Palm>, color: Readonly<THREE.Color>) {
@@ -115,12 +153,13 @@ function createSea(plan: Readonly<LandscapePlan>): THREE.Mesh {
   return sea;
 }
 
-function createLighthouse(plan: Readonly<LandscapePlan>): THREE.Group {
-  const position = groundPosition(plan, Math.min(1600, plan.route.lengthM / 2), -320);
-  const root = new THREE.Group();
+function createLighthouse(plan: Readonly<LandscapePlan>): DressingGroup {
+  const ground = groundPosition(plan, Math.min(1600, plan.route.lengthM / 2), -320);
+  const position = { ...ground, y: footHeight(plan, ground, LIGHTHOUSE_FOOT_RADIUS_M) };
+  const root = new DressingGroup();
 
   const tower = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.4, 2.1, 18, 10),
+    new THREE.CylinderGeometry(1.4, LIGHTHOUSE_FOOT_RADIUS_M, 18, 10),
     new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.9 }),
   );
 
@@ -141,23 +180,22 @@ function createLighthouse(plan: Readonly<LandscapePlan>): THREE.Group {
   gallery.castShadow = true;
 
   root.name = "biome-lighthouse";
-  root.add(tower, gallery, lantern);
+  root.place(STANDS, tower);
+  root.place(CARRIED, gallery, lantern);
 
   return root;
 }
 
 /** Coast: sea to the horizon, sand palette terrain, palms and one lighthouse. */
-export function createCoastScenery(plan: Readonly<LandscapePlan>): THREE.Group {
-  const root = new THREE.Group();
+export function createCoastScenery(plan: Readonly<LandscapePlan>): DressingGroup {
+  const root = new DressingGroup();
   const palms = palmsAlong(plan, seededRandom(7));
 
   root.name = "biome-coast";
-  root.add(
-    createSea(plan),
-    createLighthouse(plan),
-    ...chunkedMeshes(palmTrunkLayer(palms)),
-    ...chunkedMeshes(palmFrondLayer(palms)),
-  );
+  root.place(WATER, createSea(plan));
+  root.add(createLighthouse(plan));
+  root.place(STANDS, ...chunkedMeshes(palmTrunkLayer(palms)));
+  root.place(CARRIED, ...chunkedMeshes(palmFrondLayer(palms)));
 
   return root;
 }

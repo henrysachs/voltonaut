@@ -1,10 +1,11 @@
 import * as THREE from "three";
 
+import { DressingGroup, WATER } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 
 /** The lake water with its glints, placed on the plan's lake ellipse. */
-export function createLake(plan: LandscapePlan): THREE.Group {
-  const root = new THREE.Group();
+export function createLake(plan: LandscapePlan): DressingGroup {
+  const root = new DressingGroup();
 
   const glints = new THREE.InstancedMesh(
     new THREE.PlaneGeometry(1, 1),
@@ -45,7 +46,7 @@ export function createLake(plan: LandscapePlan): THREE.Group {
   water.scale.set(plan.lake.alongRadiusM, plan.lake.acrossRadiusM, 1);
   root.rotation.y = -plan.lake.headingRad;
   root.position.set(plan.lake.center.x, plan.lake.waterYM, plan.lake.center.z);
-  root.add(water, glints);
+  root.place(WATER, water, glints);
 
   return root;
 }
