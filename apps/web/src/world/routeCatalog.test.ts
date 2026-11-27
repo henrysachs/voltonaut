@@ -34,7 +34,6 @@ describe("route presentation catalog (#75)", () => {
     expect(routePresentation("night-city")?.description).toContain("Neon");
     expect(routePresentation("flat-loop")).toBeUndefined();
     expect(routePresentation("kom-climb")).toBeUndefined();
-    expect(routePresentation("missing-route")).toBeUndefined();
   });
 
   it("accepts only catalog ids and rejects inherited object names", () => {

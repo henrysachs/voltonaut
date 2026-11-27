@@ -1,10 +1,10 @@
-import { TEST_ROUTES, type RouteData } from "@voltonaut/engine";
+import { registeredRoute, type RouteData, type RouteId } from "@voltonaut/engine";
 
 import { formatRouteLength, routeElevationGainM, routePreviewPath } from "./routePreview.js";
 
 /** Catalog fields the panel needs; structurally satisfied by RoutePresentation. */
 export interface RouteCardSource {
-  readonly id: string;
+  readonly id: RouteId;
   readonly title: string;
   readonly description: string;
 }
@@ -15,7 +15,7 @@ export function routeIdentityText(name: string, lengthM: number): string {
 }
 
 /** Sets the route URL parameter while keeping sim, clock, debug and friends. */
-export function selectRoute(routeId: string): void {
+export function selectRoute(routeId: RouteId): void {
   const params = new URLSearchParams(window.location.search);
 
   params.set("route", routeId);
@@ -106,13 +106,13 @@ function routeCard(
  */
 export function mountRouteCatalog(
   presentations: readonly RouteCardSource[],
-  currentRouteId: string,
+  currentRouteId: RouteId,
 ): void {
   const host = document.querySelector("#route-catalog");
 
   if (host instanceof HTMLElement) {
     for (const presentation of presentations) {
-      const data = TEST_ROUTES[presentation.id];
+      const data = registeredRoute(presentation.id);
 
       if (data === undefined) continue;
 
@@ -122,8 +122,8 @@ export function mountRouteCatalog(
 }
 
 /** Writes the selected route's name and length into the header identity. */
-export function updateRouteIdentity(routeId: string): void {
-  const data = TEST_ROUTES[routeId];
+export function updateRouteIdentity(routeId: RouteId): void {
+  const data = registeredRoute(routeId);
   const identity = document.querySelector("#ride-route-identity");
 
   if (data !== undefined && identity instanceof HTMLElement) {
