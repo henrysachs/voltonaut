@@ -16,15 +16,21 @@ import { bindHudResistance } from "./ui/hudTrainerControl.js";
 
 /** The HUD's resistance indicator; absent in pages without the ride HUD. */
 function mountHudResistance(control: Parameters<typeof bindHudResistance>[0]): void {
-  const element = document.querySelector("#hud-resistance");
-  const present = element instanceof HTMLElement;
+  const root = document.querySelector("#hud-resistance");
+  const state = document.querySelector("#hud-resistance-state");
+  const grade = document.querySelector("#hud-resistance-grade");
+
+  const present =
+    root instanceof HTMLElement && state instanceof HTMLElement && grade instanceof HTMLElement;
 
   if (!present) return;
 
   bindHudResistance(control, {
-    write: (text, state) => {
-      element.textContent = text;
-      element.dataset["state"] = state;
+    write: (kind, text, gradeText) => {
+      root.dataset["state"] = kind;
+      root.hidden = kind === "hidden";
+      state.textContent = text;
+      grade.textContent = gradeText === "" ? "" : ` · ${gradeText}`;
     },
   });
 }

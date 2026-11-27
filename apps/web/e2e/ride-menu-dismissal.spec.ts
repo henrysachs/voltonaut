@@ -124,7 +124,11 @@ test("outside dismissal does not disable an explicitly active Sim trainer contro
   await expect(
     devices.getByRole("group", { name: "Rollenschaltung", exact: true }),
   ).toHaveAttribute("data-authority", "active");
+  await expect(page.getByTestId("hud-resistance")).toHaveAttribute("data-state", "active");
   await devices.getByRole("button", { name: "Widerstand deaktivieren", exact: true }).click();
+  await expect(page.getByTestId("hud-resistance")).toHaveText(
+    "Widerstand aus · Stop bestätigt · neu verbinden",
+  );
 });
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.

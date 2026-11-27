@@ -6,15 +6,18 @@ export type HudResistance =
   | { readonly kind: "off" }
   | { readonly kind: "starting" }
   | { readonly kind: "active"; readonly acknowledgedGradePct: number | undefined }
+  | { readonly kind: "stopping" }
+  | { readonly kind: "stopped" }
   | { readonly kind: "lost" }
   | { readonly kind: "failed" };
 
 function fromAuthority(authority: TrainerAuthority, view: TrainerControlView): HudResistance {
   switch (authority.kind) {
     case "inactive":
-      return { kind: "off" };
+      return view.hardware === "stopAcknowledged" ? { kind: "stopped" } : { kind: "off" };
     case "acquiring":
-      return authority.step === "stopping" ? { kind: "off" } : { kind: "starting" };
+      // Neutral and Stop are not confirmed yet: never present this as "off" (AGENTS.md §3.9).
+      return authority.step === "stopping" ? { kind: "stopping" } : { kind: "starting" };
     case "active":
       return {
         kind: "active",
@@ -36,21 +39,20 @@ function fromAuthority(authority: TrainerAuthority, view: TrainerControlView): H
 }
 
 /**
- * Hidden while no controllable trainer is connected. A lost or failed session also reports
- * `available: false`, but must stay visible: that is the warning the rider needs.
+ * Hidden only while no controllable trainer is connected. A session that ended (lost,
+ * failed, or a confirmed stop) reports `available: false` but stays visible: the rider
+ * needs to know that resistance control is over until a reconnect.
  */
 export function hudResistance(view: TrainerControlView): HudResistance {
-  if (view.authority.kind === "lost" || view.authority.kind === "failed") {
-    return fromAuthority(view.authority, view);
-  }
+  const ended =
+    view.authority.kind === "lost" ||
+    view.authority.kind === "failed" ||
+    (view.authority.kind === "inactive" && view.hardware === "stopAcknowledged");
 
-  return view.available ? fromAuthority(view.authority, view) : { kind: "hidden" };
+  return view.available || ended ? fromAuthority(view.authority, view) : { kind: "hidden" };
 }
 
-/**
- * Short German HUD text. "Aktiv" only after the trainer acknowledged control; the grade is
- * the last acknowledged target, never a merely requested one (AGENTS.md §9).
- */
+/** Short German state word; this is what the live region announces. */
 export function hudResistanceText(state: HudResistance): string {
   switch (state.kind) {
     case "hidden":
@@ -60,9 +62,11 @@ export function hudResistanceText(state: HudResistance): string {
     case "starting":
       return "Widerstand wird aktiviert …";
     case "active":
-      return state.acknowledgedGradePct === undefined
-        ? "Widerstand aktiv"
-        : `Widerstand aktiv · ${state.acknowledgedGradePct.toFixed(1)} %`;
+      return "Widerstand aktiv";
+    case "stopping":
+      return "Widerstand wird deaktiviert …";
+    case "stopped":
+      return "Widerstand aus · Stop bestätigt · neu verbinden";
     case "lost":
       return "Widerstand verloren · neu verbinden";
     case "failed":
@@ -75,20 +79,40 @@ export function hudResistanceText(state: HudResistance): string {
   }
 }
 
-/** DOM target of the indicator; the element carries the state for styling and tests. */
-export interface HudResistanceTarget {
-  readonly write: (text: string, state: HudResistance["kind"]) => void;
+/**
+ * The last acknowledged grade, shown next to the state but outside the live region, so a
+ * climb does not announce every 0.1 % step. Never a merely requested target (AGENTS.md §9).
+ */
+export function hudResistanceGrade(state: HudResistance): string {
+  if (state.kind !== "active" || state.acknowledgedGradePct === undefined) return "";
+
+  const rounded = Math.round(state.acknowledgedGradePct * 10) / 10;
+
+  return `${(rounded === 0 ? 0 : rounded).toFixed(1)} %`;
 }
 
-/** Keeps the indicator in sync with the trainer control; returns the unsubscribe. */
+/** DOM target of the indicator; the element carries the state for styling and tests. */
+export interface HudResistanceTarget {
+  readonly write: (state: HudResistance["kind"], text: string, grade: string) => void;
+}
+
+/** Keeps the indicator in sync with the trainer control, writing only on change. */
 export function bindHudResistance(
   control: Readonly<Pick<TrainerControlPanel, "view" | "subscribe">>,
   target: HudResistanceTarget,
 ): () => void {
+  let last = "";
+
   const update = (): void => {
     const state = hudResistance(control.view());
+    const text = hudResistanceText(state);
+    const grade = hudResistanceGrade(state);
+    const key = `${state.kind}|${text}|${grade}`;
 
-    target.write(hudResistanceText(state), state.kind);
+    if (key === last) return;
+
+    last = key;
+    target.write(state.kind, text, grade);
   };
 
   update();

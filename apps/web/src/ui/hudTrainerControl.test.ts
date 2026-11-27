@@ -8,7 +8,12 @@ import {
   createSimScript,
   type TrainerControlView,
 } from "@voltonaut/ble";
-import { bindHudResistance, hudResistance, hudResistanceText } from "./hudTrainerControl.js";
+import {
+  bindHudResistance,
+  hudResistance,
+  hudResistanceGrade,
+  hudResistanceText,
+} from "./hudTrainerControl.js";
 
 const BASE: TrainerControlView = {
   authority: { kind: "inactive", reason: "Nur Messwerte." },
@@ -26,12 +31,14 @@ const SIM_TARGET = {
   cwKgPerM: 0.2,
 } as const;
 
+const ACTIVE = { ...BASE, authority: { kind: "active" } } as const;
+
 it("stays hidden without a controllable trainer", () => {
   expect(hudResistance({ ...BASE, available: false })).toEqual({ kind: "hidden" });
   expect(hudResistanceText({ kind: "hidden" })).toBe("");
 });
 
-it("keeps a lost or failed session visible although it is no longer available", () => {
+it("keeps an ended session visible although it is no longer available", () => {
   expect(
     hudResistance({ ...BASE, available: false, authority: { kind: "lost", reason: "x" } }),
   ).toEqual({ kind: "lost" });
@@ -42,12 +49,15 @@ it("keeps a lost or failed session visible although it is no longer available", 
       authority: { kind: "failed", reason: "x", reconnectRequired: true },
     }),
   ).toEqual({ kind: "failed" });
+  expect(hudResistance({ ...BASE, available: false, hardware: "stopAcknowledged" })).toEqual({
+    kind: "stopped",
+  });
 });
 
 it.each([
   [{ kind: "inactive", reason: "x" }, "Widerstand aus · Menü → Geräte"],
   [{ kind: "acquiring", step: "control" }, "Widerstand wird aktiviert …"],
-  [{ kind: "acquiring", step: "stopping" }, "Widerstand aus · Menü → Geräte"],
+  [{ kind: "acquiring", step: "stopping" }, "Widerstand wird deaktiviert …"],
   [{ kind: "lost", reason: "x" }, "Widerstand verloren · neu verbinden"],
   [
     { kind: "failed", reason: "x", reconnectRequired: true },
@@ -57,31 +67,77 @@ it.each([
   expect(hudResistanceText(hudResistance({ ...BASE, authority }))).toBe(text);
 });
 
-it("shows only an acknowledged grade, never a merely requested target", () => {
-  const active = { ...BASE, authority: { kind: "active" } } as const;
+it("never claims 'off' while the stop is still unconfirmed", () => {
+  const stopping = hudResistance({
+    ...BASE,
+    authority: { kind: "acquiring", step: "stopping" },
+    acknowledged: SIM_TARGET,
+    hardware: "targetAcknowledged",
+  });
 
+  expect(stopping).toEqual({ kind: "stopping" });
+  expect(hudResistanceText(stopping)).not.toContain("aus");
+});
+
+it("shows only an acknowledged grade, never a merely requested target", () => {
+  expect(hudResistanceGrade(hudResistance({ ...ACTIVE, target: SIM_TARGET }))).toBe("");
   expect(
-    hudResistanceText(hudResistance({ ...active, target: SIM_TARGET, hardware: "unknown" })),
-  ).toBe("Widerstand aktiv");
-  expect(
-    hudResistanceText(
+    hudResistanceGrade(
       hudResistance({
-        ...active,
+        ...ACTIVE,
         target: SIM_TARGET,
         acknowledged: SIM_TARGET,
         hardware: "targetAcknowledged",
       }),
     ),
-  ).toBe("Widerstand aktiv · 4.0 %");
+  ).toBe("4.0 %");
   expect(
-    hudResistanceText(
+    hudResistanceGrade(
       hudResistance({
-        ...active,
-        acknowledged: { ...SIM_TARGET, gradePct: 0 },
+        ...ACTIVE,
+        acknowledged: { ...SIM_TARGET, gradePct: -0.04 },
         hardware: "neutralAcknowledged",
       }),
     ),
-  ).toBe("Widerstand aktiv · 0.0 %");
+  ).toBe("0.0 %");
+  expect(hudResistanceText({ kind: "active", acknowledgedGradePct: 4 })).toBe("Widerstand aktiv");
+});
+
+it("writes only when state, text or grade change", () => {
+  const writes: string[] = [];
+  const listeners: (() => void)[] = [];
+  let view: TrainerControlView = BASE;
+
+  bindHudResistance(
+    {
+      view: () => view,
+      subscribe: (listener) => {
+        listeners.push(listener);
+
+        return () => {};
+      },
+    },
+    {
+      write: (state, _text, grade) => {
+        writes.push(`${state}${grade}`);
+      },
+    },
+  );
+
+  const notify = (): void => {
+    for (const listener of listeners) listener();
+  };
+
+  notify();
+  view = { ...ACTIVE, acknowledged: SIM_TARGET, hardware: "targetAcknowledged" };
+  notify();
+  notify();
+  view = { ...view, acknowledged: { ...SIM_TARGET, gradePct: 4.02 } };
+  notify();
+  view = { ...view, acknowledged: { ...SIM_TARGET, gradePct: 5 } };
+  notify();
+
+  expect(writes).toEqual(["off", "active4.0 %", "active5.0 %"]);
 });
 
 async function settle(rounds = 20): Promise<void> {
@@ -91,7 +147,7 @@ async function settle(rounds = 20): Promise<void> {
   await settle(rounds - 1);
 }
 
-it("follows the real sim trainer from hidden over off to active and back to off on disconnect", async () => {
+function simTrainer() {
   const clock = createManualClock();
   const ticker = createManualTicker();
 
@@ -106,13 +162,19 @@ it("follows the real sim trainer from hidden over off to active and back to off 
     }),
   });
 
-  const seen: string[] = [];
+  const states: string[] = [];
 
   bindHudResistance(trainer.control, {
-    write: (_text, state) => {
-      seen.push(state);
+    write: (state) => {
+      states.push(state);
     },
   });
+
+  return { trainer, clock, ticker, states };
+}
+
+it("follows the real sim trainer: hidden, off, starting, active, hidden after disconnect", async () => {
+  const { trainer, states } = simTrainer();
 
   await trainer.connect();
   await settle();
@@ -121,12 +183,26 @@ it("follows the real sim trainer from hidden over off to active and back to off 
   await trainer.disconnect();
   await settle();
 
-  // Repeated notifications of one state are expected; the order of distinct states is the contract.
-  expect(seen.filter((state, index) => state !== seen[index - 1])).toEqual([
-    "hidden",
-    "off",
-    "starting",
-    "active",
-    "hidden",
-  ]);
+  expect(states).toEqual(["hidden", "off", "starting", "active", "hidden"]);
+});
+
+it("follows the real sim trainer through disable: stopping until confirmed, then stopped", async () => {
+  const { trainer, clock, ticker, states } = simTrainer();
+
+  await trainer.connect();
+  await settle();
+  await trainer.control.enable();
+  await settle();
+
+  const disabling = trainer.control.disable();
+
+  await settle();
+  expect(states.at(-1)).toBe("stopping");
+  clock.advanceS(0.25);
+  ticker.tick();
+  await disabling;
+  await settle();
+
+  expect(states).toEqual(["hidden", "off", "starting", "active", "stopping", "stopped"]);
+  await trainer.disconnect();
 });

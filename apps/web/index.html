@@ -44,10 +44,12 @@
             id="hud-resistance"
             data-testid="hud-resistance"
             data-state="hidden"
-            aria-label="Trainerwiderstand"
-            aria-live="polite"
             lang="de"
-          ></p>
+            hidden
+          >
+            <span id="hud-resistance-state" aria-live="polite"></span>
+            <span id="hud-resistance-grade" class="hud__resistance-grade"></span>
+          </p>
           <dl class="hud__values hud__effort-values">
             <div class="hud__value">
               <dt>Power</dt>

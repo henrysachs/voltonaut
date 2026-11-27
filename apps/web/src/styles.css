@@ -227,13 +227,14 @@ button[aria-busy="true"],
   color: #e7f1ee;
   background: rgb(0 0 0 / 22%);
 }
-.hud__resistance:empty {
+.hud__resistance[hidden] {
   display: none;
 }
 .hud__resistance[data-state="active"] {
   border-left-color: #8ef0a8;
 }
-.hud__resistance[data-state="starting"] {
+.hud__resistance[data-state="starting"],
+.hud__resistance[data-state="stopping"] {
   border-left-color: #ffd23f;
 }
 .hud__resistance[data-state="lost"],
@@ -1250,6 +1251,10 @@ body > dialog.connect-dialog:not([open]) {
   .hud__status {
     margin-bottom: 10px;
     font-size: 0.6rem;
+  }
+  .hud__resistance {
+    margin: -4px 0 10px;
+    font-size: 0.62rem;
   }
   .hud__effort-values {
     gap: 12px 8px;
