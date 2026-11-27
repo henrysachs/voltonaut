@@ -1,7 +1,7 @@
 # Spec E10-12 – Zusammenhängende Welt, Schritt 2: Höhenraster mit Korridor-Einebnung
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, „Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen“, Unterpunkt Schritt 2
-- **Issue:** [#150](https://github.com/henrysachs/voltonaut/issues/150) (Schritt 2: #160), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) §5 und §9 (vorgeschlagen, Henrys Freigabe ausstehend)
+- **Issue:** [#150](https://github.com/henrysachs/voltonaut/issues/150) (Schritt 2: #160), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) §5 und §9 (angenommen am 2026-11-27)
 - **Vorgänger:** [E10-11](E10-11-connected-world.md) (Schritt 1, #158), Biome aus #138 mit #168/#169
 - **Status:** Review
 - **Betroffene Module:** `apps/web/src/world` (Planung ohne `three`, Darstellung mit `three`)
@@ -106,4 +106,4 @@ Die Messwerte stammen vom Stand vor den letzten Startzeit-Optimierungen; diese �
 
 ## Doku-Updates (Pflicht beim Abschluss)
 
-- [x] Roadmap-Unterpunkt Schritt 2 · [x] `docs/04-world-3d.md` §4 und §11 · [ ] ADR-033 Freigabe (Henry, unverändert offen)
+- [x] Roadmap-Unterpunkt Schritt 2 · [x] `docs/04-world-3d.md` §4 und §11 · [x] ADR-033 Freigabe (Henry, 2026-11-27)

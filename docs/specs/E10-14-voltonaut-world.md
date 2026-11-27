@@ -1,7 +1,7 @@
 # Spec E10-14 – Zusammenhängende Welt, Schritt 3: Welt `voltonaut` mit Regionen
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, „Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen“
-- **Issue:** [#171](https://github.com/henrysachs/voltonaut/issues/171) (Teil von [#150](https://github.com/henrysachs/voltonaut/issues/150)), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) §6 und „Umsetzung“ Schritt 3 (vorgeschlagen, Henrys Freigabe ausstehend)
+- **Issue:** [#171](https://github.com/henrysachs/voltonaut/issues/171) (Teil von [#150](https://github.com/henrysachs/voltonaut/issues/150)), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) §6 und „Umsetzung“ Schritt 3 (angenommen am 2026-11-27)
 - **Vorgänger:** [E10-11](E10-11-connected-world.md) (Schritt 1), [E10-12](E10-12-world-heightfield.md) (Schritt 2), [E10-13](E10-13-world-recording-contract.md) (Schritt 4)
 - **Status:** Implementiert und lokal softwaregeprüft; CI, Review und Hardware offen
 - **Betroffene Module:** `packages/engine/src/world`, `apps/web/src/world`, `apps/web/src/routeSelection.ts`, `apps/server/src/rides/replayRoute.ts`

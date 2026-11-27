@@ -1,7 +1,7 @@
 # Spec E10-13 – Zusammenhängende Welt, Schritt 4: Aufnahme- und Replay-Vertrag mit Welt und Weg
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, „Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen“, Schritt 4
-- **Issue:** [#150](https://github.com/henrysachs/voltonaut/issues/150), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) §7 und §8 (vorgeschlagen, Henrys Freigabe ausstehend); baut auf [E10-11](E10-11-connected-world.md) (Schritt 1) auf
+- **Issue:** [#150](https://github.com/henrysachs/voltonaut/issues/150), Entscheidung [ADR-033](../decisions/ADR-033-connected-worlds.md) §7 und §8 (angenommen am 2026-11-27); baut auf [E10-11](E10-11-connected-world.md) (Schritt 1) auf
 - **Status:** Implementiert und lokal softwaregeprüft; CI und Review offen
 - **Betroffene Module:** `packages/shared` (Verträge), `packages/engine/src/world` (Wegauflösung), `apps/web/src/game` (Worker-Aufnahme und Progress), `apps/server/src/rides` (Nachrechnung), `apps/server/src/progress` und Drizzle-Migration `0015`
 
@@ -108,4 +108,4 @@ Der Server hält eine eigene Freigabeliste nachrechenbarer Weltrevisionen. Sie e
 
 ## Doku-Updates (Pflicht beim Abschluss)
 
-- [x] Roadmap-Unterpunkt · [x] `docs/01-architecture.md` · [x] `docs/08-backend.md` · [ ] ADR-033 Freigabe (Henry)
+- [x] Roadmap-Unterpunkt · [x] `docs/01-architecture.md` · [x] `docs/08-backend.md` · [x] ADR-033 Freigabe (Henry, 2026-11-27)

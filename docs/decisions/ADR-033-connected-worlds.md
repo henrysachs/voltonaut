@@ -1,6 +1,6 @@
 # ADR-033 – Zusammenhängende Welten aus Straßennetz, Höhenraster und Regionen
 
-- **Status:** Vorgeschlagen. Henrys Freigabe steht aus.
+- **Status:** Angenommen (Henrys Freigabe im Chat am 2026-11-27).
 - **Bezug:** Issue [#150](https://github.com/henrysachs/voltonaut/issues/150), #151 (Nachtstadt-Optik), Issue #75 und PR #138 (Biome als Einzelstrecken), #145 (weitere Biome), #85 (Mini-Map), #68 (Terrain-Chunks), ADR-016 (Server-Nachrechnung), `docs/01-architecture.md` (`Route`), `docs/04-world-3d.md` §4.
 
 ## Kontext
