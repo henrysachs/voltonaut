@@ -3,7 +3,7 @@ import type { EngineRoute, WorldPos } from "@voltonaut/engine";
 import * as THREE from "three";
 
 import type { ChunkItem, ChunkLayer } from "./biomeSceneryShared.js";
-import { sampleRoad, roadSampleDistances } from "./road-plan.js";
+import { roadSampleDistances, sampleRoad, SHOULDER_WIDTH_M } from "./road-plan.js";
 
 export const WINDOW_MATERIAL_NAME = "night-city-windows";
 const LAMP_LIGHT_NAME = "night-city-lamp-light";
@@ -76,7 +76,8 @@ interface LampLightGeometry {
 
 /** Ribbon over the road edges with the lamps' light as vertex colours. */
 function lampLightGeometry(route: EngineRoute, lamps: readonly StreetLamp[]): LampLightGeometry {
-  const samples = sampleRoad(route, 9);
+  // As wide as the shoulder band, the widest drawn road layer: the light never leaves the road.
+  const samples = sampleRoad(route, SHOULDER_WIDTH_M);
   const distances = roadSampleDistances(route);
   const positions: number[] = [];
   const colors: number[] = [];

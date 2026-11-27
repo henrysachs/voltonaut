@@ -15,7 +15,10 @@ export type Footing =
   | { readonly kind: "water" }
   /** Roles repeat instance by instance, one cycle per prop (a billboard: frame, post, post). */
   | { readonly kind: "prop"; readonly roles: readonly [PartRole, ...PartRole[]] }
-  /** Overlays on the drawn road surface (lamp light); the road clearance gate owns that height. */
+  /**
+   * Overlays that follow the road ribbon's own support points within the shoulder band (lamp
+   * light), so they lie on the road, not on the terrain the ground probe checks.
+   */
   | { readonly kind: "road" };
 
 export const WATER: Footing = { kind: "water" };

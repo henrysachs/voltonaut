@@ -7,7 +7,7 @@ import { createNightCityScenery } from "./biomeScenery.js";
 import { BLOOM_THRESHOLD } from "./bloom.js";
 import { createLandscapePlan } from "./landscape-plan.js";
 import { createLampLight, luminanceOf } from "./nightCityLights.js";
-import { ROAD_SAMPLE_SPACING_M } from "./road-plan.js";
+import { ROAD_SAMPLE_SPACING_M, SHOULDER_WIDTH_M } from "./road-plan.js";
 
 it("lamp light brightens the asphalt under each lamp and leaves the gaps between them dark", () => {
   const route = createRoute(NIGHT_CITY);
@@ -55,3 +55,23 @@ function neonLuminances(root: THREE.Object3D): readonly number[] {
 
   return luminances;
 }
+
+it("keeps the lamp light within the drawn shoulder band of the road", () => {
+  const route = createRoute(NIGHT_CITY);
+  const light = createLampLight(route, [{ routeDistanceM: 400, side: 1 }]);
+  const position = light.geometry.getAttribute("position");
+  const centre = route.worldPos(0);
+  const offset = light.position;
+
+  const halfWidthM =
+    Math.hypot(position.getX(1) - position.getX(0), position.getZ(1) - position.getZ(0)) / 2;
+
+  expect(halfWidthM).toBeCloseTo(SHOULDER_WIDTH_M / 2, 3);
+  expect(
+    Math.hypot(
+      (position.getX(0) + position.getX(1)) / 2 + offset.x - centre.x,
+      (position.getZ(0) + position.getZ(1)) / 2 + offset.z - centre.z,
+    ),
+  ).toBeLessThan(1e-3);
+  light.geometry.dispose();
+});
