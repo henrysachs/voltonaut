@@ -1,0 +1,3771 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "ua": "anonymized hardware capture browser",
+    "date": "2026-11-27T07:44:17.993Z",
+    "deviceName": "Zwift Hub",
+    "deviceId": "hardware-zwift-hub-one-20261127",
+    "firmware": "5.2.2",
+    "protocol": "raw",
+    "notes": ""
+  },
+  "gatt": [
+    {
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00002a24-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a26-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a27-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a29-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        }
+      ]
+    },
+    {
+      "service": "00000001-19ca-4651-86e5-fa29dcdd09d1",
+      "characteristics": [
+        {
+          "char": "00000002-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00000003-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "writeWithoutResponse"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00000004-19ca-4651-86e5-fa29dcdd09d1",
+          "properties": [
+            "read",
+            "indicate"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00002a37-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00002a38-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        }
+      ]
+    },
+    {
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00002acc-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00002ad6-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002ad8-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "write",
+            "indicate"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00002ada-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "characteristics": [
+        {
+          "char": "00002a5d-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a63-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "notify"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        },
+        {
+          "char": "00002a65-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "read"
+          ],
+          "descriptors": []
+        },
+        {
+          "char": "00002a66-0000-1000-8000-00805f9b34fb",
+          "properties": [
+            "write",
+            "indicate"
+          ],
+          "descriptors": [
+            "00002902-0000-1000-8000-00805f9b34fb"
+          ]
+        }
+      ]
+    }
+  ],
+  "log": [
+    {
+      "tMs": 2492.8000000000466,
+      "device": "Zwift Hub",
+      "event": "connected",
+      "marker": ""
+    },
+    {
+      "tMs": 3180.3000000000466,
+      "device": "Zwift Hub",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a24-0000-1000-8000-00805f9b34fb",
+      "hex": "30 36",
+      "ascii": "06",
+      "decoded": "Modell: 06",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3181.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3181.4000000000233,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3183.9000000000233,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3299.8000000000466,
+      "device": "Zwift Hub",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a26-0000-1000-8000-00805f9b34fb",
+      "hex": "35 2e 32 2e 32",
+      "ascii": "5.2.2",
+      "decoded": "Firmware: 5.2.2",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3389.8000000000466,
+      "device": "Zwift Hub",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a27-0000-1000-8000-00805f9b34fb",
+      "hex": "31",
+      "ascii": "1",
+      "decoded": "Hardware: 1",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3509.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180a-0000-1000-8000-00805f9b34fb",
+      "char": "00002a29-0000-1000-8000-00805f9b34fb",
+      "hex": "5a 77 69 66 74",
+      "ascii": "Zwift",
+      "decoded": "Hersteller: Zwift",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3629.8000000000466,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a38-0000-1000-8000-00805f9b34fb",
+      "hex": "01",
+      "ascii": ".",
+      "decoded": "",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3719.600000000093,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002acc-0000-1000-8000-00805f9b34fb",
+      "hex": "87 44 00 00 0c e0 00 00",
+      "ascii": ".D......",
+      "decoded": "{\"machineDwordHex\":\"0x00004487\",\"machineFeatures\":[\"averageSpeed\",\"cadence\",\"totalDistance\",\"resistanceLevel\",\"heartRateMeasurement\",\"powerMeasurement\"],\"targetFeatures\":[\"resistanceTarget\",\"powerTarget\",\"indoorBikeSimulationParameters\",\"wheelCircumference\",\"spinDownControl\"]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 3929.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad6-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 64 00 01 00",
+      "ascii": "..d...",
+      "decoded": "",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 4019.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad8-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 e8 03 01 00",
+      "ascii": "......",
+      "decoded": "",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 4109.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a5d-0000-1000-8000-00805f9b34fb",
+      "hex": "0c",
+      "ascii": ".",
+      "decoded": "",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 4169.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 4170.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 4170.800000000047,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 4173.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a65-0000-1000-8000-00805f9b34fb",
+      "hex": "0c 00 00 00",
+      "ascii": "....",
+      "decoded": "",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 5160.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 5220.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 5279.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 6180.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 6183.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 6183.800000000047,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 7200,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 7200.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 7202.5,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 8220,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 8220.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 8222.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 9180.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 9180.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 9182.400000000023,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 10200.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 10203.800000000047,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 10204.100000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 11220.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 11223.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 11279.800000000047,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 12180,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 12183.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 12183.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 13320.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 13320.800000000047,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 13322.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 14220.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 14221,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 14222.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 15240.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 15244.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 15247.100000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 16200,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 16200.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 16203.400000000023,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 17160,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 17163,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 17221.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 18180.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 18180.600000000093,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 18186.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 19260.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 19264.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 19265.100000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 20161.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 20166.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 20166.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 21180.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 21183.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 21184.100000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 22200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 22205.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 22260,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 23160.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 23164.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 23164.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 24180.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 24180.900000000023,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 24184.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 25200.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 25204.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 25204.5,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 26220.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 26221.100000000093,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 26225.800000000047,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 27240.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 27244.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 27245,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 28200.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 28206.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 28206.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 29160.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 29165.900000000023,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 29166.600000000093,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 30180.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 30185.900000000023,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 30186.5,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 31260.400000000023,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 31265.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 31266,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 32160.300000000047,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 32280.600000000093,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 32286.300000000047,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 33240.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 33246.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 33246.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 34200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 34206.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 5e 02 00 00 14 00 00 00 00",
+      "ascii": "d.^........",
+      "decoded": "{\"speedMps\":1.6833333333333333,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 34206.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 35160.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 72 00 02 00 00 00 1f 6f",
+      "ascii": "..r......o",
+      "decoded": "{\"powerW\":114}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 35166,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 26 04 00 00 14 00 72 00 00",
+      "ascii": "d.&.....r..",
+      "decoded": "{\"speedMps\":2.95,\"cadenceRpm\":0,\"powerW\":114,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 35166.5,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 36180.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 3b 00 03 00 00 00 3f 74",
+      "ascii": "..;.....?t",
+      "decoded": "{\"powerW\":59}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 36186.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 cd 04 00 00 14 00 3b 00 00",
+      "ascii": "d.......;..",
+      "decoded": "{\"speedMps\":3.4138888888888888,\"cadenceRpm\":0,\"powerW\":59,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 36239.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 37200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 28 00 05 00 00 00 66 7e",
+      "ascii": "..(.....f~",
+      "decoded": "{\"powerW\":40}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 37206.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 8a 04 00 00 14 00 28 00 00",
+      "ascii": "d.......(..",
+      "decoded": "{\"speedMps\":3.227777777777778,\"cadenceRpm\":0,\"powerW\":40,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 37206.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 38160.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 2b 00 07 00 00 00 25 88",
+      "ascii": "..+.....%.",
+      "decoded": "{\"powerW\":43}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 38166.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 f6 04 00 00 14 00 2b 00 00",
+      "ascii": "d.......+..",
+      "decoded": "{\"speedMps\":3.5277777777777777,\"cadenceRpm\":0,\"powerW\":43,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 38167.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 39240.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 2b 00 08 00 00 00 25 8d",
+      "ascii": "..+.....%.",
+      "decoded": "{\"powerW\":43}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 39246.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 aa 04 0a 00 14 00 2b 00 00",
+      "ascii": "d.......+..",
+      "decoded": "{\"speedMps\":3.316666666666667,\"cadenceRpm\":5,\"powerW\":43,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 39246.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 40200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 24 00 0a 00 00 00 20 97",
+      "ascii": "..$..... .",
+      "decoded": "{\"powerW\":36}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 40207,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 ca 04 26 00 14 00 24 00 00",
+      "ascii": "d...&...$..",
+      "decoded": "{\"speedMps\":3.4055555555555554,\"cadenceRpm\":19,\"powerW\":36,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 40207.5,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 41160.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 35 00 0c 00 00 00 05 a1",
+      "ascii": "..5.......",
+      "decoded": "{\"powerW\":53}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 41167.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 c6 04 32 00 14 00 35 00 00",
+      "ascii": "d...2...5..",
+      "decoded": "{\"speedMps\":3.3944444444444444,\"cadenceRpm\":25,\"powerW\":53,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 41167.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 42180.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "30 00 26 00 0d 00 00 00 08 a6 01 00 57 d2",
+      "ascii": "0.&.........W.",
+      "decoded": "{\"powerW\":38,\"crankRevs\":1,\"crankEventRaw\":53847}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 42184.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 b4 04 32 00 14 00 26 00 00",
+      "ascii": "d...2...&..",
+      "decoded": "{\"speedMps\":3.3444444444444446,\"cadenceRpm\":25,\"powerW\":38,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 42184.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 43200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 38 00 0f 00 00 00 ee af",
+      "ascii": "..8.......",
+      "decoded": "{\"powerW\":56}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 43207.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 d2 04 36 00 14 00 38 00 00",
+      "ascii": "d...6...8..",
+      "decoded": "{\"speedMps\":3.4277777777777776,\"cadenceRpm\":27,\"powerW\":56,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 43207.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 44220.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "30 00 22 00 10 00 00 00 16 b5 02 00 69 db",
+      "ascii": "0.\".........i.",
+      "decoded": "{\"powerW\":34,\"crankRevs\":2,\"crankEventRaw\":56169}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 44226.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 69 04 36 00 14 00 22 00 00",
+      "ascii": "d.i.6...\"..",
+      "decoded": "{\"speedMps\":3.136111111111111,\"cadenceRpm\":27,\"powerW\":34,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 44227.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 45240.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 33 00 12 00 00 00 b4 bf",
+      "ascii": "..3.......",
+      "decoded": "{\"powerW\":51}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 45247.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 7e 04 38 00 14 00 33 00 00",
+      "ascii": "d.~.8...3..",
+      "decoded": "{\"speedMps\":3.1944444444444446,\"cadenceRpm\":28,\"powerW\":51,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 45248.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 46200.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "30 00 29 00 14 00 00 00 8d ca 03 00 24 e4",
+      "ascii": "0.).........$.",
+      "decoded": "{\"powerW\":41,\"crankRevs\":3,\"crankEventRaw\":58404}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 46206.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 50 04 36 00 14 00 29 00 00",
+      "ascii": "d.P.6...)..",
+      "decoded": "{\"speedMps\":3.066666666666667,\"cadenceRpm\":27,\"powerW\":41,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 46259.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 47220.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 3a 00 15 00 00 00 6a cf",
+      "ascii": "..:.....j.",
+      "decoded": "{\"powerW\":58}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 47227.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 e0 04 36 00 14 00 3a 00 00",
+      "ascii": "d...6...:..",
+      "decoded": "{\"speedMps\":3.466666666666667,\"cadenceRpm\":27,\"powerW\":58,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 47227.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 48240.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "30 00 30 00 17 00 00 00 9b d9 04 00 2b ed",
+      "ascii": "0.0.........+.",
+      "decoded": "{\"powerW\":48,\"crankRevs\":4,\"crankEventRaw\":60715}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 48247.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 84 04 34 00 14 00 30 00 00",
+      "ascii": "d...4...0..",
+      "decoded": "{\"speedMps\":3.2111111111111112,\"cadenceRpm\":26,\"powerW\":48,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 48300,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 49200.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 00 00 18 00 00 00 07 e1",
+      "ascii": "..........",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 49208.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 db 02 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":2.0305555555555554,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 49208.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 50160.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 50167.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 50168.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 51240.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 51240.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 51242.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52201.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 52202.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 53159.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 53161.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 53219.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 54180.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 54181.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 54182.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 55200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 55201.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 55208.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 56220.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 56234.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 56239.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 57244,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 57244.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 57299.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58200.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58201,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 58202.60000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59160.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59161.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 59170.10000000009,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 60180.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 60187.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 60188.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 61200.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 61209.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 61320,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 62160.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 62169.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 62169.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 63240.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 63240.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 63242.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 63627.10000000009,
+      "device": "Zwift Hub",
+      "event": "marker",
+      "marker": "error: Zuerst FTMS Request Control erfolgreich ausführen."
+    },
+    {
+      "tMs": 64200.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64208.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 64209.30000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65040.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "00",
+      "ascii": ".",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 65048.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 00 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x00: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65160.10000000009,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65220.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "64 02 00 00 00 00 14 00 00 00 00",
+      "ascii": "d..........",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65340,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65460,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "07",
+      "ascii": ".",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 65460.60000000009,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 07 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x07: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65462.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ada-0000-1000-8000-00805f9b34fb",
+      "hex": "04",
+      "ascii": ".",
+      "decoded": "Started/Resumed by user",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65580.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "11 00 00 00 00 28 33",
+      "ascii": ".....(3",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 65580.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 11 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x11: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65581.20000000007,
+      "device": "Zwift Hub",
+      "event": "marker",
+      "marker": "Preset abgeschlossen: FTMS Request Control + Start + Sim 0 %"
+    },
+    {
+      "tMs": 65583.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ada-0000-1000-8000-00805f9b34fb",
+      "hex": "12 00 00 00 00 28 33",
+      "ascii": ".....(3",
+      "decoded": "Indoor bike simulation changed",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65700.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "11 00 00 f4 01 28 33",
+      "ascii": ".....(3",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 65700.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 11 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x11: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 65701.20000000007,
+      "device": "Zwift Hub",
+      "event": "marker",
+      "marker": "Preset abgeschlossen: FTMS Sim 5 %"
+    },
+    {
+      "tMs": 65702.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ada-0000-1000-8000-00805f9b34fb",
+      "hex": "12 00 00 f4 01 28 33",
+      "ascii": ".....(3",
+      "decoded": "Indoor bike simulation changed",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66180.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66181.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66183.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66184.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "00",
+      "ascii": ".",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 66246.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 00 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x00: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66360.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "07",
+      "ascii": ".",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 66361.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 07 04",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x07: failed",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66480.6000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "11 00 00 00 00 28 33",
+      "ascii": ".....(3",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 66488.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 11 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x11: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 66489.40000000002,
+      "device": "Zwift Hub",
+      "event": "marker",
+      "marker": "Preset abgeschlossen: FTMS Request Control + Start + Sim 0 %"
+    },
+    {
+      "tMs": 66490.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ada-0000-1000-8000-00805f9b34fb",
+      "hex": "12 00 00 00 00 28 33",
+      "ascii": ".....(3",
+      "decoded": "Indoor bike simulation changed",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 67200.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 67260.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 67380,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 67380.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "11 00 00 f4 01 28 33",
+      "ascii": ".....(3",
+      "decoded": "",
+      "marker": "",
+      "dir": "tx"
+    },
+    {
+      "tMs": 67381.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad9-0000-1000-8000-00805f9b34fb",
+      "hex": "80 11 01",
+      "ascii": "...",
+      "decoded": "Antwort auf 0x11: success",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 67381.6000000001,
+      "device": "Zwift Hub",
+      "event": "marker",
+      "marker": "Preset abgeschlossen: FTMS Sim 5 %"
+    },
+    {
+      "tMs": 67381.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ada-0000-1000-8000-00805f9b34fb",
+      "hex": "12 00 00 f4 01 28 33",
+      "ascii": ".....(3",
+      "decoded": "Indoor bike simulation changed",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 68160.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 68161,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 68162.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 69240.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 69242.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 69300.1000000001,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70200.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70201.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 70202.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 71160.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 71162.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 71162.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 72180.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 72190.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 72191.1000000001,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 73200.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 73210.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 73210.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 74220.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 74229.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 74229.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 75240.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 75250.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 75250.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 76200.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 76209.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 76210.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 77160.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 77170.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 77170.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 78240.6000000001,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 78249.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 78300.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 79200.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 00 00 19 00 00 00 79 d5",
+      "ascii": "........y.",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 79210.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 b1 03 32 00 00 00 00 00 02 00 00 14 00 00 00 00 00 00",
+      "ascii": "....2...............",
+      "decoded": "{\"speedMps\":2.625,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":2}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 79210.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 80220.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 2c 00 1a 00 00 00 fb dd",
+      "ascii": "..,.......",
+      "decoded": "{\"powerW\":44}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 80230.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 22 02 46 00 00 00 00 00 03 00 00 14 00 2c 00 02 00 00",
+      "ascii": "..\".F..........,....",
+      "decoded": "{\"speedMps\":1.5166666666666666,\"cadenceRpm\":0,\"powerW\":44,\"hrBpm\":0,\"totalDistanceM\":3}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 80230.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 81240.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 33 00 1b 00 00 00 cc e6",
+      "ascii": "..3.......",
+      "decoded": "{\"powerW\":51}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 81250.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 ff 02 6e 00 00 00 00 00 05 00 00 14 00 33 00 05 00 00",
+      "ascii": "....n..........3....",
+      "decoded": "{\"speedMps\":2.1305555555555555,\"cadenceRpm\":0,\"powerW\":51,\"hrBpm\":0,\"totalDistanceM\":5}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 81251.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 82200.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 82210.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 67 00 00 00 00 00 05 00 00 14 00 00 00 05 00 00",
+      "ascii": "....g...............",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":5}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 82211.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 83161.70000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 00 00 1c 00 00 00 de f5",
+      "ascii": "..........",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 83171.6000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 b3 03 89 00 00 00 00 00 07 00 00 14 00 00 00 05 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":2.6305555555555555,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":7}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 83219.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 84180.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 28 00 1d 00 00 00 9f fd",
+      "ascii": "..(.......",
+      "decoded": "{\"powerW\":40}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 84188.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 65 02 94 00 18 00 01 00 08 00 00 14 00 28 00 07 00 00",
+      "ascii": "..e............(....",
+      "decoded": "{\"speedMps\":1.7027777777777777,\"cadenceRpm\":12,\"powerW\":40,\"hrBpm\":0,\"totalDistanceM\":8}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 84188.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 85201.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 55 00 1e 00 00 00 97 06",
+      "ascii": "..U.......",
+      "decoded": "{\"powerW\":85}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 85210.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 dc 02 b0 00 1c 00 02 00 0a 00 00 14 00 55 00 0b 00 00",
+      "ascii": "...............U....",
+      "decoded": "{\"speedMps\":2.033333333333333,\"cadenceRpm\":14,\"powerW\":85,\"hrBpm\":0,\"totalDistanceM\":10}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 85211.40000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 86280.6000000001,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 00 00 1f 00 00 00 f6 0f",
+      "ascii": "..........",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 86290.6000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 52 02 b8 00 00 00 02 00 0b 00 00 14 00 00 00 0a 00 00",
+      "ascii": "..R.................",
+      "decoded": "{\"speedMps\":1.65,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":11}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 86291.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 87240.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 55 00 20 00 00 00 90 19",
+      "ascii": "..U. .....",
+      "decoded": "{\"powerW\":85}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 87250,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 82 02 c0 00 00 00 02 00 0c 00 00 14 00 55 00 0d 00 00",
+      "ascii": "...............U....",
+      "decoded": "{\"speedMps\":1.7833333333333334,\"cadenceRpm\":0,\"powerW\":85,\"hrBpm\":0,\"totalDistanceM\":12}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 87250.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88200.30000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88208.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 51 00 b7 00 00 00 02 00 0c 00 00 14 00 00 00 0d 00 00",
+      "ascii": "..Q.................",
+      "decoded": "{\"speedMps\":0.225,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":12}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 88209.20000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89160.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "10 00 00 00 21 00 00 00 96 27",
+      "ascii": "....!....'",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89171.6000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 d3 03 cd 00 00 00 02 00 0e 00 00 14 00 00 00 0c 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":2.7194444444444446,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 89172.40000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 90180.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 90191.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 c5 00 00 00 02 00 0e 00 00 14 00 00 00 0c 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 90192.1000000001,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 91200.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 91210.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 bd 00 00 00 02 00 0e 00 00 14 00 00 00 0b 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 91211.70000000007,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 92220.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 92232,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 b6 00 00 00 01 00 0e 00 00 14 00 00 00 0b 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 92240.1000000001,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 93241.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 93251.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 b0 00 00 00 01 00 0e 00 00 14 00 00 00 0a 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 93252.1000000001,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94200.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94211.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 aa 00 00 00 01 00 0e 00 00 14 00 00 00 0a 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 94212,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95160.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95171.90000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 a4 00 00 00 01 00 0e 00 00 14 00 00 00 0a 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 95172.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 96180.80000000005,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 96191.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 9f 00 00 00 01 00 0e 00 00 14 00 00 00 09 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 96192.5,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 97200.5,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 97201.5,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 9a 00 00 00 01 00 0e 00 00 14 00 00 00 09 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 97202.90000000002,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 98161.1000000001,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 98162.20000000007,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 95 00 00 00 01 00 0e 00 00 14 00 00 00 09 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 98163.80000000005,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99242,
+      "device": "Zwift Hub",
+      "service": "00001818-0000-1000-8000-00805f9b34fb",
+      "char": "00002a63-0000-1000-8000-00805f9b34fb",
+      "hex": "00 00 00 00",
+      "ascii": "....",
+      "decoded": "{\"powerW\":0}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99243.40000000002,
+      "device": "Zwift Hub",
+      "service": "00001826-0000-1000-8000-00805f9b34fb",
+      "char": "00002ad2-0000-1000-8000-00805f9b34fb",
+      "hex": "fe 02 00 00 91 00 00 00 01 00 0e 00 00 14 00 00 00 08 00 00",
+      "ascii": "....................",
+      "decoded": "{\"speedMps\":0,\"cadenceRpm\":0,\"powerW\":0,\"hrBpm\":0,\"totalDistanceM\":14}",
+      "marker": "",
+      "dir": "rx"
+    },
+    {
+      "tMs": 99244,
+      "device": "Zwift Hub",
+      "service": "0000180d-0000-1000-8000-00805f9b34fb",
+      "char": "00002a37-0000-1000-8000-00805f9b34fb",
+      "hex": "04 00",
+      "ascii": "..",
+      "decoded": "{\"bpm\":0,\"contact\":\"noContact\",\"rrMs\":[]}",
+      "marker": "",
+      "dir": "rx"
+    }
+  ]
+}

@@ -33,3 +33,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [031](ADR-031-server-inventory-and-operator-grant.md) | Server-Inventar, atomare Käufe und Operator-Gutschrift; Mindestlevel vorerst ungeprüft | Angenommen für E7-02 |
 | [032](ADR-032-garage-preview-worker.md) | Garage-Vorschau im Render-Worker | Angenommen |
 | [033](ADR-033-connected-worlds.md) | Zusammenhängende Welten aus Straßennetz, Höhenraster und Regionen | Vorgeschlagen, Henrys Freigabe ausstehend |
+| [034](ADR-034-hardware-capture-fixtures.md) | Hardware-Mitschnitte als BLE-Fixtures | Angenommen |
