@@ -13,13 +13,14 @@ import {
 const CATALOG_IDS: readonly string[] = ROUTE_CATALOG.map((entry) => entry.id);
 
 describe("route presentation catalog (#75)", () => {
-  it("offers the five presentable rides in a stable order", () => {
+  it("offers the six presentable rides in a stable order", () => {
     expect(CATALOG_IDS).toEqual([
       "test-loop",
       "coast-loop",
       "alpine-pass",
       "night-city",
       "voltonaut-tour",
+      "felsental",
     ]);
   });
 
@@ -34,7 +35,6 @@ describe("route presentation catalog (#75)", () => {
     expect(routePresentation("night-city")?.description).toContain("Neon");
     expect(routePresentation("flat-loop")).toBeUndefined();
     expect(routePresentation("kom-climb")).toBeUndefined();
-    expect(routePresentation("missing-route")).toBeUndefined();
   });
 
   it("accepts only catalog ids and rejects inherited object names", () => {

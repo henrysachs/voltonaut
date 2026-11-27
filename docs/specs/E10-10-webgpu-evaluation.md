@@ -1,7 +1,7 @@
 # Spec E10-10 – WebGPU und Ultra-Qualität evaluieren
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E10, Checkbox „WebGPU-Renderer evaluieren; Ultra-Qualitätsstufe", [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)
-- **Status:** Teilergebnis. Erste Hardwaremessung, Entscheidungsvorschlag und Messgrenzen sind dokumentiert. AK1 bleibt offen, bis eine Folgemessung das Backend pro Lauf protokolliert. Henrys Freigabe zu ADR-030 steht aus.
+- **Status:** Teilergebnis. Erste Hardwaremessung, Entscheidungsvorschlag und Messgrenzen sind dokumentiert. AK1 bleibt offen, bis eine Folgemessung das Backend pro Lauf protokolliert. ADR-030 hat Henry im Chat am 2026-11-27 angenommen.
 - **Betroffene Module:** Dokumentation und ein isoliertes Scratch-Lab. Kein Produktionscode, keine neue Abhängigkeit, keine geschützte Konfiguration.
 
 ## Ziel

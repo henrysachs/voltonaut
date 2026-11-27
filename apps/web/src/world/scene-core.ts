@@ -8,7 +8,13 @@ import { createFrameSampler, type EnvironmentSettings, type FrameSampler } from 
 import { billboardsInView, createLandscapeSystem } from "./landscape.js";
 import type { RenderViewport, SceneDiagnostics } from "./render-protocol.js";
 import { createRoadSystem } from "./road.js";
-import { createScheduler, QUALITY_SETTINGS } from "./scheduler.js";
+import {
+  createFramePresenter,
+  createScheduler,
+  peakBloom,
+  QUALITY_SETTINGS,
+  type FramePresenter,
+} from "./scheduler.js";
 
 /** The world the landscape draws (render-world.ts), named through its one consumer. */
 type RenderWorld = Parameters<typeof createLandscapeSystem>[0];
@@ -36,6 +42,7 @@ class ThreeSceneCore implements SceneCore {
   private readonly sampler: FrameSampler;
   private readonly rider;
   private readonly scheduler;
+  private readonly presenter: FramePresenter;
   private disposed = false;
 
   constructor(
@@ -52,6 +59,14 @@ class ThreeSceneCore implements SceneCore {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.shadowMap.enabled = QUALITY_SETTINGS.medium.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Bloom renders several passes per frame; diagnostics count all of them (reset in render).
+    renderer.info.autoReset = false;
+    this.presenter = createFramePresenter(
+      renderer,
+      this.scene,
+      this.camera,
+      QUALITY_SETTINGS.medium.bloom ? peakBloom(world.regions.map((region) => region.biome)) : 0,
+    );
     this.scheduler = createScheduler(
       [
         createEnvironmentSystem(),
@@ -69,7 +84,8 @@ class ThreeSceneCore implements SceneCore {
     const frame = this.sampler.sample(snapshot, nowMs);
 
     this.scheduler.update(frame);
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.info.reset();
+    this.presenter.render(frame.env);
 
     return {
       calls: this.renderer.info.render.calls,
@@ -99,6 +115,7 @@ class ThreeSceneCore implements SceneCore {
       Math.min(viewport.devicePixelRatio, QUALITY_SETTINGS.medium.pixelRatio),
     );
     this.renderer.setSize(viewport.widthCssPx, viewport.heightCssPx, false);
+    this.presenter.setSize(viewport.widthCssPx, viewport.heightCssPx);
     this.camera.aspect = viewport.widthCssPx / viewport.heightCssPx;
     this.camera.updateProjectionMatrix();
   };
@@ -117,6 +134,7 @@ class ThreeSceneCore implements SceneCore {
     if (this.disposed) return;
     this.disposed = true;
     this.scheduler.dispose();
+    this.presenter.dispose();
     this.renderer.dispose();
 
     if (!this.renderer.getContext().isContextLost()) this.renderer.forceContextLoss();

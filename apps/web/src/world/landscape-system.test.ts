@@ -1,4 +1,12 @@
-import { ALPINE_PASS, COAST_LOOP, createRoute, NIGHT_CITY, TEST_LOOP } from "@voltonaut/engine";
+import {
+  ALPINE_PASS,
+  COAST_LOOP,
+  createRoute,
+  NIGHT_CITY,
+  TEST_LOOP,
+  TEST_ROUTES,
+  type RouteData,
+} from "@voltonaut/engine";
 import * as THREE from "three";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -67,12 +75,20 @@ it("releases every shared geometry, material and instance buffer once without to
   expect(scene.children).toEqual([unrelated]);
 });
 
+function felsentalData(): RouteData {
+  const data = TEST_ROUTES["felsental"];
+
+  if (data === undefined) throw new TypeError("felsental must be a registered route");
+
+  return data;
+}
+
 interface BuiltLandscape {
   readonly scene: THREE.Scene;
   readonly scheduler: Scheduler;
 }
 
-describe.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY])(
+describe.each([TEST_LOOP, COAST_LOOP, ALPINE_PASS, NIGHT_CITY, felsentalData()])(
   "the landscape system on $id",
   (data) => {
     // One build per route in its own hook, so the check below only reads and disposes it.

@@ -8,6 +8,7 @@ interface DisposableResource {
 export function disposeObject(root: Readonly<THREE.Object3D>): void {
   const geometries = new Set<DisposableResource>();
   const materials = new Set<DisposableResource>();
+  const textures = new Set<DisposableResource>();
 
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three invokes traversal with its mutable Object3D contract.
   root.traverse((object) => {
@@ -25,6 +26,10 @@ export function disposeObject(root: Readonly<THREE.Object3D>): void {
       for (const material of meshMaterials) {
         if (material instanceof THREE.Material) {
           materials.add(material);
+
+          if (material instanceof THREE.MeshStandardMaterial && material.emissiveMap !== null) {
+            textures.add(material.emissiveMap);
+          }
         }
       }
     }
@@ -36,6 +41,10 @@ export function disposeObject(root: Readonly<THREE.Object3D>): void {
 
   for (const material of materials) {
     material.dispose();
+  }
+
+  for (const texture of textures) {
+    texture.dispose();
   }
 
   root.removeFromParent();

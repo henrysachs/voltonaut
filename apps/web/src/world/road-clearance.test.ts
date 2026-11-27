@@ -115,6 +115,7 @@ describe("road clearance (AK4)", () => {
     expect(shipped.map((entry) => entry.route.id).toSorted()).toEqual(
       Object.keys(TEST_ROUTES).toSorted(),
     );
+    expect(shipped.map((entry) => entry.id)).toContain("felsental");
   });
 
   it("keeps the terrain under a tight climbing hairpin", () => {

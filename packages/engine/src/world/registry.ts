@@ -19,15 +19,3 @@ export function worldPathRoute(
 
   return world?.route(reference.pathId);
 }
-
-/** The world reference a new ride on this path records (ADR-033 §7); undefined for unknown paths. */
-export function worldPathOf(
-  worlds: readonly World[],
-  pathId: string,
-): WorldPathReference | undefined {
-  const world = worlds.find((candidate) => candidate.route(pathId) !== undefined);
-
-  return world === undefined
-    ? undefined
-    : { worldId: world.id, worldRevision: world.revision, pathId };
-}

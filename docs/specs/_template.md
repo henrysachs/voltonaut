@@ -15,9 +15,9 @@ Ein bis drei Sätze: Was kann der Nutzer danach, was vorher nicht ging?
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK  | Ebene      | Datei / Fixture                                   |
-| --- | ---------- | ------------------------------------------------- |
-| AK1 | BLE-Replay | `packages/ble/src/zwift-play/play.replay.test.ts` |
+| AK  | Ebene      | Datei / Fixture                                      |
+| --- | ---------- | ---------------------------------------------------- |
+| AK1 | BLE-Replay | `packages/ble/src/zwift-play/adapter.replay.test.ts` |
 
 ## Nicht-Ziele
 
