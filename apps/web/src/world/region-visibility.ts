@@ -19,6 +19,7 @@ export function regionBounds(home: Pick<EngineRoute, "lengthM" | "worldPos">): R
   const points = Array.from({ length: Math.ceil(home.lengthM / 50) + 1 }, (_, index) =>
     home.worldPos(Math.min(home.lengthM, index * 50)),
   );
+
   const xs = points.map((point) => point.x);
   const zs = points.map((point) => point.z);
 

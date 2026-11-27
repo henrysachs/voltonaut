@@ -75,22 +75,57 @@ function roadsidePosts(
   return posts;
 }
 
-/** Shoulder, asphalt and both edge lines of the given roads, merged into one mesh per layer. */
+type RoadMaterials = Readonly<Record<"shoulder" | "asphalt" | "paint", THREE.MeshStandardMaterial>>;
+
+/** One drawn layer: ribbons of the given widths and offsets at one height in one material. */
+type RoadLayer = readonly [
+  readonly (readonly [number, number])[],
+  number,
+  THREE.MeshStandardMaterial,
+];
+
+/** The ridden road: shoulder, asphalt and each edge line as its own mesh, as before worlds. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library resources owned by this system.
+function riddenLayers(materials: RoadMaterials): readonly RoadLayer[] {
+  return [
+    [[[8, 0]], -0.02, materials.shoulder],
+    [[[7, 0]], 0, materials.asphalt],
+    [[[0.09, -3.1]], 0.01, materials.paint],
+    [[[0.09, 3.1]], 0.01, materials.paint],
+  ];
+}
+
+/** Side roads share one mesh per material: both edge lines together. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library resources owned by this system.
+function sideLayers(materials: RoadMaterials): readonly RoadLayer[] {
+  return [
+    [[[8, 0]], -0.02, materials.shoulder],
+    [[[7, 0]], 0, materials.asphalt],
+    [
+      [
+        [0.09, -3.1],
+        [0.09, 3.1],
+      ],
+      0.01,
+      materials.paint,
+    ],
+  ];
+}
+
+/** The given roads drawn in the given layers, one merged mesh per layer. */
 function roadLayers(
   roads: readonly EngineRoute[],
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three materials are mutable library resources owned by this system.
-  materials: Readonly<Record<"shoulder" | "asphalt" | "paint", THREE.MeshStandardMaterial>>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each layer carries its mutable Three material into the new mesh.
+  layers: readonly RoadLayer[],
 ): readonly THREE.Mesh[] {
-  const layers = [
-    [8, 0, -0.02, materials.shoulder],
-    [7, 0, 0, materials.asphalt],
-    [0.09, -3.1, 0.01, materials.paint],
-    [0.09, 3.1, 0.01, materials.paint],
-  ] satisfies [number, number, number, THREE.MeshStandardMaterial][];
-
-  return layers.map(([widthM, offsetM, heightM, material]) => {
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Each layer carries its mutable Three material into the new mesh.
+  return layers.map(([ribbons, heightM, material]) => {
     const mesh = new THREE.Mesh(
-      roadGeometry(roads.map((road) => sampleRoad(road, widthM, offsetM))),
+      roadGeometry(
+        roads.flatMap((road) =>
+          ribbons.map(([widthM, offsetM]) => sampleRoad(road, widthM, offsetM)),
+        ),
+      ),
       material,
     );
 
@@ -103,7 +138,7 @@ function roadLayers(
 
 /**
  * The ridden road with posts and waymarks, plus the world's side roads off the ridden path
- * (ADR-033 step 3) as plain road in four merged meshes.
+ * (ADR-033 step 3) as plain road in three merged meshes.
  */
 export function createRoadSystem(sideRoads: readonly EngineRoute[] = []): RenderSystem {
   const root = new THREE.Group();
@@ -120,9 +155,9 @@ export function createRoadSystem(sideRoads: readonly EngineRoute[] = []): Render
       const shoulder = new THREE.MeshStandardMaterial({ color: 0xb9ae8a, roughness: 1 });
       const materials = { shoulder, asphalt, paint };
 
-      root.add(...roadLayers([context.route], materials));
+      root.add(...roadLayers([context.route], riddenLayers(materials)));
 
-      if (sideRoads.length > 0) root.add(...roadLayers(sideRoads, materials));
+      if (sideRoads.length > 0) root.add(...roadLayers(sideRoads, sideLayers(materials)));
 
       root.add(roadsidePosts(context.route, paint), createWaymarks(context.route));
       context.scene.add(root);

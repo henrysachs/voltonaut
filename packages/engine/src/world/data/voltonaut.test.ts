@@ -67,6 +67,20 @@ it("is a valid smooth world with revision 1", () => {
   expect(WORLDS.at(-1)).toBe(VOLTONAUT);
 });
 
+it("names its regions and the tour for the route catalog", () => {
+  expect(VOLTONAUT_WORLD.regions).toEqual([
+    { id: "forest", name: "Wald und See", scenery: "mixed" },
+    { id: "coast", name: "Küste", scenery: "coast" },
+    { id: "night-city", name: "Nachtstadt", scenery: "night-city" },
+  ]);
+  expect(VOLTONAUT.routes.map((route) => route.name)).toEqual([
+    "Voltonaut-Tour",
+    "Wald und See",
+    "Küste",
+    "Nachtstadt",
+  ]);
+});
+
 it("offers the tour and one loop per region as routes", () => {
   expect(VOLTONAUT.routes.map((route) => [route.id, route.loop, route.scenery])).toEqual([
     ["voltonaut-tour", true, "mixed"],
@@ -82,7 +96,7 @@ it("rides the tour through every region without a break", () => {
 
   expect([...new Set(tourRegions())]).toEqual(["forest", "coast", "night-city"]);
   expect(tourRegions()).toHaveLength(9);
-  expect(tour.lengthM).toBeGreaterThan(30_000);
+  expect(tour.lengthM).toBeCloseTo(23_181.6, 0);
   expect(() => createRoute(tour)).not.toThrow();
 });
 

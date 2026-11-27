@@ -23,7 +23,9 @@ const POINT_STRIDE = 5;
 
 /** Region weights are reused within squares of this size; a 600 m blend needs no finer. */
 const MEMO_M = 64;
-const MAX_RINGS = 64;
+
+/** The far field reaches this many cells beyond the outermost road cells. */
+const FAR_MARGIN_CELLS = 32;
 
 interface GridPoint {
   readonly x: number;
@@ -31,8 +33,15 @@ interface GridPoint {
   readonly region: number;
 }
 
+interface FarCell {
+  readonly region: number;
+  readonly steps: number;
+}
+
 interface Grid {
   readonly pointsIn: (key: number) => readonly GridPoint[];
+  /** Nearest road cell's region and its distance in 4-neighbour cell steps. */
+  readonly far: (column: number, row: number) => FarCell;
 }
 
 function cellKey(column: number, row: number): number {
@@ -58,7 +67,102 @@ function buildGrid(roads: readonly RegionRoad[], regionIds: readonly string[]): 
     }
   }
 
-  return { pointsIn: (key) => cells.get(key) ?? [] };
+  return {
+    pointsIn: (key) => cells.get(key) ?? [],
+    far: farField((key) => cells.get(key) ?? [], [...cells.keys()]),
+  };
+}
+
+/** Region of the point nearest a cell's centre among the cell's own road points. */
+function cellRegion(points: readonly GridPoint[], column: number, row: number): number {
+  const centerX = (column + 0.5) * CELL_M;
+  const centerZ = (row + 0.5) * CELL_M;
+  let best = points[0];
+
+  for (const point of points) {
+    const distanceM = Math.hypot(point.x - centerX, point.z - centerZ);
+    const bestM = Math.hypot((best?.x ?? 0) - centerX, (best?.z ?? 0) - centerZ);
+
+    if (distanceM < bestM) best = point;
+  }
+
+  return best?.region ?? 0;
+}
+
+interface Sweep {
+  readonly regions: Int16Array;
+  readonly steps: Int32Array;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Breadth-first fill from the queued road cells: each empty cell takes its first neighbour. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The typed arrays and the queue are filled in place while the sweep runs.
+function sweep({ regions, steps, width, height }: Sweep, queue: number[]): void {
+  for (let head = 0; head < queue.length; head += 1) {
+    const slot = queue[head] ?? 0;
+    const x = slot % width;
+    const y = Math.floor(slot / width);
+
+    const neighbours = [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ] as const;
+
+    for (const [nx, ny] of neighbours) {
+      const next = ny * width + nx;
+
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && regions[next] === -1) {
+        regions[next] = regions[slot] ?? 0;
+        steps[next] = (steps[slot] ?? 0) + 1;
+        queue.push(next);
+      }
+    }
+  }
+}
+
+/**
+ * Nearest region per cell by a breadth-first sweep from every road cell (4-neighbour steps).
+ * Far from all roads only the nearest region shows, so cell accuracy is enough; cells beyond
+ * the swept area take the nearest swept cell.
+ */
+function farField(
+  cellsAt: (key: number) => readonly GridPoint[],
+  keys: readonly number[],
+): (column: number, row: number) => FarCell {
+  const columns = keys.map((key) => Math.round(key / 131_072));
+  const rows = keys.map((key, index) => key - (columns[index] ?? 0) * 131_072);
+  const minColumn = Math.min(...columns) - FAR_MARGIN_CELLS;
+  const minRow = Math.min(...rows) - FAR_MARGIN_CELLS;
+  const width = Math.max(...columns) + FAR_MARGIN_CELLS - minColumn + 1;
+  const height = Math.max(...rows) + FAR_MARGIN_CELLS - minRow + 1;
+  const regions = new Int16Array(width * height).fill(-1);
+  const steps = new Int32Array(width * height);
+  const queue: number[] = [];
+
+  for (const [index, key] of keys.entries()) {
+    const column = columns[index] ?? 0;
+    const row = rows[index] ?? 0;
+    const slot = (row - minRow) * width + column - minColumn;
+
+    regions[slot] = cellRegion(cellsAt(key), column, row);
+    queue.push(slot);
+  }
+
+  sweep({ regions, steps, width, height }, queue);
+
+  return (column, row) => {
+    const x = Math.min(width - 1, Math.max(0, column - minColumn));
+    const y = Math.min(height - 1, Math.max(0, row - minRow));
+    const outside = Math.abs(column - minColumn - x) + Math.abs(row - minRow - y);
+
+    return {
+      region: regions[y * width + x] ?? 0,
+      steps: (steps[y * width + x] ?? 0) + outside,
+    };
+  };
 }
 
 /** Cell offsets on the square ring at the given distance; ring 0 is the centre cell. */
@@ -104,32 +208,42 @@ class RingSearch {
       }
     }
   }
-
-  /** Distance no unscanned point can undercut. */
-  get reachM(): number {
-    return (this.ring - 1) * CELL_M;
-  }
 }
 
 /** Fade weights; outside every blend zone the nearest region alone. */
 function weightsFrom(grid: Grid, count: number, x: number, z: number): readonly number[] {
+  const blendRings = Math.ceil(REGION_BLEND_M / CELL_M) + 1;
+  const far = grid.far(Math.floor(x / CELL_M), Math.floor(z / CELL_M));
+
+  // Beyond 2 · blendRings Manhattan steps no road point lies within the blend distance.
+  if (far.steps > 2 * blendRings) return oneHot(count, far.region);
+
   const search = new RingSearch(grid, count, x, z);
 
-  search.scanTo(Math.ceil(REGION_BLEND_M / CELL_M) + 1);
+  search.scanTo(blendRings);
 
   const raw = search.nearest.map((distanceM) => Math.max(0, 1 - distanceM / REGION_BLEND_M) ** 2);
   const total = raw.reduce((sum, weight) => sum + weight, 0);
 
   if (total > 0) return raw.map((weight) => weight / total);
 
-  for (let ring = search.reachM / CELL_M + 2; ring <= MAX_RINGS; ring += 1) {
-    if (Math.min(...search.nearest) <= search.reachM) break;
-    search.scanTo(ring);
-  }
+  return oneHot(count, far.region);
+}
 
-  const winner = search.nearest.indexOf(Math.min(...search.nearest));
+const oneHots = new Map<string, readonly number[]>();
 
-  return search.nearest.map((_, index) => (index === Math.max(0, winner) ? 1 : 0));
+/** Shared weights giving one region everything. */
+function oneHot(count: number, region: number): readonly number[] {
+  const key = `${count}:${region}`;
+  const known = oneHots.get(key);
+
+  if (known !== undefined) return known;
+
+  const weights = Array.from({ length: count }, (_, index) => (index === region ? 1 : 0));
+
+  oneHots.set(key, weights);
+
+  return weights;
 }
 
 /**

@@ -68,6 +68,7 @@ it("finds the truly nearest far region, not the first one a widening ring touche
     // Side of ring 15, about 2980 m away.
     { regionId: "b", centerline: [{ x: 32, z: 3010 }] },
   ];
+
   const far = createRegionMap(roads, ["a", "b"]);
 
   expect(far.weightsAt(32, 32)).toEqual([0, 1]);

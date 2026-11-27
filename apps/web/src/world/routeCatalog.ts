@@ -69,7 +69,7 @@ export const ROUTE_CATALOG: readonly RoutePresentation[] = [
     id: "voltonaut-tour",
     title: "Voltonaut-Tour",
     description:
-      "31 km durch die Welt Voltonaut: Wald und See, Küste und Nachtstadt ohne Ladepause.",
+      "23 km durch die Welt Voltonaut: Wald und See, Küste und Nachtstadt ohne Ladepause.",
     environment: environment(31, 12 * 60 * 60, "clear"),
     budget: STANDARD_BUDGET,
   },

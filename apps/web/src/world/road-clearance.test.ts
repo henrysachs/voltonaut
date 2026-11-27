@@ -30,6 +30,11 @@ const shipped: readonly ShippedRoute[] = WORLDS.flatMap((world, index) =>
   })),
 );
 
+/** Ids of the routes ridden in a world. */
+function routeIdsOf(view: RenderWorld): readonly string[] {
+  return shipped.flatMap((entry) => (entry.world === view ? [entry.id] : []));
+}
+
 const terrainOfWorld = new Map<RenderWorld, Heightfield>();
 
 /** The world raster as drawn, planned once per world. */
@@ -148,11 +153,8 @@ describe.each(worldViews.map((view, index) => [WORLDS[index]?.id, view] as const
       drawnTerrain(view);
     });
 
-    it.each(shipped.flatMap((entry) => (entry.world === view ? [entry.id] : [])))(
-      "keeps the terrain under every road band of %s",
-      (id) => {
-        expect(clearanceOfShipped(id)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
-      },
-    );
+    it.each(routeIdsOf(view))("keeps the terrain under every road band of %s", (id) => {
+      expect(clearanceOfShipped(id)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
+    });
   },
 );

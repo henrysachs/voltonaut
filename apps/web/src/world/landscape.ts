@@ -1,9 +1,8 @@
 import * as THREE from "three";
 
 import type { Biome } from "./biome.js";
-import { biomeObjects } from "./biome-landscape.js";
+import { regionDressings, showInView, type RegionDressing } from "./region-dressing.js";
 import type { RenderWorld } from "./render-world.js";
-import { regionBounds, regionInView, type RegionBounds } from "./region-visibility.js";
 import { disposeObject } from "./resources.js";
 import type { RenderSystem } from "./scheduler.js";
 import { createWorldTerrain } from "./terrain.js";
@@ -30,7 +29,7 @@ export function biomeTerrain(biome: Biome): TerrainPalette {
  */
 export function createLandscapeSystem(world: RenderWorld): RenderSystem {
   const root = new THREE.Group();
-  const dressings: { readonly group: THREE.Group; readonly bounds: RegionBounds }[] = [];
+  const dressings: RegionDressing[] = [];
 
   return {
     id: "landscape",
@@ -55,24 +54,15 @@ export function createLandscapeSystem(world: RenderWorld): RenderSystem {
 
       root.add(terrain);
 
-      for (const [index, plan] of landscape.plans.entries()) {
-        const group = new THREE.Group();
-        const region = world.regions[index];
-
-        group.name = `region-${region?.id ?? index}`;
-        group.add(...biomeObjects(region?.biome ?? { kind: "forest" }, plan));
-        root.add(group);
-        dressings.push({ group, bounds: regionBounds(plan.route) });
+      for (const dressing of regionDressings(world, landscape.plans)) {
+        root.add(dressing.group);
+        dressings.push(dressing);
       }
 
       context.scene.add(root);
     },
     update(frame) {
-      if (dressings.length < 2) return;
-
-      for (const { group, bounds } of dressings) {
-        group.visible = regionInView(bounds, frame.ride.worldPos.x, frame.ride.worldPos.z);
-      }
+      showInView(dressings, frame.ride.worldPos.x, frame.ride.worldPos.z);
     },
     setQuality() {},
     dispose() {

@@ -30,7 +30,14 @@ export interface LandscapePlan {
   readonly apron: readonly RoadSample[];
   readonly trees: readonly Plant[];
   readonly rocks: readonly Plant[];
+  /** Per road index: plants are grouped into instanced meshes along stretches of this length. */
+  readonly stretchesM: readonly number[];
 }
+
+/** Plant stretches of a region's home road; connecting roads use longer, fewer stretches. */
+export const HOME_STRETCH_M = 250;
+
+export const CONNECTING_STRETCH_M = 500;
 
 /** Ground point beside the route on the drawn terrain mesh. */
 export function terrainPosition(
@@ -76,14 +83,20 @@ function standsFree(scatter: Scatter, plant: Plant): boolean {
   );
 }
 
-/** One seeded plant beside a road; before 650 m it is always a tree, beyond often a rock. */
+/** Where along a road one plant is scattered; the dense stretch grows trees only. */
+interface Spot {
+  readonly startM: number;
+  readonly row: number;
+  readonly side: number;
+  readonly dense: boolean;
+}
+
+/** One seeded plant beside a road; in the dense stretch it is always a tree, beyond often a rock. */
 function plantAt(
   scatter: Scatter,
   road: EngineRoute,
   roadIndex: number,
-  startM: number,
-  row: number,
-  side: number,
+  { startM, row, side, dense }: Spot,
 ): Plant & { readonly tree: boolean } {
   const { random } = scatter;
   const routeDistanceM = Math.min(road.lengthM - 0.01, startM + random() * 18);
@@ -92,7 +105,7 @@ function plantAt(
   const shade = random();
   const heightM = 7 + random() * 7;
   const rotationRad = random() * Math.PI * 2;
-  const tree = startM < 650 || shade > 0.35;
+  const tree = dense || shade > 0.35;
   const common = { roadIndex, routeDistanceM, position, rotationRad, shade, tree };
 
   return tree
@@ -100,15 +113,29 @@ function plantAt(
     : { ...common, heightM: 1, radiusM: 0.7 + shade * 2 };
 }
 
-/** Forest along one road: six rows per side over the first 650 m, three beyond. */
-function scatterAlong(scatter: Scatter, road: EngineRoute, roadIndex: number): Forest {
+/** Dense forest at the start of a region's home road, by the lake. */
+const DENSE_START_M = 650;
+
+/**
+ * Forest along one road: six rows per side over the first 650 m of a home road, three elsewhere.
+ * Connecting roads start at junctions and stay sparse there (ADR-033 step 3).
+ */
+function scatterAlong(
+  scatter: Scatter,
+  road: EngineRoute,
+  roadIndex: number,
+  denseStartM: number,
+): Forest {
   const trees: Plant[] = [];
   const rocks: Plant[] = [];
 
   for (let startM = 0; startM < road.lengthM; startM += 24) {
+    const dense = startM < denseStartM;
+
     for (const side of [-1, 1]) {
-      for (const row of startM < 650 ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]) {
-        const { tree, ...plant } = plantAt(scatter, road, roadIndex, startM, row, side);
+      for (const row of dense ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]) {
+        const spot = { startM, row, side, dense };
+        const { tree, ...plant } = plantAt(scatter, road, roadIndex, spot);
 
         if (standsFree(scatter, plant)) (tree ? trees : rocks).push(plant);
       }
@@ -146,15 +173,30 @@ export function createRegionalLandscape(
   const carved = lakes.filter((_, index) => regions[index]?.withLake === true);
   const { field, corridor } = planTerrain(roads, carved, seed);
   const scatter: Scatter = { random: seededRandom(seed), lakes, terrain: field, corridor };
-  const forests = roads.map((road, roadIndex) => scatterAlong(scatter, road, roadIndex));
+
+  const forests = roads.map((road, roadIndex) =>
+    scatterAlong(
+      scatter,
+      road,
+      roadIndex,
+      regions.some((region) => region.home === road) ? DENSE_START_M : 0,
+    ),
+  );
 
   const owns = (index: number, plant: Plant): boolean =>
     dominantRegion(regionMap, plant.position.x, plant.position.z) === index;
+
+  const homeRoads = new Set(regions.map((region) => region.home));
+
+  const stretchesM = roads.map((road) =>
+    homeRoads.has(road) ? HOME_STRETCH_M : CONNECTING_STRETCH_M,
+  );
 
   return {
     terrain: field,
     lakes,
     plans: regions.map((region, index) => ({
+      stretchesM,
       route: region.home,
       lake: lakes[index] ?? planLake(region.home, false),
       terrain: field,

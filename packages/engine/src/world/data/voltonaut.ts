@@ -29,14 +29,14 @@ export const VOLTONAUT_WORLD: WorldData = regionTourWorld({
       name: "Küste",
       scenery: "coast",
       loop: COAST_LOOP,
-      offset: { x: 7000, z: -3000 },
+      offset: { x: 4800, z: -1800 },
     },
     {
       id: "night-city",
       name: "Nachtstadt",
       scenery: "night-city",
       loop: NIGHT_CITY,
-      offset: { x: 6500, z: 4500 },
+      offset: { x: 3800, z: 3300 },
     },
   ],
 });
