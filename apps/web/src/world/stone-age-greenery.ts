@@ -27,6 +27,12 @@ const FERN_MAX_RELIEF_M = 0.4;
 const BOULDER_FOOT_SHARE = 0.55;
 const BOULDER_SINK_SHARE = 0.3;
 
+/**
+ * Ground relief allowed under a boulder's foot, as a share of its radius. Its middle stands
+ * 0.25 r above its position, which settling lowers by at most relief − 0.3 r: 0.5 r leaves 0.05 r.
+ */
+const BOULDER_MAX_RELIEF_SHARE = 0.5;
+
 function plantDecor(
   plan: Readonly<LandscapePlan>,
   plant: Readonly<Plant>,
@@ -71,7 +77,13 @@ export function greenery(plan: Readonly<LandscapePlan>, space: Footprints): Gree
       sinkM: rock.radiusM * BOULDER_SINK_SHARE,
     });
 
-    if (space.fits(item.position, item.radiusM)) boulders.push(item);
+    const footM = rock.radiusM * BOULDER_FOOT_SHARE;
+
+    if (
+      space.fits(item.position, item.radiusM) &&
+      flatEnough(plan, item.position, footM, rock.radiusM * BOULDER_MAX_RELIEF_SHARE)
+    )
+      boulders.push(item);
   }
 
   return { palms, ferns, boulders };

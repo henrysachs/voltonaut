@@ -4,6 +4,15 @@ import * as THREE from "three";
 import { chunkedMeshes, type ChunkLayer } from "./biomeSceneryShared.js";
 import { CARRIED, DressingGroup, STANDS } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
+import {
+  DOME_SINK_M,
+  DOOR_HEIGHT_M,
+  doorwayM,
+  ENTRANCE_RADIUS_M,
+  entranceLengthM,
+  entranceMiddleM,
+  HOUSE_FLOOR_SINK_M,
+} from "./stone-age-house.js";
 import { partsOf, planStoneAge, type Part, type Placed, type RockHouse } from "./stone-age-plan.js";
 import { atItem, named, placeStatues, placeVolcanoes, stone } from "./stoneAgeLandmarks.js";
 
@@ -13,25 +22,13 @@ function houseDomeLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
     material: stone(),
     items: houses,
     transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
-      atItem(object, house, [0, -0.3, 0]);
+      atItem(object, house, [0, -DOME_SINK_M, 0]);
       object.scale.set(house.domeRadiusM, house.heightM, house.domeRadiusM);
     },
     tint(house: Readonly<RockHouse>, color: THREE.Color) {
       color.setHSL(0.08, 0.2, 0.42 + house.shade * 0.14);
     },
   };
-}
-
-const ENTRANCE_RADIUS_M = 1.25;
-
-/** How far the entrance tunnel reaches out of the dome rim towards the road. */
-const ENTRANCE_REACH_M = 0.5;
-
-/** Share of the dome radius where the tunnel starts; the dome is still taller than the arch there. */
-const ENTRANCE_START = 0.6;
-
-function entranceLengthM(house: Readonly<RockHouse>): number {
-  return house.domeRadiusM * (1 - ENTRANCE_START) + ENTRANCE_REACH_M;
 }
 
 /**
@@ -47,10 +44,8 @@ function houseEntranceLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse>
     material: stone(),
     items: houses,
     transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
-      const lengthM = entranceLengthM(house);
-
-      atItem(object, house, [0, -0.1, house.domeRadiusM * ENTRANCE_START + lengthM / 2]);
-      object.scale.set(ENTRANCE_RADIUS_M, ENTRANCE_RADIUS_M, lengthM);
+      atItem(object, house, [0, -HOUSE_FLOOR_SINK_M, entranceMiddleM(house)]);
+      object.scale.set(ENTRANCE_RADIUS_M, ENTRANCE_RADIUS_M, entranceLengthM(house));
     },
     tint(house: Readonly<RockHouse>, color: THREE.Color) {
       color.setHSL(0.08, 0.2, 0.36 + house.shade * 0.14);
@@ -61,13 +56,11 @@ function houseEntranceLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse>
 /** Dark doorway on the tunnel mouth; its corners stay inside the arch. */
 function houseDoorLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
   return {
-    geometry: new THREE.BoxGeometry(1.2, 1, 0.08),
+    geometry: new THREE.BoxGeometry(1.2, DOOR_HEIGHT_M, 0.08),
     material: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }),
     items: houses,
     transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
-      const mouthM = house.domeRadiusM * ENTRANCE_START + entranceLengthM(house);
-
-      atItem(object, house, [0, 0.4, mouthM + 0.02]);
+      atItem(object, house, [0, DOOR_HEIGHT_M / 2 - HOUSE_FLOOR_SINK_M, doorwayM(house)]);
     },
     tint(_house: Readonly<RockHouse>, color: THREE.Color) {
       color.setHex(0x24180f);
@@ -181,14 +174,11 @@ export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): DressingGr
 
   root.name = "biome-stone-age";
   placeVolcanoes(root, decor.volcanoes, lapM);
+  // Dome, tunnel and doorway each stand on the ground, so the ground check also catches a door
+  // that faces into the hill.
   root.place(
     STANDS,
     ...named(chunkedMeshes(houseDomeLayer(decor.houses), lapM), "stone-age-house"),
-  );
-  // The dome carries its tunnel. Settling keeps the tunnel floor on the ground at its mouth; on a
-  // slope its uphill side runs into the hill like a cellar entrance.
-  root.place(
-    CARRIED,
     ...named(chunkedMeshes(houseEntranceLayer(decor.houses), lapM), "stone-age-entrance"),
     ...named(chunkedMeshes(houseDoorLayer(decor.houses), lapM), "stone-age-door"),
   );

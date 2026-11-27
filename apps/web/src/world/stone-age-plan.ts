@@ -1,6 +1,7 @@
 import { groundPosition, seededRandom, type ChunkItem } from "./biomeSceneryShared.js";
 import { PLANT_ROAD_CLEARANCE_M, type LandscapePlan } from "./landscape-plan.js";
 import { greenery } from "./stone-age-greenery.js";
+import { rockHouses, type RockHouse } from "./stone-age-house.js";
 import {
   firstSite,
   flatEnough,
@@ -12,12 +13,9 @@ import {
   type Placed,
 } from "./stone-age-space.js";
 
-export type { Placed } from "./stone-age-space.js";
+export type { RockHouse } from "./stone-age-house.js";
 
-export interface RockHouse extends Placed {
-  readonly domeRadiusM: number;
-  readonly heightM: number;
-}
+export type { Placed } from "./stone-age-space.js";
 
 export interface Volcano extends Placed {
   readonly baseRadiusM: number;
@@ -28,92 +26,6 @@ export interface Volcano extends Placed {
 export interface Part<T> extends ChunkItem {
   readonly owner: Readonly<T>;
   readonly index: number;
-}
-
-/**
- * Beyond the dome rim the entrance tunnel reaches out to its mouth corners (stoneAgeScenery.ts);
- * its floor sits HOUSE_FLOOR_SINK_M into the ground.
- */
-const HOUSE_FOOT_BEYOND_DOME_M = 0.8;
-const HOUSE_FLOOR_SINK_M = 0.1;
-
-/** The dome sits 0.3 m into the ground (stoneAgeScenery.ts). */
-const DOME_SINK_M = 0.3;
-
-/** Ground under the dome centre must stay below the dome's middle, with this much to spare. */
-const DOME_MIDDLE_MARGIN_M = 0.1;
-
-function houseMaxReliefM(house: Readonly<RockHouse>): number {
-  return house.heightM / 2 - DOME_SINK_M - DOME_MIDDLE_MARGIN_M;
-}
-
-/** Village across the lap line and a hamlet on the plateau above the Steinbruch. */
-const SETTLEMENTS: readonly { readonly fromM: number; readonly toM: number }[] = [
-  { fromM: -360, toM: 440 },
-  { fromM: 3380, toM: 3820 },
-];
-
-function rockHouseAt(
-  plan: Readonly<LandscapePlan>,
-  distanceM: number,
-  random: () => number,
-): RockHouse {
-  const side = random() < 0.5 ? -1 : 1;
-  const domeRadiusM = 3.2 + random() * 2.6;
-  const routeDistanceM = lapDistanceM(plan, distanceM + random() * 14);
-
-  const position = settledOn(
-    plan,
-    groundPosition(plan, routeDistanceM, side * (15 + random() * 24)),
-    {
-      radiusM: domeRadiusM + HOUSE_FOOT_BEYOND_DOME_M,
-      sinkM: HOUSE_FLOOR_SINK_M,
-    },
-  );
-
-  const road = plan.route.worldPos(routeDistanceM);
-  const shade = random();
-
-  return {
-    routeDistanceM,
-    position,
-    radiusM: domeRadiusM + 1.2,
-    // The door at local +Z looks at the road.
-    rotationRad: Math.atan2(road.x - position.x, road.z - position.z),
-    shade,
-    scale: 1,
-    domeRadiusM,
-    heightM: domeRadiusM * (0.75 + shade * 0.2),
-  };
-}
-
-function rockHouses(
-  plan: Readonly<LandscapePlan>,
-  space: Footprints,
-  random: () => number,
-): readonly RockHouse[] {
-  const houses: RockHouse[] = [];
-
-  for (const { fromM, toM } of SETTLEMENTS) {
-    for (let distanceM = fromM; distanceM < toM; distanceM += 38) {
-      const house = firstSite(SITE_TRIES, () => {
-        const candidate = rockHouseAt(plan, distanceM, random);
-        const footM = candidate.domeRadiusM + HOUSE_FOOT_BEYOND_DOME_M;
-
-        return space.fits(candidate.position, candidate.radiusM) &&
-          flatEnough(plan, candidate.position, footM, houseMaxReliefM(candidate))
-          ? candidate
-          : undefined;
-      });
-
-      if (house === undefined) continue;
-
-      space.claim(house);
-      houses.push(house);
-    }
-  }
-
-  return houses;
 }
 
 /** Tail tip to snout of a statue at scale 1, from its centre; the footprint covers it. */
