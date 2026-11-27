@@ -16,7 +16,7 @@ function houseDomeLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
       object.scale.set(house.domeRadiusM, house.heightM, house.domeRadiusM);
     },
     tint(house: Readonly<RockHouse>, color: THREE.Color) {
-      color.setHSL(0.09, 0.16, 0.5 + house.shade * 0.16);
+      color.setHSL(0.08, 0.2, 0.42 + house.shade * 0.14);
     },
   };
 }

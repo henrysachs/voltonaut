@@ -32,7 +32,7 @@ export interface Volcano extends Placed {
   readonly heightM: number;
 }
 
-/** One of several identical parts of a decor item: a frond, a dino leg, a lava stream. */
+/** One of several identical parts of a decor item: a frond or a lava stream. */
 export interface Part<T> extends ChunkItem {
   readonly owner: Readonly<T>;
   readonly index: number;
@@ -156,16 +156,17 @@ function dinoStatues(
   return statues;
 }
 
-/** Two volcanoes outside the valley and one in its middle, beside the given route distance. */
+/** Volcanoes beyond both ends of the valley, beside the climb and inside the loop. */
 const VOLCANO_SITES: readonly {
   readonly distanceM: number;
   readonly lateralM: number;
   readonly baseRadiusM: number;
   readonly heightM: number;
 }[] = [
+  { distanceM: 0, lateralM: -370, baseRadiusM: 190, heightM: 220 },
   { distanceM: 2300, lateralM: -400, baseRadiusM: 200, heightM: 230 },
-  { distanceM: 5700, lateralM: 560, baseRadiusM: 250, heightM: 290 },
-  { distanceM: 7900, lateralM: -390, baseRadiusM: 190, heightM: 210 },
+  { distanceM: 4530, lateralM: -380, baseRadiusM: 210, heightM: 260 },
+  { distanceM: 5900, lateralM: 360, baseRadiusM: 240, heightM: 280 },
 ];
 
 function volcanoes(plan: Readonly<LandscapePlan>, space: Footprints): readonly Volcano[] {
