@@ -117,8 +117,34 @@ it("replays a ride on the voltonaut tour in its connected world (ADR-033 step 3)
   expect(result.summary.distanceM).toBeGreaterThan(0);
 });
 
+const VINEYARD_WORLD_PATH: RideReference = {
+  worldId: "voltonaut",
+  worldRevision: "2",
+  pathId: "voltonaut-vineyard",
+};
+
+it("replays a ride on the vineyard path in revision 2 of the connected world (#146)", () => {
+  const result = replayed(recordReplay(SEGMENT_RIDE, 1, VINEYARD_WORLD_PATH));
+
+  expect(result).toMatchObject({ status: "replayed", replayRevision: "world-path-1" });
+  expect(result.summary.distanceM).toBeGreaterThan(0);
+});
+
+it("replays the tour in revision 1 and in revision 2", () => {
+  for (const worldRevision of ["1", "2"]) {
+    expect(
+      replayed(recordReplay(SEGMENT_RIDE, 1, { ...TOUR_WORLD_PATH, worldRevision })),
+    ).toMatchObject({
+      status: "replayed",
+      replayRevision: "world-path-1",
+    });
+  }
+});
+
 it.each<RideReference>([
-  { ...TOUR_WORLD_PATH, worldRevision: "2" },
+  { ...TOUR_WORLD_PATH, worldRevision: "3" },
+  { ...VINEYARD_WORLD_PATH, worldRevision: "1" },
+  { ...VINEYARD_WORLD_PATH, worldRevision: "3" },
   { ...TOUR_WORLD_PATH, pathId: "voltonaut-alpine" },
   { routeId: "voltonaut-tour", routeRevision: "1" },
   { routeId: "voltonaut", routeRevision: "1" },

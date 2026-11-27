@@ -7,6 +7,7 @@ import { FLAT_LOOP } from "./flat-loop.js";
 import { KOM_CLIMB } from "./kom-climb.js";
 import { NIGHT_CITY } from "./night-city.js";
 import { TEST_LOOP } from "./test-loop.js";
+import { VINEYARD_INTERVALS } from "./vineyard-intervals.js";
 
 interface TestRouteRegistry {
   readonly [routeId: string]: RouteData | undefined;
@@ -17,4 +18,4 @@ export const TEST_ROUTES: TestRouteRegistry = Object.fromEntries(
   WORLDS.flatMap((world) => world.routes).map((route) => [route.id, route]),
 );
 
-export { ALPINE_PASS, COAST_LOOP, FLAT_LOOP, KOM_CLIMB, NIGHT_CITY, TEST_LOOP };
+export { ALPINE_PASS, COAST_LOOP, FLAT_LOOP, KOM_CLIMB, NIGHT_CITY, TEST_LOOP, VINEYARD_INTERVALS };

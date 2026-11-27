@@ -8,7 +8,7 @@ import { singleRouteWorld } from "../singleRouteWorld.js";
 import type { World } from "../types.js";
 import { createWorld } from "../world.js";
 
-import { VOLTONAUT_WORLD } from "./voltonaut.js";
+import { VOLTONAUT_WORLD, VOLTONAUT_WORLD_REVISION_2 } from "./voltonaut.js";
 
 /** Revision of the migrated single-route worlds; matches the recorded routeRevision "1". */
 export const SINGLE_ROUTE_WORLD_REVISION = "1";
@@ -26,5 +26,11 @@ export const TEST_WORLDS: readonly World[] = [
 /** The connected world voltonaut (ADR-033 step 3) with its tour and region loops. */
 export const VOLTONAUT: World = createWorld(VOLTONAUT_WORLD);
 
-/** Every shipped world: the single-route worlds first, then the connected worlds. */
-export const WORLDS: readonly World[] = [...TEST_WORLDS, VOLTONAUT];
+/** Revision 2 of voltonaut: the tour with the vineyard region (#146). New rides record it. */
+export const VOLTONAUT_REVISION_2: World = createWorld(VOLTONAUT_WORLD_REVISION_2);
+
+/**
+ * Every shipped world: the single-route worlds first, then the connected worlds. A world id
+ * lists its revisions oldest first; the newest one comes last and wins by path id.
+ */
+export const WORLDS: readonly World[] = [...TEST_WORLDS, VOLTONAUT, VOLTONAUT_REVISION_2];

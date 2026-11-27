@@ -20,12 +20,15 @@ export function worldPathRoute(
   return world?.route(reference.pathId);
 }
 
-/** The world reference a new ride on this path records (ADR-033 §7); undefined for unknown paths. */
+/**
+ * The world reference a new ride on this path records (ADR-033 §7); undefined for unknown paths.
+ * Worlds list revisions oldest first, so the newest world with the path wins.
+ */
 export function worldPathOf(
   worlds: readonly World[],
   pathId: string,
 ): WorldPathReference | undefined {
-  const world = worlds.find((candidate) => candidate.route(pathId) !== undefined);
+  const world = worlds.findLast((candidate) => candidate.route(pathId) !== undefined);
 
   return world === undefined
     ? undefined

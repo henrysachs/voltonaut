@@ -9,6 +9,11 @@ export interface RoadEnd {
   readonly point: CenterlinePoint;
   readonly headingRad: number;
   readonly elevationM: Meters;
+  /**
+   * Rise per metre of the road along its travel direction at this end. When both ends give
+   * one, the transition keeps that grade through the junction; otherwise it levels out.
+   */
+  readonly slope?: number | undefined;
 }
 
 const DENSE_STEPS = 4096;
@@ -71,6 +76,19 @@ function easedElevation(start: RoadEnd, end: RoadEnd, share: number): Meters {
   );
 }
 
+/** Cubic Hermite elevation: meets both end heights with the end grades of the roads it joins. */
+function hermiteElevation(start: RoadEnd, end: RoadEnd, lengthM: Meters, share: number): Meters {
+  const squared = share * share;
+  const cubed = squared * share;
+
+  return (
+    (2 * cubed - 3 * squared + 1) * start.elevationM +
+    (cubed - 2 * squared + share) * lengthM * (start.slope ?? 0) +
+    (-2 * cubed + 3 * squared) * end.elevationM +
+    (cubed - squared) * lengthM * (end.slope ?? 0)
+  );
+}
+
 /**
  * A smooth transition road between two junctions (ADR-033 step 3): a cubic Bézier that leaves
  * and enters along the given headings, resampled to chords of at most chordM, with one profile
@@ -104,7 +122,9 @@ export function transitionRoad(start: RoadEnd, end: RoadEnd, chordM: Meters): Ro
           ? start.elevationM
           : step === chords
             ? end.elevationM
-            : easedElevation(start, end, distanceM / lengthM),
+            : start.slope === undefined && end.slope === undefined
+              ? easedElevation(start, end, distanceM / lengthM)
+              : hermiteElevation(start, end, lengthM, distanceM / lengthM),
     })),
   };
 }

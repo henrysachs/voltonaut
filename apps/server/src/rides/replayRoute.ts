@@ -28,6 +28,7 @@ const LEGACY_ROUTE_IDS: readonly string[] = [
 const REPLAYABLE_WORLDS: readonly { readonly worldId: string; readonly worldRevision: string }[] = [
   ...LEGACY_ROUTE_IDS.map((worldId) => ({ worldId, worldRevision: "1" })),
   { worldId: "voltonaut", worldRevision: "1" },
+  { worldId: "voltonaut", worldRevision: "2" },
 ];
 
 const REPLAYABLE_ROUTE_IDS = new Set(LEGACY_ROUTE_IDS);
