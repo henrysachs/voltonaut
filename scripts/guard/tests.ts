@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -11,16 +10,7 @@ import {
   expectedBaseCompilerOptions,
   scanEscapeHatches,
 } from "./main.ts";
-
-function withTempDir(run: (root: string) => void): void {
-  const directory = mkdtempSync(join(tmpdir(), "voltonaut-guard-"));
-
-  try {
-    run(directory);
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-}
+import { withTempDir } from "./temp-dir.ts";
 
 await test("scanEscapeHatches rejects every documented escape hatch", () => {
   withTempDir((root) => {
@@ -30,7 +20,6 @@ await test("scanEscapeHatches rejects every documented escape hatch", () => {
         "// @ts-ignore",
         "const value = input as any;",
         "const second = input as unknown as string;",
-        "const third = record!.field;",
         "// oxlint-disable-next-line",
         "// @ts-expect-error",
         "export const values = 1;",
@@ -47,16 +36,55 @@ await test("scanEscapeHatches rejects every documented escape hatch", () => {
     );
 
     const findings = scanEscapeHatches(root);
-    assert.equal(findings.length, 6);
+    assert.equal(findings.length, 5);
     const [first] = findings;
     assert.ok(first !== undefined);
     assert.equal(first.file, "bad.ts");
     assert.equal(first.line, 1);
     assert.ok(findings.some((finding) => finding.message.includes("as any")));
     assert.ok(findings.some((finding) => finding.message.includes("as unknown as")));
-    assert.ok(findings.some((finding) => finding.message.includes("non-null")));
     assert.ok(findings.some((finding) => finding.message.includes("oxlint-disable")));
     assert.ok(findings.some((finding) => finding.message.includes("@ts-expect-error")));
+  });
+});
+
+await test("scanEscapeHatches leaves negation to the AST: '!(x instanceof Y)' is no finding (5d00ee7)", () => {
+  withTempDir((root) => {
+    writeFileSync(
+      join(root, "negation.ts"),
+      [
+        "export function isPlain(value: Date | string): boolean {",
+        "  return !(value instanceof Date) && ![value].includes('');",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    assert.deepEqual(scanEscapeHatches(root), []);
+  });
+});
+
+await test("checkLintConfigs keeps the AST non-null rule that replaced the guard regex (ADR-036)", () => {
+  withTempDir((root) => {
+    const oxlintConfig = [
+      "export default defineConfig({",
+      "  options: { typeAware: true, denyWarnings: true },",
+      '  rules: { "typescript/no-non-null-assertion": "error" },',
+      "});",
+      "",
+    ].join("\n");
+
+    writeFileSync(join(root, "oxlint.config.ts"), oxlintConfig);
+    writeFileSync(join(root, ".dependency-cruiser.cjs"), "module.exports = {};\n");
+
+    const missing = "required rule 'typescript/no-non-null-assertion' is missing";
+    assert.ok(!checkLintConfigs(root).some((finding) => finding.includes(missing)));
+
+    writeFileSync(
+      join(root, "oxlint.config.ts"),
+      oxlintConfig.replace('"typescript/no-non-null-assertion": "error"', ""),
+    );
+    assert.ok(checkLintConfigs(root).some((finding) => finding.includes(missing)));
   });
 });
 

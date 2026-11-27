@@ -1,14 +1,17 @@
+import { checkCommitTrailers, readCommitRange } from "./lib/commit-trailers.ts";
 import { checkDependencyRegister } from "./lib/dependencies.ts";
 import { checkLintConfigs } from "./lib/lint-configs.ts";
 import { checkProtectedDiff } from "./lib/protected-diff.ts";
 import { checkTypeScriptConfigs } from "./lib/tsconfig.ts";
 import { scanEscapeHatches } from "./lib/escape-hatches.ts";
 
+export { checkCommitTrailers, readCommitRange } from "./lib/commit-trailers.ts";
+
 export { checkDependencyRegister } from "./lib/dependencies.ts";
 
 export { checkLintConfigs } from "./lib/lint-configs.ts";
 
-export { checkProtectedDiff } from "./lib/protected-diff.ts";
+export { checkProtectedDiff, protectedDiffFindings } from "./lib/protected-diff.ts";
 
 export { checkTypeScriptConfigs } from "./lib/tsconfig.ts";
 
@@ -26,10 +29,16 @@ export function runGuard(root: string = process.cwd()): readonly string[] {
     ...checkDependencyRegister(root),
   ];
 
+  // Set only on pull_request runs (check.yml). Pushes to main skip both diff checks: GitHub writes the squash
+  // commit and copies branch trailers into its body, so the PR range is the only place authors control.
   const diffBase = process.env.GUARD_DIFF_BASE;
 
   if (diffBase !== undefined) {
-    return [...findings, ...checkProtectedDiff(diffBase)];
+    return [
+      ...findings,
+      ...checkProtectedDiff(diffBase),
+      ...checkCommitTrailers(readCommitRange(diffBase)),
+    ];
   }
 
   return findings;
