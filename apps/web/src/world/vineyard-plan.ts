@@ -8,6 +8,7 @@ import {
   roadLine,
   type CorridorIndex,
 } from "./road-corridor.js";
+import { vineChordBetween, type VineChord } from "./vineyard-footing.js";
 
 /** Every vine row, cypress and house keeps this much air to the centerline of every road. */
 export const VINE_CLEARANCE_M = 10;
@@ -47,13 +48,6 @@ const GRADIENT_PROBE_M = 2;
 
 /** Largest correction that pulls a chord end back onto its contour. */
 const MAX_PULL_M = 2;
-
-/** One straight piece of a vine row, level along its contour. */
-export interface VineChord {
-  readonly position: WorldPos;
-  readonly yawRad: number;
-  readonly lengthM: number;
-}
 
 export interface Cypress {
   readonly position: WorldPos;
@@ -196,16 +190,14 @@ function nextChord(
     !freeOfRoads(plan, end.x, end.z, VINE_CLEARANCE_M) ||
     !freeOfRoads(plan, midX, midZ, VINE_CLEARANCE_M);
 
-  if (blocked) return undefined;
+  const chord = blocked ? undefined : vineChordBetween(terrain, from, end);
 
-  return {
-    chord: {
-      position: { x: midX, y: heightAt(terrain, midX, midZ), z: midZ },
-      yawRad: -Math.atan2(end.z - from.z, end.x - from.x),
-      lengthM: Math.hypot(end.x - from.x, end.z - from.z),
-    },
-    cursor: { x: end.x, z: end.z, heading: step },
-  };
+  return chord === undefined
+    ? undefined
+    : {
+        chord,
+        cursor: { x: end.x, z: end.z, heading: step },
+      };
 }
 
 /**

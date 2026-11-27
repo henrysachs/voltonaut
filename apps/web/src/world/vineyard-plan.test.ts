@@ -8,9 +8,9 @@ import {
   HOUSE_CLEARANCE_M,
   MAX_VINE_CHORDS,
   VINE_CLEARANCE_M,
-  type VineChord,
 } from "./vineyard-plan.js";
 import { planVineyard } from "./vineyard-decor.js";
+import type { VineChord } from "./vineyard-footing.js";
 
 const { world, plan, vineyard } = vineyardFixture();
 

@@ -1,12 +1,14 @@
-import { heightAt } from "./heightfield.js";
+import { heightAt, settledHeightAt } from "./heightfield.js";
 import { offsetPosition } from "./lake-plan.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { seededRandom } from "./biomeSceneryShared.js";
+import { standsOnSlope } from "./vineyard-footing.js";
 import {
   CYPRESS_CLEARANCE_M,
   freeOfRoads,
   HOUSE_CLEARANCE_M,
   HOUSE_DEPTH_M,
+  HOUSE_HEIGHT_M,
   HOUSE_WIDTH_M,
   vineChords,
   vineyardSite,
@@ -30,10 +32,14 @@ function cypressAt(
   x: number,
   z: number,
 ): Cypress | undefined {
+  const heightM = 9 + random() * 5;
+  const radiusM = 0.9 + random() * 0.4;
+
   const cypress = {
-    position: { x, y: heightAt(plan.terrain, x, z), z },
-    heightM: 9 + random() * 5,
-    radiusM: 0.9 + random() * 0.4,
+    // The cone's base ring must reach the ground on its downhill side too.
+    position: { x, y: settledHeightAt(plan.terrain, x, z, { radiusM, sinkM: 0 }), z },
+    heightM,
+    radiusM,
     shade: random(),
   };
 
@@ -98,7 +104,9 @@ function housesAlong(plan: VineyardSite, random: () => number): readonly StoneHo
         ...corners.map((corner) => heightAt(plan.terrain, corner.x, corner.z)),
       );
 
-      houses.push({ position: { x: spot.x, y: lowestM, z: spot.z }, yawRad, shade });
+      if (standsOnSlope(heightAt(plan.terrain, spot.x, spot.z), lowestM, HOUSE_HEIGHT_M)) {
+        houses.push({ position: { x: spot.x, y: lowestM, z: spot.z }, yawRad, shade });
+      }
     }
   }
 

@@ -1,15 +1,22 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Three's Object3D and Color are mutable scene resources; these layers own the instances they write. */
 import * as THREE from "three";
 
+import { CARRIED, DressingGroup, STANDS } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { planVineyard } from "./vineyard-decor.js";
+import {
+  VINE_ROW_HEIGHT_M,
+  VINE_ROW_OVERHANG_M,
+  VINE_ROW_SINK_M,
+  VINE_ROW_WIDTH_M,
+  type VineChord,
+} from "./vineyard-footing.js";
 import {
   HOUSE_DEPTH_M,
   HOUSE_HEIGHT_M,
   HOUSE_WIDTH_M,
   type Cypress,
   type StoneHouse,
-  type VineChord,
 } from "./vineyard-plan.js";
 
 function instances<T>(
@@ -49,9 +56,15 @@ function vineRows(chords: readonly VineChord[]): THREE.InstancedMesh {
     plainMaterial(),
     chords,
     (chord, object, color) => {
-      object.position.set(chord.position.x, chord.position.y + 0.5, chord.position.z);
+      const { position } = chord;
+
+      object.position.set(
+        position.x,
+        position.y + VINE_ROW_HEIGHT_M / 2 - VINE_ROW_SINK_M,
+        position.z,
+      );
       object.rotation.set(0, chord.yawRad, 0);
-      object.scale.set(chord.lengthM + 0.2, 1.1, 0.9);
+      object.scale.set(chord.lengthM + VINE_ROW_OVERHANG_M, VINE_ROW_HEIGHT_M, VINE_ROW_WIDTH_M);
       color.setHSL(0.24 + ((chord.position.x * 7 + chord.position.z * 3) % 10) * 0.004, 0.42, 0.3);
     },
     false,
@@ -83,7 +96,12 @@ function cypressCones(cypresses: readonly Cypress[]): THREE.InstancedMesh {
   return mesh;
 }
 
-function houseBoxes(houses: readonly StoneHouse[]): readonly THREE.InstancedMesh[] {
+interface HouseBoxes {
+  readonly walls: THREE.InstancedMesh;
+  readonly roofs: THREE.InstancedMesh;
+}
+
+function houseBoxes(houses: readonly StoneHouse[]): HouseBoxes {
   const walls = instances(
     new THREE.BoxGeometry(1, 1, 1),
     plainMaterial(),
@@ -113,19 +131,22 @@ function houseBoxes(houses: readonly StoneHouse[]): readonly THREE.InstancedMesh
   walls.name = "stone-houses";
   roofs.name = "house-roofs";
 
-  return [walls, roofs];
+  return { walls, roofs };
 }
 
 /**
  * Vineyard hills: vine rows along the contour lines of the raster as one instanced box,
- * cypress cones and a few stone houses (body and roof boxes), all instanced.
+ * cypress cones and a few stone houses (body and roof boxes), all instanced. Rows, cones and
+ * walls stand on the drawn ground; roofs are carried by their walls.
  */
-export function createVineyardScenery(plan: Readonly<LandscapePlan>): THREE.Group {
+export function createVineyardScenery(plan: Readonly<LandscapePlan>): DressingGroup {
   const { chords, cypresses, houses } = planVineyard(plan);
-  const root = new THREE.Group();
+  const { walls, roofs } = houseBoxes(houses);
+  const root = new DressingGroup();
 
   root.name = "biome-vineyard";
-  root.add(vineRows(chords), cypressCones(cypresses), ...houseBoxes(houses));
+  root.place(STANDS, vineRows(chords), cypressCones(cypresses), walls);
+  root.place(CARRIED, roofs);
 
   return root;
 }
