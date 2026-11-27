@@ -28,6 +28,13 @@ const MAX_ROW_TURN_RAD = 0.6;
 /** A chord whose far end misses the row's height by more than this ends the row. */
 const MAX_LEVEL_ERROR_M = 0.4;
 
+/**
+ * Rise per metre along a chord above which it is no longer level; such a chord ends the row.
+ * The level check alone lets both ends miss the row's height by MAX_LEVEL_ERROR_M, which on a
+ * short pulled chord allows far steeper pieces.
+ */
+const MAX_CHORD_RISE = 0.05;
+
 /** One instanced mesh holds every vine chord; this keeps it near 80 k triangles. */
 export const MAX_VINE_CHORDS = 7000;
 
@@ -133,6 +140,22 @@ interface RowCursor {
   readonly heading: Direction | undefined;
 }
 
+/** A chord keeps its row level when its end meets the row's height and it rises no steeper. */
+function staysLevel(
+  terrain: Readonly<Heightfield>,
+  levelM: number,
+  from: Direction,
+  end: Direction,
+): boolean {
+  const endM = heightAt(terrain, end.x, end.z);
+  const lengthM = Math.hypot(end.x - from.x, end.z - from.z);
+
+  return (
+    Math.abs(endM - levelM) <= MAX_LEVEL_ERROR_M &&
+    Math.abs(endM - heightAt(terrain, from.x, from.z)) <= MAX_CHORD_RISE * lengthM
+  );
+}
+
 /** Next chord of a row from the cursor, or undefined where the row ends. */
 function nextChord(
   plan: VineyardSite,
@@ -169,7 +192,7 @@ function nextChord(
 
   const blocked =
     turnRad > MAX_ROW_TURN_RAD ||
-    Math.abs(heightAt(terrain, end.x, end.z) - levelM) > MAX_LEVEL_ERROR_M ||
+    !staysLevel(terrain, levelM, from, end) ||
     !freeOfRoads(plan, end.x, end.z, VINE_CLEARANCE_M) ||
     !freeOfRoads(plan, midX, midZ, VINE_CLEARANCE_M);
 
@@ -188,7 +211,8 @@ function nextChord(
 /**
  * One vine row along the contour line of the raster that passes through the start: each chord
  * follows the level direction (perpendicular to the slope) and is pulled back onto the start
- * height. The row ends on flat ground, at a sharp bend or before any road.
+ * height. The row ends on flat ground, at a sharp bend, where a chord would rise or before any
+ * road.
  */
 function traceRow(plan: VineyardSite, startX: number, startZ: number): readonly VineChord[] {
   const levelM = heightAt(plan.terrain, startX, startZ);
