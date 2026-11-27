@@ -1,8 +1,8 @@
 import * as THREE from "three";
 
-export const MAX_RAIN_DROPS = 1400;
-export const RAIN_HEIGHT_M = 24;
-export const RAIN_SPEED_MPS = 18;
+const MAX_RAIN_DROPS = 1400;
+const RAIN_HEIGHT_M = 24;
+const RAIN_SPEED_MPS = 18;
 const RAIN_HALF_HEIGHT_M = RAIN_HEIGHT_M / 2;
 const RAIN_STREAK_M = 0.65;
 

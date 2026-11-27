@@ -16,7 +16,7 @@ import {
 } from "./state.js";
 
 /** The account's garage sync the panel reads and writes. */
-export interface GarageAccountSource {
+interface GarageAccountSource {
   readonly shop: GarageShopSource;
   readonly loadout: Pick<GarageLoadout, "subscribe" | "save">;
 }

@@ -8,19 +8,10 @@ import { indexedProgressStore } from "./progressOutboxStore.js";
 export {
   PROGRESS_OUTBOX_DATABASE_NAME,
   PROGRESS_OUTBOX_DATABASE_VERSION,
-  PROGRESS_OUTBOX_INDEX_ACCOUNT,
-  PROGRESS_OUTBOX_INDEX_ACCOUNT_OPEN,
-  PROGRESS_OUTBOX_INDEX_JOURNAL,
-  PROGRESS_OUTBOX_INDEX_OPEN,
-  PROGRESS_OUTBOX_INDEX_RETRY,
-  PROGRESS_OUTBOX_INDEX_SEQUENCE,
-  PROGRESS_OUTBOX_INDEX_STATE,
   PROGRESS_OUTBOX_STORE_NAME,
 } from "./progressOutboxIndexedTypes.js";
 
 export type {
-  ProgressAppendRead,
-  ProgressIndexedCursor,
   ProgressIndexedDatabase,
   ProgressIndexedKey,
   ProgressIndexedRequest,
@@ -31,7 +22,6 @@ export type {
 export {
   runProgressChange,
   runProgressJournalPending,
-  runProgressKeyedChange,
   runProgressNextRetryAt,
   runProgressOpenChange,
   runProgressOwnerPurge,

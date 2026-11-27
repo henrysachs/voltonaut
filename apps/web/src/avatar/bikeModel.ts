@@ -31,7 +31,7 @@ export interface BikeParts {
  * Assembles the bike node tree of the asset contract (`bike` → `frame`, `wheel_front`,
  * `wheel_rear`, `crank` → `pedal_r`/`pedal_l`); every node holds one mesh per material.
  */
-export function assembleBike(g: Readonly<BikeGeometry>, materials: BikeMaterials): BikeParts {
+function assembleBike(g: Readonly<BikeGeometry>, materials: BikeMaterials): BikeParts {
   const root = new THREE.Group();
   const frame = new THREE.Group();
   const bucket = new PartBucket();

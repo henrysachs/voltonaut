@@ -37,7 +37,7 @@ export interface LandscapePlan {
 /** Plant stretches of a region's home road; connecting roads use longer, fewer stretches. */
 export const HOME_STRETCH_M = 250;
 
-export const CONNECTING_STRETCH_M = 500;
+const CONNECTING_STRETCH_M = 500;
 
 /** Ground point beside the route on the drawn terrain mesh. */
 export function terrainPosition(

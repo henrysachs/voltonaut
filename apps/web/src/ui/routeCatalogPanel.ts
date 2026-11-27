@@ -10,12 +10,12 @@ export interface RouteCardSource {
 }
 
 /** Header identity line: "TEST LOOP / 10 KM". */
-export function routeIdentityText(name: string, lengthM: number): string {
+function routeIdentityText(name: string, lengthM: number): string {
   return `${name.toUpperCase()} / ${formatRouteLength(lengthM).toUpperCase()}`;
 }
 
 /** Sets the route URL parameter while keeping sim, clock, debug and friends. */
-export function selectRoute(routeId: string): void {
+function selectRoute(routeId: string): void {
   const params = new URLSearchParams(window.location.search);
 
   params.set("route", routeId);

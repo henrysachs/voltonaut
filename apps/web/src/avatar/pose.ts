@@ -2,8 +2,6 @@ import * as THREE from "three";
 
 import { pedalPoint, type BikeGeometry, type Point3 } from "./bikeGeometry.js";
 
-export type { Point3 } from "./bikeGeometry.js";
-
 export const THIGH_M = 0.45;
 export const SHIN_M = 0.45;
 
@@ -18,7 +16,7 @@ const TORSO_RAD = (38 * Math.PI) / 180;
 const BACK_BOW_M = 0.035;
 
 /** Cleat and pedal body: the shoe sole sits this far above the pedal spindle axis. */
-export const CLEAT_STACK_M = 0.014;
+const CLEAT_STACK_M = 0.014;
 
 /** Ankle joint in the foot frame: behind and above the cleat. */
 const ANKLE_BACK_M = 0.11;
@@ -75,7 +73,7 @@ export function footPitchRad(crankRad: number, side: 1 | -1): number {
 }
 
 /** Point in the pitched foot frame: `forwardM` along the sole, `upM` normal to it. */
-export function footPoint(cleat: Point3, pitchRad: number, forwardM: number, upM: number): Point3 {
+function footPoint(cleat: Point3, pitchRad: number, forwardM: number, upM: number): Point3 {
   const cos = Math.cos(pitchRad);
   const sin = Math.sin(pitchRad);
 
@@ -131,7 +129,7 @@ export function torsoPoints(geometry: Readonly<BikeGeometry>): TorsoPoints {
 }
 
 /** Point on the bowed spine between pelvis (t = 0) and neck base (t = 1). */
-export function spinePoint(torso: Readonly<TorsoPoints>, t: number): Point3 {
+function spinePoint(torso: Readonly<TorsoPoints>, t: number): Point3 {
   const { pelvis, neck } = torso;
   const dx = neck[0] - pelvis[0];
   const dy = neck[1] - pelvis[1];

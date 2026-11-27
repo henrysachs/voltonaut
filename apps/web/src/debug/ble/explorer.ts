@@ -9,7 +9,7 @@ import {
 import type { LabDevice } from "./device.js";
 import { element } from "./dom.js";
 
-export type RunOperation = (operation: () => Promise<void>) => void;
+type RunOperation = (operation: () => Promise<void>) => void;
 
 type ExplorerDevice = Readonly<Pick<LabDevice, "profile" | "session" | "run" | "rawWrite">>;
 

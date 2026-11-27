@@ -18,7 +18,7 @@ export interface PointXz {
 /** Elliptic radius: 1 on the waterline ellipse, 1.18 at the sandy shore, 1.65 at the basin rim. */
 export const LAKE_SHORE_RADIUS = 1.18;
 
-export const LAKE_RIM_RADIUS = 1.65;
+const LAKE_RIM_RADIUS = 1.65;
 
 /** Lateral offset of a route position; negative is left of the travel direction. */
 export function offsetPosition(route: EngineRoute, distanceM: number, lateralM: number): WorldPos {

@@ -21,8 +21,6 @@ import { hashValidatedProgressPayload } from "./progressOutboxHash.js";
 import { rowIssue, type ProgressIssueContext } from "./progressOutboxIssue.js";
 import { progressSequenceKey, type ProgressSequenceKey } from "./progressOutboxKeys.js";
 
-export type { ProgressSequenceKey } from "./progressOutboxKeys.js";
-
 export const PROGRESS_OUTBOX_MAX_ROWS = 1200;
 export const PROGRESS_OUTBOX_MAX_ATTEMPTS = 5;
 
