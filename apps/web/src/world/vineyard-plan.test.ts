@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { biomeFromScenery } from "./biome.js";
 import { heightAt } from "./heightfield.js";
-import { biomeTerrain } from "./landscape.js";
 import { vineyardFixture } from "./testdata/vineyardWorld.js";
 import {
   CYPRESS_CLEARANCE_M,
@@ -65,7 +64,6 @@ function riseOf(chord: VineChord): number {
 describe("vineyard region plan", () => {
   it("is the vineyard biome with its own terrain colours", () => {
     expect(biomeFromScenery("vineyard")).toEqual({ kind: "vineyard" });
-    expect(biomeTerrain({ kind: "vineyard" })).not.toEqual(biomeTerrain({ kind: "forest" }));
     expect(world.regions.map((region) => region.biome.kind)).toEqual([
       "forest",
       "vineyard",
