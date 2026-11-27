@@ -14,22 +14,24 @@ it("draws a single-route world as one region dressed along its route", () => {
   expect(world.sideRoads("coast-loop")).toEqual([]);
 });
 
-it("draws voltonaut with its three regions on their own loops", () => {
+it("draws voltonaut with its four regions on their own loops", () => {
   const world = resolveRenderWorld("voltonaut-tour");
 
   expect(world.regions.map((region) => [region.id, region.biome.kind, region.home.id])).toEqual([
     ["forest", "forest", "voltonaut-forest"],
+    ["vineyard", "vineyard", "voltonaut-vineyard"],
     ["coast", "coast", "voltonaut-coast"],
     ["night-city", "night-city", "voltonaut-night-city"],
   ]);
-  expect(world.regionRoads).toHaveLength(12);
+  expect(world.regionRoads).toHaveLength(16);
   expect(world.sideRoads("voltonaut-tour").map((road) => road.id)).toEqual([
     "forest:around",
+    "vineyard:around",
     "coast:around",
     "night-city:around",
   ]);
-  expect(world.sideRoads("voltonaut-coast")).toHaveLength(10);
-  expect(resolveRenderWorld("voltonaut-coast").regions).toHaveLength(3);
+  expect(world.sideRoads("voltonaut-coast")).toHaveLength(14);
+  expect(resolveRenderWorld("voltonaut-coast").regions).toHaveLength(4);
 });
 
 it("refuses a world whose region has no home path to dress", () => {

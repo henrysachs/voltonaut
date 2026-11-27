@@ -65,7 +65,7 @@ export function renderWorldOf(world: World): RenderWorld {
 
 /** The world the route belongs to, as the landscape draws it. */
 export function resolveRenderWorld(routeId: string): RenderWorld {
-  const world = WORLDS.find((candidate) => candidate.route(routeId) !== undefined);
+  const world = WORLDS.findLast((candidate) => candidate.route(routeId) !== undefined);
 
   if (world === undefined) throw new Error(`Unsupported render route: ${routeId}`);
 

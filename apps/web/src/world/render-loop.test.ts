@@ -109,10 +109,13 @@ it("hands the terrain every road of the world the ridden route belongs to", () =
   expect(resolveRenderWorld("kom-climb").roads.map((road) => road.lengthM)).toEqual([2500]);
   expect(resolveRenderWorld("voltonaut-coast").roads.map((road) => road.id)).toEqual([
     "voltonaut-forest",
+    "voltonaut-vineyard",
     "voltonaut-coast",
     "voltonaut-night-city",
-    "forest-coast:out",
-    "forest-coast:in",
+    "forest-vineyard:out",
+    "forest-vineyard:in",
+    "vineyard-coast:out",
+    "vineyard-coast:in",
     "coast-night-city:out",
     "coast-night-city:in",
     "night-city-forest:out",

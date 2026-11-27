@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { openGameMenu } from "./helpers/gameMenu.js";
 import { ROUTE_CATALOG } from "../src/world/routeCatalog.js";
@@ -6,7 +6,7 @@ import { ROUTE_CATALOG } from "../src/world/routeCatalog.js";
 const CATALOG_IDS: readonly string[] = ROUTE_CATALOG.map((entry) => entry.id);
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
-test("Strecke tab offers the five catalog routes with previews and marks the current one", async ({
+test("Strecke tab offers the six catalog routes with previews and marks the current one", async ({
   page,
 }) => {
   await page.goto("/?sim=1&debug=1");
@@ -15,7 +15,7 @@ test("Strecke tab offers the five catalog routes with previews and marks the cur
 
   const panel = page.getByRole("tabpanel", { name: "Strecke", exact: true });
 
-  await expect(panel.locator(".route-card")).toHaveCount(5);
+  await expect(panel.locator(".route-card")).toHaveCount(6);
   await expect(panel.getByText(/lädt die Seite neu/u)).toBeVisible();
 
   await Promise.all(
@@ -90,3 +90,94 @@ for (const entry of ROUTE_CATALOG) {
     expect(CATALOG_IDS).toContain(entry.id);
   });
 }
+
+/** A number from the render diagnostics overlay. */
+async function diagnostic(
+  source: Readonly<Pick<Locator, "getAttribute">>,
+  name: string,
+): Promise<number> {
+  return Number(await source.getAttribute(`data-${name}`));
+}
+
+interface TrackedRide {
+  /** Waits until the ride passed the distance; the distance only grows, the world keeps drawing. */
+  readonly rideTo: (distanceM: number) => Promise<void>;
+  readonly peaks: () => { readonly calls: number; readonly triangles: number };
+}
+
+/** Follows a ride through the render diagnostics and records the draw call and triangle peaks. */
+function trackRide(
+  page: Readonly<Pick<Page, "getByLabel" | "getByTestId" | "locator">>,
+): TrackedRide {
+  const diagnostics = page.getByLabel("Render diagnostics");
+  const canvas = page.locator('canvas[aria-label="3D ride scene"]');
+  const peak = { calls: 0, triangles: 0 };
+  let lastDistanceM = 0;
+
+  async function sample(): Promise<number> {
+    peak.calls = Math.max(peak.calls, await diagnostic(diagnostics, "calls"));
+    peak.triangles = Math.max(peak.triangles, await diagnostic(diagnostics, "triangles"));
+
+    const now = await diagnostic(diagnostics, "distance-m");
+
+    expect(now).toBeGreaterThanOrEqual(lastDistanceM);
+    lastDistanceM = now;
+    await expect(canvas).toHaveAttribute("aria-busy", "false");
+    await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+
+    return now;
+  }
+
+  return {
+    rideTo: async (distanceM) => {
+      await expect.poll(sample, { timeout: 300_000, intervals: [1000] }).toBeGreaterThan(distanceM);
+    },
+    peaks: () => ({ ...peak }),
+  };
+}
+
+/** Distances (m) along the voltonaut tour of revision 2 where the vineyard region begins and ends. */
+const TOUR_VINEYARD_ENTRY_M = 4675;
+const TOUR_VINEYARD_EXIT_M = 13_855;
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable page fixture.
+test("the tour rides into the vineyard region and out again without a break (#146)", async ({
+  page,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Playwright owns the mutable test info.
+}, testInfo) => {
+  test.setTimeout(420_000);
+
+  const errors: string[] = [];
+
+  page.on("pageerror", (error: Readonly<Error>) => {
+    errors.push(error.message);
+  });
+  await page.goto("/?sim=1&clock=fast&debug=1&route=voltonaut-tour");
+  await expect(page.getByTestId("hud-status")).toHaveText("Sim connected");
+
+  const diagnostics = page.getByLabel("Render diagnostics");
+  const ride = trackRide(page);
+
+  const shoot = (name: string): Promise<Buffer> =>
+    page.screenshot({ path: testInfo.outputPath(`vineyard-${name}.png`) });
+
+  await page.keyboard.press("ArrowUp");
+  await ride.rideTo(TOUR_VINEYARD_ENTRY_M + 150);
+  await shoot("transition-chase");
+  await ride.rideTo(TOUR_VINEYARD_ENTRY_M + 2600);
+  await shoot("chase");
+  await page.getByRole("button", { name: "Camera: chase" }).click();
+  await expect(diagnostics).toHaveAttribute("data-camera", "overview");
+  await shoot("overview");
+  await page.keyboard.press("c");
+  await expect(diagnostics).toHaveAttribute("data-camera", "chase");
+  await ride.rideTo(TOUR_VINEYARD_EXIT_M + 400);
+
+  expect(ride.peaks().calls).toBeLessThanOrEqual(150);
+  expect(ride.peaks().triangles).toBeLessThanOrEqual(500_000);
+  expect(errors).toEqual([]);
+  await testInfo.attach("vineyard-tour-budget", {
+    body: `peak draw calls ${ride.peaks().calls}, peak triangles ${ride.peaks().triangles}`,
+    contentType: "text/plain",
+  });
+});

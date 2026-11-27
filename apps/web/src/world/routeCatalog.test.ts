@@ -13,13 +13,14 @@ import {
 const CATALOG_IDS: readonly string[] = ROUTE_CATALOG.map((entry) => entry.id);
 
 describe("route presentation catalog (#75)", () => {
-  it("offers the five presentable rides in a stable order", () => {
+  it("offers the six presentable rides in a stable order", () => {
     expect(CATALOG_IDS).toEqual([
       "test-loop",
       "coast-loop",
       "alpine-pass",
       "night-city",
       "voltonaut-tour",
+      "voltonaut-vineyard",
     ]);
   });
 
@@ -44,6 +45,14 @@ describe("route presentation catalog (#75)", () => {
     expect(resolveRouteId("__proto__")).toBe("test-loop");
     expect(resolveRouteId("missing-route")).toBe("test-loop");
     expect(resolveRouteId(null)).toBe("test-loop");
+  });
+
+  it("sets the vineyard path in a clear warm evening", () => {
+    const vineyard = routePresentation("voltonaut-vineyard");
+
+    expect(vineyard?.title).toBe("Weinberg-Intervalle");
+    expect(vineyard?.environment.startTimeS).toBe(17.5 * 60 * 60);
+    expect(vineyard?.environment.script).toEqual([{ startS: 0, weather: "clear" }]);
   });
 
   it("keeps every render budget inside the docs/04 world ceiling", () => {
