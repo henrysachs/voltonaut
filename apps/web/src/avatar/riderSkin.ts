@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import type { Point3 } from "./bikeGeometry.js";
+import { hasArea } from "./bikeMesh.js";
 import type { Point2 } from "./bikeSweep.js";
 import type { RiderMaterialKey, RiderMaterials } from "./riderMaterials.js";
 import { skinSlots, type Weigher } from "./riderWeights.js";
@@ -52,7 +53,40 @@ function allocate(
   };
 }
 
-/** Copies one part into the buffers; skin weights are computed once per vertex. */
+/** Writes the index entries of every triangle with area (hasArea); returns how many. */
+function writeTriangles(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Fills the typed buffers owned by the merge.
+  buffers: SkinBuffers,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Reads the temporary Three geometry of the part.
+  geometry: THREE.BufferGeometry,
+  vertexOffset: number,
+  indexOffset: number,
+): number {
+  const position = geometry.getAttribute("position");
+  const { index } = geometry;
+  const count = index?.count ?? position.count;
+  let written = 0;
+
+  for (let corner = 0; corner + 2 < count; corner += 3) {
+    const [a, b, c] = [corner, corner + 1, corner + 2].map((at) =>
+      index === null ? at : index.getX(at),
+    );
+
+    if (a === undefined || b === undefined || c === undefined || !hasArea(position, a, b, c)) {
+      continue;
+    }
+
+    buffers.indices.set(
+      [vertexOffset + a, vertexOffset + b, vertexOffset + c],
+      indexOffset + written,
+    );
+    written += 3;
+  }
+
+  return written;
+}
+
+/** Copies one part into the buffers; skin weights are computed once per vertex. Returns the index entries written. */
 function writePart(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Fills the typed buffers owned by the merge.
   buffers: SkinBuffers,
@@ -60,7 +94,7 @@ function writePart(
   part: Readonly<SkinPart>,
   vertexOffset: number,
   indexOffset: number,
-): void {
+): number {
   const { geometry, weigher, uv } = part;
   const position = geometry.getAttribute("position");
   const normal = geometry.getAttribute("normal");
@@ -83,13 +117,7 @@ function writePart(
     buffers.skinWeight.set(weights, at * 4);
   }
 
-  const { index } = geometry;
-  const count = index?.count ?? position.count;
-
-  for (let corner = 0; corner < count; corner += 1) {
-    buffers.indices[indexOffset + corner] =
-      vertexOffset + (index === null ? corner : index.getX(corner));
-  }
+  return writeTriangles(buffers, geometry, vertexOffset, indexOffset);
 }
 
 /** Merges parts into one indexed skinned geometry and frees the part geometries. */
@@ -102,9 +130,8 @@ function mergeSkinned(
   let indexOffset = 0;
 
   for (const part of parts) {
-    writePart(buffers, part, vertexOffset, indexOffset);
+    indexOffset += writePart(buffers, part, vertexOffset, indexOffset);
     vertexOffset += part.geometry.getAttribute("position").count;
-    indexOffset += part.geometry.index?.count ?? part.geometry.getAttribute("position").count;
     part.geometry.dispose();
   }
 
@@ -115,7 +142,7 @@ function mergeSkinned(
   merged.setAttribute("uv", new THREE.BufferAttribute(buffers.uvs, 2));
   merged.setAttribute("skinIndex", new THREE.BufferAttribute(buffers.skinIndex, 4));
   merged.setAttribute("skinWeight", new THREE.BufferAttribute(buffers.skinWeight, 4));
-  merged.setIndex(new THREE.BufferAttribute(buffers.indices, 1));
+  merged.setIndex(new THREE.BufferAttribute(buffers.indices.slice(0, indexOffset), 1));
 
   return merged;
 }
