@@ -143,21 +143,12 @@ describe("road clearance (AK4)", () => {
   });
 });
 
-/** The vineyard path as shipped in the newest voltonaut revision (the only one that has it). */
-function vineyardOfRevision2(): ShippedRoute {
-  const entry = shipped.find((candidate) => candidate.id === "voltonaut-vineyard");
-
-  if (entry === undefined) throw new Error("revision 2 ships no vineyard path");
-
-  return entry;
-}
-
-it("checks the vineyard path of voltonaut revision 2 against its own raster (#146)", () => {
-  const entry = vineyardOfRevision2();
+it("checks the vineyard path in the raster of voltonaut revision 2 (#146)", () => {
+  const entry = shippedRoute("voltonaut-vineyard");
 
   expect(entry.world).toBe(worldViews.at(-1));
+  expect(routesOf(entry.world)).toContain(entry);
   expect(entry.route.lengthM).toBeGreaterThan(12_000);
-  expect(clearanceOfShipped(entry)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);
 });
 
 describe.each(
