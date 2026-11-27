@@ -23,7 +23,8 @@ jobs:
       # No workflow-level path filter: the required `mutation` context must report on every PR.
       # Off-scope PRs skip the job, which GitHub counts as passing (ADR-036).
       # `shell: bash` adds pipefail; the separate assignment makes a failing `git diff` fail the step
-      # instead of reading as "no scope change" and skipping the job (ADR-036).
+      # instead of reading as "no scope change" and skipping the job (ADR-036). The here-string avoids a
+      # pipe: `printf | grep -q` can die with SIGPIPE (141) on large lists, which `if` reads as no match.
       - name: Detect changes in the mutation scope
         id: filter
         shell: bash
@@ -36,7 +37,7 @@ jobs:
           base="origin/${{ github.event.pull_request.base.ref }}"
           scope='^(packages/(engine|rules)/|packages/ble/src/ftms/|apps/server/src/strava/|stryker\.config\.json$)'
           files=$(git diff --name-only "${base}...HEAD")
-          if printf '%s\n' "$files" | grep -Eq "$scope"; then
+          if grep -Eq "$scope" <<<"$files"; then
             echo "core=true" >> "$GITHUB_OUTPUT"
           else
             echo "core=false" >> "$GITHUB_OUTPUT"
