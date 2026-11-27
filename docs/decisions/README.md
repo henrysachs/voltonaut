@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fortlaufend nummerieren; ersetzte ADRs auf „Ersetzt durch ADR-xxx" setzen, nicht löschen. Änderungen an Leitplanken (Lint-, TS-, depcruise-Regeln, neue Abhängigkeiten) brauchen ein ADR.
+Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fortlaufend nummerieren; ersetzte ADRs auf „Ersetzt durch ADR-xxx" setzen, nicht löschen. Jedes ADR steht genau einmal in der Tabelle. Ihre Statusspalte nennt denselben Entscheidungsstand wie die `Status:`-Zeile des ADR: „Vorgeschlagen …“, „Ersetzt …“/„Abgelöst …“ oder sonst entschieden. `apps/web/src/consistency/adr-index.test.ts` prüft Nummern, Tabelle und Status. Änderungen an Leitplanken (Lint-, TS-, depcruise-Regeln, neue Abhängigkeiten) brauchen ein ADR.
 
 | ADR | Titel | Status |
 |---|---|---|
@@ -20,10 +20,14 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [014](ADR-014-three-rendering-dependencies.md) | Abhängigkeiten für die erste 3D-Szene | Umsetzung von ADR-002 und ADR-008 |
 | [015](ADR-015-oidc-client-library.md) | openid-client für serverseitigen OIDC-Codeflow | Gewählt für E5-06 |
 | [016](ADR-016-server-engine-replay.md) | Öffentliche Engine für reine Server-Nachrechnung | Gewählt für E10-02 |
-| [017](ADR-017-strava-connection.md) | Strava-Verbindung und verschlüsselte Zugangsdaten | Serverseitiger Teilschnitt integriert; echter Pilot offen |
+| [017](ADR-017-strava-connection.md) | Strava-Verbindung und verschlüsselte Zugangsdaten | Vorgeschlagen; serverseitig aktiviert, echter Pilot offen |
 | [018](ADR-018-actor-recording-and-explicit-delivery.md) | Actor-Aufnahme und ausdrückliche Strava-Auslieferung | Gewählte Softwareform für E10-04 |
 | [019](ADR-019-render-worker-isolation.md) | WebGL im getrennten Render-Worker | Softwaregeprüft für E4-04; Hardware-FPS offen |
 | [020](ADR-020-explicit-production-provisioning.md) | Einmalige Produktionsprovisionierung und optionales Backup | Angenommen; ausdrückliche Freigabe vom 21.11.2026 |
+| [021](ADR-021-membership-and-administration.md) | Mitgliedschaft und Administration trennen | Gewählte Form für Henrys Auftrag vom 21.11.2026 |
+| [022](ADR-022-real-strava-provisioning.md) | Echte Strava-Konfiguration und verifizierte Deautorisierung | Gewählte Form für Henrys Aktivierungsauftrag vom 21.11.2026 |
+| [023](ADR-023-sequence-browser-gate.md) | Browserprüfung nach CPU-schweren Gate-Aufgaben | Von Henry am 23.11.2026 freigegeben |
+| [024](ADR-024-reward-quote-contracts.md) | Domänenverträge für reine Belohnungsangebote | Gewählte Implementierungsform vom 23.11.2026 |
 | [025](ADR-025-handwritten-service-worker.md) | Handgeschriebener Service Worker für die installierbare PWA | Angenommen für E10-09 |
 | [026](ADR-026-configurable-oidc-providers.md) | Konfigurierbare OIDC-Provider, Cloudflare Access ist einer davon | Vorgeschlagen, Henrys Freigabe ausstehend |
 | [027](ADR-027-server-volts-ledger.md) | Serverseitiges Volts-Journal und gemeinsame Rules-Rechnung | Angenommen für E6-05 |

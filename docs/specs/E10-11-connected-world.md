@@ -22,7 +22,7 @@ ADR-033 Schritt 1: Datentypen `World`, Abschnitt, Knoten, Weg und Region in `pac
 
 ## Abnahme gesamt (aus #150)
 
-- [ ] ADR-033 von Henry freigegeben.
+- [x] ADR-033 von Henry freigegeben (2026-11-27).
 - [ ] Eine Fahrt führt ohne Unterbrechung durch mindestens zwei Regionen.
 - [ ] Kein Gelände über der Fahrbahn, automatisch für jede Route geprüft.
 - [ ] Bestehende Aufnahmen und Bestzeiten bleiben lesbar.
