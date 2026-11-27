@@ -1,26 +1,18 @@
-import type { WorldPos } from "@voltonaut/engine";
-
+import { groundPosition, seededRandom, type ChunkItem } from "./biomeSceneryShared.js";
+import { PLANT_ROAD_CLEARANCE_M, type LandscapePlan } from "./landscape-plan.js";
+import { greenery } from "./stone-age-greenery.js";
 import {
-  groundPosition,
-  routeClearanceM,
-  routeCorridorSamples,
-  seededRandom,
-  type ChunkItem,
-} from "./biomeSceneryShared.js";
-import { PLANT_ROAD_CLEARANCE_M, type LandscapePlan, type Plant } from "./landscape-plan.js";
+  firstSite,
+  flatEnough,
+  footprints,
+  lapDistanceM,
+  settledOn,
+  SITE_TRIES,
+  type Footprints,
+  type Placed,
+} from "./stone-age-space.js";
 
-/** Road samples every 2 m overestimate the clearance by at most 0.08 m from 7 m on. */
-const ROAD_SAMPLE_STEP_M = 2;
-const SAMPLING_SLACK_M = 0.1;
-
-/** Decor with a horizontal footprint circle that stays clear of the road and of other decor. */
-export interface Placed extends ChunkItem {
-  readonly position: WorldPos;
-  readonly radiusM: number;
-  readonly rotationRad: number;
-  readonly shade: number;
-  readonly scale: number;
-}
+export type { Placed } from "./stone-age-space.js";
 
 export interface RockHouse extends Placed {
   readonly domeRadiusM: number;
@@ -38,40 +30,21 @@ export interface Part<T> extends ChunkItem {
   readonly index: number;
 }
 
-interface Footprints {
-  readonly fits: (position: Readonly<WorldPos>, radiusM: number) => boolean;
-  readonly claim: (item: Readonly<Placed>) => void;
-}
+/**
+ * Beyond the dome rim the entrance tunnel reaches out to its mouth corners (stoneAgeScenery.ts);
+ * its floor sits HOUSE_FLOOR_SINK_M into the ground.
+ */
+const HOUSE_FOOT_BEYOND_DOME_M = 0.8;
+const HOUSE_FLOOR_SINK_M = 0.1;
 
-/** Road clearance plus the discs of the volcanoes, houses and statues placed so far. */
-function footprints(plan: Readonly<LandscapePlan>): Footprints {
-  const road = routeCorridorSamples(plan.route, ROAD_SAMPLE_STEP_M);
-  const claimed: Placed[] = [];
+/** The dome sits 0.3 m into the ground (stoneAgeScenery.ts). */
+const DOME_SINK_M = 0.3;
 
-  return {
-    fits(position, radiusM) {
-      const reachM = PLANT_ROAD_CLEARANCE_M + radiusM + SAMPLING_SLACK_M;
+/** Ground under the dome centre must stay below the dome's middle, with this much to spare. */
+const DOME_MIDDLE_MARGIN_M = 0.1;
 
-      return (
-        routeClearanceM(position, road) >= reachM &&
-        claimed.every(
-          (other) =>
-            Math.hypot(position.x - other.position.x, position.z - other.position.z) >=
-            radiusM + other.radiusM,
-        )
-      );
-    },
-    claim(item) {
-      claimed.push(item);
-    },
-  };
-}
-
-/** Distance on the lap for a possibly negative or overlong offset from the start line. */
-function lapDistanceM(plan: Readonly<LandscapePlan>, distanceM: number): number {
-  const lengthM = plan.route.lengthM;
-
-  return Math.min(lengthM - 0.01, ((distanceM % lengthM) + lengthM) % lengthM);
+function houseMaxReliefM(house: Readonly<RockHouse>): number {
+  return house.heightM / 2 - DOME_SINK_M - DOME_MIDDLE_MARGIN_M;
 }
 
 /** Village across the lap line and a hamlet on the plateau above the Steinbruch. */
@@ -88,7 +61,16 @@ function rockHouseAt(
   const side = random() < 0.5 ? -1 : 1;
   const domeRadiusM = 3.2 + random() * 2.6;
   const routeDistanceM = lapDistanceM(plan, distanceM + random() * 14);
-  const position = groundPosition(plan, routeDistanceM, side * (15 + random() * 24));
+
+  const position = settledOn(
+    plan,
+    groundPosition(plan, routeDistanceM, side * (15 + random() * 24)),
+    {
+      radiusM: domeRadiusM + HOUSE_FOOT_BEYOND_DOME_M,
+      sinkM: HOUSE_FLOOR_SINK_M,
+    },
+  );
+
   const road = plan.route.worldPos(routeDistanceM);
   const shade = random();
 
@@ -114,9 +96,17 @@ function rockHouses(
 
   for (const { fromM, toM } of SETTLEMENTS) {
     for (let distanceM = fromM; distanceM < toM; distanceM += 38) {
-      const house = rockHouseAt(plan, distanceM, random);
+      const house = firstSite(SITE_TRIES, () => {
+        const candidate = rockHouseAt(plan, distanceM, random);
+        const footM = candidate.domeRadiusM + HOUSE_FOOT_BEYOND_DOME_M;
 
-      if (!space.fits(house.position, house.radiusM)) continue;
+        return space.fits(candidate.position, candidate.radiusM) &&
+          flatEnough(plan, candidate.position, footM, houseMaxReliefM(candidate))
+          ? candidate
+          : undefined;
+      });
+
+      if (house === undefined) continue;
 
       space.claim(house);
       houses.push(house);
@@ -129,6 +119,12 @@ function rockHouses(
 /** Tail tip to snout of a statue at scale 1, from its centre; the footprint covers it. */
 const STATUE_REACH_M = 7.8;
 
+/** Outer edge of the four legs at scale 1, from the statue centre (stoneAgeLandmarks.ts). */
+const STATUE_FOOT_M = 1.9;
+
+/** At scale 1, below the middle of a 2.1 m leg. */
+const STATUE_MAX_RELIEF_M = 0.8;
+
 function dinoStatues(
   plan: Readonly<LandscapePlan>,
   space: Footprints,
@@ -138,16 +134,29 @@ function dinoStatues(
 
   for (let distanceM = 260; distanceM < plan.route.lengthM; distanceM += 640) {
     const side = statues.length % 2 === 0 ? 1 : -1;
-    const scale = 0.9 + random() * 0.7;
-    const radiusM = STATUE_REACH_M * scale;
-    const routeDistanceM = lapDistanceM(plan, distanceM + random() * 80);
-    const lateralM = side * (PLANT_ROAD_CLEARANCE_M + radiusM + 5 + random() * 14);
-    const position = groundPosition(plan, routeDistanceM, lateralM);
-    // Local +X is the snout; a yaw of −heading shows the profile to the passing rider.
-    const rotationRad = -plan.route.headingRad(routeDistanceM) + (random() - 0.5) * 0.8;
-    const statue = { routeDistanceM, position, radiusM, rotationRad, shade: random(), scale };
 
-    if (!space.fits(position, radiusM)) continue;
+    const statue = firstSite(SITE_TRIES, () => {
+      const scale = 0.9 + random() * 0.7;
+      const radiusM = STATUE_REACH_M * scale;
+      const routeDistanceM = lapDistanceM(plan, distanceM + random() * 80);
+      const lateralM = side * (PLANT_ROAD_CLEARANCE_M + radiusM + 5 + random() * 14);
+
+      const position = settledOn(plan, groundPosition(plan, routeDistanceM, lateralM), {
+        radiusM: STATUE_FOOT_M * scale,
+        sinkM: 0,
+      });
+
+      // Local +X is the snout; a yaw of −heading shows the profile to the passing rider.
+      const rotationRad = -plan.route.headingRad(routeDistanceM) + (random() - 0.5) * 0.8;
+      const candidate = { routeDistanceM, position, radiusM, rotationRad, shade: random(), scale };
+
+      return space.fits(position, radiusM) &&
+        flatEnough(plan, position, STATUE_FOOT_M * scale, STATUE_MAX_RELIEF_M * scale)
+        ? candidate
+        : undefined;
+    });
+
+    if (statue === undefined) continue;
 
     space.claim(statue);
     statues.push(statue);
@@ -174,12 +183,17 @@ function volcanoes(plan: Readonly<LandscapePlan>, space: Footprints): readonly V
 
   for (const [index, site] of VOLCANO_SITES.entries()) {
     const routeDistanceM = lapDistanceM(plan, site.distanceM);
-    const ground = groundPosition(plan, routeDistanceM, site.lateralM);
+    const sinkM = site.heightM * 0.12;
+
+    // Sunk so the cone still meets the ground on its lower side.
+    const ground = settledOn(plan, groundPosition(plan, routeDistanceM, site.lateralM), {
+      radiusM: site.baseRadiusM,
+      sinkM,
+    });
 
     const volcano: Volcano = {
       routeDistanceM,
-      // Sunk so the cone still meets the ground on its lower side.
-      position: { ...ground, y: ground.y - site.heightM * 0.12 },
+      position: { ...ground, y: ground.y - sinkM },
       radiusM: site.baseRadiusM,
       rotationRad: index * 1.3,
       shade: index / VOLCANO_SITES.length,
@@ -195,49 +209,6 @@ function volcanoes(plan: Readonly<LandscapePlan>, space: Footprints): readonly V
   }
 
   return result;
-}
-
-interface Greenery {
-  readonly palms: readonly Placed[];
-  readonly ferns: readonly Placed[];
-  readonly boulders: readonly Placed[];
-}
-
-/** Horizontal reach of the fronds from the stem at scale 1. */
-const PALM_REACH_M = 3.8;
-const FERN_REACH_M = 2.1;
-
-function plantDecor(plant: Readonly<Plant>, reachM: number, scale: number): Placed {
-  return {
-    routeDistanceM: plant.routeDistanceM,
-    position: plant.position,
-    radiusM: reachM * scale,
-    rotationRad: plant.rotationRad,
-    shade: plant.shade,
-    scale,
-  };
-}
-
-/** The forest plan's corridor-checked trees become palms and ferns, its rocks boulders. */
-function greenery(plan: Readonly<LandscapePlan>, space: Footprints): Greenery {
-  const palms: Placed[] = [];
-  const ferns: Placed[] = [];
-  const boulders: Placed[] = [];
-
-  for (const tree of plan.trees) {
-    const palm = tree.shade > 0.55;
-    const item = plantDecor(tree, palm ? PALM_REACH_M : FERN_REACH_M, 0.8 + tree.shade * 0.5);
-
-    if (space.fits(item.position, item.radiusM)) (palm ? palms : ferns).push(item);
-  }
-
-  for (const rock of plan.rocks) {
-    const item = plantDecor(rock, rock.radiusM, 1);
-
-    if (space.fits(item.position, item.radiusM)) boulders.push(item);
-  }
-
-  return { palms, ferns, boulders };
 }
 
 export function partsOf<T extends ChunkItem>(

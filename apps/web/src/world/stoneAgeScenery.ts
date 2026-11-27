@@ -2,9 +2,10 @@
 import * as THREE from "three";
 
 import { chunkedMeshes, type ChunkLayer } from "./biomeSceneryShared.js";
+import { CARRIED, DressingGroup, STANDS } from "./dressing-group.js";
 import type { LandscapePlan } from "./landscape-plan.js";
 import { partsOf, planStoneAge, type Part, type Placed, type RockHouse } from "./stone-age-plan.js";
-import { atItem, named, statueMeshes, stone, volcanoMeshes } from "./stoneAgeLandmarks.js";
+import { atItem, named, placeStatues, placeVolcanoes, stone } from "./stoneAgeLandmarks.js";
 
 function houseDomeLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
   return {
@@ -110,18 +111,29 @@ const PALM_FRONDS: FrondStyle = {
   stemTopM: (palm) => palmHeightM(palm) - 0.2,
 };
 
+/** Base radius of a frond cone as a share of its length. */
+const FROND_BASE_SHARE = 0.16;
+
+const FERN_LENGTH_M = 1.9;
+const FERN_TILT_RAD = 0.7;
+
+/**
+ * Fern fronds rise from the ground. A tilted cone lifts one side of its base rim by
+ * base radius · sin(tilt), so the stem sinks by that much and no rim corner floats. Flatter fronds
+ * than 0.7 rad lie so low that the slope above them reaches their middle.
+ */
 const FERN_FRONDS: FrondStyle = {
   count: 6,
-  lengthM: 1.9,
-  tiltRad: 1.05,
+  lengthM: FERN_LENGTH_M,
+  tiltRad: FERN_TILT_RAD,
   hue: 0.3,
-  stemTopM: () => 0,
+  stemTopM: (fern) => -FERN_LENGTH_M * FROND_BASE_SHARE * Math.sin(FERN_TILT_RAD) * fern.scale,
 };
 
 /** Each frond starts at the stem top and leans out; fronds fan evenly around the stem. */
 function frondLayer(owners: readonly Placed[], style: FrondStyle): ChunkLayer<Part<Placed>> {
   return {
-    geometry: new THREE.ConeGeometry(style.lengthM * 0.16, style.lengthM, 4),
+    geometry: new THREE.ConeGeometry(style.lengthM * FROND_BASE_SHARE, style.lengthM, 4),
     material: stone(),
     items: partsOf(owners, style.count),
     transform(frond: Readonly<Part<Placed>>, object: THREE.Object3D) {
@@ -162,25 +174,37 @@ const PLANT_CHUNK_M = 500;
  * so each layer is one mesh over the whole lap. Plants use 500 m chunks: with four plant layers,
  * 250 m chunks took the Steinbruch view to 140 of the 150 draw calls (spec E10-16 AK6).
  */
-export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Group {
-  const root = new THREE.Group();
+export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): DressingGroup {
+  const root = new DressingGroup();
   const decor = planStoneAge(plan);
   const lapM = plan.route.lengthM;
 
   root.name = "biome-stone-age";
-  root.add(
-    ...volcanoMeshes(decor.volcanoes, lapM),
+  placeVolcanoes(root, decor.volcanoes, lapM);
+  root.place(
+    STANDS,
     ...named(chunkedMeshes(houseDomeLayer(decor.houses), lapM), "stone-age-house"),
+  );
+  // The dome carries its tunnel. Settling keeps the tunnel floor on the ground at its mouth; on a
+  // slope its uphill side runs into the hill like a cellar entrance.
+  root.place(
+    CARRIED,
     ...named(chunkedMeshes(houseEntranceLayer(decor.houses), lapM), "stone-age-entrance"),
     ...named(chunkedMeshes(houseDoorLayer(decor.houses), lapM), "stone-age-door"),
-    ...statueMeshes(decor.statues, lapM),
+  );
+  placeStatues(root, decor.statues, lapM);
+  root.place(
+    STANDS,
     ...named(chunkedMeshes(palmTrunkLayer(decor.palms), PLANT_CHUNK_M), "stone-age-palm"),
+    ...named(chunkedMeshes(frondLayer(decor.ferns, FERN_FRONDS), PLANT_CHUNK_M), "stone-age-fern"),
+    ...named(chunkedMeshes(boulderLayer(decor.boulders), PLANT_CHUNK_M), "stone-age-boulder"),
+  );
+  root.place(
+    CARRIED,
     ...named(
       chunkedMeshes(frondLayer(decor.palms, PALM_FRONDS), PLANT_CHUNK_M),
       "stone-age-palm-frond",
     ),
-    ...named(chunkedMeshes(frondLayer(decor.ferns, FERN_FRONDS), PLANT_CHUNK_M), "stone-age-fern"),
-    ...named(chunkedMeshes(boulderLayer(decor.boulders), PLANT_CHUNK_M), "stone-age-boulder"),
   );
 
   return root;

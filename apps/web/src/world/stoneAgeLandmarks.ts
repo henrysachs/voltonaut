@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 import { chunkedMeshes, type ChunkItem, type ChunkLayer } from "./biomeSceneryShared.js";
+import { CARRIED, STANDS, type DressingGroup } from "./dressing-group.js";
 import { partsOf, type Part, type Placed, type Volcano } from "./stone-age-plan.js";
 
 export function stone(): THREE.MeshStandardMaterial {
@@ -177,7 +178,7 @@ function lavaStreamLayer(fire: readonly Volcano[]): ChunkLayer<Part<Volcano>> {
 export function named(
   meshes: readonly THREE.InstancedMesh[],
   name: string,
-): readonly THREE.Object3D[] {
+): readonly THREE.InstancedMesh[] {
   for (const mesh of meshes) mesh.name = name;
 
   return meshes;
@@ -190,16 +191,25 @@ function withoutShadow(meshes: readonly THREE.InstancedMesh[]): readonly THREE.I
   return meshes;
 }
 
-export function volcanoMeshes(fire: readonly Volcano[], lapM: number): readonly THREE.Object3D[] {
-  return [
+/** The cone stands on the valley floor and carries its crater glow and lava streams. */
+export function placeVolcanoes(root: DressingGroup, fire: readonly Volcano[], lapM: number): void {
+  root.place(
+    STANDS,
     ...named(withoutShadow(chunkedMeshes(volcanoConeLayer(fire), lapM)), "stone-age-volcano"),
+  );
+  root.place(
+    CARRIED,
     ...named(withoutShadow(chunkedMeshes(craterGlowLayer(fire), lapM)), "stone-age-crater"),
     ...named(withoutShadow(chunkedMeshes(lavaStreamLayer(fire), lapM)), "stone-age-lava"),
-  ];
+  );
 }
 
-export function statueMeshes(statues: readonly Placed[], lapM: number): readonly THREE.Object3D[] {
-  return DINO_PARTS.flatMap((part) =>
-    named(chunkedMeshes(statuePartLayer(statues, part), lapM), `stone-age-dino-${part.name}`),
-  );
+/** A statue stands on its legs; body, neck, head and tail are carried by them. */
+export function placeStatues(root: DressingGroup, statues: readonly Placed[], lapM: number): void {
+  for (const part of DINO_PARTS) {
+    root.place(
+      part.name === "legs" ? STANDS : CARRIED,
+      ...named(chunkedMeshes(statuePartLayer(statues, part), lapM), `stone-age-dino-${part.name}`),
+    );
+  }
 }
