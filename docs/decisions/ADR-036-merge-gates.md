@@ -11,7 +11,7 @@ Ein Audit von 82 PRs ergab:
 - `mutation` lief bei #138 und #158 erst nach dem Merge.
 - 11 Commits auf `main` tragen `Co-Authored-By: Claude`, 26 Nicht-Merge-Commits haben kein `Signed-off-by`.
 - Der Non-null-Regex des Guards meldete `!(x instanceof Y)` (5d00ee7).
-- Jede geänderte `docs/decisions/ADR-*`-Datei schaltete **alle** geschützten Pfade frei (`scripts/guard/lib/protected-diff.ts`, alte Zeile 28). Ein Tippfehler in ADR-012 hätte `mise.toml` freigegeben.
+- Jede geänderte `docs/decisions/ADR-*`-Datei schaltete **alle** geschützten Pfade frei (`scripts/guard/lib/protected-diff.ts`, alte Zeile 28). Ein Tippfehler in ADR-012 hätte mise.toml freigegeben.
 - In Trainer-Control (#129, #131) und Strava (#130, #132) fanden Reviewer Tests, die kaputtes Verhalten überleben, nur mit handgeschriebenen Mutanten.
 
 ## Entscheidung
@@ -91,7 +91,7 @@ Die Prüfung läuft nur auf PRs. `check.yml` setzt `GUARD_DIFF_BASE=origin/<base
 
 ### 3. Non-null-Regex entfällt
 
-Oxlint prüft `typescript/no-non-null-assertion` als Fehler am AST (`oxlint.config.ts`). `scripts/guard/lib/lint-configs.ts` verlangt die Regel. Eine Probedatei außerhalb des Repos mit `x!.y` meldet `typescript(no-non-null-assertion)`, `!(x instanceof Error)` meldet nichts. Der Regex in `scripts/guard/lib/escape-hatches.ts` ist doppelt und ungenau und wird gelöscht. Tests prüfen: Der Guard meldet `!(x instanceof Y)` nicht, und das Fehlen der Oxlint-Regel bleibt ein Fund.
+Oxlint prüft `typescript/no-non-null-assertion` als Fehler am AST (oxlint.config.ts). `scripts/guard/lib/lint-configs.ts` verlangt die Regel. Eine Probedatei außerhalb des Repos mit `x!.y` meldet `typescript(no-non-null-assertion)`, `!(x instanceof Error)` meldet nichts. Der Regex in `scripts/guard/lib/escape-hatches.ts` ist doppelt und ungenau und wird gelöscht. Tests prüfen: Der Guard meldet `!(x instanceof Y)` nicht, und das Fehlen der Oxlint-Regel bleibt ein Fund.
 
 ### 4. ADR-Ausnahme nur für genannte Pfade
 
@@ -99,9 +99,9 @@ Oxlint prüft `typescript/no-non-null-assertion` als Fehler am AST (`oxlint.conf
 
 - Ohne geändertes ADR bleibt jeder geschützte Pfad rot.
 - Mit geändertem ADR bleibt `docs/decisions/**` frei.
-- Jeden anderen geschützten Pfad muss ein im selben Diff geändertes ADR in Backticks nennen, exakt (`` `mise.toml` ``) oder als Verzeichnis mit Schrägstrich (`` `.github/workflows/` ``). Gelesen wird der Stand bei `HEAD`. Die Meldung nennt den fehlenden Pfad.
+- Jeden anderen geschützten Pfad muss ein im selben Diff geändertes ADR in Backticks nennen, exakt (Backticks um mise.toml) oder als Verzeichnis mit Schrägstrich am Ende (Backticks um .github/workflows/). Gelesen wird der Stand bei `HEAD`. Die Meldung nennt den fehlenden Pfad.
 
-Dieser PR ändert folgende geschützte Pfade: `.github/workflows/mutation.yml`, `.github/workflows/deploy-web.yml`, `scripts/guard/`, `scripts/guard.test.mjs` und dieses ADR mit `docs/decisions/README.md`. Ein ADR, das einen Pfad nennt, gibt ihn bei jeder späteren Änderung an diesem ADR wieder frei. Das ist gewollt: Der Reviewer sieht im selben Diff, welches ADR die Änderung trägt.
+Dieser PR ändert folgende geschützte Pfade: `.github/workflows/mutation.yml`, `.github/workflows/deploy-web.yml`, `scripts/guard/`, `scripts/guard.test.mjs` und dieses ADR mit `docs/decisions/README.md`. Ein ADR, das einen Pfad nennt, gibt ihn bei jeder späteren Änderung an diesem ADR wieder frei. Das ist gewollt: Der Reviewer sieht im selben Diff, welches ADR die Änderung trägt. Dieses ADR setzt deshalb nur die Pfade in Backticks, die es selbst ändert.
 
 ### 5. Mutationsumfang
 
