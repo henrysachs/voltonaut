@@ -134,7 +134,7 @@ Das Budget „Eigener Fahrer + Rad“ wurde am 25.11.2026 zweimal angehoben: auf
 
 Das Höhenraster aus [E10-12](specs/E10-12-world-heightfield.md) zeichnet nur die Meshes (je 4 × 4 Kacheln) im Sichtkegel. Gesamtgröße: Testrunde 184 k Dreiecke in 16 Meshes, Alpenpass 530 k in 44 Meshes plus 28 k Schürze. Gemessen im E2E (headless, SwiftShader), Spitzenwerte je Route gegenüber `main` vor dem Wechsel: Testrunde 112 Draw Calls / 231 k Dreiecke (vorher 108 / 238 k), Küste 76 / 168 k (74 / 184 k), Alpenpass 94 / 382 k (86 / 454 k), Nachtstadt 56 / 127 k (55 / 120 k). Auf echter Hardware offen (#86).
 
-Die Nachtstadt mit Türmen, Neon und Bloom ([E10-15](specs/E10-15-night-city-megacity.md)) misst im Sim-E2E nachts höchstens 93 Draw Calls und 173 k Dreiecke, tagsüber 80 / 168 k, die Voltonaut-Tour um 21:00 am Start 101 / 284 k. Seit ADR-035 zählt die Diagnose jeden Render-Pass eines Frames, nachts also auch die etwa 14 Vollbild-Passes von Bloom. Auf echter Hardware offen (#86).
+Die Nachtstadt mit Türmen, Neon und Bloom ([E10-15](specs/E10-15-night-city-megacity.md)) misst im Sim-E2E nachts höchstens 91 Draw Calls und 172 k Dreiecke, tagsüber 80 / 168 k, die Voltonaut-Tour um 21:00 am Start 97 / 282 k. Seit ADR-035 zählt die Diagnose jeden Render-Pass eines Frames, nachts also auch die etwa 14 Vollbild-Passes von Bloom. Auf echter Hardware offen (#86).
 
 Die Voltonaut-Tour ([E10-14](specs/E10-14-voltonaut-world.md)) bleibt über die ganze Runde bei höchstens 137 Draw Calls und 359 k Dreiecken (E2E-Messfahrt im Sim mit `clock=fast`); Ausstattung fern liegender Regionen kostet keine Draw Calls. Auf echter Hardware offen (#86).
 

@@ -34,4 +34,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [032](ADR-032-garage-preview-worker.md) | Garage-Vorschau im Render-Worker | Angenommen |
 | [033](ADR-033-connected-worlds.md) | Zusammenhängende Welten aus Straßennetz, Höhenraster und Regionen | Angenommen |
 | [034](ADR-034-hardware-capture-fixtures.md) | Hardware-Mitschnitte als BLE-Fixtures | Angenommen |
-| [035](ADR-035-night-bloom.md) | Bloom nachts, je Biom, über einen Frame-Presenter; Diagnose zählt jeden Pass | Vorgeschlagen; Henrys Optikfreigabe ausstehend |
+| [035](ADR-035-night-bloom.md) | Bloom nachts, je Biom, über einen Frame-Presenter; Diagnose zählt jeden Pass | Angenommen (Henrys Freigabe im Chat am 2026-11-27) |
