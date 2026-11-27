@@ -1,10 +1,11 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Three's scene graph objects are mutable by contract; these helpers only traverse them. */
 import { TEST_ROUTES, createRoute, type RouteData } from "@voltonaut/engine";
 import * as THREE from "three";
-import { expect, it } from "vitest";
+import { beforeAll, expect, it } from "vitest";
 
 import { createStoneAgeScenery } from "./biomeScenery.js";
-import { routeClearanceM, routeCorridorSamples } from "./biomeSceneryShared.js";
+import { routeCorridorSamples } from "./biomeSceneryShared.js";
+import type { DressingGroup } from "./dressing-group.js";
 import {
   createLandscapePlan,
   PLANT_ROAD_CLEARANCE_M,
@@ -23,6 +24,26 @@ function stoneAgePlan(): LandscapePlan {
   const route = createRoute(felsentalData());
 
   return createLandscapePlan(route, [route], 42, false);
+}
+
+/** One plan and one scenery for every check; each check only reads them. */
+interface Built {
+  readonly plan: LandscapePlan;
+  readonly scenery: DressingGroup;
+}
+
+let built: Built | undefined;
+
+beforeAll(() => {
+  const plan = stoneAgePlan();
+
+  built = { plan, scenery: createStoneAgeScenery(plan) };
+});
+
+function shared(): Built {
+  if (built === undefined) throw new Error("test: the stone age scenery was not built");
+
+  return built;
 }
 
 interface Footprint {
@@ -73,12 +94,52 @@ function instanceFootprints(root: Readonly<THREE.Object3D>): readonly Footprint[
   return footprints;
 }
 
-/** Smallest gap between any instance footprint of the named layer and the road centerline. */
+/** Road samples every 1 m, sorted by x for an exact nearest-sample search. */
+interface RoadIndex {
+  readonly xs: Float64Array;
+  readonly zs: Float64Array;
+}
+
+function roadIndex(route: Readonly<LandscapePlan["route"]>): RoadIndex {
+  const samples = routeCorridorSamples(route, 1).toSorted((a, b) => a.x - b.x);
+
+  return { xs: Float64Array.from(samples, (s) => s.x), zs: Float64Array.from(samples, (s) => s.z) };
+}
+
+/**
+ * Horizontal distance to the nearest road sample, the same minimum routeClearanceM takes. The
+ * scan leaves each side of x once the x gap alone exceeds the best distance found.
+ */
+function clearanceM({ xs, zs }: RoadIndex, x: number, z: number): number {
+  let low = 0;
+  let high = xs.length;
+
+  while (low < high) {
+    const middle = (low + high) >> 1;
+
+    if ((xs[middle] ?? 0) < x) low = middle + 1;
+    else high = middle;
+  }
+
+  let bestM = Number.POSITIVE_INFINITY;
+
+  for (let index = low; index < xs.length && (xs[index] ?? 0) - x < bestM; index += 1) {
+    bestM = Math.min(bestM, Math.hypot((xs[index] ?? 0) - x, (zs[index] ?? 0) - z));
+  }
+
+  for (let index = low - 1; index >= 0 && x - (xs[index] ?? 0) < bestM; index -= 1) {
+    bestM = Math.min(bestM, Math.hypot((xs[index] ?? 0) - x, (zs[index] ?? 0) - z));
+  }
+
+  return bestM;
+}
+
+/** Smallest gap between any of the instance footprints and the road centerline. */
 function roadGapM(footprints: readonly Footprint[], route: Readonly<LandscapePlan["route"]>) {
-  const road = routeCorridorSamples(route, 1);
+  const road = roadIndex(route);
 
   return Math.min(
-    ...footprints.map((footprint) => routeClearanceM(footprint.position, road) - footprint.reachM),
+    ...footprints.map(({ position, reachM }) => clearanceM(road, position.x, position.z) - reachM),
   );
 }
 
@@ -105,8 +166,7 @@ function basicMaterials(root: Readonly<THREE.Object3D>): readonly THREE.MeshBasi
 }
 
 it("stone age scenery is deterministic and dresses the valley with every decor kind", () => {
-  const plan = stoneAgePlan();
-  const first = createStoneAgeScenery(plan);
+  const { plan, scenery: first } = shared();
   const second = createStoneAgeScenery(plan);
   const statues = layerCount(first, "stone-age-dino-body");
 
@@ -126,8 +186,7 @@ it("stone age scenery is deterministic and dresses the valley with every decor k
 });
 
 it("stone age scenery raises all four volcanoes with glowing craters far off the road", () => {
-  const plan = stoneAgePlan();
-  const scenery = createStoneAgeScenery(plan);
+  const { plan, scenery } = shared();
   const volcanoes = instanceFootprints(scenery).filter(({ name }) => name === "stone-age-volcano");
   const crater = scenery.getObjectByName("stone-age-crater");
 
@@ -141,8 +200,8 @@ it("stone age scenery raises all four volcanoes with glowing craters far off the
 });
 
 it("keeps every stone age instance with its footprint 7 m off the road centerline", () => {
-  const plan = stoneAgePlan();
-  const footprints = instanceFootprints(createStoneAgeScenery(plan));
+  const { plan, scenery } = shared();
+  const footprints = instanceFootprints(scenery);
 
   expect(footprints.length).toBeGreaterThan(5000);
   expect(roadGapM(footprints, plan.route)).toBeGreaterThanOrEqual(PLANT_ROAD_CLEARANCE_M);
@@ -176,7 +235,7 @@ function instanceTopsM(root: Readonly<THREE.Object3D>, name: string): readonly n
 }
 
 it("keeps every rock house door below the arch of its entrance tunnel", () => {
-  const scenery = createStoneAgeScenery(stoneAgePlan());
+  const { scenery } = shared();
   const doorTopsM = instanceTopsM(scenery, "stone-age-door");
   const archTopsM = instanceTopsM(scenery, "stone-age-entrance");
 
@@ -231,7 +290,7 @@ function tunnelStartMarginsM(domes: readonly Pose[], tunnels: readonly Pose[]): 
 }
 
 it("starts every entrance tunnel where its dome is still taller than the arch", () => {
-  const scenery = createStoneAgeScenery(stoneAgePlan());
+  const { scenery } = shared();
   const domes = instancePoses(scenery, "stone-age-house");
   const tunnels = instancePoses(scenery, "stone-age-entrance");
 
