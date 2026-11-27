@@ -39,4 +39,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [033](ADR-033-connected-worlds.md) | Zusammenhängende Welten aus Straßennetz, Höhenraster und Regionen | Angenommen |
 | [034](ADR-034-hardware-capture-fixtures.md) | Hardware-Mitschnitte als BLE-Fixtures | Angenommen |
 | [035](ADR-035-night-bloom.md) | Bloom nachts, je Biom, über einen Frame-Presenter; Diagnose zählt jeden Pass | Angenommen (Henrys Freigabe im Chat am 2026-11-27) |
-| [036](ADR-036-merge-gates.md) | Merge-Gates ohne Bypass, Sign-off im Guard, engere ADR-Ausnahme | Angenommen; Rulesets und Repo-Einstellung setzt Henry nach dem Merge |
+| [036](ADR-036-merge-gates.md) | Merge-Gates ohne Bypass, engere ADR-Ausnahme | Angenommen; Rulesets setzt Henry nach dem Merge |
