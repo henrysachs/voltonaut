@@ -60,6 +60,7 @@ Während des Starts bleibt ein zugänglicher Ladestatus sichtbar. Renderdiagnost
 - **Roadside life:** Häuser, Zäune, Weidetiere, Fahnen, Banner, Verpflegungsstand, Wasser (See mit Reflexion auf High), Vögel-Schwärme (GPU-Boids, billig).
 - **Zuschauer:** an KOM/Sprint/Zielbögen; Low-Poly-Instanzen mit **Vertex-Animation-Textures** (Jubeln, Winken, Fahne schwenken) → hunderte Figuren in wenigen Draw Calls; laufen bei Annäherung mit (simple Agenten-Logik).
 - **Biome (Stufenplan):** „Voltonaut Loop" (See, Wald, Hügel – MVP), Küste mit Leuchtturm (`coast-loop`), Alpenpass mit 12-km-Serpentinen-Anstieg und getrennter Abfahrt (`alpine-pass`) und Nachtstadt mit Neon (`night-city`). Die Streckenauswahl im Fahrtmenü zeigt pro Route eine 2D-Vorschau, Länge und Höhenmeter und lädt die gewählte Route über den `route`-URL-Parameter.
+- **Themenwelten (#159):** Fantasiewelten sind eigene Welten nach [ADR-033](decisions/ADR-033-connected-worlds.md) §1, keine Regionen der Welt `voltonaut`. Die erste ist die Steinzeit-Welt **Felsental** ([E10-16](specs/E10-16-felsental-world.md)): eine 9 km lange Talrunde mit dem Anstieg „Steinbruch“ (2 km, 4–7 %). Das Biom `stone-age` hat eine ocker-sandsteinfarbene Geländepalette und keinen See. Es zeigt Felsenhäuser mit Eingangstunnel und dunkler Tür im Dorf am Start und im Weiler auf dem Plateau, Palmen und Farne auf den Baumplätzen des Waldplans, Findlinge, Dino-Statuen aus fünf Grundkörpern und vier Vulkane. Ihre Krater und Lavaströme leuchten ohne Lichtquelle und ohne Nebel (`MeshBasicMaterial`). Alles ist geseedet, instanziert, hält mit seinem Radius mindestens 7 m Abstand zur Straßenmitte und steht nach der Bodeninvariante aus [E10-15](specs/E10-15-dressing-ground.md) auf dem gezeichneten Gelände.
 - **GPX-Import** (optional, später): Lat/Lon/Ele → ENU-Projektion → Douglas-Peucker → Höhenglättung (~50 m) → `Route`; Umgebung prozedural.
 
 ## 5. Mitfahrer, Bots, Windschatten
@@ -137,6 +138,8 @@ Das Höhenraster aus [E10-12](specs/E10-12-world-heightfield.md) zeichnet nur di
 Die Nachtstadt mit Türmen, Neon und Bloom ([E10-15](specs/E10-15-night-city-megacity.md)) misst im Sim-E2E nachts höchstens 91 Draw Calls und 172 k Dreiecke, tagsüber 80 / 168 k, die Voltonaut-Tour um 21:00 am Start 97 / 282 k. Seit ADR-035 zählt die Diagnose jeden Render-Pass eines Frames, nachts also auch die etwa 14 Vollbild-Passes von Bloom. Auf echter Hardware offen (#86).
 
 Die Voltonaut-Tour ([E10-14](specs/E10-14-voltonaut-world.md)) bleibt über die ganze Runde bei höchstens 137 Draw Calls und 359 k Dreiecken (E2E-Messfahrt im Sim mit `clock=fast`); Ausstattung fern liegender Regionen kostet keine Draw Calls. Auf echter Hardware offen (#86).
+
+Felsental ([E10-16](specs/E10-16-felsental-world.md)) bündelt Häuser, Statuen und Vulkane je Schicht in einem Mesh für die ganze Runde und Pflanzen in Abschnitten zu 500 m. Mit 250-m-Abschnitten lag die Spitze bei 140 Draw Calls. Gemessen headless mit SwiftShader im Sim-Modus auf `main` mit #185: erster Frame 86 Draw Calls / 182 k Dreiecke, Spitze über die ganze Runde mit `clock=fast` 122 Draw Calls (am Steinbruch) und 277 k Dreiecke. Auf echter Hardware offen (#86).
 
 ## 12. Tests
 

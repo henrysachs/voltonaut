@@ -2,6 +2,7 @@
 
 /mise.toml @henrysachs
 /pnpm-workspace.yaml @henrysachs
+/stryker.config.json @henrysachs
 /tsconfig.base.json @henrysachs
 /tsconfig.json @henrysachs
 /oxlint.config.ts @henrysachs

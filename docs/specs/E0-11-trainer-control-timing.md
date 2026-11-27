@@ -10,7 +10,7 @@ Aufrufer der Trainersteuerung tragen keine Timing-Pflichten mehr. Der Trainer-Ad
 
 ## Befund vor der Änderung (im Code geprüft)
 
-1. `observeCadence` musste von außen gefüttert werden, sonst ging nichts raus. Doppelt in `ftms/adapter.ts` und `sim/fakeTrainer.ts`.
+1. `observeCadence` musste von außen gefüttert werden, sonst ging nichts raus. Doppelt in `ftms/adapter.ts` und ~~`sim/fakeTrainer.ts`~~ (seit E0-15 entfernt).
 2. `commandSink` in `rideDevices.ts` reichte das unveränderte Ziel bei jeder Worker-Nachricht (20 Hz) erneut ein, damit es innerhalb von `FRESH_S = 1,5 s` gültig blieb. `FtmsControlSession.submit` hat dafür einen Zweig für identische Ziele.
 3. `clockScale` lief über `main.ts` → `rideDevices` → `ConnectSlot.trainer` → `renderTrainerControl` → `enable(clockScale)`.
 4. „Fährt“ wurde zweimal entschieden: Snapshot-Kadenz und `paused` im Web, frische Gerätekadenz in der Session.

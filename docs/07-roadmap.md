@@ -219,12 +219,14 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
   - [x] Schritt 4 ([E10-13](specs/E10-13-world-recording-contract.md)): Aufnahme-, Spur- und Progress-Vertrag mit `worldId`, `worldRevision` und `pathId`; Server rechnet Weltwege mit `replayRevision: "world-path-1"` nach; Altaufnahmen mit `routeId`/`routeRevision` bleiben lesbar und werden nicht neu bewertet; Migration `0015` erhält alle Progress-Journale. Gemergt mit #164.
   - [ ] Schritt 3 ([E10-14](specs/E10-14-voltonaut-world.md), #171): Welt `voltonaut` mit Wald, Küste und Nachtstadt als Regionen, Übergangsstraßen und 23-km-Voltonaut-Tour; Regionsfarben überblenden, Ausstattung je Region nur in Sichtweite, Nebenstraßen gezeichnet. Softwaregeprüft, CI und Review offen; Atmosphäre je Region und Alpenpass folgen.
   - [ ] Schritt 5: Abbiegen und Mini-Map (#85)
+- [ ] Themenwelten (#159): originale Fantasiewelten als eigene Welten nach ADR-033 §1
+  - [ ] [E10-16](specs/E10-16-felsental-world.md): Steinzeit-Welt `felsental` mit 9-km-Talrunde, Steinbruch-KOM (2 km, 4–7 %), Felsenhäusern, Palmen und Farnen, Dino-Statuen und vier glühenden Vulkanen; der Server rechnet Weltwege nach. Implementiert; AK1–AK8 durch Tests und Sim-Messläufe belegt, Rundenspitze 122 Draw Calls / 277 k Dreiecke (SwiftShader); Dom, Tunnel und Tür jedes Hauses bestehen die Bodeninvariante aus E10-15 als stehende Teile. CI und Review am neuen Head von PR #182 offen. Offen sind außerdem Henrys Optikfreigabe der Screenshots, das Render-Budget auf echter Hardware (#86) und die Bereitstellung. Dark-Fantasy (#179), Wüstenplanet (#180) und Steinzeit-Rad (#181) folgen in eigenen Issues; die Neon-Megacity geht in #151 auf.
 - [ ] **Power-ups** (Aero-Boost, Leichtgewicht, Windschatten-Magnet) inkl. serverseitiger Nachrechnung
 - [ ] Ghost der PB-Fahrt; Events/Herausforderungen (z. B. „Wochen-KOM")
 - [ ] GPX-Import (optional), FIT-Export (Strava/Garmin)
 - [ ] Optionale ERG-Workouts (nutzt `ftpW`)
 - [ ] Weitere Login-Methoden wie Passkeys im Broker prüfen; keine parallele direkte Auth-Implementierung ohne neue Entscheidung (ADR-013)
-- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung vorgeschlagen: kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis und Freigabe offen.
+- [ ] WebGPU-Renderer und Ultra-Qualität evaluieren ([E10-10](specs/E10-10-webgpu-evaluation.md), [Issue #79](https://github.com/henrysachs/voltonaut/issues/79)). Entscheidung angenommen (2026-11-27): kein zweites Render-Backend, Ultra zurückgestellt ([ADR-030](decisions/ADR-030-webgpu-renderer.md)). Backend-Nachweis offen.
 - [ ] Onboarding, Einstellungen, Barrierefreiheit HUD
 - [ ] Installierbare PWA ([E10-09](specs/E10-09-installable-pwa.md), [Issue #88](https://github.com/henrysachs/voltonaut/issues/88))
   - [x] Manifest, Icons, versionierter App-Shell-Cache, kontrolliertes Update und Menü „App" am gebauten Artefakt softwaregeprüft (Offline-Reload, kein Cache für API-Daten).

@@ -7,7 +7,8 @@ export type Biome =
   | { readonly kind: "forest" }
   | { readonly kind: "coast" }
   | { readonly kind: "alpine" }
-  | { readonly kind: "night-city" };
+  | { readonly kind: "night-city" }
+  | { readonly kind: "stone-age" };
 
 /** Derives the biome from RouteData.scenery; unknown scenery keeps the forest. */
 export function biomeFromScenery(scenery: string): Biome {
@@ -18,12 +19,17 @@ export function biomeFromScenery(scenery: string): Biome {
       return { kind: "alpine" };
     case "night-city":
       return { kind: "night-city" };
+    case "stone-age":
+      return { kind: "stone-age" };
     default:
       return { kind: "forest" };
   }
 }
 
-/** The forest and the coast keep their lake; the alpine pass and the night city drop it (#75). */
+/**
+ * The forest and the coast keep their lake; the alpine pass, the night city (#75) and the stone
+ * age valley (spec E10-16) drop it.
+ */
 export function biomeHasLake(biome: Biome): boolean {
   return biome.kind === "forest" || biome.kind === "coast";
 }
