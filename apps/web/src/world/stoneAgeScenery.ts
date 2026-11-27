@@ -115,10 +115,13 @@ function boulderLayer(boulders: readonly Placed[]): ChunkLayer<Placed> {
   };
 }
 
+const PLANT_CHUNK_M = 500;
+
 /**
  * Stone age (spec E10-15): rock houses with dark doors, palms, ferns and boulders, long-necked
  * dino statues and glowing volcanoes. Houses, statues and volcanoes are few, so each layer is
- * one mesh over the whole lap; plants keep the 250 m chunks.
+ * one mesh over the whole lap. Plants use 500 m chunks: with four plant layers, 250 m chunks
+ * took the Steinbruch view to 140 of the 150 draw calls (spec E10-15 AK6).
  */
 export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Group {
   const root = new THREE.Group();
@@ -131,10 +134,13 @@ export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Grou
     ...named(chunkedMeshes(houseDomeLayer(decor.houses), lapM), "stone-age-house"),
     ...named(chunkedMeshes(houseDoorLayer(decor.houses), lapM), "stone-age-door"),
     ...statueMeshes(decor.statues, lapM),
-    ...named(chunkedMeshes(palmTrunkLayer(decor.palms)), "stone-age-palm"),
-    ...named(chunkedMeshes(frondLayer(decor.palms, PALM_FRONDS)), "stone-age-palm-frond"),
-    ...named(chunkedMeshes(frondLayer(decor.ferns, FERN_FRONDS)), "stone-age-fern"),
-    ...named(chunkedMeshes(boulderLayer(decor.boulders)), "stone-age-boulder"),
+    ...named(chunkedMeshes(palmTrunkLayer(decor.palms), PLANT_CHUNK_M), "stone-age-palm"),
+    ...named(
+      chunkedMeshes(frondLayer(decor.palms, PALM_FRONDS), PLANT_CHUNK_M),
+      "stone-age-palm-frond",
+    ),
+    ...named(chunkedMeshes(frondLayer(decor.ferns, FERN_FRONDS), PLANT_CHUNK_M), "stone-age-fern"),
+    ...named(chunkedMeshes(boulderLayer(decor.boulders), PLANT_CHUNK_M), "stone-age-boulder"),
   );
 
   return root;
