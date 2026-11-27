@@ -253,7 +253,7 @@ function install(): void {
       if (!navigator.userActivation.isActive) return Promise.reject(new Error("gesture required"));
 
       const isPlay =
-        options.filters?.some((filter) => filter.services.includes(playUuid("1"))) === true;
+        options.filters?.some((filter) => (filter.services ?? []).includes(playUuid("1"))) === true;
 
       const label =
         document.activeElement?.closest("section")?.querySelector("h3")?.textContent ?? "";

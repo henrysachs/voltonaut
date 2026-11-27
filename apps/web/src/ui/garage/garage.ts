@@ -94,9 +94,11 @@ class GaragePanel {
 
   #build(): void {
     const heading = document.createElement("h2");
+    heading.className = "garage__heading";
     heading.textContent = "Garage / Shop";
 
     const intro = document.createElement("p");
+    intro.className = "garage__intro";
     intro.textContent =
       "Slots und Items ansehen, Look als Vorschau ändern. Gesperrte Items bleiben als Vorschau sichtbar.";
 

@@ -4,14 +4,9 @@ import {
   readerBytes,
   toAscii,
   toHex,
-  parseIndoorBikeData,
-  parseHeartRateMeasurement,
-  parsePlayInput,
-  INDOOR_BIKE_DATA,
-  HEART_RATE_MEASUREMENT,
+  decodeLabFrame,
+  isEncryptedHandshakeReply,
   ZWIFT_PLAY_COMMAND_RESPONSE,
-  ZWIFT_PLAY_MEASUREMENT,
-  ZWIFT_PLAY_LEGACY_SERVICE,
   type BleFixture,
   type BleLogEntry,
   type BleTransport,
@@ -25,40 +20,12 @@ export interface SnifferSession {
   readonly transport: BleTransport;
   readonly fixture: (firmware: string, notes: string) => BleFixture;
   readonly marker: (text: string) => void;
+  /** Lab-generated note (e.g. a failed automatic read); never counted as a user marker. */
+  readonly note: (text: string) => void;
   readonly dispose: () => Promise<void>;
   readonly observe: (ref: CharacteristicRef) => Promise<void>;
   readonly unobserve: (ref: CharacteristicRef) => void;
   readonly isObserving: (ref: CharacteristicRef) => boolean;
-}
-
-function decode(ref: CharacteristicRef, data: ByteReader): string {
-  if (
-    ref.serviceUuid === ZWIFT_PLAY_LEGACY_SERVICE &&
-    ref.characteristicUuid === ZWIFT_PLAY_MEASUREMENT
-  ) {
-    const result = parsePlayInput(data);
-
-    return result.ok
-      ? JSON.stringify({
-          ...result.value,
-          analogInfo: "Unkalibrierte Rohwerte, keine Spielwirkung.",
-        })
-      : "";
-  }
-
-  if (ref.characteristicUuid === INDOOR_BIKE_DATA) {
-    const result = parseIndoorBikeData(data);
-
-    return result.ok ? JSON.stringify(result.value) : result.failure.reason;
-  }
-
-  if (ref.characteristicUuid === HEART_RATE_MEASUREMENT) {
-    const result = parseHeartRateMeasurement(data);
-
-    return result.ok ? JSON.stringify(result.value) : result.failure.reason;
-  }
-
-  return "";
 }
 
 function exportGatt(profile: GattProfile): BleFixture["gatt"] {
@@ -121,12 +88,14 @@ function createRecorder(raw: BleTransport, changed: () => void, nowMs: () => num
         dir,
         hex: toHex(bytes),
         ascii: toAscii(bytes),
-        decoded: decode(ref, data),
+        decoded: decodeLabFrame(ref, data),
         marker: "",
       });
 
-      // UNVERIFIED: docs/02-bluetooth.md#handshake
-      if (ref.characteristicUuid === ZWIFT_PLAY_COMMAND_RESPONSE && data.byteLength >= 64) {
+      if (
+        ref.characteristicUuid === ZWIFT_PLAY_COMMAND_RESPONSE &&
+        isEncryptedHandshakeReply(data)
+      ) {
         encrypted = true;
         event(
           "encrypted-handshake",
@@ -176,6 +145,17 @@ function fixtureMeta(raw: BleTransport, firmware: string, notes: string): BleFix
   };
 }
 
+function annotations(recorder: Recorder): Pick<SnifferSession, "marker" | "note"> {
+  return {
+    marker: (text) => {
+      recorder.event("marker", text);
+    },
+    note: (text) => {
+      recorder.event("auto-capture-failed", text);
+    },
+  };
+}
+
 export function createSnifferSession(
   raw: BleTransport,
   changed: () => void,
@@ -216,9 +196,7 @@ export function createSnifferSession(
       stopDisconnected();
       await raw.disconnect();
     },
-    marker: (text) => {
-      recorder.event("marker", text);
-    },
+    ...annotations(recorder),
     fixture: (firmware, notes) => ({
       meta: fixtureMeta(raw, firmware, notes),
       gatt: exportGatt(profile),

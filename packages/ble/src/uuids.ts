@@ -9,13 +9,30 @@ export const CYCLING_SPEED_AND_CADENCE_SERVICE = "00001816-0000-1000-8000-00805f
 
 export const ZWIFT_PLAY_LEGACY_SERVICE = "00000001-19ca-4651-86e5-fa29dcdd09d1";
 
-// UNVERIFIED: docs/02-bluetooth.md#4-zwift-play-controller-henrys-hardware-️-unverifiziert
+/** Service of the Zwift Click v2 pucks, confirmed by a GATT export on 2026-11-26. */
 export const ZWIFT_PLAY_V2_SERVICE = "0000fc82-0000-1000-8000-00805f9b34fb";
 export const ZWIFT_PLAY_MEASUREMENT = "00000002-19ca-4651-86e5-fa29dcdd09d1";
 export const ZWIFT_PLAY_CONTROL_POINT = "00000003-19ca-4651-86e5-fa29dcdd09d1";
 export const ZWIFT_PLAY_COMMAND_RESPONSE = "00000004-19ca-4651-86e5-fa29dcdd09d1";
+
+// UNVERIFIED: docs/02-bluetooth.md#zwift-click-v2 – purpose unknown; the lab never touches them automatically.
+export const ZWIFT_CLICK_V2_UNKNOWN_CHARACTERISTICS: readonly string[] = [
+  "00000100-19ca-4651-86e5-fa29dcdd09d1",
+  "00000101-19ca-4651-86e5-fa29dcdd09d1",
+  "00000102-19ca-4651-86e5-fa29dcdd09d1",
+];
+
 export const FITNESS_MACHINE_CONTROL_POINT = "00002ad9-0000-1000-8000-00805f9b34fb";
 export const FITNESS_MACHINE_STATUS = "00002ada-0000-1000-8000-00805f9b34fb";
+export const CYCLING_POWER_FEATURE = "00002a65-0000-1000-8000-00805f9b34fb";
+export const CYCLING_POWER_CONTROL_POINT = "00002a66-0000-1000-8000-00805f9b34fb";
+export const BATTERY_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb";
+export const MODEL_NUMBER = "00002a24-0000-1000-8000-00805f9b34fb";
+export const SERIAL_NUMBER = "00002a25-0000-1000-8000-00805f9b34fb";
+export const FIRMWARE_REVISION = "00002a26-0000-1000-8000-00805f9b34fb";
+export const HARDWARE_REVISION = "00002a27-0000-1000-8000-00805f9b34fb";
+export const SOFTWARE_REVISION = "00002a28-0000-1000-8000-00805f9b34fb";
+export const MANUFACTURER_NAME = "00002a29-0000-1000-8000-00805f9b34fb";
 
 export const SNIFFER_OPTIONAL_SERVICES: readonly string[] = [
   FITNESS_MACHINE_SERVICE,

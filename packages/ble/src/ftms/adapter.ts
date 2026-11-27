@@ -53,9 +53,14 @@ export interface TrainerAdapter extends BleDeviceAdapter {
   readonly features: () => FitnessMachineFeature | undefined;
 }
 
+// UNVERIFIED: docs/02-bluetooth.md#zwift-hub-one – whether the Hub advertises 0x1826 is unknown, hence the name filter.
 const SCAN: ScanOptions = {
   acceptAllDevices: false,
-  filters: [{ services: [FITNESS_MACHINE_SERVICE] }, { services: [CYCLING_POWER_SERVICE] }],
+  filters: [
+    { services: [FITNESS_MACHINE_SERVICE] },
+    { services: [CYCLING_POWER_SERVICE] },
+    { namePrefix: "Zwift Hub" },
+  ],
   optionalServices: [FITNESS_MACHINE_SERVICE, CYCLING_POWER_SERVICE],
 };
 

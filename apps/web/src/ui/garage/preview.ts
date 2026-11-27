@@ -3,11 +3,13 @@ import type { AvatarConfig } from "@voltonaut/shared";
 import { createPreviewLink } from "./previewLink.js";
 import { BrowserPreviewPort } from "./previewPort.js";
 import type { PreviewViewport } from "./previewProtocol.js";
+import type { PreviewOrbit } from "./previewOrbit.js";
 
 export interface GaragePreviewView {
   readonly setLook: (config: AvatarConfig) => void;
   readonly setAutoRotate: (enabled: boolean) => void;
-  readonly rotateBy: (angleRad: number) => void;
+  readonly setOrbit: (orbit: Readonly<PreviewOrbit>) => void;
+  readonly capture: () => Promise<Blob>;
   readonly dispose: () => void;
 }
 
@@ -24,6 +26,7 @@ class GaragePreviewWorkerView implements GaragePreviewView {
   });
   readonly #link;
   #state: State = { kind: "starting" };
+  #nextCaptureRequestId = 0;
 
   constructor(
     // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- The view owns the host's canvas child.
@@ -86,8 +89,14 @@ class GaragePreviewWorkerView implements GaragePreviewView {
     this.#link.send({ type: "preview.autoRotate", enabled });
   }
 
-  rotateBy(angleRad: number): void {
-    this.#link.send({ type: "preview.rotate", angleRad });
+  setOrbit(orbit: Readonly<PreviewOrbit>): void {
+    this.#link.send({ type: "preview.orbit", orbit });
+  }
+
+  capture(): Promise<Blob> {
+    this.#nextCaptureRequestId += 1;
+
+    return this.#link.capture(this.#nextCaptureRequestId);
   }
 
   #detach(): void {

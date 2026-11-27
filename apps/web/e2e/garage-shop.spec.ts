@@ -35,6 +35,16 @@ async function expectMinimumHitArea(target: Readonly<Locator>): Promise<void> {
   expect(box.height).toBeGreaterThanOrEqual(44);
 }
 
+async function attachScreenshot(
+  page: Readonly<Page>,
+  testInfo: Readonly<TestInfo>,
+  name: string,
+): Promise<void> {
+  const path = testInfo.outputPath(name);
+  await page.screenshot({ path });
+  await testInfo.attach(name, { path, contentType: "image/png" });
+}
+
 test("garage previews items and colors, keeps guest purchases disabled and the ride continues", async ({
   page,
 }: Readonly<PageFixture>, testInfo: Readonly<TestInfo>) => {
@@ -77,7 +87,7 @@ test("garage previews items and colors, keeps guest purchases disabled and the r
   await expect
     .poll(async () => Number(await diagnostics.getAttribute("data-distance-m")))
     .toBeGreaterThan(distanceM + 2);
-  await page.screenshot({ path: testInfo.outputPath("garage-shop.png") });
+  await attachScreenshot(page, testInfo, "garage-shop.png");
 
   await page.mouse.click(8, 8);
   await expect(page.getByRole("dialog", { name: "Fahrtmenü" })).not.toBeVisible();
@@ -135,12 +145,14 @@ test("garage keeps item information usable without WebGL and honors reduced moti
   );
   await expect(page.getByRole("button", { name: "Links drehen", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Drehung starten", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Fotomodus", exact: true })).toBeDisabled();
+  await expect(page.getByTestId("garage-preview")).toHaveCSS("touch-action", "auto");
 
   await page.getByTestId("garage-item-jersey.stripe").click();
   await expect(page.getByTestId("garage-item-name")).toHaveText("Blitzstreifen");
   await expect(page.getByTestId("garage-price")).toHaveText("1.500 ⚡");
   await expect(page.getByTestId("garage-purchase")).toBeDisabled();
-  await page.screenshot({ path: testInfo.outputPath("garage-shop-no-webgl.png") });
+  await attachScreenshot(page, testInfo, "garage-shop-no-webgl.png");
 });
 
 test("garage stays inside the small ride menu without body scrolling", async ({
@@ -182,7 +194,7 @@ test("garage stays inside the small ride menu without body scrolling", async ({
           element.scrollHeight > element.clientHeight,
       ),
   ).toBe(true);
-  await page.screenshot({ path: testInfo.outputPath("garage-shop-small.png") });
+  await attachScreenshot(page, testInfo, "garage-shop-small.png");
 });
 
 /* oxlint-enable typescript/prefer-readonly-parameter-types */

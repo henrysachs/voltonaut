@@ -15,14 +15,23 @@ type LabPage = Readonly<
     | "evaluate"
     | "waitForEvent"
     | "screenshot"
+    | "getByText"
+    | "on"
   >
 >;
 
 async function openDevice(page: LabPage, id: string): Promise<void> {
   await page.getByRole("button", { name: "Gerät hinzufügen", exact: true }).click();
   await expect(page.locator("#selected-device")).toContainText(id);
-  await expect(page.locator("#status")).toHaveText("ready");
-  await page.getByRole("button", { name: "Subscribe", exact: true }).click();
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
+
+  // The fake trainer's characteristic is readable, so the lab reads it once at connect.
+  if (id === "trainer") {
+    await page.evaluate(() => document.dispatchEvent(new Event("multi-read-trainer")));
+    await expect(page.locator("#log")).toContainText("rx  Indoor Bike Data");
+  }
+
+  // Recording starts on connect, without a Subscribe click.
   await expect(page.getByRole("button", { name: "Unsubscribe", exact: true })).toBeEnabled();
   await page.getByLabel("Firmware", { exact: true }).fill(`firmware-${id}`);
   await page.getByLabel("Notizen", { exact: true }).fill(`notes-${id}`);
@@ -31,6 +40,7 @@ async function openDevice(page: LabPage, id: string): Promise<void> {
 async function openDevices(page: LabPage): Promise<void> {
   await page.addInitScript({ content: multideviceBluetoothScript() });
   await page.goto("/debug/ble.html");
+  await page.getByText("GATT-Explorer für Fortgeschrittene", { exact: true }).click();
   await openDevice(page, "trainer");
   await openDevice(page, "left");
   await openDevice(page, "right");
@@ -62,8 +72,9 @@ function readFixture(path: string): BleFixture {
 async function exportDevice(page: LabPage, id: string): Promise<BleFixture> {
   await choose(page, id);
   const pending = page.waitForEvent("download");
-  await page.getByRole("button", { name: "JSON exportieren", exact: true }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
   const download = await pending;
+  expect(download.suggestedFilename()).toMatch(/^ble-\d-/u);
   const fixture = readFixture(await download.path());
   expect(fixture.meta.deviceId).toBe(id);
   expect(fixture.meta.firmware).toBe(`firmware-${id}`);
@@ -114,7 +125,8 @@ test("three ready devices capture independently, duplicate selection preserves e
   await expect(page.locator("body")).not.toHaveAttribute("data-left-disconnects");
   await emitAll(page);
 
-  await assertCapture(page, "trainer", 2);
+  // Trainer: one connect-time read plus two notifications.
+  await assertCapture(page, "trainer", 3);
   await assertCapture(page, "left", 2);
   await assertCapture(page, "right", 2);
   await expect(page.getByRole("button", { name: "Subscribe", exact: true })).toBeDisabled();
@@ -135,7 +147,7 @@ test("disconnecting only left preserves all captures and the other notification 
   await expect(page.locator("#devices article.ready")).toHaveCount(2);
   await emitAll(page);
 
-  await assertCapture(page, "trainer", 2);
+  await assertCapture(page, "trainer", 3);
   await assertCapture(page, "left", 1);
   await assertCapture(page, "right", 2);
 
@@ -160,7 +172,7 @@ test("pending trainer read does not block right; late error restores only traine
   await expect(page.locator("#log")).toContainText("right stays usable");
   await page.evaluate(() => document.dispatchEvent(new Event("multi-fail-trainer")));
   await expect(page.locator("#devices article.error")).toHaveCount(1);
-  await expect(page.locator("#status")).toHaveText("ready");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
   await expect(page.locator("#log")).not.toContainText("read failed");
   await choose(page, "trainer");
   await expect(page.locator("#status")).toContainText("read failed trainer");
@@ -180,7 +192,7 @@ test("queued export keeps the clicked device and metadata after selecting anothe
   await page.getByLabel("Firmware", { exact: true }).fill("firmware-at-click");
   await page.getByLabel("Notizen", { exact: true }).fill("notes-at-click");
   const pending = page.waitForEvent("download");
-  await page.getByRole("button", { name: "JSON exportieren", exact: true }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
   await choose(page, "right");
   await page.evaluate(() => document.dispatchEvent(new Event("multi-read-trainer")));
   const download = await pending;
@@ -197,6 +209,7 @@ test("late trainer connection never selects over right and adding remains availa
 }: Readonly<{ page: LabPage }>) => {
   await page.addInitScript({ content: multideviceBluetoothScript() });
   await page.goto("/debug/ble.html");
+  await page.getByText("GATT-Explorer für Fortgeschrittene", { exact: true }).click();
   await page.evaluate(() => {
     document.body.dataset["delayConnect"] = "trainer";
   });
@@ -205,12 +218,12 @@ test("late trainer connection never selects over right and adding remains availa
   await page.getByRole("button", { name: "Gerät hinzufügen", exact: true }).click();
   await page.getByRole("button", { name: "Gerät hinzufügen", exact: true }).click();
   await expect(page.locator("#selected-device")).toContainText("right");
-  await expect(page.locator("#status")).toHaveText("ready");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
   const payload = page.getByLabel("Payload 00000002-19ca-4651-86e5-fa29dcdd09d1");
   await payload.fill("00");
   await page.evaluate(() => document.dispatchEvent(new Event("multi-connect-trainer")));
   await expect(page.locator("#devices article.ready")).toHaveCount(3);
   await expect(page.locator("#selected-device")).toContainText("right");
-  await expect(page.locator("#status")).toHaveText("ready");
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "ready");
   await expect(payload).toHaveValue("00");
 });

@@ -257,7 +257,7 @@ function installPlayBluetoothFake(): void {
 
       choices += 1;
       document.body.dataset["playPickerCalls"] = String(choices);
-      const services = options.filters?.flatMap((filter) => filter.services) ?? [];
+      const services = options.filters?.flatMap((filter) => filter.services ?? []) ?? [];
 
       if (services.includes(playUuid("1"))) {
         const label =

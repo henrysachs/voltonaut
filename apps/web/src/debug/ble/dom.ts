@@ -1,3 +1,5 @@
+import { describeAdvertisement, type AdvertisementFrame } from "@voltonaut/ble";
+
 export function element(id: string): HTMLElement {
   const found = document.querySelector(`#${id}`);
 
@@ -28,27 +30,25 @@ export function select(id: string): HTMLSelectElement {
   throw new Error(`Expected select #${id}`);
 }
 
-export function downloadJson(json: string): void {
+/** File-system safe part of a download name. */
+export function fileSlug(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/gu, "-")
+      .replaceAll(/^-|-$/gu, "") || "geraet"
+  );
+}
+
+export function downloadJson(json: string, baseName: string): void {
   const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `ble-${new Date().toISOString().replaceAll(":", "-")}.json`;
+  anchor.download = `${baseName}-${new Date().toISOString().replaceAll(":", "-")}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
 
 export function showAdvertisement(frame: AdvertisementFrame): void {
-  element("advertisement").textContent = JSON.stringify({
-    rssiDbm: frame.rssiDbm,
-    manufacturerData: frame.manufacturerData.map((entry) => ({
-      companyId: entry.companyId,
-      hex: toHex(entry.data),
-    })),
-    serviceData: frame.serviceData.map((entry) => ({
-      service: entry.serviceUuid,
-      hex: toHex(entry.data),
-    })),
-  });
+  element("advertisement").textContent = describeAdvertisement(frame);
 }
-
-import { toHex, type AdvertisementFrame } from "@voltonaut/ble";

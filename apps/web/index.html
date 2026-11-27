@@ -39,6 +39,17 @@
       <section class="panel hud" aria-label="Ride HUD">
         <div class="hud__effort">
           <p class="hud__status" id="hud-status" data-testid="hud-status">Waiting for devices</p>
+          <p
+            class="hud__resistance"
+            id="hud-resistance"
+            data-testid="hud-resistance"
+            data-state="hidden"
+            lang="de"
+            hidden
+          >
+            <span id="hud-resistance-state" aria-live="polite"></span>
+            <span id="hud-resistance-grade" class="hud__resistance-grade"></span>
+          </p>
           <dl class="hud__values hud__effort-values">
             <div class="hud__value">
               <dt>Power</dt>

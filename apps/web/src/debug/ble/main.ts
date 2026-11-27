@@ -1,26 +1,49 @@
 import {
   createReplayTransport,
   createIntervalTicker,
+  labDeviceGuide,
   parseBleFixtureJson,
   bleFixtureSchema,
   SNIFFER_PRESETS,
   SNIFFER_OPTIONAL_SERVICES,
   type BleTransport,
 } from "@voltonaut/ble";
-import { element, input, downloadJson } from "./dom.js";
+import { element, input, downloadJson, fileSlug } from "./dom.js";
 import { renderExplorer } from "./explorer.js";
 import { LabDevices } from "./devices.js";
 import type { LabDevice, LabChange } from "./device.js";
-import { renderDevices, restoreMetadata } from "./deviceList.js";
+import { createDeviceList, deviceLabel, restoreMetadata } from "./deviceList.js";
+import { createLogTabs } from "./logTabs.js";
 import { addNativeDevice } from "./connections.js";
-import { preset } from "./presets.js";
+import { countLog, formatLogEntry } from "./logView.js";
+import { preset, presetMismatch } from "./presets.js";
 
 const scan = { acceptAllDevices: true, filters: [], optionalServices: SNIFFER_OPTIONAL_SERVICES };
 const clock = { nowS: () => performance.now() / 1000 };
 const ticker = createIntervalTicker(50);
 const devices = new LabDevices({ clock, ticker }, changed);
+
+const presetButtons: {
+  readonly button: HTMLButtonElement;
+  readonly definition: (typeof SNIFFER_PRESETS)[number];
+}[] = [];
+
 let paused = false;
 let refreshExplorer = (): void => {};
+
+function exportDevice(device: Readonly<LabDevice>): void {
+  const firmware = device.firmware;
+  const notes = device.notes;
+  device.run(async () => {
+    const fixture = bleFixtureSchema.parse(device.session.fixture(firmware, notes));
+    downloadJson(JSON.stringify(fixture, null, 2), `ble-${device.number}-${fileSlug(device.name)}`);
+    await Promise.resolve();
+  });
+}
+
+const renderDevices = createDeviceList(devices, { exportDevice });
+
+const renderLogTabs = createLogTabs(devices);
 
 function renderLog(): void {
   const target = devices.selected;
@@ -29,17 +52,69 @@ function renderLog(): void {
     return;
   }
 
+  const log = target.session.fixture(target.firmware, target.notes).log;
+  const counts = countLog(log);
   const filter = input("filter").value.toLowerCase();
-  element("log").textContent = target.session
-    .fixture(target.firmware, target.notes)
-    .log.map((entry) => JSON.stringify(entry))
-    .filter((line) => line.toLowerCase().includes(filter))
-    .join("\n");
+
+  element("log-summary").textContent =
+    `${deviceLabel(target)}: ${counts.received} empfangen, ${counts.sent} gesendet, ${counts.markers} Marker.`;
+  const lines: string[] = [];
+
+  for (const entry of log) {
+    const line = formatLogEntry(entry);
+
+    if (`${line} ${JSON.stringify(entry)}`.toLowerCase().includes(filter)) lines.push(line);
+  }
+
+  element("log").textContent = lines.join("\n");
+}
+
+function renderGuide(): void {
+  const target = devices.selected;
+  const root = element("guide");
+  root.replaceChildren();
+
+  if (target === undefined || target.state.kind === "connecting") {
+    element("guide-title").textContent = "Anleitung";
+
+    const step = document.createElement("li");
+    step.textContent =
+      target === undefined
+        ? "Gerät hinzufügen, dann erscheint hier die passende Anleitung."
+        : "Gerät wird verbunden und erkannt …";
+    root.append(step);
+
+    return;
+  }
+
+  const guide = labDeviceGuide(target.profile);
+  element("guide-title").textContent = `Anleitung · ${guide.title}`;
+
+  for (const text of guide.steps) {
+    const step = document.createElement("li");
+    step.textContent = text;
+    root.append(step);
+  }
+}
+
+function renderPresets(): void {
+  const target = devices.selected;
+
+  for (const { button, definition } of presetButtons) {
+    const mismatch =
+      target === undefined ? "Zuerst Gerät wählen." : presetMismatch(target, definition);
+
+    button.disabled = mismatch !== undefined;
+    button.title = mismatch ?? "";
+  }
 }
 
 function changed(change: LabChange, source: Readonly<LabDevice>): void {
   if (change !== "capture") {
-    renderDevices(devices);
+    renderDevices();
+    renderLogTabs();
+    renderGuide();
+    renderPresets();
   }
 
   const target = devices.selected;
@@ -117,6 +192,14 @@ function bindControls(): void {
   element("disconnect").addEventListener("click", () => {
     runSelected((device) => device.disconnect());
   });
+  element("read-all").addEventListener("click", () => {
+    runSelected((device) => device.readAll());
+  });
+  element("export-all").addEventListener("click", () => {
+    for (const device of devices.entries) {
+      exportDevice(device);
+    }
+  });
 
   for (const id of ["firmware", "notes"]) {
     element(id).addEventListener("input", () => {
@@ -144,14 +227,15 @@ function bindLogger(): void {
     });
   });
   element("export").addEventListener("click", () => {
-    const firmware = input("firmware").value;
-    const notes = input("notes").value;
-    runSelected(async (device) => {
-      const fixture = device.session.fixture(firmware, notes);
-      const parsed = bleFixtureSchema.parse(fixture);
-      downloadJson(JSON.stringify(parsed, null, 2));
-      await Promise.resolve();
-    });
+    const target = devices.selected;
+
+    if (target === undefined) {
+      element("status").textContent = "Zuerst Gerät wählen";
+
+      return;
+    }
+
+    exportDevice(target);
   });
 }
 
@@ -162,6 +246,7 @@ for (const definition of SNIFFER_PRESETS) {
     runSelected((device) => preset(device, definition));
   });
   element("presets").append(button);
+  presetButtons.push({ button, definition });
 }
 
 window.addEventListener(
@@ -177,3 +262,7 @@ window.addEventListener(
 bindControls();
 
 bindLogger();
+
+renderGuide();
+
+renderPresets();

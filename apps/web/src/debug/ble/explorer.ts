@@ -1,5 +1,7 @@
 import {
+  characteristicLabel,
   parseHex,
+  toShortUuid,
   type CharacteristicRef,
   type CharacteristicInfo,
   type BleTransport,
@@ -79,7 +81,8 @@ function characteristicRow(
   const row = document.createElement("section");
   const transport = session.transport;
   const title = document.createElement("p");
-  title.textContent = `${info.uuid} [${info.properties.join(", ")}] Descriptors: ${info.descriptors.join(", ") || "–"}`;
+  const label = characteristicLabel(info.uuid);
+  title.textContent = `${label === toShortUuid(info.uuid) ? "" : `${label} · `}${info.uuid} [${info.properties.join(", ")}] Descriptors: ${info.descriptors.join(", ") || "–"}`;
   row.append(title);
 
   if (info.properties.includes("read")) {

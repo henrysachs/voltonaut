@@ -147,10 +147,12 @@ function nativeDevice(peripheral: SimPeripheral): WebBluetoothDevice {
 }
 
 function offers(peripheral: SimPeripheral, options: WebBluetoothRequestOptions): boolean {
-  return (options.filters ?? []).some((filter) =>
-    filter.services.every((uuid) =>
-      peripheral.profile.services.some((service) => service.uuid === uuid),
-    ),
+  return (options.filters ?? []).some(
+    (filter) =>
+      (filter.services ?? []).every((uuid) =>
+        peripheral.profile.services.some((service) => service.uuid === uuid),
+      ) &&
+      (filter.namePrefix === undefined || peripheral.name.startsWith(filter.namePrefix)),
   );
 }
 

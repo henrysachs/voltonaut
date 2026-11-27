@@ -19,22 +19,20 @@ function payloadBytes(bytes: BufferSource): number[] {
   );
 }
 
-function notificationCharacteristic(notificationsReady: Readonly<Promise<void>>) {
+/** One characteristic with its own value and listeners, like a native GATT characteristic. */
+function listenedCharacteristic(
+  template: Omit<WebBluetoothCharacteristic, "value" | "addEventListener" | "removeEventListener">,
+  initial: readonly number[],
+) {
   const listeners = new Set<(event: WebBluetoothCharacteristicValueChangedEvent) => void>();
-  const writes: number[][] = [];
-  let value = new DataView(Uint8Array.from([0x45, 0, 180, 0, 244, 0]).buffer);
+  let value = new DataView(Uint8Array.from(initial).buffer);
 
-  const data: WebBluetoothCharacteristic = {
-    uuid: INDOOR_BIKE_DATA,
-    properties: { notify: true },
+  const characteristic: WebBluetoothCharacteristic = {
+    ...template,
     get value() {
       return value;
     },
     readValue: () => Promise.resolve(value),
-    writeValue: () => Promise.resolve(),
-    startNotifications: () => notificationsReady,
-    stopNotifications: () => Promise.resolve(),
-    getDescriptors: () => Promise.resolve([]),
     addEventListener: (_type, listener) => {
       listeners.add(listener);
     },
@@ -43,33 +41,67 @@ function notificationCharacteristic(notificationsReady: Readonly<Promise<void>>)
     },
   };
 
-  const emit = (): void => {
+  const emit = (bytes?: readonly number[]): void => {
+    if (bytes !== undefined) value = new DataView(Uint8Array.from(bytes).buffer);
+
     for (const listener of listeners) {
-      listener({ target: data });
+      listener({ target: characteristic });
     }
   };
 
-  const control: WebBluetoothCharacteristic = {
-    ...data,
-    uuid: FITNESS_MACHINE_CONTROL_POINT,
-    properties: { write: true, indicate: true },
-    writeValue: (bytes) => {
-      const payload = payloadBytes(bytes);
-
-      writes.push(payload);
-      value = new DataView(Uint8Array.from([0x80, payload[0] ?? 0, 1]).buffer);
-      emit();
-
-      return Promise.resolve();
-    },
-  };
-
-  return { data, control, emit, writes };
+  return { characteristic, emit };
 }
 
+function notificationCharacteristic(notificationsReady: Readonly<Promise<void>>) {
+  const writes: number[][] = [];
+
+  const common = {
+    readValue: () => Promise.resolve(new DataView(new ArrayBuffer(0))),
+    writeValue: () => Promise.resolve(),
+    startNotifications: () => notificationsReady,
+    stopNotifications: () => Promise.resolve(),
+    getDescriptors: () => Promise.resolve([]),
+  };
+
+  const data = listenedCharacteristic(
+    { ...common, uuid: INDOOR_BIKE_DATA, properties: { notify: true } },
+    [0x45, 0, 180, 0, 244, 0],
+  );
+
+  const indication = { emit: (_bytes: readonly number[]): void => {} };
+
+  const control = listenedCharacteristic(
+    {
+      ...common,
+      uuid: FITNESS_MACHINE_CONTROL_POINT,
+      properties: { write: true, indicate: true },
+      writeValue: (bytes) => {
+        const payload = payloadBytes(bytes);
+
+        writes.push(payload);
+        indication.emit([0x80, payload[0] ?? 0, 1]);
+
+        return Promise.resolve();
+      },
+    },
+    [],
+  );
+
+  indication.emit = control.emit;
+
+  return {
+    data: data.characteristic,
+    control: control.characteristic,
+    emit: () => {
+      data.emit();
+    },
+    writes,
+  };
+}
+
+/** Reads stay pending until the test settles all of them (the lab also reads once at connect). */
 function readCharacteristic(template: WebBluetoothCharacteristic) {
-  let finish: (() => void) | undefined;
-  let fail: (() => void) | undefined;
+  const pending: { readonly finish: () => void; readonly fail: () => void }[] = [];
 
   const feature: WebBluetoothCharacteristic = {
     ...template,
@@ -77,23 +109,24 @@ function readCharacteristic(template: WebBluetoothCharacteristic) {
     properties: { read: true },
     readValue: () =>
       new Promise<DataView>((resolve, reject) => {
-        finish = () => {
-          resolve(new DataView(new ArrayBuffer(8)));
-        };
-
-        fail = () => {
-          reject(new Error("read failed"));
-        };
+        pending.push({
+          finish: () => {
+            resolve(new DataView(new ArrayBuffer(8)));
+          },
+          fail: () => {
+            reject(new Error("read failed"));
+          },
+        });
       }),
   };
 
   return {
     feature,
     finishRead: () => {
-      finish?.();
+      for (const read of pending.splice(0)) read.finish();
     },
     failRead: () => {
-      fail?.();
+      for (const read of pending.splice(0)) read.fail();
     },
   };
 }

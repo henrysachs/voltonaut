@@ -45,6 +45,7 @@ export class ControlTestRig {
   private readonly listeners = new Map<string, NotificationListener>();
   private autoAck = true;
   private responseResult = 1;
+  private readonly opcodeResults = new Map<number, number>();
   private writeFailure = false;
   private writeDelay: Promise<void> = Promise.resolve();
   readonly bus = createEventBus();
@@ -76,7 +77,8 @@ export class ControlTestRig {
     const opcode = bytes.at(0) ?? -1;
     this.writes.push({ opcode, mode, bytes, atS: this.clock.nowS() });
 
-    if (this.autoAck) this.notify([0x80, opcode, this.responseResult]);
+    if (this.autoAck)
+      this.notify([0x80, opcode, this.opcodeResults.get(opcode) ?? this.responseResult]);
 
     return this.writeFailure ? Promise.reject(new Error("write uncertain")) : this.writeDelay;
   }
@@ -118,6 +120,10 @@ export class ControlTestRig {
   }
   result(value: number): void {
     this.responseResult = value;
+  }
+  /** Result code for one opcode only, e.g. a Hub's `80 07 04` for an already started machine. */
+  resultFor(opcode: number, value: number): void {
+    this.opcodeResults.set(opcode, value);
   }
   failWrite(): void {
     this.writeFailure = true;

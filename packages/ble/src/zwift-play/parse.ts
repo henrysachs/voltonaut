@@ -1,4 +1,5 @@
 import { parseFailure, type ByteReader, type ParseResult } from "../bytes.js";
+import { zwiftProtobufCursor } from "./protobuf.js";
 
 export type PlaySide = "left" | "right";
 
@@ -36,48 +37,13 @@ export type PlayInput = PlayChannels &
       }
   );
 
-class Varints {
-  private offset = 1;
-
-  constructor(private readonly data: ByteReader) {}
-
-  done(): boolean {
-    return this.offset === this.data.byteLength;
-  }
-
-  next(): number | undefined {
-    let value = 0;
-
-    for (let index = 0; index < 5; index += 1) {
-      if (this.offset >= this.data.byteLength) {
-        return undefined;
-      }
-
-      const byte = this.data.getUint8(this.offset);
-      this.offset += 1;
-
-      if (index === 4 && byte > 0x0f) {
-        return undefined;
-      }
-
-      value += (byte & 0x7f) * 2 ** (index * 7);
-
-      if (byte < 0x80) {
-        return value;
-      }
-    }
-
-    return undefined;
-  }
-}
-
 function readFields(data: ByteReader): ReadonlyMap<number, number> | undefined {
-  const reader = new Varints(data);
+  const reader = zwiftProtobufCursor(data);
   const fields = new Map<number, number>();
 
   while (!reader.done()) {
-    const tag = reader.next();
-    const value = reader.next();
+    const tag = reader.varint();
+    const value = reader.varint();
 
     if (
       tag === undefined ||

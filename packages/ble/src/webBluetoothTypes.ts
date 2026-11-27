@@ -94,7 +94,7 @@ export interface WebBluetoothDevice {
 export interface WebBluetoothRequestOptions {
   readonly acceptAllDevices?: boolean;
   readonly filters?: readonly {
-    readonly services: readonly string[];
+    readonly services?: readonly string[];
     readonly namePrefix?: string;
   }[];
   readonly optionalServices?: readonly string[];

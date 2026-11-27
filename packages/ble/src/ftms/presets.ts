@@ -1,13 +1,5 @@
 import type { ReadOnlyBytes } from "../bytes.js";
 import { readOnlyBytes } from "../bytes.js";
-import type { CharacteristicRef } from "../transport.js";
-import {
-  ZWIFT_PLAY_COMMAND_RESPONSE,
-  ZWIFT_PLAY_CONTROL_POINT,
-  ZWIFT_PLAY_LEGACY_SERVICE,
-  ZWIFT_PLAY_MEASUREMENT,
-} from "../uuids.js";
-import { RIDE_ON } from "../zwift-play/handshake.js";
 
 /** One FTMS control-point procedure: the write and the opcode its indication must echo. */
 export interface FtmsPresetCommand {
@@ -17,8 +9,8 @@ export interface FtmsPresetCommand {
 
 /**
  * FTMS presets never carry raw control-point writes; `createFtmsLabControl` runs their
- * commands through `ControlProcedure`. The Play handshake awaits no response, so it
- * stays a plain "observe, then write" description.
+ * commands through `ControlProcedure`. The controller handshake awaits no response, so
+ * it stays a plain "observe, then write" step derived from the connected profile.
  */
 export type BlePreset =
   | {
@@ -30,11 +22,10 @@ export type BlePreset =
       readonly commands: readonly FtmsPresetCommand[];
     }
   | {
-      readonly kind: "zwiftPlay";
+      /** Service, channels and handshake bytes come from `zwiftControllerLink(profile)`. */
+      readonly kind: "zwiftController";
       readonly id: string;
       readonly label: string;
-      readonly observe: readonly CharacteristicRef[];
-      readonly write: { readonly ref: CharacteristicRef; readonly bytes: ReadOnlyBytes };
     };
 
 export type FtmsPreset = Extract<BlePreset, { readonly kind: "ftms" }>;
@@ -62,26 +53,18 @@ export const FTMS_SIM_FIVE_PRESET: FtmsPreset = {
 };
 
 /**
- * Zwift Play handshake: subscribe 0x...02 and 0x...04, write the cleartext
- * "RideOn" to 0x...03. A 64-byte answer means the encrypted path; the sniffer
- * documents it instead of continuing (docs/02-bluetooth.md section 4).
+ * Zwift controller handshake: subscribe 0x...02 and 0x...04, then write the cleartext
+ * handshake of the detected family to 0x...03 ("RideOn" for Play, "RideOn 02 03" for
+ * Click v2). An encrypted answer stops further writes (docs/02-bluetooth.md section 4).
  */
-export const ZWIFT_PLAY_HANDSHAKE_PRESET: BlePreset = {
-  kind: "zwiftPlay",
-  id: "zwift-play-handshake",
+export const ZWIFT_CONTROLLER_HANDSHAKE_PRESET: BlePreset = {
+  kind: "zwiftController",
+  id: "zwift-controller-handshake",
   label: "Zwift-Controller-Handshake",
-  observe: [
-    { serviceUuid: ZWIFT_PLAY_LEGACY_SERVICE, characteristicUuid: ZWIFT_PLAY_MEASUREMENT },
-    { serviceUuid: ZWIFT_PLAY_LEGACY_SERVICE, characteristicUuid: ZWIFT_PLAY_COMMAND_RESPONSE },
-  ],
-  write: {
-    ref: { serviceUuid: ZWIFT_PLAY_LEGACY_SERVICE, characteristicUuid: ZWIFT_PLAY_CONTROL_POINT },
-    bytes: RIDE_ON,
-  },
 };
 
 export const SNIFFER_PRESETS: readonly BlePreset[] = [
   FTMS_REQUEST_CONTROL_AND_SIM_ZERO_PRESET,
   FTMS_SIM_FIVE_PRESET,
-  ZWIFT_PLAY_HANDSHAKE_PRESET,
+  ZWIFT_CONTROLLER_HANDSHAKE_PRESET,
 ];
