@@ -76,7 +76,7 @@ Geprüft an den Workflows und der API:
 
 - `.github/workflows/mutation.yml` hat `on: pull_request` ohne `paths`/`branches` und läuft auf jedem PR. Der Job heißt `name: mutation`. GitHub meldet ihn als Check-Run `mutation`, bei Off-Scope-PRs als `skipped` (Lauf 46029485489). Ein übersprungener Job zählt als bestanden.
 - Schlägt die Scope-Erkennung fehl, würde ein übersprungener `mutation` als grün gelten. Der Schritt läuft deshalb mit `shell: bash` (pipefail) und weist `git diff` erst einer Variable zu, sodass ein Fehler den Schritt abbricht statt `core=false` zu melden. Der Job `mutation` läuft auch bei einem fehlgeschlagenen `paths`-Job und bricht dann rot ab.
-- Bisher meldeten auf PRs zwei Jobs den Kontext `check`: `check.yml` und `deploy-web.yml`. In `.github/workflows/deploy-web.yml` heißt das Gate jetzt `web-check` und läuft nur auf Pushes nach `main`, vor dem Produktionsdeploy. Die Pages-Vorschau pro PR (`AGENTS.md` §7) braucht nur die Secrets-Erkennung und baut selbst; sie wartet nicht mehr auf ein zweites volles Gate. Auf PRs meldet damit nur `check.yml` den Kontext `check`.
+- Bisher meldeten auf PRs zwei Jobs den Kontext `check`: `check.yml` und `deploy-web.yml`. In `.github/workflows/deploy-web.yml` heißt das Gate jetzt `web-check` und läuft nur auf Pushes nach `main`, vor dem Produktionsdeploy. Die Pages-Vorschau pro PR (§7 in `AGENTS.md`, angepasst) braucht nur die Secrets-Erkennung und baut selbst; sie wartet nicht mehr auf ein zweites volles Gate. Auf PRs meldet damit nur `check.yml` den Kontext `check`.
 
 Henry setzt beide Rulesets und `web_commit_signoff_required=true` nach dem Merge per GitHub-API. Agenten ändern Rulesets und Repo-Einstellungen nicht.
 
@@ -104,7 +104,7 @@ Oxlint prüft `typescript/no-non-null-assertion` als Fehler am AST (oxlint.confi
 - Jeden anderen geschützten Pfad muss eine Zeile in Backticks nennen, die der Diff einem ADR **hinzufügt**, exakt (Backticks um mise.toml) oder als Verzeichnis mit Schrägstrich am Ende (Backticks um .github/workflows/). Gelesen werden nur die `+`-Zeilen aus `git diff -U0 <base>...HEAD -- docs/decisions/`. Ein neues ADR fügt alle Zeilen hinzu und zählt ganz. Ein Tippfehler in ADR-007 oder ADR-034 schaltet damit nichts frei, was diese ADRs früher nannten. Die Meldung nennt den fehlenden Pfad.
 - `stryker.config.json` ist neu geschützt (Guard und CODEOWNERS), damit niemand die Mutationsschwelle des neuen Required Checks still senkt.
 
-Dieser PR ändert folgende geschützte Pfade: `.github/workflows/mutation.yml`, `.github/workflows/deploy-web.yml`, `.github/CODEOWNERS`, `stryker.config.json`, `scripts/guard/`, `scripts/guard.test.mjs` und dieses ADR mit `docs/decisions/README.md`. Ein Test spielt genau diese Pfade gegen dieses ADR durch. Ein späterer Diff an diesem ADR gibt nur die Pfade frei, die er selbst hinzufügt.
+Dieser PR ändert folgende geschützte Pfade: `.github/workflows/mutation.yml`, `.github/workflows/deploy-web.yml`, `.github/CODEOWNERS`, `stryker.config.json`, `scripts/guard/`, `scripts/guard.test.mjs` und dieses ADR mit `docs/decisions/README.md`. Ein Test spielt genau diese Pfade gegen dieses ADR durch. Ein späterer Diff an diesem ADR gibt nur die Pfade frei, die er selbst hinzufügt. Wer ein altes ADR in eine neue Datei kopiert, schaltet dessen Pfade bewusst frei, weil ein neues ADR ganz zählt; der Reviewer sieht das vollständige Duplikat im Diff, und CODEOWNERS auf `docs/decisions/**` ist die Rückfallebene.
 
 ### 5. Mutationsumfang
 
