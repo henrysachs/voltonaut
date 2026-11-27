@@ -11,7 +11,7 @@ Ein Audit von 82 PRs ergab:
 - `mutation` lief bei #138 und #158 erst nach dem Merge.
 - 11 Commits auf `main` tragen `Co-Authored-By: Claude`, 26 Nicht-Merge-Commits haben kein `Signed-off-by`.
 - Der Non-null-Regex des Guards meldete `!(x instanceof Y)` (5d00ee7).
-- Jede geänderte `docs/decisions/ADR-*`-Datei schaltete **alle** geschützten Pfade frei (`scripts/guard/lib/protected-diff.ts`, alte Zeile 28). Ein Tippfehler in ADR-012 hätte mise.toml freigegeben.
+- Jede geänderte `docs/decisions/ADR-*`-Datei schaltete **alle** geschützten Pfade frei (`scripts/guard/lib/protected-diff.ts`, alte Zeile 28). Ein Tippfehler in ADR-007 hätte mise.toml und oxlint.config.ts freigegeben, weil ADR-007 beide nennt.
 - In Trainer-Control (#129, #131) und Strava (#130, #132) fanden Reviewer Tests, die kaputtes Verhalten überleben, nur mit handgeschriebenen Mutanten.
 
 ## Entscheidung
@@ -75,8 +75,8 @@ Neu ist **`main-merge-gates`** (B): Required Checks `check` und `mutation`, stri
 Geprüft an den Workflows und der API:
 
 - `.github/workflows/mutation.yml` hat `on: pull_request` ohne `paths`/`branches` und läuft auf jedem PR. Der Job heißt `name: mutation`. GitHub meldet ihn als Check-Run `mutation`, bei Off-Scope-PRs als `skipped` (Lauf 46029485489). Ein übersprungener Job zählt als bestanden.
-- Schlägt die Scope-Erkennung fehl, würde ein übersprungener `mutation` als grün gelten. Der Job läuft deshalb auch bei einem fehlgeschlagenen `paths`-Job und bricht dann rot ab.
-- `check` melden auf PRs zwei Jobs: `check.yml` und `deploy-web.yml`. Beide setzen jetzt `GUARD_DIFF_BASE` (`.github/workflows/deploy-web.yml`), damit der zweite `check` nicht ohne PR-Prüfungen grün wird.
+- Schlägt die Scope-Erkennung fehl, würde ein übersprungener `mutation` als grün gelten. Der Schritt läuft deshalb mit `shell: bash` (pipefail) und weist `git diff` erst einer Variable zu, sodass ein Fehler den Schritt abbricht statt `core=false` zu melden. Der Job `mutation` läuft auch bei einem fehlgeschlagenen `paths`-Job und bricht dann rot ab.
+- Bisher meldeten auf PRs zwei Jobs den Kontext `check`: `check.yml` und `deploy-web.yml`. In `.github/workflows/deploy-web.yml` heißt das Gate jetzt `web-check` und läuft nur auf Pushes nach `main`, vor dem Produktionsdeploy. Die Pages-Vorschau pro PR (`AGENTS.md` §7) braucht nur die Secrets-Erkennung und baut selbst; sie wartet nicht mehr auf ein zweites volles Gate. Auf PRs meldet damit nur `check.yml` den Kontext `check`.
 
 Henry setzt beide Rulesets und `web_commit_signoff_required=true` nach dem Merge per GitHub-API. Agenten ändern Rulesets und Repo-Einstellungen nicht.
 
@@ -85,9 +85,11 @@ Henry setzt beide Rulesets und `web_commit_signoff_required=true` nach dem Merge
 `scripts/guard/lib/commit-trailers.ts` prüft die Nicht-Merge-Commits in `GUARD_DIFF_BASE..HEAD`. Git parst die Trailer selbst (`%(trailers:only,unfold)`), genau wie `git interpret-trailers --parse`:
 
 - Jeder Commit braucht `Signed-off-by`.
-- Verboten sind `Co-Authored-By` mit Claude oder Anthropic (auch `noreply@anthropic.com`), `Claude-Session` und eine Autor-Adresse mit Claude oder Anthropic. GitHub macht beim Squash aus jedem PR-Commit-Autor eine Zeile `Co-authored-by:`. So entstand in a470bd1 `Co-authored-by: Claude <noreply@anthropic.com>`.
+- Verboten sind `Co-Authored-By` mit einer Adresse unter `@anthropic.com` (etwa `noreply@anthropic.com`), jeder `Claude-Session`-Trailer und eine Autor-Adresse unter `@anthropic.com`. Ein Mensch namens Claude (`claude.martin@example.com`) bleibt erlaubt. GitHub macht beim Squash aus jedem PR-Commit-Autor eine Zeile `Co-authored-by:`. So entstand in a470bd1 `Co-authored-by: Claude <noreply@anthropic.com>`.
 
-Die Prüfung läuft nur auf PRs. `check.yml` setzt `GUARD_DIFF_BASE=origin/<base_ref>` nur bei `pull_request`. Auf Push-Läufen von `main` fehlt die Variable, und der Guard prüft weder Diff noch Trailer. Squash-Commits schreibt GitHub selbst. 2ec2dee und dc0f2e0 tragen Sign-offs mitten im Text und zusätzlich einen Trailer-Block am Ende. Der Test liest beide wie Git und findet nichts. a470bd1 schlägt fehl. Der synthetische Merge-Commit des PR-Merge-Refs fällt durch `--no-merges` heraus.
+Die Prüfung läuft nur auf PRs. `check.yml` setzt `GUARD_DIFF_BASE=origin/<base_ref>` nur bei `pull_request`. Auf Push-Läufen von `main` fehlt die Variable, und der Guard prüft weder Diff noch Trailer. Squash-Commits schreibt GitHub selbst. 2ec2dee und dc0f2e0 tragen Sign-offs mitten im Text und zusätzlich einen Trailer-Block am Ende. Der Test liest beide wie Git und findet nichts. a470bd1 schlägt fehl. Der synthetische Merge-Commit des PR-Merge-Refs fällt durch `--no-merges` heraus. Fehlt diese Historie (flacher Klon), überspringt der Test sich mit Meldung.
+
+Der Sign-off ist nicht an den Commit-Autor gebunden: Jeder `Signed-off-by` genügt. Das ist bewusst lockerer als DCO; er belegt die Zustimmung eines Menschen, nicht die Urheberschaft.
 
 ### 3. Non-null-Regex entfällt
 
@@ -99,9 +101,10 @@ Oxlint prüft `typescript/no-non-null-assertion` als Fehler am AST (oxlint.confi
 
 - Ohne geändertes ADR bleibt jeder geschützte Pfad rot.
 - Mit geändertem ADR bleibt `docs/decisions/**` frei.
-- Jeden anderen geschützten Pfad muss ein im selben Diff geändertes ADR in Backticks nennen, exakt (Backticks um mise.toml) oder als Verzeichnis mit Schrägstrich am Ende (Backticks um .github/workflows/). Gelesen wird der Stand bei `HEAD`. Die Meldung nennt den fehlenden Pfad.
+- Jeden anderen geschützten Pfad muss eine Zeile in Backticks nennen, die der Diff einem ADR **hinzufügt**, exakt (Backticks um mise.toml) oder als Verzeichnis mit Schrägstrich am Ende (Backticks um .github/workflows/). Gelesen werden nur die `+`-Zeilen aus `git diff -U0 <base>...HEAD -- docs/decisions/`. Ein neues ADR fügt alle Zeilen hinzu und zählt ganz. Ein Tippfehler in ADR-007 oder ADR-034 schaltet damit nichts frei, was diese ADRs früher nannten. Die Meldung nennt den fehlenden Pfad.
+- `stryker.config.json` ist neu geschützt (Guard und CODEOWNERS), damit niemand die Mutationsschwelle des neuen Required Checks still senkt.
 
-Dieser PR ändert folgende geschützte Pfade: `.github/workflows/mutation.yml`, `.github/workflows/deploy-web.yml`, `scripts/guard/`, `scripts/guard.test.mjs` und dieses ADR mit `docs/decisions/README.md`. Ein ADR, das einen Pfad nennt, gibt ihn bei jeder späteren Änderung an diesem ADR wieder frei. Das ist gewollt: Der Reviewer sieht im selben Diff, welches ADR die Änderung trägt. Dieses ADR setzt deshalb nur die Pfade in Backticks, die es selbst ändert.
+Dieser PR ändert folgende geschützte Pfade: `.github/workflows/mutation.yml`, `.github/workflows/deploy-web.yml`, `.github/CODEOWNERS`, `stryker.config.json`, `scripts/guard/`, `scripts/guard.test.mjs` und dieses ADR mit `docs/decisions/README.md`. Ein Test spielt genau diese Pfade gegen dieses ADR durch. Ein späterer Diff an diesem ADR gibt nur die Pfade frei, die er selbst hinzufügt.
 
 ### 5. Mutationsumfang
 
@@ -124,7 +127,7 @@ Gemessen lokal mit Stryker unter dem Check-Lock auf ruhiger Maschine, break-Schw
 - Ein roter, laufender oder fehlender `check` oder `mutation` blockiert jeden Merge, auch Henrys. Ein kaputtes `main` kann nur ein grüner Fix-PR reparieren.
 - Strict plus `mutation` (heute 45–95 min auf PRs) verlangt nach jedem Merge ein Update und einen neuen Lauf betroffener PRs. Das ist gewollt: Mutation vor dem Merge, nicht danach.
 - Offene PRs ohne Sign-off (#178, #182, #183) werden nach dem Merge rot. Abhilfe: `git rebase --signoff origin/main`.
-- Eine Leitplankenänderung braucht ein ADR, das den Pfad ausdrücklich nennt. Ein beliebiges geändertes ADR genügt nicht mehr.
+- Eine Leitplankenänderung braucht ein ADR, dessen im selben Diff hinzugefügte Zeilen den Pfad ausdrücklich nennen. Ein beliebiges geändertes ADR oder ein altes ADR, das den Pfad irgendwann nannte, genügt nicht mehr.
 
 ## Alternativen
 
@@ -132,4 +135,5 @@ Gemessen lokal mit Stryker unter dem Check-Lock auf ruhiger Maschine, break-Schw
 - **`mutation` per Workflow-`paths` filtern:** verworfen. Ohne Lauf meldet der Kontext nie, und der PR blockiert für immer.
 - **Trailer auch auf `main`-Pushes prüfen:** verworfen. GitHub erzeugt den Squash-Text, die Prüfung käme erst nach dem Merge. Sign-off für Web-Commits erzwingt `web_commit_signoff_required`.
 - **Nicht bestehende Dateien mit Ausnahmen aufnehmen:** verworfen (`AGENTS.md` §0.2).
-- **Folgearbeit:** `stryker.config.json` (Schwelle, Umfang) zu den geschützten Pfaden und in CODEOWNERS aufnehmen, Überlebende der vier Folgedateien töten und die Dateien aufnehmen.
+- **Merge Queue:** für Repos eines Nutzerkontos nicht verfügbar. Sie würde strict ohne ständige Updates ersetzen; neu prüfen, falls das Repo in eine Organisation wandert.
+- **Folgearbeit:** Überlebende der vier Folgedateien töten und die Dateien aufnehmen.
