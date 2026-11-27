@@ -2,6 +2,7 @@ import { ALPINE_PASS, COAST_LOOP, createRoute, NIGHT_CITY, TEST_LOOP } from "@vo
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
+import { worldAtmosphere } from "./biome-atmosphere.js";
 import { createLandscapeSystem } from "./landscape.js";
 import { resolveRenderWorld } from "./render-world.js";
 import { createScheduler } from "./scheduler.js";
@@ -105,10 +106,20 @@ function landscapeLights(routeId: string): readonly (readonly [string, string, n
   return lights;
 }
 
-it("keeps the night city's blue glow on its own route and out of connected worlds", () => {
+it("lights the night city route with its blue glow", () => {
   expect(landscapeLights(NIGHT_CITY.id)).toEqual([["AmbientLight", "35405e", 1.1]]);
+});
+
+it("adds no light to the forest route", () => {
   expect(landscapeLights(TEST_LOOP.id)).toEqual([]);
-  expect(landscapeLights("voltonaut-tour")).toEqual([]);
+});
+
+// The connected world's dressing carries no light either (dressing-ground.test.ts).
+it("keeps the night city glow out of the connected world's atmosphere", () => {
+  const voltonaut = resolveRenderWorld("voltonaut-tour");
+
+  expect(voltonaut.regions.map((region) => region.biome.kind)).toContain("night-city");
+  expect(worldAtmosphere(voltonaut)).toEqual([]);
 });
 
 function tourRoad(): typeof route {

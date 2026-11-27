@@ -1,7 +1,7 @@
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Three's scene graph objects are mutable by contract; these probes build and read them. */
 import { createRoute, TEST_LOOP, WORLDS } from "@voltonaut/engine";
 import * as THREE from "three";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { DressingGroup, STANDS, WATER } from "./dressing-group.js";
 import { heightAt } from "./heightfield.js";
@@ -10,8 +10,9 @@ import { createLake } from "./lake.js";
 import {
   FLOAT_TOLERANCE_M,
   groundReport,
-  worldReport,
+  worldDressing,
   type GroundReport,
+  type WorldDressing,
 } from "./testdata/groundReport.js";
 
 /** Count and first offenders: a full list of thousands would drown the failure message. */
@@ -29,24 +30,44 @@ const none: Offenders = { count: 0, first: [] };
 describe.each(WORLDS.map((world) => [world.id, world] as const))(
   "dressing of world %s on its drawn terrain",
   (_id, world) => {
-    it("places every drawable with a footing and brings no light", () => {
-      const report = worldReport(world);
+    // One build and one report per world; each check below only reads them.
+    let dressing: WorldDressing | undefined;
+    let measured: GroundReport | undefined;
 
-      expect(report.standing).toBeGreaterThan(0);
-      expect(report.unplaced).toEqual([]);
-      expect(report.lights).toEqual([]);
+    beforeAll(() => {
+      dressing = worldDressing(world);
+    });
+
+    function report(): GroundReport {
+      if (dressing === undefined) throw new Error(`${world.id} dressing was not built`);
+
+      measured ??= groundReport(dressing.groups, dressing.terrain);
+
+      return measured;
+    }
+
+    it("measures standing parts on the drawn terrain", () => {
+      expect(report().standing).toBeGreaterThan(0);
+    });
+
+    it("places every drawable with a footing", () => {
+      expect(report().unplaced).toEqual([]);
+    });
+
+    it("brings no light", () => {
+      expect(report().lights).toEqual([]);
     });
 
     it(`rests every standing base on the terrain within ${FLOAT_TOLERANCE_M} m`, () => {
-      expect(offenders(worldReport(world).floating)).toEqual(none);
+      expect(offenders(report().floating)).toEqual(none);
     });
 
     it("buries no standing part past its own midpoint", () => {
-      expect(offenders(worldReport(world).swallowed)).toEqual(none);
+      expect(offenders(report().swallowed)).toEqual(none);
     });
 
     it("stands nothing in a lake or the sea", () => {
-      expect(offenders(worldReport(world).wet)).toEqual(none);
+      expect(offenders(report().wet)).toEqual(none);
     });
   },
 );

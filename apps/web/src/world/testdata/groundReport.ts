@@ -17,8 +17,15 @@ export const FLOAT_TOLERANCE_M = 0.05;
 /** One instance of a placed drawable as the renderer draws it. */
 interface Instance {
   readonly label: string;
-  readonly matrix: THREE.Matrix4;
-  readonly geometry: THREE.BufferGeometry;
+  /** Column-major world matrix, as Three stores it. */
+  readonly matrix: readonly number[];
+  readonly local: LocalGeometry;
+}
+
+/** A geometry's vertices once: all of them and the corners of its base, as flat x, y, z runs. */
+interface LocalGeometry {
+  readonly all: Float32Array;
+  readonly base: Float32Array;
 }
 
 /** What the invariant found in one world's dressing; every list must stay empty. */
@@ -48,50 +55,54 @@ function placedParts(group: DressingGroup, path: string): readonly Placed[] {
   });
 }
 
-const vertexCache = new WeakMap<THREE.BufferGeometry, readonly THREE.Vector3[]>();
+const localCache = new WeakMap<THREE.BufferGeometry, LocalGeometry>();
 
-function vertices(geometry: THREE.BufferGeometry): readonly THREE.Vector3[] {
-  const known = vertexCache.get(geometry);
+/** The base is every vertex at the lowest local height; computed once per shared geometry. */
+function localGeometry(geometry: THREE.BufferGeometry): LocalGeometry {
+  const known = localCache.get(geometry);
 
   if (known !== undefined) return known;
 
   const position = geometry.getAttribute("position");
+  const all = new Float32Array(position.count * 3);
+  let lowestY = Number.POSITIVE_INFINITY;
 
-  const found = Array.from({ length: position.count }, (_, index) =>
-    new THREE.Vector3().fromBufferAttribute(position, index),
-  );
+  for (let index = 0; index < position.count; index += 1) {
+    all.set([position.getX(index), position.getY(index), position.getZ(index)], index * 3);
+    lowestY = Math.min(lowestY, position.getY(index));
+  }
 
-  vertexCache.set(geometry, found);
+  const base: number[] = [];
+
+  for (let offset = 0; offset < all.length; offset += 3) {
+    if ((all[offset + 1] ?? 0) <= lowestY + 1e-6) base.push(...all.subarray(offset, offset + 3));
+  }
+
+  const found = { all, base: Float32Array.from(base) };
+
+  localCache.set(geometry, found);
 
   return found;
 }
 
-/** The corners of a geometry's base: its vertices at the lowest local height. */
-function baseCorners(geometry: THREE.BufferGeometry): readonly THREE.Vector3[] {
-  const all = vertices(geometry);
-  const lowestY = Math.min(...all.map((vertex) => vertex.y));
-
-  return all.filter((vertex) => vertex.y <= lowestY + 1e-6);
-}
-
 function instancesOf(part: Drawable, path: string): readonly Instance[] {
-  const { geometry } = part;
+  const local = localGeometry(part.geometry);
 
   if (part instanceof THREE.InstancedMesh) {
-    return Array.from({ length: part.count }, (_, index) => {
-      const matrix = new THREE.Matrix4();
+    const matrix = new THREE.Matrix4();
 
+    return Array.from({ length: part.count }, (_, index) => {
       part.getMatrixAt(index, matrix);
 
       return {
         label: `${path}#${index}`,
-        matrix: matrix.premultiply(part.matrixWorld),
-        geometry,
+        matrix: [...matrix.premultiply(part.matrixWorld).elements],
+        local,
       };
     });
   }
 
-  return [{ label: path, matrix: part.matrixWorld.clone(), geometry }];
+  return [{ label: path, matrix: [...part.matrixWorld.elements], local }];
 }
 
 function isDrawable(part: THREE.Object3D): part is Drawable {
@@ -111,20 +122,19 @@ function standingInstances(parts: readonly Placed[]): readonly Instance[] {
   });
 }
 
-const down = new THREE.Vector3(0, -1, 0);
+/** Drawn water surfaces, probed by one reused downward ray. */
+interface WaterProbe {
+  readonly surfaces: readonly THREE.Object3D[];
+  readonly ray: THREE.Raycaster;
+  readonly field: Heightfield;
+}
 
-/** Water surface height above the terrain at a point, if any water is drawn there. */
-function waterAbove(
-  water: readonly THREE.Object3D[],
-  field: Heightfield,
-  point: THREE.Vector3,
-): number | undefined {
-  const hit = new THREE.Raycaster(new THREE.Vector3(point.x, 1e5, point.z), down).intersectObjects(
-    [...water],
-    false,
-  )[0];
+/** Water depth above the terrain at a point, if any water is drawn there. */
+function waterDepthAt(probe: WaterProbe, x: number, z: number): number | undefined {
+  probe.ray.ray.origin.set(x, 1e5, z);
 
-  const groundM = heightAt(field, point.x, point.z);
+  const hit = probe.ray.intersectObjects([...probe.surfaces], false)[0];
+  const groundM = heightAt(probe.field, x, z);
 
   return hit !== undefined && hit.point.y > groundM ? hit.point.y - groundM : undefined;
 }
@@ -139,26 +149,54 @@ interface Contact {
   readonly wetM: number | undefined;
 }
 
-function contactOf(
-  { matrix, geometry }: Instance,
-  water: readonly THREE.Object3D[],
-  field: Heightfield,
-): Contact {
-  const corner = new THREE.Vector3();
-  const centre = new THREE.Vector3().setFromMatrixPosition(matrix);
-  let gapM = Number.NEGATIVE_INFINITY;
-  let wetM = waterAbove(water, field, centre);
+/** World y of the local point at `offset`, from the column-major matrix m. */
+function worldY(m: readonly number[], points: Float32Array, offset: number): number {
+  const x = points[offset] ?? 0;
+  const y = points[offset + 1] ?? 0;
+  const z = points[offset + 2] ?? 0;
 
-  for (const local of baseCorners(geometry)) {
-    corner.copy(local).applyMatrix4(matrix);
-    gapM = Math.max(gapM, corner.y - heightAt(field, corner.x, corner.z));
-    wetM ??= waterAbove(water, field, corner);
+  return (m[1] ?? 0) * x + (m[5] ?? 0) * y + (m[9] ?? 0) * z + (m[13] ?? 0);
+}
+
+function worldXz(
+  m: readonly number[],
+  points: Float32Array,
+  offset: number,
+): readonly [number, number] {
+  const x = points[offset] ?? 0;
+  const y = points[offset + 1] ?? 0;
+  const z = points[offset + 2] ?? 0;
+
+  return [
+    (m[0] ?? 0) * x + (m[4] ?? 0) * y + (m[8] ?? 0) * z + (m[12] ?? 0),
+    (m[2] ?? 0) * x + (m[6] ?? 0) * y + (m[10] ?? 0) * z + (m[14] ?? 0),
+  ];
+}
+
+function contactOf({ matrix: m, local }: Instance, water: WaterProbe): Contact {
+  const centreX = m[12] ?? 0;
+  const centreZ = m[14] ?? 0;
+  let gapM = Number.NEGATIVE_INFINITY;
+  let wetM = waterDepthAt(water, centreX, centreZ);
+
+  for (let offset = 0; offset < local.base.length; offset += 3) {
+    const [x, z] = worldXz(m, local.base, offset);
+
+    gapM = Math.max(gapM, worldY(m, local.base, offset) - heightAt(water.field, x, z));
+    wetM ??= waterDepthAt(water, x, z);
   }
 
-  const heights = vertices(geometry).map((local) => corner.copy(local).applyMatrix4(matrix).y);
-  const midM = (Math.min(...heights) + Math.max(...heights)) / 2;
+  let lowM = Number.POSITIVE_INFINITY;
+  let highM = Number.NEGATIVE_INFINITY;
 
-  return { gapM, buriedM: heightAt(field, centre.x, centre.z) - midM, wetM };
+  for (let offset = 0; offset < local.all.length; offset += 3) {
+    const y = worldY(m, local.all, offset);
+
+    lowM = Math.min(lowM, y);
+    highM = Math.max(highM, y);
+  }
+
+  return { gapM, buriedM: heightAt(water.field, centreX, centreZ) - (lowM + highM) / 2, wetM };
 }
 
 function lightsOf(groups: readonly DressingGroup[]): readonly string[] {
@@ -185,9 +223,14 @@ export function groundReport(groups: readonly DressingGroup[], field: Heightfiel
     return placedParts(group, group.name);
   });
 
-  const water = parts.flatMap(({ part, footing }) => (footing?.kind === "water" ? [part] : []));
+  const water: WaterProbe = {
+    surfaces: parts.flatMap(({ part, footing }) => (footing?.kind === "water" ? [part] : [])),
+    ray: new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0)),
+    field,
+  };
+
   const standing = standingInstances(parts);
-  const contacts = standing.map((instance) => ({ instance, ...contactOf(instance, water, field) }));
+  const contacts = standing.map((instance) => ({ instance, ...contactOf(instance, water) }));
 
   return {
     standing: standing.length,
@@ -203,23 +246,18 @@ export function groundReport(groups: readonly DressingGroup[], field: Heightfiel
   };
 }
 
-const reports = new Map<World, GroundReport>();
+/** A world's dressing exactly as the landscape system builds it, with the raster it draws. */
+export interface WorldDressing {
+  readonly groups: readonly DressingGroup[];
+  readonly terrain: Heightfield;
+}
 
-/** The dressing of a world exactly as the landscape system builds it, on the raster it draws. */
-export function worldReport(world: World): GroundReport {
-  const known = reports.get(world);
-
-  if (known !== undefined) return known;
-
+export function worldDressing(world: World): WorldDressing {
   const view = renderWorldOf(world);
   const { landscape } = planWorldLandscape(view);
 
-  const report = groundReport(
-    regionDressings(view, landscape.plans).map((dressing) => dressing.group),
-    landscape.terrain,
-  );
-
-  reports.set(world, report);
-
-  return report;
+  return {
+    groups: regionDressings(view, landscape.plans).map((dressing) => dressing.group),
+    terrain: landscape.terrain,
+  };
 }
