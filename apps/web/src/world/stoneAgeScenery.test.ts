@@ -113,6 +113,7 @@ it("stone age scenery is deterministic and dresses the valley with every decor k
   expect(first.name).toBe("biome-stone-age");
   expect(instanceMatrices(first)).toEqual(instanceMatrices(second));
   expect(layerCount(first, "stone-age-house")).toBeGreaterThanOrEqual(20);
+  expect(layerCount(first, "stone-age-entrance")).toBe(layerCount(first, "stone-age-house"));
   expect(layerCount(first, "stone-age-door")).toBe(layerCount(first, "stone-age-house"));
   expect(layerCount(first, "stone-age-palm")).toBeGreaterThan(500);
   expect(layerCount(first, "stone-age-fern")).toBeGreaterThan(1000);
@@ -124,13 +125,13 @@ it("stone age scenery is deterministic and dresses the valley with every decor k
   expect(layerCount(first, "stone-age-dino-legs")).toBe(statues * 4);
 });
 
-it("stone age scenery raises at least two volcanoes with glowing craters far off the road", () => {
+it("stone age scenery raises all four volcanoes with glowing craters far off the road", () => {
   const plan = stoneAgePlan();
   const scenery = createStoneAgeScenery(plan);
   const volcanoes = instanceFootprints(scenery).filter(({ name }) => name === "stone-age-volcano");
   const crater = scenery.getObjectByName("stone-age-crater");
 
-  expect(volcanoes.length).toBeGreaterThanOrEqual(2);
+  expect(volcanoes).toHaveLength(4);
   expect(layerCount(scenery, "stone-age-crater")).toBe(volcanoes.length);
   expect(crater).toBeInstanceOf(THREE.InstancedMesh);
   expect(basicMaterials(scenery).length).toBeGreaterThanOrEqual(2);
@@ -145,4 +146,42 @@ it("keeps every stone age instance with its footprint 7 m off the road centerlin
 
   expect(footprints.length).toBeGreaterThan(5000);
   expect(roadGapM(footprints, plan.route)).toBeGreaterThanOrEqual(PLANT_ROAD_CLEARANCE_M);
+});
+
+/** Highest world y of each instance of the named layer, in instance order. */
+function instanceTopsM(root: Readonly<THREE.Object3D>, name: string): readonly number[] {
+  const matrix = new THREE.Matrix4();
+  const vertex = new THREE.Vector3();
+
+  return instancedMeshes(root)
+    .filter((mesh) => mesh.name === name)
+    .flatMap((mesh) => {
+      const vertices = mesh.geometry.getAttribute("position");
+
+      return Array.from({ length: mesh.count }, (_, index) => {
+        mesh.getMatrixAt(index, matrix);
+
+        let topM = Number.NEGATIVE_INFINITY;
+
+        for (let corner = 0; corner < vertices.count; corner += 1) {
+          topM = Math.max(
+            topM,
+            vertex.fromBufferAttribute(vertices, corner).applyMatrix4(matrix).y,
+          );
+        }
+
+        return topM;
+      });
+    });
+}
+
+it("keeps every rock house door below the arch of its entrance tunnel", () => {
+  const scenery = createStoneAgeScenery(stoneAgePlan());
+  const doorTopsM = instanceTopsM(scenery, "stone-age-door");
+  const archTopsM = instanceTopsM(scenery, "stone-age-entrance");
+
+  const clearancesM = archTopsM.map((archTopM, index) => archTopM - Number(doorTopsM[index]));
+
+  expect(doorTopsM).toHaveLength(archTopsM.length);
+  expect(Math.min(...clearancesM)).toBeGreaterThan(0);
 });

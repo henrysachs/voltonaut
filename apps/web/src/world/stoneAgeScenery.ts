@@ -21,13 +21,52 @@ function houseDomeLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
   };
 }
 
+const ENTRANCE_RADIUS_M = 1.25;
+
+/** How far the entrance tunnel reaches out of the dome rim towards the road. */
+const ENTRANCE_REACH_M = 0.5;
+
+/** Share of the dome radius where the tunnel starts; the dome is still taller than the arch there. */
+const ENTRANCE_START = 0.6;
+
+function entranceLengthM(house: Readonly<RockHouse>): number {
+  return house.domeRadiusM * (1 - ENTRANCE_START) + ENTRANCE_REACH_M;
+}
+
+/**
+ * Half-cylinder entrance tunnel that comes out of the dome, like the porch of an igloo. An upright
+ * door box at the rim stood up to 1.5 m above the low dome edge and read as a black slab.
+ */
+function houseEntranceLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
+  return {
+    // Upper half around the local Z axis, flat side on the ground.
+    geometry: new THREE.CylinderGeometry(1, 1, 1, 10, 1, false, -Math.PI / 2, Math.PI).rotateX(
+      -Math.PI / 2,
+    ),
+    material: stone(),
+    items: houses,
+    transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
+      const lengthM = entranceLengthM(house);
+
+      atItem(object, house, [0, -0.1, house.domeRadiusM * ENTRANCE_START + lengthM / 2]);
+      object.scale.set(ENTRANCE_RADIUS_M, ENTRANCE_RADIUS_M, lengthM);
+    },
+    tint(house: Readonly<RockHouse>, color: THREE.Color) {
+      color.setHSL(0.08, 0.2, 0.36 + house.shade * 0.14);
+    },
+  };
+}
+
+/** Dark doorway on the tunnel mouth; its corners stay inside the arch. */
 function houseDoorLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
   return {
-    geometry: new THREE.BoxGeometry(1.3, 1.9, 0.9),
+    geometry: new THREE.BoxGeometry(1.2, 1, 0.08),
     material: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }),
     items: houses,
     transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
-      atItem(object, house, [0, 0.85, house.domeRadiusM * 0.97]);
+      const mouthM = house.domeRadiusM * ENTRANCE_START + entranceLengthM(house);
+
+      atItem(object, house, [0, 0.4, mouthM + 0.02]);
     },
     tint(_house: Readonly<RockHouse>, color: THREE.Color) {
       color.setHex(0x24180f);
@@ -118,10 +157,10 @@ function boulderLayer(boulders: readonly Placed[]): ChunkLayer<Placed> {
 const PLANT_CHUNK_M = 500;
 
 /**
- * Stone age (spec E10-15): rock houses with dark doors, palms, ferns and boulders, long-necked
- * dino statues and glowing volcanoes. Houses, statues and volcanoes are few, so each layer is
- * one mesh over the whole lap. Plants use 500 m chunks: with four plant layers, 250 m chunks
- * took the Steinbruch view to 140 of the 150 draw calls (spec E10-15 AK6).
+ * Stone age (spec E10-15): rock houses with entrance tunnels and dark doors, palms, ferns and
+ * boulders, long-necked dino statues and glowing volcanoes. Houses, statues and volcanoes are few,
+ * so each layer is one mesh over the whole lap. Plants use 500 m chunks: with four plant layers,
+ * 250 m chunks took the Steinbruch view to 140 of the 150 draw calls (spec E10-15 AK6).
  */
 export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Group {
   const root = new THREE.Group();
@@ -132,6 +171,7 @@ export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Grou
   root.add(
     ...volcanoMeshes(decor.volcanoes, lapM),
     ...named(chunkedMeshes(houseDomeLayer(decor.houses), lapM), "stone-age-house"),
+    ...named(chunkedMeshes(houseEntranceLayer(decor.houses), lapM), "stone-age-entrance"),
     ...named(chunkedMeshes(houseDoorLayer(decor.houses), lapM), "stone-age-door"),
     ...statueMeshes(decor.statues, lapM),
     ...named(chunkedMeshes(palmTrunkLayer(decor.palms), PLANT_CHUNK_M), "stone-age-palm"),
