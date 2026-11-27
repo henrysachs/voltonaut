@@ -1,5 +1,5 @@
 import { ALPINE_PASS, createRoute, TEST_ROUTES } from "@voltonaut/engine";
-import { expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { createLandscapePlan } from "./landscape-plan.js";
 import { apronSamples, ROAD_APRON_DROP_M } from "./road-apron.js";
@@ -50,8 +50,15 @@ it("ships the apron rule for exactly the two alpine-biome routes (#138)", () => 
   ]);
 });
 
-it.each(ROUTE_IDS)("draws the road apron on %s exactly when it is alpine", (id) => {
-  expect(Number.isFinite(apronClearance(id))).toBe(TEST_ROUTES[id]?.scenery === "alpine");
+describe.each(ROUTE_IDS)("road apron on %s", (id) => {
+  // Plan and measure once per route in its own hook, so no check carries the build.
+  beforeAll(() => {
+    apronClearance(id);
+  });
+
+  it("is drawn exactly when the route is alpine", () => {
+    expect(Number.isFinite(apronClearance(id))).toBe(TEST_ROUTES[id]?.scenery === "alpine");
+  });
 });
 
 it("keeps the kom-climb apron under its road band", () => {
