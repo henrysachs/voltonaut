@@ -13,7 +13,7 @@ export interface ReplayRoute {
 
 /**
  * Single routes recorded before worlds existed (routeRevision "1"); each is also its own world
- * with revision "1" (ADR-033 §8). Connected worlds never had route recordings.
+ * with revision "1" (ADR-033 §8). Worlds added since then never had route recordings.
  */
 const LEGACY_ROUTE_IDS: readonly string[] = [
   "flat-loop",
@@ -28,6 +28,7 @@ const LEGACY_ROUTE_IDS: readonly string[] = [
 const REPLAYABLE_WORLDS: readonly { readonly worldId: string; readonly worldRevision: string }[] = [
   ...LEGACY_ROUTE_IDS.map((worldId) => ({ worldId, worldRevision: "1" })),
   { worldId: "voltonaut", worldRevision: "1" },
+  { worldId: "felsental", worldRevision: "1" },
 ];
 
 const REPLAYABLE_ROUTE_IDS = new Set(LEGACY_ROUTE_IDS);

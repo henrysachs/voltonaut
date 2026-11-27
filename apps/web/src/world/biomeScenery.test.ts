@@ -3,7 +3,7 @@ import { ALPINE_PASS, COAST_LOOP, NIGHT_CITY, createRoute } from "@voltonaut/eng
 import * as THREE from "three";
 import { expect, it } from "vitest";
 
-import { biomeFromScenery } from "./biome.js";
+import { biomeFromScenery, biomeHasLake } from "./biome.js";
 import { createAlpineScenery, createCoastScenery, createNightCityScenery } from "./biomeScenery.js";
 import { routeClearanceM, routeCorridorSamples } from "./biomeSceneryShared.js";
 import { createLandscapePlan, type LandscapePlan } from "./landscape-plan.js";
@@ -113,7 +113,13 @@ it("derives the discriminated biome from RouteData.scenery", () => {
   expect(biomeFromScenery("coast")).toEqual({ kind: "coast" });
   expect(biomeFromScenery("alpine")).toEqual({ kind: "alpine" });
   expect(biomeFromScenery("night-city")).toEqual({ kind: "night-city" });
+  expect(biomeFromScenery("stone-age")).toEqual({ kind: "stone-age" });
   expect(biomeFromScenery("mars")).toEqual({ kind: "forest" });
+});
+
+it("keeps the stone age valley without a lake", () => {
+  expect(biomeHasLake({ kind: "stone-age" })).toBe(false);
+  expect(biomeHasLake({ kind: "coast" })).toBe(true);
 });
 
 it("keeps the forest terrain palette byte-identical to the original colors", () => {

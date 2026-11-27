@@ -17,6 +17,7 @@ const BIOME_TERRAIN: Readonly<Record<Biome["kind"], TerrainPalette>> = {
   coast: { low: 0xd8c896, high: 0x94a86a, shore: 0xe4d9b0, ground: 0xc9b884 },
   alpine: { low: 0x6f7681, high: 0xdfe7ee, shore: 0xeef3f8, ground: 0x8d939c },
   "night-city": { low: 0x22262e, high: 0x303540, shore: 0x2a2e36, ground: 0x191c22 },
+  "stone-age": { low: 0xa88a52, high: 0xd8ab72, shore: 0xe2cc98, ground: 0x9a7446 },
 };
 
 /** Terrain palette of a biome (#75). */
