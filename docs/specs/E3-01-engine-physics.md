@@ -49,19 +49,19 @@ Hardware wurde nicht getestet. Page Freezing über fünf Minuten mit aktivem BLE
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK                  | Ebene                              | Datei / Fixture                                                                                         |
-| ------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| AK1                 | Unit + Property                    | `packages/engine/src/physics/physics.test.ts`, `physics.property.test.ts`                               |
-| AK1 (Determinismus) | Unit                               | `packages/engine/src/internal/determinism.test.ts`                                                      |
-| AK2                 | Golden                             | `fixtures/rides/*.input.json` → `*.golden.json`, Runner `apps/web/src/golden/golden.test.ts`            |
-| AK3                 | Property (fast-check)              | `packages/engine/src/{physics,gears,trainer}/*.property.test.ts`                                        |
-| AK4                 | Mutation + Coverage                | `mise run check:mutation` (Pfadfilter engine), Vitest-Coverage-Schwellen aus E0                         |
-| AK5                 | Unit                               | `packages/engine/src/elevation/profile.test.ts`, `route.test.ts`                                        |
-| AK6                 | Unit                               | `packages/engine/src/internal/{sums,autopause}.test.ts`                                                 |
-| AK7                 | Unit + Golden                      | `packages/engine/src/trainer/gradeMap.test.ts` + Kommando-Hashes in AK2                                 |
-| AK8                 | Unit + E2E                         | `apps/web/src/ui/profile/profileScreen.test.ts`, `apps/web/e2e/profile.spec.ts`                         |
-| AK9                 | Unit + E2E (best effort) + manuell | `packages/engine/src/internal/catchup.test.ts`, `apps/web/e2e/background-tab.spec.ts`, Henry-Check §5.8 |
-| AK10                | Golden                             | `fixtures/rides/flat-200w-60min.*`                                                                      |
+| AK                  | Ebene                              | Datei / Fixture                                                                                                                                                |
+| ------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AK1                 | Unit + Property                    | `packages/engine/src/physics/physics.test.ts`, `physics.property.test.ts`                                                                                      |
+| AK1 (Determinismus) | Unit                               | `packages/engine/src/internal/determinism.test.ts`                                                                                                             |
+| AK2                 | Golden                             | `fixtures/rides/*.input.json` → `*.golden.json`, Runner `apps/web/src/golden/golden.test.ts`                                                                   |
+| AK3                 | Property (fast-check)              | `packages/engine/src/{physics,gears,trainer}/*.property.test.ts`                                                                                               |
+| AK4                 | Mutation + Coverage                | `mise run check:mutation` (Pfadfilter engine), Vitest-Coverage-Schwellen aus E0                                                                                |
+| AK5                 | Unit                               | `packages/engine/src/elevation/profile.test.ts`, `route.test.ts`                                                                                               |
+| AK6                 | Unit                               | `packages/engine/src/internal/{sums,autopause}.test.ts`                                                                                                        |
+| AK7                 | Unit + Golden                      | `packages/engine/src/trainer/gradeMap.test.ts` + Kommando-Hashes in AK2                                                                                        |
+| AK8                 | Unit + E2E                         | `apps/web/src/ui/profile/profileScreen.test.ts` (Grenzen über `RiderProfileSchema`), `apps/web/src/sync/profile-store.test.ts`, `apps/web/e2e/profile.spec.ts` |
+| AK9                 | Unit + E2E (best effort) + manuell | `packages/engine/src/internal/catchup.test.ts`, `apps/web/e2e/background-tab.spec.ts`, Henry-Check §5.8                                                        |
+| AK10                | Golden                             | `fixtures/rides/flat-200w-60min.*`                                                                                                                             |
 
 E2E-Flüsse (Playwright, `?sim=1&clock=fast`): (1) Profil-Screen: ungültige Masse abgewiesen, gültige gespeichert, Reload stellt her. (2) Fahrt auf Test-Route: HUD zeigt Distanz/Tempo aus der Physik, 2× hoch schalten ändert Ganganzeige, Distanz wächst mit beschleunigter Sim-Uhr. (3) Background-Tab: Distanz läuft weiter (falls in headless CI instabil → Unit-Tests + manueller Henry-Test tragen das Kriterium, E2E wird dokumentiert entfernt, nicht gelockert).
 

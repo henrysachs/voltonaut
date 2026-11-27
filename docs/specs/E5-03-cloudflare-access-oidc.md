@@ -33,7 +33,7 @@ Diese Spec dokumentiert den Plan, nicht einen ausgelieferten Login. Alle folgend
 
 ## Testplan (`docs/10-testing.md`)
 
-Die angegebenen Dateien sind geplante Testorte, keine vorhandenen Tests. Ein lokaler OIDC-Testprovider wird über DI eingebunden, ohne `vi.mock` und ohne Live-Secrets. Er liefert echte signierte Testtoken zur Prüfung durch die gewählte Bibliothek.
+Die Tabelle nennt die ursprünglich geplanten Testorte. Durchgestrichene Dateien sind nie entstanden; ihre Fälle liegen in den daneben genannten vorhandenen Tests. Ein lokaler OIDC-Testprovider wird über DI eingebunden, ohne `vi.mock` und ohne Live-Secrets. Er liefert echte signierte Testtoken zur Prüfung durch die gewählte Bibliothek.
 
 | AK       | Ebene              | Geplanter Nachweis                                                                                                                                                                                                                                              |
 | -------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
