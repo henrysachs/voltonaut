@@ -19,7 +19,9 @@ const BIOME_BLOOM: Readonly<Record<Biome["kind"], number>> = {
 /** Linear HDR luminance above which a pixel blooms. */
 export const BLOOM_THRESHOLD = 1.05;
 const BLOOM_RADIUS = 0.45;
-const MSAA_SAMPLES = 4;
+
+/** 2× looked the same as 4× in a side-by-side night frame and halves the multisample memory. */
+const MSAA_SAMPLES = 2;
 
 /** Strongest bloom any region of the world asks for at full night. */
 export function peakBloom(biomes: readonly Biome[]): number {
