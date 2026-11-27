@@ -94,7 +94,7 @@ Davon getrennt gibt es den **Spaß-Modus** ([E9-01](specs/E9-01-fun-mode-items.m
 - XP nur bei effektiven Rohwerten `powerW > 30` und `cadenceRpm > 20`, nicht bei geglätteten HUD-Werten. Beide Grenzen sind strikt. Sim-Modus vergibt keine XP. Das reine Schwellenprädikat `isXpActive` ermittelt noch keine aktiven Fahrtfakten.
 - Basis-XP werden aus `activeDistanceM`, `activeElevationGainM` und `activeTimeS` berechnet. Jeder Bestandteil wird **einmal nach Aggregation der ganzen Fahrt abgerundet**, danach werden die drei Ganzzahlen summiert. Nicht pro Tick und nicht erst die ungerundete Gesamtsumme abrunden.
 - Level 1 beginnt bei **0 Gesamt-XP**. Level 0 ist ungültig. Für Level 2 bis 50 gilt `xpForLevel(n) = round(500 · n^1.6)` → Level 2 = 1516 XP, Level 10 = 19 905 XP. `levelForXp` liefert die höchste erreichte Stufe, maximal 50. Gesamt-XP müssen sichere nichtnegative Ganzzahlen sein. ⚠️ Kurve justieren.
-- Jedes Level vergibt mindestens ein Item oder Volts-Bonus (`game/data/levels.json`, Server und Client teilen die Datei).
+- Jedes Level vergibt mindestens ein Item oder Volts-Bonus. Noch nicht umgesetzt: `packages/rules/src/levels.ts` enthält bisher nur die Kurve, Server und Client teilen das Paket.
 
 ## Season Pass
 

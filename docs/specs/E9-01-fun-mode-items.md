@@ -42,7 +42,7 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Er ist einer von 
 | AK1          | Golden | `apps/web/src/golden/golden.test.ts`                                                                                               |
 | AK2–AK5, AK7 | Unit   | `packages/engine/src/fun/*.test.ts`, `packages/engine/src/physics/effects.test.ts`, `packages/engine/src/internal/funMode.test.ts` |
 | AK6          | Unit   | `packages/engine/src/internal/funTrainer.test.ts`                                                                                  |
-| AK8          | Unit   | `apps/web/src/game/engineWorkerFun.test.ts`, `apps/web/src/ui/rideMode.test.ts`                                                    |
+| AK8          | Unit   | `apps/web/src/game/recordedRide.modes.test.ts`, `apps/web/src/ui/rideMode.test.ts`                                                 |
 | AK9          | Unit   | `apps/web/src/ui/hud.test.ts`, `apps/web/src/world/itemBoxes.test.ts`                                                              |
 | AK10         | E2E    | `apps/web/e2e/fun-mode.spec.ts`                                                                                                    |
 

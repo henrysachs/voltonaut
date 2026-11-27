@@ -13,7 +13,7 @@ Ein angemeldeter Fahrer rüstet in der Garage besessene Items und Farben aus. De
 
 - **Start gegen `main` trotz offener Refactors (Auftraggeber, 25.11.2026).** #134 (Konto-Scope) und #124 (Render-Worker) sind offen und berühren dieselben Dateien. Konflikte werden beim Merge gelöst, nicht durch Warten.
 - **Eigener Branch `claude/garage-loadout-65`** (Auftraggeber, 25.11.2026), damit PR #126 nicht um dieses Feature wächst.
-- **Farben gehören zum Katalog.** Die Vorschau-Paletten ziehen von `apps/web/src/ui/garage/palettes.ts` nach `packages/rules`, damit Server und Garage dieselben Farben prüfen. `barTapeColor` hat keine Palette und wird von der Garage nicht angeboten; eine Ausrüstung mit `barTapeColor` wird abgewiesen.
+- **Farben gehören zum Katalog.** Die Vorschau-Paletten ziehen von ~~`apps/web/src/ui/garage/palettes.ts`~~ nach `packages/rules/src/avatarPalettes.ts`, damit Server und Garage dieselben Farben prüfen. `barTapeColor` hat keine Palette und wird von der Garage nicht angeboten; eine Ausrüstung mit `barTapeColor` wird abgewiesen.
 - **Migrationsnummer.** Diese Spec legt die nächste freie Migration auf `main` an. PR #126 wurde zuerst gemergt; die Loadout-Migration ist deshalb `0014_avatar_loadouts`, neu generiert auf `0013_volts_grant_operators`.
 
 ## Abnahmekriterien

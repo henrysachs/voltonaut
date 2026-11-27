@@ -12,7 +12,7 @@ Die Übersetzung zwischen `DeviceEvent`, `RecordingEntryV2`, Engine und Replay-S
 
 - [x] AK1 – `packages/engine/src/journal/` exportiert über `@voltonaut/engine`: `encodeJournalInput` (Geräteereignis → Journalentscheidung inkl. abgelehnter Messwerte), `applyJournalEntry` (Eintrag → Engine), `projectReplaySnapshot`, `replaySnapshotEqual`, `replayNumberEqual` und `PHYSICS_REVISION`. Das Modul ist rein: kein DOM, kein Node, keine Uhr; dependency-cruiser bleibt grün.
 - [x] AK2 – `encodeJournalInput` unterscheidet erschöpfend über alle `DeviceEvent`-Typen und alle `ControllerButton`-Werte (`switch` mit `never`-Prüfung). `applyJournalEntry` unterscheidet erschöpfend über alle Eintragsarten. `powerUp` ist ausdrücklich als `unrecordable_mode_intent` entschieden (ADR-028), nicht stillschweigend verworfen.
-- [x] AK3 – Kopien gelöscht: `apps/web/src/game/recordingObservation.ts`, `validCaptureReading`, `applyEntry`/`trainerFields` in `apps/server/src/rides/replay.ts`, `replaySnapshotEqual`/`replayNumberEqual` in `replayComparison.ts`, `claim`/`applyLive` in `apps/server/src/testing/replay.spec.ts`, die Snapshot-Projektion in `apps/server/scripts/verify-owned-journal.ts`. Es gibt keine Weiterleitungsfassade.
+- [x] AK3 – Kopien gelöscht: ~~`apps/web/src/game/recordingObservation.ts`~~, `validCaptureReading`, `applyEntry`/`trainerFields` in `apps/server/src/rides/replay.ts`, `replaySnapshotEqual`/`replayNumberEqual` in `replayComparison.ts`, `claim`/`applyLive` in `apps/server/src/testing/replay.spec.ts`, die Snapshot-Projektion in `apps/server/scripts/verify-owned-journal.ts`. Es gibt keine Weiterleitungsfassade.
 - [x] AK4 – Das Literal `"engine-v1"` steht im Produktions- und Skriptcode nur noch in `PHYSICS_REVISION` und im Vertragsschema `packages/shared/src/api/rides.ts`. Worker-Actor, Worker-Progress, Server-Replay und Verify-Skript nutzen die Konstante.
 - [x] AK5 – Verhalten identisch: Kodierungsgrenzen (Leistung 0–2000 W, Kadenz 0–200 rpm, Tempo 0–100 m/s, Puls 1–250 bpm), Journal-Invalidierung `invalid_input`, Track-Invalidierung je Kanal (Tempo ohne Trackkanal), Snapshot-Felder und Vergleichstoleranzen (1e-6 absolut / 1e-9 relativ; `tS`, `dataAgeS`, `lap`, `paused`, `gearIndex` exakt). Alle bestehenden Recorder-, Replay-, Golden- und Fixture-Tests laufen unverändert grün.
 - [x] AK6 – Property-Test: Für beliebige vertragskonforme Geräteereignis- und Advance-Folgen und Takt 1–20 liefert die Nachrechnung des kodierten Journals nach jedem Advance dieselben Snapshots, Ride-Events und Trainerkommandos wie die Live-Engine.
@@ -20,13 +20,13 @@ Die Übersetzung zwischen `DeviceEvent`, `RecordingEntryV2`, Engine und Replay-S
 
 ## Testplan (`docs/10-testing.md`)
 
-| AK       | Ebene                              | Datei / Fixture                                                                                    |
-| -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| AK1, AK2 | Unit                               | `packages/engine/src/journal/encode.test.ts`, `apply.test.ts`, `replaySnapshot.test.ts`            |
-| AK3, AK4 | Typecheck, Lint                    | `mise run check` (tsc, Oxlint, dependency-cruiser), `rg '"engine-v1"' apps packages`               |
-| AK5      | Regression                         | `apps/web/src/game/rideRecorder.test.ts`, `engineWorkerCapture.test.ts`, `apps/server/src/rides/*` |
-| AK6      | Property (fast-check, fester Seed) | `packages/engine/src/journal/codec.property.test.ts`                                               |
-| AK7      | Gate, Mutation                     | `mise run check`, `mise run check:mutation`                                                        |
+| AK       | Ebene                              | Datei / Fixture                                                                                                  |
+| -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| AK1, AK2 | Unit                               | `packages/engine/src/journal/encode.test.ts`, `apply.test.ts`, `replaySnapshot.test.ts`                          |
+| AK3, AK4 | Typecheck, Lint                    | `mise run check` (tsc, Oxlint, dependency-cruiser), `rg '"engine-v1"' apps packages`                             |
+| AK5      | Regression                         | `apps/web/src/game/recordedRide.journal.test.ts`, `recordedRide.test.ts` (seit E0-08), `apps/server/src/rides/*` |
+| AK6      | Property (fast-check, fester Seed) | `packages/engine/src/journal/codec.property.test.ts`                                                             |
+| AK7      | Gate, Mutation                     | `mise run check`, `mise run check:mutation`                                                                      |
 
 ## Nicht-Ziele
 
