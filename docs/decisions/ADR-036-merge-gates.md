@@ -81,7 +81,7 @@ Henry setzt beide Rulesets nach dem Merge per GitHub-API. Agenten ändern Rulese
 
 ### 2. Commit-Metadaten bleiben ungeprüft
 
-Der Guard prüft bewusst keine Commit-Metadaten (kein `Signed-off-by`, keine Autoren oder Trailer), weil Henry am 2026-11-27 entschieden hat, dass Sign-off nur für die für ihn arbeitenden Agenten zählt und in deren eigener Konfiguration steht, nicht im Repo.
+Der Guard prüft bewusst keine Commit-Metadaten; `scripts/guard/main.ts` ruft keinen Trailer-Check mehr auf, `scripts/guard/merge-gate-tests.ts` enthält keine Trailer-Tests mehr, und der frühere Trailer-Check ~~`scripts/guard/lib/commit-trailers.ts`~~ ist entfernt (kein `Signed-off-by`, keine Autoren oder Trailer), weil Henry am 2026-11-27 entschieden hat, dass Sign-off nur für die für ihn arbeitenden Agenten zählt und in deren eigener Konfiguration steht, nicht im Repo.
 
 ### 3. Non-null-Regex entfällt
 
@@ -112,7 +112,7 @@ Gemessen lokal mit Stryker unter dem Check-Lock auf ruhiger Maschine, break-Schw
 | `apps/server/src/strava/strava.delivery-step.ts` | 65,36 % | 179 | Folgearbeit |
 | `packages/ble/src/ftms/controlSim.ts` | 37,88 % | 66 | Folgearbeit |
 
-`control.ts` enthält nur Typ-Reexporte und `apps/web/src/game/controlConnection.ts` existiert nicht. Die Trainer-Control-Verbindung liegt in `packages/ble/src/ftms/controlConnection.ts`. Die drei aufgenommenen Dateien ergeben zusammen 87,26 % (404 Mutanten, 4 min 8 s lokal bei `--concurrency 4`). CI speichert die Incremental-Datei nicht und rechnet jeden Lauf voll. Der nächtliche Lauf vom 27.11. brauchte für 6100 Engine-/Rules-Mutanten 45 min 52 s. Die 404 neuen Mutanten haben langsamere Tests (Dry-Run 72 s statt 15 s). Geschätzt kommen pro Lauf 5–10 min hinzu. Das ist nicht in CI gemessen; der erste Lauf dieses PRs liefert den Wert. Die vier Folgedateien brauchen Verhaltenstests gegen ihre Überlebenden. Die Schwelle sinkt nicht, und es gibt keine Ausnahmen. Die Scope-Erkennung in `.github/workflows/mutation.yml` startet den Job bei Änderungen unter `packages/ble/src/ftms/`, `apps/server/src/strava/` und an `stryker.config.json`, also auch bei Teständerungen.
+`control.ts` enthält nur Typ-Reexporte, und unter `apps/web/src/game/` gibt es keine eigene Control-Verbindung. Die Trainer-Control-Verbindung liegt in `packages/ble/src/ftms/controlConnection.ts`. Die drei aufgenommenen Dateien ergeben zusammen 87,26 % (404 Mutanten, 4 min 8 s lokal bei `--concurrency 4`). CI speichert die Incremental-Datei nicht und rechnet jeden Lauf voll. Der nächtliche Lauf vom 27.11. brauchte für 6100 Engine-/Rules-Mutanten 45 min 52 s. Die 404 neuen Mutanten haben langsamere Tests (Dry-Run 72 s statt 15 s). Geschätzt kommen pro Lauf 5–10 min hinzu. Das ist nicht in CI gemessen; der erste Lauf dieses PRs liefert den Wert. Die vier Folgedateien brauchen Verhaltenstests gegen ihre Überlebenden. Die Schwelle sinkt nicht, und es gibt keine Ausnahmen. Die Scope-Erkennung in `.github/workflows/mutation.yml` startet den Job bei Änderungen unter `packages/ble/src/ftms/`, `apps/server/src/strava/` und an `stryker.config.json`, also auch bei Teständerungen.
 
 ## Konsequenzen
 
