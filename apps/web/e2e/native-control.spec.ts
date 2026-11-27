@@ -26,11 +26,14 @@ async function connect(page: Page, query = "?debug=1"): Promise<void> {
 }
 
 async function enable(page: Page): Promise<void> {
+  await expect(page.getByTestId("hud-resistance")).toHaveAttribute("data-state", "off");
   await page.getByRole("button", { name: "Widerstand aktivieren", exact: true }).click();
   await expect(page.getByRole("group", { name: "Rollenschaltung", exact: true })).toHaveAttribute(
     "data-authority",
     "active",
   );
+  await expect(page.getByTestId("hud-resistance")).toHaveAttribute("data-state", "active");
+  await expect(page.getByTestId("hud-resistance")).toContainText("Widerstand aktiv");
   await expect
     .poll(async () => Number(await page.locator("body").getAttribute("data-control-count")))
     .toBeGreaterThan(3);
@@ -191,6 +194,10 @@ test("permission loss keeps watts alive and cannot silently reacquire", async ({
     "data-authority",
     "lost",
   );
+  // The loss is visible in the ride HUD, not only inside the device dialog.
+  await expect(page.getByTestId("hud-resistance")).toHaveText(
+    "Widerstand verloren · neu verbinden",
+  );
   const count = await writeCount(page);
   await page.evaluate(() => document.dispatchEvent(new Event("test-control-right-down")));
   await expect(page.getByTestId("hud-gear")).toHaveText("13");
@@ -222,6 +229,7 @@ test("native data reconnect clears authority and never replays resistance until 
     "inactive",
   );
   await expect(page.getByLabel("Trainer-ACK")).toContainText("Widerstand unbekannt");
+  await expect(page.getByTestId("hud-resistance")).toHaveText("Widerstand aus · Menü → Geräte");
   await expect(page.locator("body")).toHaveAttribute("data-control-count", count);
   await expect(page.getByTestId("hud-power")).toHaveText("244 W");
   await enable(page);
