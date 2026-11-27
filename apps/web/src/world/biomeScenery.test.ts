@@ -82,6 +82,16 @@ function basicMaterials(root: Readonly<THREE.Object3D>): readonly THREE.MeshBasi
   return materials;
 }
 
+function lightsIn(root: Readonly<THREE.Object3D>): readonly THREE.Light[] {
+  const lights: THREE.Light[] = [];
+
+  root.traverse((object) => {
+    if (object instanceof THREE.Light) lights.push(object);
+  });
+
+  return lights;
+}
+
 function instancePositions(root: Readonly<THREE.Object3D>): readonly THREE.Vector3[] {
   const positions: THREE.Vector3[] = [];
   const matrix = new THREE.Matrix4();
@@ -159,10 +169,9 @@ it("night city scenery wires streetlights and neon without real light sources", 
   const route = createRoute(NIGHT_CITY);
   const plan = createLandscapePlan(route, [route], 42, false);
   const scenery = createNightCityScenery(plan);
-  const glow = scenery.children.find((child) => child instanceof THREE.AmbientLight);
 
   expect(scenery.name).toBe("biome-night-city");
-  expect(glow).toBeInstanceOf(THREE.AmbientLight);
+  expect(lightsIn(scenery)).toEqual([]);
   expect(instanceCount(scenery)).toBeGreaterThan(100);
   expect(basicMaterials(scenery).length).toBeGreaterThan(0);
 });

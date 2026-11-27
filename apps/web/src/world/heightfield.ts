@@ -203,3 +203,31 @@ export function heightAt(field: Heightfield, x: number, z: number): number {
 
   return fv >= fu ? a + fu * (d - c) + fv * (c - a) : a + fu * (b - a) + fv * (d - b);
 }
+
+/** Rim points sampled around a round base; 32 keep a 2.7 m base on a 1:1 slope within 2 cm. */
+const RIM_SAMPLES = 32;
+
+/** A round base on the ground: its rim radius and how far it is sunk below its centre's ground. */
+export interface Foot {
+  readonly radiusM: number;
+  readonly sinkM: number;
+}
+
+/**
+ * Ground height to stand a base on: the drawn height under its centre, lowered on a slope until
+ * the base, sunk foot.sinkM below it, reaches the terrain under its whole rim (#138). On ground
+ * that falls less than sinkM across the base it is the centre height unchanged.
+ */
+export function settledHeightAt(field: Heightfield, x: number, z: number, foot: Foot): number {
+  let rimM = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < RIM_SAMPLES; index += 1) {
+    const angleRad = (index / RIM_SAMPLES) * Math.PI * 2;
+    const rimX = x + Math.cos(angleRad) * foot.radiusM;
+    const rimZ = z + Math.sin(angleRad) * foot.radiusM;
+
+    rimM = Math.min(rimM, heightAt(field, rimX, rimZ));
+  }
+
+  return Math.min(heightAt(field, x, z), rimM + foot.sinkM);
+}
