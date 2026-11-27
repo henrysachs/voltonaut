@@ -61,6 +61,48 @@ it("keeps the rider body out of the first frame even when a look arrives first",
   scheduler.dispose();
 });
 
+/** Rider bodies built and kit rebuilds of a built body (each adds a new mesh set). */
+interface BuildCounts {
+  bodies: number;
+  rebuilds: number;
+}
+
+/** Counts builds below the ride's rider root through Three's scene-graph events. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's scene graph is mutable; listeners only count.
+function countBuilds(scene: THREE.Scene): Readonly<BuildCounts> {
+  const counts: BuildCounts = { bodies: 0, rebuilds: 0 };
+  const model = scene.getObjectByName("rider-root")?.children[0];
+
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- Three's event hands over its mutable child.
+  model?.addEventListener("childadded", ({ child }) => {
+    if (child.name !== "rider") return;
+    counts.bodies += 1;
+    child.addEventListener("childadded", () => {
+      counts.rebuilds += 1;
+    });
+  });
+
+  return counts;
+}
+
+it("builds the deferred body once, directly in a look that arrived before it", () => {
+  const scene = new THREE.Scene();
+  const rider = createRider(2.105);
+  const scheduler = createScheduler([rider.system], { scene, route });
+  const counts = countBuilds(scene);
+
+  // The ride's order: the server look arrives, then frames 1, 2 and 3.
+  rider.setLook(STRIPE);
+  scheduler.update({ ride: snapshot, dtS: 0, alpha: 1, env });
+  scheduler.update({ ride: snapshot, dtS: 0.05, alpha: 1, env });
+  scheduler.update({ ride: snapshot, dtS: 0.1, alpha: 1, env });
+
+  expect(counts).toEqual({ bodies: 1, rebuilds: 0 });
+  expect(rider.look()).toEqual(STRIPE);
+  expect(wornHelmetHex(scene)).toBe(STRIPE.rider.helmetColor);
+  scheduler.dispose();
+});
+
 it("wears the default look once the deferred body exists when no look was requested", () => {
   const scene = new THREE.Scene();
   const rider = createRider(2.105);
