@@ -2,7 +2,7 @@
 
 - **Roadmap-Bezug:** `docs/07-roadmap.md` → E7, Checkbox „Garage-Showroom (Studio-Licht, Drehteller, Fotomodus), Shop mit Preisen in ⚡, gesperrte Items mit Bedingung“
 - **Issue:** #122 · Abhängigkeiten: [E7-05](E7-05-garage-loadout.md) und [E4-11](E4-11-in-ride-menu-redesign.md) sind gemergt. Der Preview-Worker aus #154 ist die aktuelle Render-Grenze.
-- **Status:** Implementiert und softwaregeprüft. Review, vollständiges Gate, visuelle Abnahme und Bereitstellung bleiben offen.
+- **Status:** Implementiert und softwaregeprüft. Unabhängiges Review ist grün. Visuelle Abnahme und Bereitstellung bleiben offen.
 - **Betroffene Module:** `apps/web/src/ui/garage`, `apps/web/src/styles.css`, `apps/web/e2e`, `docs/05-avatar-customization.md`, `docs/07-roadmap.md`
 
 ## Ziel
@@ -51,7 +51,7 @@ Keine echten visuellen Baselines mit `toHaveScreenshot`. `mise run visual:update
 
 - Henrys Sichtprüfung der Studio-Szene und des Fotomodus bleibt offen.
 - Eine echte GPU-Bildratenmessung bleibt offen. Die Chromium-Softwareprüfung ist kein Hardwareattest.
-- Review, vollständiges `mise run check`, Merge und Bereitstellung stehen aus.
+- Merge und Bereitstellung stehen aus.
 
 ## Nachweis
 
@@ -65,6 +65,7 @@ Orbit-Helper, absolutes Worker-Protokoll, Studio-Szene, Worker-Capture, PNG-Down
 - `pnpm exec tsc -b packages/shared packages/rules packages/ble packages/engine apps/web --pretty false`: grün.
 - `pnpm --filter @voltonaut/web build`: grün.
 - Typisierter Oxlint mit `--deny-warnings --report-unused-disable-directives` auf allen geänderten Web-Dateien: grün.
+- Unabhängiges Review: APPROVE für `af5cbc4`.
 - `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-showroom.spec.ts e2e/garage-shop.spec.ts e2e/overlay-states.spec.ts --workers=1`: 17 Tests grün.
 - `CI=1 E2E_PORT=5197 pnpm --filter @voltonaut/web exec playwright test e2e/garage-loadout.spec.ts e2e/garage-purchase.spec.ts e2e/game-menu.spec.ts e2e/menu-layout.spec.ts --workers=1`: 65 Tests grün.
 - Der Download-Test prüft bei DPR 2 PNG-Signatur, IHDR, Canvas-Backing-Store, sichtbare CSS-Fläche und mindestens ein deckendes Pixel nach dem Decode im Browser.
@@ -78,7 +79,7 @@ Nicht geprüft. Die Softwareprüfung belegt kein Hardwareverhalten und keine GPU
 
 ### Bereitgestellt
 
-Nein. Dieser Auftrag erzeugt weder PR noch Merge noch Deploy.
+Nein. Merge und Deploy bleiben offen.
 
 ## Doku-Updates
 
