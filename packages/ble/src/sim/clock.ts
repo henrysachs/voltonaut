@@ -16,9 +16,3 @@ export function createManualClock(startS = 0): ManualClock {
     },
   };
 }
-
-export function createScaledClock(source: Readonly<SimClock>, factor: number): SimClock {
-  return {
-    nowS: () => source.nowS() * factor,
-  };
-}

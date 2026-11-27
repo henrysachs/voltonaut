@@ -45,7 +45,7 @@ export type AccountDeletionRequest = z.infer<typeof AccountDeletionRequestSchema
  * Outcome of the Strava revocation that runs before the deletion (issue #140). `failed` still
  * deletes the account; the rider then removes Voltonaut in the Strava settings.
  */
-export const StravaRevocationOutcomeSchema = z.enum(["revoked", "not_connected", "failed"]);
+const StravaRevocationOutcomeSchema = z.enum(["revoked", "not_connected", "failed"]);
 
 export const AccountDeletionResponseSchema = z
   .object({ stravaRevocation: StravaRevocationOutcomeSchema })

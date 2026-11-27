@@ -8,7 +8,7 @@ export function deviceLabel(device: Readonly<LabDevice>): string {
   return `${device.number} · ${device.name} · ${device.id}`;
 }
 
-export function kindLabel(kind: LabDeviceKind): string {
+function kindLabel(kind: LabDeviceKind): string {
   switch (kind.kind) {
     case "trainer":
       return kind.ftmsControl ? "Trainer · FTMS steuerbar" : "Trainer · nur Messwerte";
@@ -26,7 +26,7 @@ export function kindLabel(kind: LabDeviceKind): string {
   }
 }
 
-export function statusText(device: Readonly<LabDevice>): string {
+function statusText(device: Readonly<LabDevice>): string {
   switch (device.state.kind) {
     case "connecting":
       return "Verbinde …";

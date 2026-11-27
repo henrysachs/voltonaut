@@ -20,12 +20,9 @@ export {
   LOCAL_PROGRESS_MAX_CHECKPOINTS,
   LOCAL_PROGRESS_MAX_FACTS,
   LOCAL_PROGRESS_MAX_TIME_S,
-  SERVER_PROGRESS_MAX_BATCHES,
   SERVER_PROGRESS_MAX_FACTS,
   SERVER_PROGRESS_MAX_TIME_S,
   type ProgressBatch,
-  type ProgressBatchAppendInput,
-  type ProgressBatchUpdate,
 } from "./progressBatchTypes.js";
 
 export {
@@ -128,8 +125,4 @@ export function appendValidatedProgressBatch({
   if (!fits(open, next)) return batchUpdate(parsed, [open]);
 
   return batchUpdate(combineBatch(open, next, parsed));
-}
-
-export function sealProgressBatch(open: ProgressBatch | undefined): readonly ProgressBatch[] {
-  return open === undefined ? [] : Object.freeze([LocalProgressBatchSchema.parse(open)]);
 }

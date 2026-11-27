@@ -4,7 +4,7 @@
  * shoe or pair of glasses is a new entry here plus a catalog item, no new mesh code.
  */
 
-export type RiderSlot = "jersey" | "helmet" | "shoes" | "glasses";
+type RiderSlot = "jersey" | "helmet" | "shoes" | "glasses";
 
 /**
  * Accent area on the jersey torso. `t` runs from the hem (0) to the collar (1); the angle runs
@@ -219,10 +219,10 @@ const [STANDARD] = HELMET_SPECS;
 const [WHITE] = SHOE_SPECS;
 const [NO_GLASSES] = GLASSES_SPECS;
 
-export const DEFAULT_JERSEY_SPEC: JerseySpec = CLASSIC;
-export const DEFAULT_HELMET_SPEC: HelmetSpec = STANDARD;
-export const DEFAULT_SHOE_SPEC: ShoeSpec = WHITE;
-export const DEFAULT_GLASSES_SPEC: GlassesSpec = NO_GLASSES;
+const DEFAULT_JERSEY_SPEC: JerseySpec = CLASSIC;
+const DEFAULT_HELMET_SPEC: HelmetSpec = STANDARD;
+const DEFAULT_SHOE_SPEC: ShoeSpec = WHITE;
+const DEFAULT_GLASSES_SPEC: GlassesSpec = NO_GLASSES;
 
 const PROCEDURAL_PREFIX = "procedural://rider/";
 

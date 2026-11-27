@@ -20,16 +20,6 @@ export function input(id: string): HTMLInputElement {
   throw new Error(`Expected input #${id}`);
 }
 
-export function select(id: string): HTMLSelectElement {
-  const found = element(id);
-
-  if (found instanceof HTMLSelectElement) {
-    return found;
-  }
-
-  throw new Error(`Expected select #${id}`);
-}
-
 /** File-system safe part of a download name. */
 export function fileSlug(text: string): string {
   return (

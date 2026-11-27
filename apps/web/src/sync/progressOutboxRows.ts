@@ -48,7 +48,7 @@ export function decodeProgressRows(
   return sortProgressRows(parsed.data);
 }
 
-export function sortProgressRows(rows: readonly ProgressOutboxRow[]): readonly ProgressOutboxRow[] {
+function sortProgressRows(rows: readonly ProgressOutboxRow[]): readonly ProgressOutboxRow[] {
   return rows.toSorted(
     (left, right) =>
       left.journalId.localeCompare(right.journalId) ||

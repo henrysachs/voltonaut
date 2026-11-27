@@ -11,7 +11,7 @@ export type BandTriangle = readonly [WorldPos, WorldPos, WorldPos];
  * A terrain triangle touching the band has every corner within one cell diagonal of the band
  * point it covers, so band planes this close bound the terrain corners (spec E10-12).
  */
-export const BAND_REACH_M = FINE_SPACING_M * Math.SQRT2 + 0.01;
+const BAND_REACH_M = FINE_SPACING_M * Math.SQRT2 + 0.01;
 
 interface PointXz {
   readonly x: number;

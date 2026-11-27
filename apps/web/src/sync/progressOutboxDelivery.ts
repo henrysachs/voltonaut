@@ -26,7 +26,7 @@ import {
 import { progressOutboxKey } from "./progressOutboxRow.js";
 import type { ProgressIndexedDatabase } from "./progressOutboxIndexedTypes.js";
 
-export { runProgressMarkStored, storedProgressRow } from "./progressOutboxStored.js";
+export { runProgressMarkStored } from "./progressOutboxStored.js";
 
 export { runProgressView } from "./progressOutboxView.js";
 
@@ -42,7 +42,7 @@ export function progressFailureState(
     : { kind: "blocked", cause, attempts, retryAtMs };
 }
 
-export function sendingProgressRow(
+function sendingProgressRow(
   existing: Readonly<ProgressOutboxRow>,
   input: Readonly<ProgressMarkSending>,
 ): ProgressOutboxRow {
@@ -73,7 +73,7 @@ export function sendingProgressRow(
   return replaceProgressState(existing, { kind: "sending", attempts: 1, retryAtMs: 0 });
 }
 
-export function requeueProgressRow(
+function requeueProgressRow(
   existing: Readonly<ProgressOutboxRow>,
   nowMs: number,
 ): ProgressOutboxRow {

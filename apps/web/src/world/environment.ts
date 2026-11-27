@@ -114,7 +114,7 @@ export function environmentAt(
   });
 }
 
-export function parseWeatherKind(value: string | null): WeatherKind | undefined {
+function parseWeatherKind(value: string | null): WeatherKind | undefined {
   if (value === null) return undefined;
 
   switch (value) {

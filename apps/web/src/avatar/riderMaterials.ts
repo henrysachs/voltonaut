@@ -7,16 +7,6 @@ import * as THREE from "three";
  */
 export type RiderMaterialKey = "kit" | "skin" | "sock" | "shoe" | "dark" | "helmet" | "lens";
 
-export const RIDER_MATERIAL_KEYS: readonly RiderMaterialKey[] = [
-  "kit",
-  "skin",
-  "sock",
-  "shoe",
-  "dark",
-  "helmet",
-  "lens",
-];
-
 export type RiderMaterialSet = Readonly<Record<RiderMaterialKey, THREE.MeshStandardMaterial>>;
 
 /** Looks up the shared material for a part; a function keeps builders free of mutable parameters. */

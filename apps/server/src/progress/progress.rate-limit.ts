@@ -5,11 +5,11 @@ import { ApiError } from "../api-error.js";
 import type { ExecutionContextPort, ThrottleDetailPort } from "../api-error.js";
 import type { TrackerRequest } from "../auth/auth-request.js";
 
-export const PROGRESS_CHECKPOINT_THROTTLER = "progress-checkpoint-account";
-export const PROGRESS_CHECKPOINT_LIMIT = 30;
-export const PROGRESS_CHECKPOINT_TTL_MS = 60_000;
+const PROGRESS_CHECKPOINT_THROTTLER = "progress-checkpoint-account";
+const PROGRESS_CHECKPOINT_LIMIT = 30;
+const PROGRESS_CHECKPOINT_TTL_MS = 60_000;
 
-export function progressCheckpointTracker(request: TrackerRequest): string {
+function progressCheckpointTracker(request: TrackerRequest): string {
   if (request.session === undefined) {
     throw new ApiError(401, "unauthorized", "missing session");
   }

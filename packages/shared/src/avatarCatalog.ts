@@ -25,7 +25,7 @@ export const AvatarSlotSchema = z.enum([
 
 export type AvatarSlot = z.infer<typeof AvatarSlotSchema>;
 
-export const AvatarRaritySchema = z.enum(["common", "rare", "epic", "legendary"]);
+const AvatarRaritySchema = z.enum(["common", "rare", "epic", "legendary"]);
 
 export type AvatarRarity = z.infer<typeof AvatarRaritySchema>;
 
@@ -152,7 +152,7 @@ function toItemDef(item: Readonly<ItemDefData>): ItemDef {
 
 export const ItemDefSchema = itemDefinition.superRefine(validateItem).transform(toItemDef);
 
-export const AvatarJerseyColorsSchema = z.tuple([AvatarColorSchema, AvatarColorSchema]).readonly();
+const AvatarJerseyColorsSchema = z.tuple([AvatarColorSchema, AvatarColorSchema]).readonly();
 
 export const AvatarConfigSchema = z
   .object({

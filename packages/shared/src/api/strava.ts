@@ -75,7 +75,7 @@ export const StravaConsentSchema = z
   })
   .strict();
 
-export const StravaReceiptSchema = z
+const StravaReceiptSchema = z
   .object({
     uploadId: StravaRemoteIdSchema,
     externalId: z.string().regex(/^voltonaut-[a-f0-9-]{36}\.tcx$/u),
@@ -135,7 +135,7 @@ export const StravaProgressSchema = z.discriminatedUnion("kind", [
     .strict(),
 ]);
 
-export const StravaAuthoritySchema = z.discriminatedUnion("kind", [
+const StravaAuthoritySchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("consented"),
@@ -233,8 +233,6 @@ export type StravaConsent = z.infer<typeof StravaConsentSchema>;
 export type StravaReceipt = z.infer<typeof StravaReceiptSchema>;
 
 export type StravaProgress = z.infer<typeof StravaProgressSchema>;
-
-export type StravaAuthority = z.infer<typeof StravaAuthoritySchema>;
 
 export type StravaDelivery = z.infer<typeof StravaDeliverySchema>;
 
