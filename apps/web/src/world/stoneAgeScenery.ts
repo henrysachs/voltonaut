@@ -1,0 +1,141 @@
+/* oxlint-disable typescript/prefer-readonly-parameter-types -- Three's Object3D and Color are mutable scene resources; these layers own the instances they write. */
+import * as THREE from "three";
+
+import { chunkedMeshes, type ChunkLayer } from "./biomeSceneryShared.js";
+import type { LandscapePlan } from "./landscape-plan.js";
+import { partsOf, planStoneAge, type Part, type Placed, type RockHouse } from "./stone-age-plan.js";
+import { atItem, named, statueMeshes, stone, volcanoMeshes } from "./stoneAgeLandmarks.js";
+
+function houseDomeLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
+  return {
+    geometry: new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    material: stone(),
+    items: houses,
+    transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
+      atItem(object, house, [0, -0.3, 0]);
+      object.scale.set(house.domeRadiusM, house.heightM, house.domeRadiusM);
+    },
+    tint(house: Readonly<RockHouse>, color: THREE.Color) {
+      color.setHSL(0.09, 0.16, 0.5 + house.shade * 0.16);
+    },
+  };
+}
+
+function houseDoorLayer(houses: readonly RockHouse[]): ChunkLayer<RockHouse> {
+  return {
+    geometry: new THREE.BoxGeometry(1.3, 1.9, 0.9),
+    material: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }),
+    items: houses,
+    transform(house: Readonly<RockHouse>, object: THREE.Object3D) {
+      atItem(object, house, [0, 0.85, house.domeRadiusM * 0.97]);
+    },
+    tint(_house: Readonly<RockHouse>, color: THREE.Color) {
+      color.setHex(0x24180f);
+    },
+  };
+}
+
+function palmHeightM(palm: Readonly<Placed>): number {
+  return 4.5 + palm.shade * 4;
+}
+
+function palmTrunkLayer(palms: readonly Placed[]): ChunkLayer<Placed> {
+  return {
+    geometry: new THREE.CylinderGeometry(0.28, 0.45, 1, 6),
+    material: stone(),
+    items: palms,
+    transform(palm: Readonly<Placed>, object: THREE.Object3D) {
+      atItem(object, palm, [0, palmHeightM(palm) / 2 / palm.scale, 0]);
+      object.scale.set(palm.scale, palmHeightM(palm), palm.scale);
+    },
+    tint(palm: Readonly<Placed>, color: THREE.Color) {
+      color.setHSL(0.08, 0.38, 0.28 + palm.shade * 0.1);
+    },
+  };
+}
+
+interface FrondStyle {
+  readonly count: number;
+  readonly lengthM: number;
+  /** Lean from vertical; beyond π/2 the frond droops. */
+  readonly tiltRad: number;
+  readonly hue: number;
+  readonly stemTopM: (owner: Readonly<Placed>) => number;
+}
+
+const PALM_FRONDS: FrondStyle = {
+  count: 7,
+  lengthM: 3.4,
+  tiltRad: 1.95,
+  hue: 0.27,
+  stemTopM: (palm) => palmHeightM(palm) - 0.2,
+};
+
+const FERN_FRONDS: FrondStyle = {
+  count: 6,
+  lengthM: 1.9,
+  tiltRad: 1.05,
+  hue: 0.3,
+  stemTopM: () => 0,
+};
+
+/** Each frond starts at the stem top and leans out; fronds fan evenly around the stem. */
+function frondLayer(owners: readonly Placed[], style: FrondStyle): ChunkLayer<Part<Placed>> {
+  return {
+    geometry: new THREE.ConeGeometry(style.lengthM * 0.16, style.lengthM, 4),
+    material: stone(),
+    items: partsOf(owners, style.count),
+    transform(frond: Readonly<Part<Placed>>, object: THREE.Object3D) {
+      const { owner } = frond;
+
+      atItem(object, owner, [0, style.stemTopM(owner) / owner.scale, 0]);
+      object.rotateY((frond.index / style.count) * Math.PI * 2);
+      object.rotateX(style.tiltRad);
+      object.translateY((style.lengthM * owner.scale) / 2);
+      object.scale.set(owner.scale, owner.scale, owner.scale);
+    },
+    tint(frond: Readonly<Part<Placed>>, color: THREE.Color) {
+      color.setHSL(style.hue + frond.owner.shade * 0.04, 0.5, 0.22 + frond.owner.shade * 0.14);
+    },
+  };
+}
+
+function boulderLayer(boulders: readonly Placed[]): ChunkLayer<Placed> {
+  return {
+    geometry: new THREE.IcosahedronGeometry(1, 0),
+    material: stone(),
+    items: boulders,
+    transform(boulder: Readonly<Placed>, object: THREE.Object3D) {
+      atItem(object, boulder, [0, boulder.radiusM * 0.25, 0]);
+      object.scale.set(boulder.radiusM, boulder.radiusM * 0.7, boulder.radiusM * 0.85);
+    },
+    tint(boulder: Readonly<Placed>, color: THREE.Color) {
+      color.setHSL(0.08, 0.3, 0.42 + boulder.shade * 0.2);
+    },
+  };
+}
+
+/**
+ * Stone age (spec E10-15): rock houses with dark doors, palms, ferns and boulders, long-necked
+ * dino statues and glowing volcanoes. Houses, statues and volcanoes are few, so each layer is
+ * one mesh over the whole lap; plants keep the 250 m chunks.
+ */
+export function createStoneAgeScenery(plan: Readonly<LandscapePlan>): THREE.Group {
+  const root = new THREE.Group();
+  const decor = planStoneAge(plan);
+  const lapM = plan.route.lengthM;
+
+  root.name = "biome-stone-age";
+  root.add(
+    ...volcanoMeshes(decor.volcanoes, lapM),
+    ...named(chunkedMeshes(houseDomeLayer(decor.houses), lapM), "stone-age-house"),
+    ...named(chunkedMeshes(houseDoorLayer(decor.houses), lapM), "stone-age-door"),
+    ...statueMeshes(decor.statues, lapM),
+    ...named(chunkedMeshes(palmTrunkLayer(decor.palms)), "stone-age-palm"),
+    ...named(chunkedMeshes(frondLayer(decor.palms, PALM_FRONDS)), "stone-age-palm-frond"),
+    ...named(chunkedMeshes(frondLayer(decor.ferns, FERN_FRONDS)), "stone-age-fern"),
+    ...named(chunkedMeshes(boulderLayer(decor.boulders)), "stone-age-boulder"),
+  );
+
+  return root;
+}
