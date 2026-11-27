@@ -157,8 +157,11 @@ export interface RiderView {
   readonly crankRad: () => number;
   /** Applies on the next update, after the deferred body exists (spec E7-05 AK8). */
   readonly setLook: (config: Readonly<AvatarConfig>) => void;
-  /** The look the rider body wears; a requested look counts only once it is applied. */
-  readonly look: () => AvatarConfig;
+  /**
+   * The look the rider body wears; none before the deferred body exists. A requested look counts
+   * only once it is applied.
+   */
+  readonly look: () => AvatarConfig | undefined;
 }
 
 export function createRiderModel(wheelCircM: number): RiderOnBike {
@@ -175,13 +178,13 @@ function sameLook(left: Readonly<AvatarConfig>, right: Readonly<AvatarConfig>): 
 
 export function createRider(wheelCircM: number): RiderView {
   const rider = new RiderOnBike(wheelCircM, true);
-  let worn: AvatarConfig = DEFAULT_AVATAR_CONFIG;
+  let worn: AvatarConfig | undefined;
   let pending: AvatarConfig | undefined;
 
   return {
     setLook(config) {
       // An unchanged look (e.g. a guest's default) must not change bike and body mid-ride.
-      if (sameLook(config, pending ?? worn)) return;
+      if (sameLook(config, pending ?? worn ?? DEFAULT_AVATAR_CONFIG)) return;
       pending = config;
     },
     look: () => worn,
@@ -203,7 +206,11 @@ export function createRider(wheelCircM: number): RiderView {
         rider.update(frame);
 
         // A look waits for the deferred body; applying it earlier would build the body in frame 1.
-        if (pending !== undefined && rider.hasBody()) {
+        if (!rider.hasBody()) return;
+        // The deferred body is built in the default look.
+        worn ??= DEFAULT_AVATAR_CONFIG;
+
+        if (pending !== undefined) {
           rider.setLook(pending);
           worn = pending;
           pending = undefined;
