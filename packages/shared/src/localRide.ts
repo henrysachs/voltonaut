@@ -13,7 +13,7 @@ const referenceText = z
   .regex(/^[^\p{Cc}\p{Cs}\uFFFE\uFFFF]+$/u);
 
 /** New tracks name a world path; stored single-route tracks stay readable (ADR-033 §7). */
-export const LocalRideMetadataSchema = withRideReference(
+const LocalRideMetadataSchema = withRideReference(
   { source: z.enum(["sim", "ble"]) },
   {
     physicsClockScale: z.number().finite().min(1).max(20),
