@@ -19,8 +19,8 @@ async function connect(page: Page, query = "?debug=1"): Promise<void> {
   await page.goto(`/${query}`);
   await page.getByRole("button", { name: "Geräte verbinden" }).click();
   await choose(page, "Trainer");
-  await choose(page, "Linker Play-Griff");
-  await choose(page, "Rechter Play-Griff");
+  await choose(page, "Linker Controller");
+  await choose(page, "Rechter Controller");
   await expect(page.getByTestId("hud-power")).toHaveText("244 W", { timeout: 10_000 });
   await expect(page.locator("body")).not.toHaveAttribute("data-control-count");
 }

@@ -28,6 +28,18 @@ Lokale Aufnahme und TCX funktionieren ohne Anmeldung. Replay-Prüfung ist kein H
 
 Journalaufnahmen enthalten für die Servernachrechnung auch Vorlaufdaten seit Sitzungsbeginn einschließlich verworfener Fenster. Die Kontozuordnung weist vor der Übertragung darauf hin. TCX und Strava exportieren nur das gewählte Fenster. Mengen- oder Bytegrenzen können das Journal vor sechs Stunden beenden. Dann bleiben lokale Aufnahme und TCX möglich, aber kein nachrechenbarer Fahrtupload.
 
+## Ein neues Gerät aufnehmen
+
+Das Labor erklärt jeden Schritt selbst; dies ist die Kurzfassung.
+
+1. Andere Apps (Zwift, Companion, Wahoo, Uhren) schließen. Chrome oder Edge über `localhost` öffnen.
+2. **Gerät hinzufügen** einmal pro Gerät. Trainer, jeder Griff und jeder Click-Puck sind eigene Geräte.
+3. Ab dem Verbinden läuft die Aufzeichnung aller Kanäle; Firmware und Fähigkeiten werden automatisch gelesen. Kein Subscribe nötig.
+4. Der Anleitung auf der Gerätekarte folgen. Vor jeder Aktion einen **Marker** setzen, sonst lässt sich ein Byte keiner Taste zuordnen.
+5. **Alle exportieren** lädt eine Datei pro Gerät (`ble-<nr>-<name>-<zeit>.json`). Mitschnitte leben nur im Tab.
+
+Ein Zwift Hub One verbindet im Spiel als **Trainer**, ein Click v2 in **Linker/Rechter Controller**. Beides ist softwaregeprüft, Hardwareabnahme offen ([E2-04](specs/E2-04-hub-click-v2-guided-lab.md)).
+
 ## Rollenschaltung und Hardwareabnahme
 
 Beide echten Play-Mitschnitte bestätigen die Zuordnung: rechts höher, links niedriger, einmal pro Druck. Eine erneute Tastenvermessung ist nicht nötig. Das Labor zeigt Seite, Tasten und unkalibrierte Analogrohwerte.
@@ -42,7 +54,7 @@ Die Softwareprüfungen verwenden Sim- und native GATT-Fakes. Widerstandsgefühl,
 2. Schließe Zwift, Wahoo, Rouvy und andere Apps, die das Gerät verbunden halten könnten.
 3. Öffne die App auf 5173 ohne `sim=1` und ohne `clock=fast`.
 4. Prüfe unter **Menü → Profil** Gewicht, reales Kettenblatt und reales Cog. Speichere Änderungen und lade vor dem Verbinden neu. Profiländerungen gelten erst für die nächste Fahrt.
-5. Öffne **Geräte verbinden**. Wähle Trainer, **Linker Play-Griff** und **Rechter Play-Griff** getrennt über **Gerät wählen**.
+5. Öffne **Geräte verbinden**. Wähle Trainer, **Linker Controller** und **Rechter Controller** getrennt über **Gerät wählen**.
 6. Prüfe Bereitschaft sowie plausible Watt- und Kadenzwerte. Aktiviere erst danach **Widerstand aktivieren** und warte auf die bestätigte Freigabe.
 7. Prüfe beim kontrollierten Treten rechts und links jeweils HUD-Gang, bestätigtes Ziel und tatsächliches Widerstandsgefühl. Halten darf nicht wiederholt schalten.
 8. Öffne das Menü. Fahrt und Play müssen weiterlaufen. Pfeiltasten in einem Profilfeld dürfen den Trainer nicht schalten.

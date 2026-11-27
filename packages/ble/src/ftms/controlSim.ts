@@ -18,12 +18,13 @@ export class SimControlPoint {
     const opcode = bytes.at(0);
     let result = 5;
 
-    if (opcode === 0 && bytes.length === 1 && this.phase === "unowned") {
-      this.phase = "owned";
+    // A repeated Request Control keeps the grant; Start on a running machine fails (as on the Zwift Hub).
+    if (opcode === 0 && bytes.length === 1) {
+      if (this.phase === "unowned") this.phase = "owned";
       result = 1;
-    } else if (opcode === 7 && bytes.length === 1 && this.phase === "owned") {
+    } else if (opcode === 7 && bytes.length === 1 && this.phase !== "unowned") {
+      result = this.phase === "started" ? 4 : 1;
       this.phase = "started";
-      result = 1;
     } else if (opcode === 0x11 && bytes.length === 7 && this.phase === "started") result = 1;
     else if (opcode === 8 && bytes.length === 2 && bytes.at(1) === 1 && this.phase === "started") {
       this.phase = "owned";

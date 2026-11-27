@@ -43,12 +43,16 @@ function key(ref: CharacteristicRef): string {
   return `${ref.serviceUuid}/${ref.characteristicUuid}`;
 }
 
-function matches(profile: GattProfile, scan: ScanOptions): boolean {
-  const offered = new Set(profile.services.map((service) => service.uuid));
+function matches(peripheral: SimPeripheral, scan: ScanOptions): boolean {
+  const offered = new Set(peripheral.profile.services.map((service) => service.uuid));
 
   return (
     scan.acceptAllDevices ||
-    scan.filters.some((filter) => filter.services.every((uuid) => offered.has(uuid)))
+    scan.filters.some(
+      (filter) =>
+        (filter.services ?? []).every((uuid) => offered.has(uuid)) &&
+        (filter.namePrefix === undefined || peripheral.name.startsWith(filter.namePrefix)),
+    )
   );
 }
 
@@ -88,7 +92,7 @@ class ScriptedTransport implements SimTransport {
   connect(scan: ScanOptions): Promise<GattProfile> {
     this.close();
 
-    if (!matches(this.peripheral.profile, scan)) {
+    if (!matches(this.peripheral, scan)) {
       return Promise.reject(new Error("no sim device matches the scan filter"));
     }
 

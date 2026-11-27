@@ -30,10 +30,14 @@ export interface CharacteristicRef {
   readonly characteristicUuid: string;
 }
 
-export interface BleScanFilter {
-  readonly services: readonly string[];
-  readonly namePrefix?: string;
-}
+/**
+ * One picker filter; a device matches when it satisfies any filter of the scan.
+ * A name-only filter finds devices that do not advertise their service UUIDs;
+ * every service used afterwards must still be listed in `optionalServices`.
+ */
+export type BleScanFilter =
+  | { readonly services: readonly string[]; readonly namePrefix?: string }
+  | { readonly services?: undefined; readonly namePrefix: string };
 
 export interface ScanOptions {
   readonly acceptAllDevices: boolean;

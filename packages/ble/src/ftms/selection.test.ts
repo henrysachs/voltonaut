@@ -21,7 +21,11 @@ it("requests FTMS or CPS devices with both services authorized at the browser pi
   await adapter.connect();
   expect(fake.requests()).toEqual([
     JSON.stringify({
-      filters: [{ services: [FITNESS_MACHINE_SERVICE] }, { services: [CYCLING_POWER_SERVICE] }],
+      filters: [
+        { services: [FITNESS_MACHINE_SERVICE] },
+        { services: [CYCLING_POWER_SERVICE] },
+        { namePrefix: "Zwift Hub" },
+      ],
       optionalServices: [FITNESS_MACHINE_SERVICE, CYCLING_POWER_SERVICE],
     }),
   ]);

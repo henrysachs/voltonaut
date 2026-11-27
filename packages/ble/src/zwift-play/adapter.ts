@@ -32,6 +32,6 @@ export function createPlayAdapter(options: PlayAdapterOptions): PlayAdapter {
     side: options.side,
     description: () =>
       session?.description() ??
-      "Seite noch unbekannt. Passenden Griff auswählen; eine Taste bestätigt die Seite.",
+      "Zwift Play oder Click v2. Seite noch unbekannt; eine Taste bestätigt die Seite.",
   };
 }

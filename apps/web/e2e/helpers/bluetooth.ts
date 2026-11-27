@@ -131,7 +131,7 @@ function installBluetoothFake(): void {
   const central: WebBluetoothCentral = {
     requestDevice: (options) => {
       const heartRate =
-        options.filters?.some((filter) => filter.services.includes(uuid("180d"))) ?? false;
+        options.filters?.some((filter) => (filter.services ?? []).includes(uuid("180d"))) ?? false;
 
       if (!heartRate) {
         trainerSelections += 1;

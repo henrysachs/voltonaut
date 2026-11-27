@@ -1,12 +1,19 @@
 import {
+  byteReader,
   createFtmsLabControl,
+  decodeDeviceText,
   isFtmsControlPoint,
+  labDeviceKind,
+  labReadableCharacteristics,
+  labRecordedCharacteristics,
+  FIRMWARE_REVISION,
   type AdvertisementFrame,
   type BleTransport,
   type CharacteristicRef,
   type GattProfile,
   type LabControl,
   type LabControlOptions,
+  type LabDeviceKind,
 } from "@voltonaut/ble";
 import { createSnifferSession, type SnifferSession } from "./session.js";
 
@@ -49,6 +56,10 @@ export class LabDevice {
     });
   }
 
+  get kind(): LabDeviceKind {
+    return labDeviceKind(this.profile);
+  }
+
   private endControl(reason: string): void {
     this.ftms?.invalidate(reason);
   }
@@ -68,6 +79,52 @@ export class LabDevice {
     }
   }
 
+  private note(action: string, ref: CharacteristicRef): (error: Readonly<Error>) => void {
+    return (error) => {
+      this.session.note(`${action} ${ref.characteristicUuid} fehlgeschlagen: ${error.message}`);
+    };
+  }
+
+  /**
+   * Records every notify/indicate channel from connect on and reads every standard
+   * readable characteristic once (Device Information, features, ranges). Subscribing
+   * writes only the CCCD; no command reaches the device. The transport serializes GATT
+   * operations per device. A failing channel is noted in the capture as a lab event,
+   * not as a user marker, and does not stop the others.
+   */
+  private async recordEverything(): Promise<void> {
+    await Promise.all(
+      labRecordedCharacteristics(this.profile).map((ref) =>
+        this.session.observe(ref).catch(this.note("Aufzeichnung", ref)),
+      ),
+    );
+    await this.readAll();
+  }
+
+  private async readEach(refs: readonly CharacteristicRef[]): Promise<void> {
+    await Promise.all(
+      refs.map((ref) =>
+        this.session.transport
+          .read(ref)
+          .then(byteReader)
+          .then(
+            (value) => {
+              if (ref.characteristicUuid === FIRMWARE_REVISION && this.firmware === "") {
+                this.firmware = decodeDeviceText(value);
+                this.changed("profile", this);
+              }
+
+              return true;
+            },
+            this.note("Lesen", ref),
+          ),
+      ),
+    );
+  }
+
+  /** Reads every standard readable characteristic once; the proprietary Zwift ones stay manual. */
+  readonly readAll = (): Promise<void> => this.readEach(labReadableCharacteristics(this.profile));
+
   readonly connect = async (scan: Parameters<BleTransport["connect"]>[0]): Promise<void> => {
     this.endControl("Neue Verbindung wird aufgebaut.");
     this.ftms = undefined;
@@ -86,6 +143,12 @@ export class LabDevice {
       this.changed("state", this);
     });
     this.changed("profile", this);
+    // Background: a slow CCCD write must not hold markers or exports of this device.
+    void this.recordEverything().then(() => {
+      this.changed("profile", this);
+
+      return true;
+    });
   };
 
   readonly disconnect = async (): Promise<void> => {

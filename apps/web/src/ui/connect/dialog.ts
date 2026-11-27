@@ -188,7 +188,8 @@ export function mountConnectDialog(slots: readonly ConnectSlot[], bus: EventBus)
   close.setAttribute("autofocus", "");
   header.setAttribute("class", "connect-dialog__header");
   body.setAttribute("class", "connect-dialog__body");
-  hint.textContent = "Trainer, Pulsgurt und Play-Griffe verbinden. Die Fahrt läuft weiter.";
+  hint.textContent =
+    "Trainer, Pulsgurt und Zwift-Controller (Play-Griffe oder Click-v2-Pucks) verbinden. Die Fahrt läuft weiter.";
   setup.setAttribute("class", "connect-dialog__setup");
   setupSummary.textContent = "Vor dem Verbinden";
   setupWarning.textContent =
