@@ -1,7 +1,7 @@
 import type { EngineRoute } from "@voltonaut/engine";
 
 /** Kilometre waymark signs stand on the left, 30 m after every full kilometre. */
-export const WAYMARK_LATERAL_M = -6.2;
+const WAYMARK_LATERAL_M = -6.2;
 const WAYMARK_OFFSET_M = 30;
 
 export interface WaymarkSpot {

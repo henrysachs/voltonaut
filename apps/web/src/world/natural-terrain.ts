@@ -1,7 +1,7 @@
 import type { RoadLine } from "./road-corridor.js";
 
 /** Spacing of the smooth base lattice; base heights are bilinear between its points. */
-export const BASE_SPACING_M = 32;
+const BASE_SPACING_M = 32;
 
 /** Road points every 32 m feed the base; farther than 600 m they no longer count. */
 const BASE_SAMPLE_STRIDE = 8;

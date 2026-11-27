@@ -5,7 +5,7 @@ import { PartBucket, type BikeMaterials } from "./bikeMaterials.js";
 import { extrudedOutline, placed, roundedBox, stadiumOutline, toothedRing } from "./bikeMesh.js";
 import { add3, lerp, mix, taperedTube, withZ, type Point2 } from "./bikeSweep.js";
 
-export const CHAIN_PITCH_M = 0.0127;
+const CHAIN_PITCH_M = 0.0127;
 export const CASSETTE_TEETH = [11, 12, 13, 14, 15, 17, 19, 21, 24, 27, 30] as const;
 const CHAIN_COG = 5;
 const RING_TEETH = 50;
@@ -52,7 +52,7 @@ function tangentRad(
 }
 
 /** Closed chain loop: big ring → cog → upper and lower jockey wheels → big ring. */
-export function chainLoop(g: Readonly<BikeGeometry>): Point3[] {
+function chainLoop(g: Readonly<BikeGeometry>): Point3[] {
   const ringRadius = pitchRadiusM(RING_TEETH);
   const cogRadius = pitchRadiusM(CASSETTE_TEETH[CHAIN_COG]);
   const ring: Point2 = [g.bottomBracket[0], g.bottomBracket[1]];

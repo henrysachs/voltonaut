@@ -71,7 +71,7 @@ export function ventMask(vents: readonly Vent[], gamma: number, beta: number): n
   return mask;
 }
 
-export function helmetPoint(
+function helmetPoint(
   spec: Readonly<HelmetSpec>,
   gamma: number,
   beta: number,

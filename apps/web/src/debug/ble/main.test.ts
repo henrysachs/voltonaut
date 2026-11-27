@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TestNodeView } from "../../testdata/dom.js";
-import { downloadJson, element, input, select } from "./dom.js";
+import { downloadJson, element, input } from "./dom.js";
 import { snifferDevice } from "../../testdata/sniffer.js";
 import { prepareDom, visibleButton } from "./testdata/ui.js";
 
@@ -78,7 +78,6 @@ describe("sniffer boundary errors", () => {
     prepareDom();
     expect(() => element("absent")).toThrow("Missing");
     expect(() => input("scan")).toThrow("Expected input");
-    expect(() => select("scan")).toThrow("Expected select");
     downloadJson("{}", "ble-1-test");
   });
 

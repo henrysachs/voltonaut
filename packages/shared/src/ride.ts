@@ -63,20 +63,16 @@ export interface TickInputs {
 }
 
 /** Trainer resistance strategy; E3 implements effectiveGrade (FTMS 0x11). */
-export const TrainerStrategySchema = z.literal("effectiveGrade");
-
-export type TrainerStrategy = z.infer<typeof TrainerStrategySchema>;
+const TrainerStrategySchema = z.literal("effectiveGrade");
 
 /** One 1 Hz row of a scripted ride (golden fixtures and later ride uploads). */
-export const RideSampleSchema = z.object({
+const RideSampleSchema = z.object({
   tS: z.number().finite().nonnegative(),
   powerW: z.number().finite().min(0).max(2000),
   cadenceRpm: z.number().finite().min(0).max(200),
   hrBpm: z.number().int().min(30).max(250).optional(),
   shift: z.number().int().min(-24).max(24).optional(),
 });
-
-export type RideSample = z.infer<typeof RideSampleSchema>;
 
 /** Input format of fixtures/rides/<name>.input.json (docs/10-testing.md section 3). */
 export const RideInputSchema = z.object({

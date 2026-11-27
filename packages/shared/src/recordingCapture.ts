@@ -4,7 +4,7 @@ import { CompletedLocalRideSchema, RideTrackSchema, type RideTrack } from "./loc
 import { RecordingV2Schema } from "./recordingV2.js";
 import { projectRecordingTrack } from "./recordingTrack.js";
 
-export const CaptureUnavailabilityReasonSchema = z.enum([
+const CaptureUnavailabilityReasonSchema = z.enum([
   "journal_bytes",
   "journal_inputs",
   "journal_advances",
