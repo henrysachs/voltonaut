@@ -72,7 +72,7 @@ function balanceWithin(context: GrantContext, userId: string) {
  * an identical replay returns the stored receipt, a different payload under the
  * same `operator:` key is a conflict.
  */
-export function grantWithin(
+function grantWithin(
   context: GrantContext,
   userId: string,
   command: Readonly<VoltsGrantCommand>,
