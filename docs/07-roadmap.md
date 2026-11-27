@@ -212,7 +212,7 @@ Präzisierung vom 24.11.2026: Fortschritt entsteht bereits während gewöhnliche
 ## E10 – Mehr Spiel: Inhalte & Extras
 
 - [ ] Biome Küste, Alpenpass (Serpentinen), Nachtstadt (Neon); Streckenauswahl mit Vorschau
-  - [ ] Nachtstadt als Cyberpunk-Megacity ([E10-15](specs/E10-15-night-city-megacity.md), #151): Türme mit Fenstern, Neon mit Bloom, Laternenlicht auf der Fahrbahn, Tag und Nacht unterscheidbar. Softwaregeprüft; Henrys Optikfreigabe, CI, Review und Hardware (#86) offen.
+  - [ ] Nachtstadt als Cyberpunk-Megacity ([E10-15](specs/E10-15-night-city-megacity.md), #151): Türme mit Fenstern, Neon mit Bloom, Laternenlicht auf der Fahrbahn, Tag und Nacht unterscheidbar. Softwaregeprüft; Optik und ADR-035 am 2026-11-27 von Henry freigegeben; Hardware (#86) offen.
 - [ ] Zusammenhängende Welt: Straßennetz, Höhenraster, Biome als Regionen ([ADR-033](decisions/ADR-033-connected-worlds.md), #150)
   - [x] Schritt 1 ([E10-11](specs/E10-11-connected-world.md)): Welt-Datentypen mit Knoten, Abschnitten, Wegen und Regionen in `packages/engine`; Höhenstetigkeit an Knoten und Krümmungsgrenze je Sehne geprüft; bestehende Strecken sind je eine Welt mit einem Weg, Golden-Fahrten bit-identisch. Gemergt mit #158.
   - [ ] Schritt 2 ([E10-12](specs/E10-12-world-heightfield.md)): Höhenraster der Welt in 256-m-Kacheln ersetzt den Geländestreifen, auch für Küste, Alpenpass und Nachtstadt (#138); Korridor-Einebnung mit tieferer Straße als Gewinner; exakter Abstandstest für alle sechs Routen (≥ 5 cm, gemessen 6 cm). Softwaregeprüft, CI und Review offen; Render-Budget auf echter Hardware offen (#86).
