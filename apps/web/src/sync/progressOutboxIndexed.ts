@@ -5,19 +5,7 @@ import type {
 } from "./progressOutboxIndexedTypes.js";
 import { indexedProgressStore } from "./progressOutboxStore.js";
 
-export {
-  PROGRESS_OUTBOX_DATABASE_NAME,
-  PROGRESS_OUTBOX_DATABASE_VERSION,
-  PROGRESS_OUTBOX_STORE_NAME,
-} from "./progressOutboxIndexedTypes.js";
-
-export type {
-  ProgressIndexedDatabase,
-  ProgressIndexedKey,
-  ProgressIndexedRequest,
-  ProgressIndexedStore,
-  ProgressIndexedTransaction,
-} from "./progressOutboxIndexedTypes.js";
+export type { ProgressIndexedDatabase } from "./progressOutboxIndexedTypes.js";
 
 export {
   runProgressChange,
