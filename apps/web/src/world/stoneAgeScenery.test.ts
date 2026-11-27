@@ -185,3 +185,56 @@ it("keeps every rock house door below the arch of its entrance tunnel", () => {
   expect(doorTopsM).toHaveLength(archTopsM.length);
   expect(Math.min(...clearancesM)).toBeGreaterThan(0);
 });
+
+/** Position and scale of each instance of the named layer, in instance order. */
+function instancePoses(
+  root: Readonly<THREE.Object3D>,
+  name: string,
+): readonly { readonly position: THREE.Vector3; readonly scale: THREE.Vector3 }[] {
+  const matrix = new THREE.Matrix4();
+
+  return instancedMeshes(root)
+    .filter((mesh) => mesh.name === name)
+    .flatMap((mesh) =>
+      Array.from({ length: mesh.count }, (_, index) => {
+        const position = new THREE.Vector3();
+        const scale = new THREE.Vector3();
+
+        mesh.getMatrixAt(index, matrix);
+        matrix.decompose(position, new THREE.Quaternion(), scale);
+
+        return { position, scale };
+      }),
+    );
+}
+
+type Pose = ReturnType<typeof instancePoses>[number];
+
+/**
+ * Dome shell height above the arch top where each tunnel starts. Dome scale: radius in x, height
+ * in y. Tunnel scale: arch radius in x, length along z. A missing dome yields NaN.
+ */
+function tunnelStartMarginsM(domes: readonly Pose[], tunnels: readonly Pose[]): readonly number[] {
+  return tunnels.map((tunnel, index) => {
+    const dome = domes[index];
+
+    if (dome === undefined) return Number.NaN;
+
+    const startM =
+      Math.hypot(tunnel.position.x - dome.position.x, tunnel.position.z - dome.position.z) -
+      tunnel.scale.z / 2;
+
+    const shellM = dome.position.y + dome.scale.y * Math.sqrt(1 - (startM / dome.scale.x) ** 2);
+
+    return shellM - (tunnel.position.y + tunnel.scale.x);
+  });
+}
+
+it("starts every entrance tunnel where its dome is still taller than the arch", () => {
+  const scenery = createStoneAgeScenery(stoneAgePlan());
+  const domes = instancePoses(scenery, "stone-age-house");
+  const tunnels = instancePoses(scenery, "stone-age-entrance");
+
+  expect(tunnels).toHaveLength(domes.length);
+  expect(Math.min(...tunnelStartMarginsM(domes, tunnels))).toBeGreaterThan(0.3);
+});
