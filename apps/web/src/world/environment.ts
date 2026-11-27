@@ -31,6 +31,11 @@ export interface EnvironmentSettings {
   readonly script: EnvironmentScript;
 }
 
+/** How dark it is: 1 with the sun below the horizon, 0 once it stands about 20° high. */
+export function nightAmount(env: Readonly<Pick<EnvironmentState, "sunDirection">>): number {
+  return 1 - Math.min(1, Math.max(0, env.sunDirection.y * 3));
+}
+
 interface WeatherPreset {
   readonly sunIntensity: number;
   readonly fogDensity: number;
