@@ -17,7 +17,7 @@ export interface SceneCore {
   readonly render: (snapshot: Readonly<RideSnapshot>, nowMs: number) => SceneDiagnostics;
   readonly resize: (viewport: RenderViewport) => void;
   readonly toggleCamera: () => CameraMode;
-  readonly setLook: (look: Readonly<SceneDiagnostics["look"]>) => void;
+  readonly setLook: (look: Readonly<NonNullable<SceneDiagnostics["look"]>>) => void;
   readonly dispose: () => void;
 }
 
@@ -103,7 +103,7 @@ class ThreeSceneCore implements SceneCore {
     this.camera.updateProjectionMatrix();
   };
 
-  readonly setLook = (look: Readonly<SceneDiagnostics["look"]>): void => {
+  readonly setLook = (look: Readonly<NonNullable<SceneDiagnostics["look"]>>): void => {
     this.rider.setLook(look);
   };
 

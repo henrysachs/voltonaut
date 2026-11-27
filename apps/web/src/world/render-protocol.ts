@@ -44,8 +44,8 @@ export interface SceneDiagnostics {
   readonly heightPx: number;
   /** Billboards whose centre is in the camera frustum, per road side (spec E8-02). */
   readonly billboardsInView: { readonly left: number; readonly right: number };
-  /** The rider's equipment as worn in the scene (spec E7-05 AK8). */
-  readonly look: AvatarConfig;
+  /** The rider's equipment as worn in the scene (spec E7-05 AK8); none before the rider is shown. */
+  readonly look: AvatarConfig | undefined;
 }
 
 export type RenderControl =

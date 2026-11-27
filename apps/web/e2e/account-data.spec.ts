@@ -9,6 +9,7 @@ import {
   setupAccountPage,
   user,
 } from "../src/sync/testdata/accountData.spec.js";
+import { drawnDistanceM } from "./helpers/rideWorld.js";
 
 /* oxlint-disable typescript/prefer-readonly-parameter-types -- Playwright owns mutable page fixtures. */
 
@@ -98,7 +99,7 @@ test("confirmed deletion purges only the owner's outbox and keeps riding plus lo
 }) => {
   await setupAccountPage(page, 200);
   const diagnostics = page.getByLabel("Render diagnostics");
-  const beforeM = Number(await diagnostics.getAttribute("data-distance-m"));
+  const beforeM = await drawnDistanceM(page);
   const confirmation = page.getByLabel("E-Mail zur Löschbestätigung");
   const understood = page.getByRole("checkbox");
   const deleteButton = page.getByRole("button", { name: "Konto endgültig löschen", exact: true });

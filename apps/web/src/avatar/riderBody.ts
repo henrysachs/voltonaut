@@ -12,8 +12,6 @@ import { DEFAULT_RIDER_KIT, sameKit, type RiderKit } from "./riderSpecs.js";
 
 /** Smoked visor tint when the kit has no glasses of its own. */
 const HELMET_VISOR = { color: 0x22303a, opacity: 0.7, metalness: 0.5 } as const;
-const DEFAULT_JERSEY_COLORS: readonly [string, string] = ["#ec6b48", "#f5ebca"];
-const DEFAULT_SKIN_TONE = "#c98d68";
 
 /** Rider colours from the avatar config. */
 export interface RiderColors {
@@ -21,6 +19,13 @@ export interface RiderColors {
   readonly skinTone: string;
   readonly helmetColor: string;
 }
+
+/** The colours of the default avatar config. */
+export const DEFAULT_RIDER_COLORS: RiderColors = {
+  jerseyColors: ["#ec6b48", "#f5ebca"],
+  skinTone: "#c98d68",
+  helmetColor: "#f5ebca",
+};
 
 /** Swaps a painted map and frees the previous texture. */
 function replaceMap(
@@ -43,19 +48,28 @@ export class RiderBody {
   readonly rig: RiderRig;
   private readonly materials = createRiderMaterials();
   private readonly materialOf: RiderMaterials = (key) => this.materials[key];
-  private kit: RiderKit = DEFAULT_RIDER_KIT;
+  private kit: RiderKit;
   private meshesValue: RiderMesh[];
-  private jerseyColors: readonly [string, string] = DEFAULT_JERSEY_COLORS;
-  private skinTone = DEFAULT_SKIN_TONE;
+  private jerseyColors: readonly [string, string];
+  private skinTone: string;
 
-  constructor(private readonly bind: Readonly<RiderJoints>) {
+  /** Builds the body directly in `kit` and `colors`, so a first look costs one build. */
+  constructor(
+    private readonly bind: Readonly<RiderJoints>,
+    kit: Readonly<RiderKit> = DEFAULT_RIDER_KIT,
+    colors: Readonly<RiderColors> = DEFAULT_RIDER_COLORS,
+  ) {
     this.root.name = "rider";
+    this.kit = kit;
+    this.jerseyColors = colors.jerseyColors;
+    this.skinTone = colors.skinTone;
     this.rig = new RiderRig(bind);
     this.meshesValue = buildRiderMeshes(bind, this.rig, this.kit, this.materialOf);
     this.root.add(this.rig.root, ...this.meshesValue);
     this.paintKit();
     this.paintGear();
     replaceMap(this.materials.skin, paintSkin(this.skinTone));
+    this.materials.helmet.color.set(colors.helmetColor);
   }
 
   /** Skinned rider meshes of the current kit, one per material. */
