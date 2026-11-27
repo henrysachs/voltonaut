@@ -17,7 +17,7 @@ export const NEON = { cyan: 0.5, magenta: 0.87, amber: 0.11 } as const;
 export const NEON_HUES: readonly number[] = Object.values(NEON);
 
 /** Every building is this one box, sunk until heightM shows above ground (heightM ≤ this). */
-export const TOWER_HEIGHT_M = 120;
+const TOWER_HEIGHT_M = 120;
 const TOWER_DEPTH_M = 15;
 const TOWER_FRONTAGE_M = 15;
 const WINDOW_M = 3;
@@ -152,7 +152,7 @@ const LIT_WINDOW_SRGB: readonly (readonly [number, number, number])[] = [
 const DARK_GLASS_SRGB: readonly [number, number, number] = [14, 18, 30];
 
 /** Lit and dark windows in frames; FRAME_UV samples a frame texel. */
-export function createWindowTexture(random: () => number): THREE.DataTexture {
+function createWindowTexture(random: () => number): THREE.DataTexture {
   const size = WINDOW_CELLS_PER_SIDE * CELL_TEXELS;
   const data = new Uint8Array(size * size * 4);
 
@@ -191,10 +191,10 @@ export function createWindowTexture(random: () => number): THREE.DataTexture {
 }
 
 /** UV of a frame texel (texel 0, 0): roofs and floors show no windows. */
-export const FRAME_UV = 0.5 / (WINDOW_CELLS_PER_SIDE * CELL_TEXELS);
+const FRAME_UV = 0.5 / (WINDOW_CELLS_PER_SIDE * CELL_TEXELS);
 
 /** The shared tower: top at y = 0, a whole number of window cells on every side face. */
-export function createBuildingGeometry(): THREE.BufferGeometry {
+function createBuildingGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BoxGeometry(TOWER_FRONTAGE_M, TOWER_HEIGHT_M, TOWER_DEPTH_M);
   const uv = geometry.getAttribute("uv");
   const normal = geometry.getAttribute("normal");
@@ -220,7 +220,7 @@ export function createBuildingGeometry(): THREE.BufferGeometry {
   return geometry;
 }
 
-export function createWindowMaterial(texture: THREE.Texture): THREE.MeshStandardMaterial {
+function createWindowMaterial(texture: THREE.Texture): THREE.MeshStandardMaterial {
   const material = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.8,
