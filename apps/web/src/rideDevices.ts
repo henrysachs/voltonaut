@@ -12,6 +12,22 @@ import {
 } from "@voltonaut/ble";
 import type { RideTrainerSink } from "./game/rideSession.js";
 import { mountConnectDialog, type ConnectSlot } from "./ui/connect/dialog.js";
+import { bindHudResistance } from "./ui/hudTrainerControl.js";
+
+/** The HUD's resistance indicator; absent in pages without the ride HUD. */
+function mountHudResistance(control: Parameters<typeof bindHudResistance>[0]): void {
+  const element = document.querySelector("#hud-resistance");
+  const present = element instanceof HTMLElement;
+
+  if (!present) return;
+
+  bindHudResistance(control, {
+    write: (text, state) => {
+      element.textContent = text;
+      element.dataset["state"] = state;
+    },
+  });
+}
 
 const SIM_SAMPLES = createSimScript([
   { powerW: 142, cadenceRpm: 88, heartRateBpm: 122 },
@@ -153,6 +169,7 @@ export function setupRideDevices(
     },
     mount() {
       mountConnectDialog(slots, bus);
+      mountHudResistance(trainer.control);
 
       if (source.connectOnMount) {
         void Promise.all(slots.map((slot) => slot.adapter.connect()));

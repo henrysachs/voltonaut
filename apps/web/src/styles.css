@@ -217,6 +217,29 @@ button[aria-busy="true"],
   letter-spacing: 0.06em;
   color: #d7ecb0;
 }
+.hud__resistance {
+  margin: -8px 0 16px;
+  padding: 4px 8px;
+  border-left: 3px solid #8fa39d;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #e7f1ee;
+  background: rgb(0 0 0 / 22%);
+}
+.hud__resistance:empty {
+  display: none;
+}
+.hud__resistance[data-state="active"] {
+  border-left-color: #8ef0a8;
+}
+.hud__resistance[data-state="starting"] {
+  border-left-color: #ffd23f;
+}
+.hud__resistance[data-state="lost"],
+.hud__resistance[data-state="failed"] {
+  border-left-color: #ff8f7a;
+}
 .hud__values {
   display: grid;
   margin: 0;
