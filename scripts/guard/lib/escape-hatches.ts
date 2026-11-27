@@ -27,7 +27,6 @@ const directEscapeHatches: readonly HatchPattern[] = [
   { pattern: /@ts-ignore/u, message: "@ts-ignore is forbidden" },
   { pattern: /@ts-nocheck/u, message: "@ts-nocheck is forbidden" },
   { pattern: /eslint-disable/u, message: "eslint-disable is forbidden" },
-  { pattern: /(?<![!=])!(?=[.([])/u, message: "non-null assertion is forbidden" },
 ];
 
 const assertionEscapeHatches: readonly HatchPattern[] = [

@@ -38,3 +38,4 @@ Format: Kontext → Entscheidung → Konsequenzen → Alternativen. Neue ADRs fo
 | [032](ADR-032-garage-preview-worker.md) | Garage-Vorschau im Render-Worker | Angenommen |
 | [033](ADR-033-connected-worlds.md) | Zusammenhängende Welten aus Straßennetz, Höhenraster und Regionen | Angenommen |
 | [034](ADR-034-hardware-capture-fixtures.md) | Hardware-Mitschnitte als BLE-Fixtures | Angenommen |
+| [036](ADR-036-merge-gates.md) | Merge-Gates ohne Bypass, Sign-off im Guard, engere ADR-Ausnahme | Angenommen; Rulesets und Repo-Einstellung setzt Henry nach dem Merge |

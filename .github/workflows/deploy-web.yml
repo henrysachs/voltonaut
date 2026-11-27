@@ -9,14 +9,15 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: check
+  # PRs get their `check` from check.yml only. A second `check` context here would let either run
+  # satisfy the required check (ADR-036). On main this full gate still guards the production deploy.
+  web-check:
+    name: web-check
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble
       options: --user 1001
-    outputs:
-      cloudflare-ready: ${{ steps.cloudflare.outputs.ready }}
     env:
       CI: "true"
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
@@ -35,6 +36,12 @@ jobs:
       - name: Run the full gate
         run: mise run check
 
+  cloudflare-secrets:
+    name: cloudflare-secrets
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.cloudflare.outputs.ready }}
+    steps:
       - name: Detect Cloudflare secrets
         id: cloudflare
         env:
@@ -49,12 +56,14 @@ jobs:
 
   deploy:
     name: cloudflare-pages
-    needs: check
+    needs: [web-check, cloudflare-secrets]
+    # Production waits for web-check on main; a PR preview deploys the PR's own build without it.
     if: >-
-      needs.check.outputs.cloudflare-ready == 'true' &&
+      !cancelled() &&
+      needs.cloudflare-secrets.outputs.ready == 'true' &&
       (
-        github.event_name == 'push' ||
-        github.event.pull_request.head.repo.fork == false
+        (github.event_name == 'push' && needs.web-check.result == 'success') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
       )
     runs-on: ubuntu-latest
     steps:
