@@ -3,6 +3,7 @@ import {
   regionTourWorld,
   type CenterlinePoint,
   type RouteData,
+  type World,
 } from "@voltonaut/engine";
 
 import { renderWorldOf } from "../render-world.js";
@@ -42,9 +43,9 @@ function ring(id: string, scenery: string): RouteData {
   };
 }
 
-/** Woods and night city, 1.6 km apart, joined by a tour (ADR-033 step 3 in miniature). */
-export const PAIR = renderWorldOf(
-  createWorld(
+/** Woods and night city joined by a tour, the city the given distance east (ADR-033 step 3 in miniature). */
+export function pairWorld(cityOffsetM: number): World {
+  return createWorld(
     regionTourWorld({
       id: "pair",
       name: "Pair",
@@ -65,9 +66,12 @@ export const PAIR = renderWorldOf(
           name: "City",
           scenery: "night-city",
           loop: ring("c", "night-city"),
-          offset: { x: 1600, z: 0 },
+          offset: { x: cityOffsetM, z: 0 },
         },
       ],
     }),
-  ),
-);
+  );
+}
+
+/** The pair 1.6 km apart, as the landscape draws it. */
+export const PAIR = renderWorldOf(pairWorld(1600));

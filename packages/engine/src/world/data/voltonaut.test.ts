@@ -112,7 +112,7 @@ it("keeps every pair of roads at least 25 m apart outside their junctions", () =
   const closestM = Math.min(...pairs.map(([a, b]) => gapM(a, b)));
 
   expect(pairs).toHaveLength(66);
-  expect(closestM).toBeGreaterThanOrEqual(25);
+  expect(closestM).toBeGreaterThanOrEqual(36);
 });
 
 it("borders regions in the middle of each transition road", () => {
@@ -123,4 +123,57 @@ it("borders regions in the middle of each transition road", () => {
   expect(out.toNodeId).toBe("forest-coast:border");
   expect(inbound.fromNodeId).toBe("forest-coast:border");
   expect(Math.abs(out.lengthM - inbound.lengthM)).toBeLessThan(20);
+});
+
+/** FNV-1a over every edge's chords and profile, rounded to the millimetre. */
+function geometryFingerprint(): string {
+  const text = VOLTONAUT_WORLD.edges
+    .map((edge) =>
+      [
+        edge.id,
+        edge.regionId,
+        edge.fromNodeId,
+        edge.toNodeId,
+        edge.lengthM.toFixed(3),
+        ...edge.centerline.map((point) => `${point.x.toFixed(3)},${point.z.toFixed(3)}`),
+        ...edge.profileSamples.map(
+          (sample) => `${sample.distanceM.toFixed(3)}:${sample.elevationM.toFixed(3)}`,
+        ),
+      ].join(";"),
+    )
+    .join("|");
+
+  let hash = 0x81_1c_9d_c5;
+
+  for (const char of text) hash = Math.imul(hash ^ (char.codePointAt(0) ?? 0), 0x01_00_01_93) >>> 0;
+
+  return `${hash.toString(16)}:${text.length}`;
+}
+
+it("pins the geometry of revision 1: any change needs a new revision (ADR-033 §8)", () => {
+  expect(VOLTONAUT.revision).toBe("1");
+  expect(geometryFingerprint()).toBe("475a5d63:128381");
+});
+
+it("keeps the region loops at least 1.8 km apart", () => {
+  const loops = ["voltonaut-forest", "voltonaut-coast", "voltonaut-night-city"].map(
+    (id) => requireRoute(id).centerline,
+  );
+
+  const gaps = loops.flatMap((a, index) =>
+    loops
+      .slice(index + 1)
+      .map((b) =>
+        a.reduce(
+          (nearestM, p) =>
+            b.reduce(
+              (closestM, q) => Math.min(closestM, Math.hypot(p.x - q.x, p.z - q.z)),
+              nearestM,
+            ),
+          Number.POSITIVE_INFINITY,
+        ),
+      ),
+  );
+
+  expect(Math.min(...gaps)).toBeGreaterThanOrEqual(1800);
 });

@@ -11,21 +11,26 @@ export interface ReplayRoute {
   readonly replayRevision: typeof WORLD_PATH_REPLAY_REVISION | undefined;
 }
 
+/**
+ * Single routes recorded before worlds existed (routeRevision "1"); each is also its own world
+ * with revision "1" (ADR-033 §8). Connected worlds never had route recordings.
+ */
+const LEGACY_ROUTE_IDS: readonly string[] = [
+  "flat-loop",
+  "test-loop",
+  "kom-climb",
+  "coast-loop",
+  "alpine-pass",
+  "night-city",
+];
+
 /** World revisions this server replays. Each one needs its own replay tests (ADR-033). */
 const REPLAYABLE_WORLDS: readonly { readonly worldId: string; readonly worldRevision: string }[] = [
-  { worldId: "flat-loop", worldRevision: "1" },
-  { worldId: "test-loop", worldRevision: "1" },
-  { worldId: "kom-climb", worldRevision: "1" },
-  { worldId: "coast-loop", worldRevision: "1" },
-  { worldId: "alpine-pass", worldRevision: "1" },
-  { worldId: "night-city", worldRevision: "1" },
+  ...LEGACY_ROUTE_IDS.map((worldId) => ({ worldId, worldRevision: "1" })),
   { worldId: "voltonaut", worldRevision: "1" },
 ];
 
-/** Recordings from before worlds only exist for the single-route worlds (ADR-033 §8). */
-const REPLAYABLE_ROUTE_IDS = new Set(
-  REPLAYABLE_WORLDS.flatMap((world) => (world.worldId === "voltonaut" ? [] : [world.worldId])),
-);
+const REPLAYABLE_ROUTE_IDS = new Set(LEGACY_ROUTE_IDS);
 
 /**
  * Resolves the recorded reference internally (ADR-016). Unknown worlds, revisions, paths and

@@ -15,11 +15,11 @@ Die erste zusammenhängende Welt `voltonaut`: Wald und See (Testrunde), Küste u
 - [x] AK1 – **Welt als Daten.** `VOLTONAUT_WORLD` (Revision `"1"`) entsteht aus den ausgelieferten Rundwegen `test-loop`, `coast-loop` und `night-city` an festen Orten. `createWorld` akzeptiert sie mit allen Prüfungen aus Schritt 1 (Höhenstetigkeit, Krümmungsgrenze). Wege: `voltonaut-tour` sowie `voltonaut-forest`, `voltonaut-coast`, `voltonaut-night-city`.
 - [x] AK2 – **Übergangsstraßen.** Eine Übergangsstraße verlässt eine Region an dem Punkt ihres Rundwegs, dessen Tangente zur nächsten Region zeigt, und mündet tangential in den nächsten Rundweg (kubische Bézier-Kurve, ≤ 10 m Sehnen, Höhe mit Kosinus-Übergang). Ihre Mitte ist die Regionsgrenze: Die erste Hälfte gehört zur verlassenen, die zweite zur erreichten Region.
 - [x] AK3 – **Fahrt durch mehrere Regionen.** Die Tour (23,2 km) fährt Wald → Küste → Nachtstadt → Wald als ein Rundweg. Server und Client zeichnen und rechnen sie als Welt `voltonaut`, Revision `1`, Weg `voltonaut-tour` (ADR-033 §7).
-- [x] AK4 – **Keine Kreuzungen.** Kein Abschnittspaar kommt sich außerhalb von 400 m um gemeinsame Knoten näher als 25 m (gemessen 36,5 m). Die Rundwege verschiedener Regionen liegen mindestens 1,8 km auseinander.
+- [x] AK4 – **Keine Kreuzungen.** Kein Abschnittspaar kommt sich außerhalb von 400 m um gemeinsame Knoten näher als 36 m (gemessen 36,5 m). Die Rundwege verschiedener Regionen liegen mindestens 1,8 km auseinander (gemessen 1823 m). Beides ist per Test abgesichert, ebenso eine Prüfsumme der Geometrie von Revision `1`: Jede Geometrieänderung muss die Revision erhöhen (ADR-033 §8).
 - [x] AK5 – **Kein Gelände über der Fahrbahn.** Der Abstandstest aus Schritt 2 prüft jeden Weg der Welt gegen das gezeichnete Raster dieser Welt (≥ 5 cm).
 - [x] AK6 – **Regionen im Bild.** Jede Region hat einen Heimweg (ihren eigenen Rundweg). Geländefarben gehen über 600 m zwischen Regionen über (Regionskarte). Bäume gehören der Region, die die Karte an ihrem Standort nennt. Jede Region trägt ihre Biom-Ausstattung und ihren See entlang ihres Heimwegs.
 - [x] AK7 – **Alle Straßen sichtbar.** Abschnitte außerhalb des gefahrenen Wegs werden als Nebenstraßen gezeichnet (drei zusammengefasste Meshes). Das Gelände plant jede Straße genau einmal: Heimwege plus die Abschnitte, die auf keinem Heimweg liegen.
-- [x] AK8 – **Render-Budget je Region** (ADR-033 §6). Die Ausstattung einer Region wird nur gezeichnet, solange der Fahrer höchstens 1500 m (Kamera-Fernebene) von ihrem Bereich entfernt ist. Über die ganze Tour (Sim, `clock=fast`) höchstens 137 Draw Calls und 359 k Dreiecke (Budget 150 / 500 k).
+- [x] AK8 – **Render-Budget je Region** (ADR-033 §6). Jedes Ausstattungsobjekt (Mesh, instanziertes Mesh) wird nur gezeichnet, solange der Fahrer höchstens 1500 m (Kamera-Fernebene) von seiner tatsächlichen Grundfläche entfernt ist. Ein Test fährt eine Tour ab und belegt, dass kein ausgeblendetes Objekt näher als 200 m am Fahrer liegt. In Welten mit mehreren Regionen bringt die Ausstattung kein eigenes Licht mit (das Umgebungslicht der Nachtstadt wirkte sonst szenenweit). Draw Calls und Dreiecke über die ganze Tour sind eine **manuelle Messung** (siehe unten); `routes.spec.ts` prüft automatisch nur den ersten Frame.
 - [x] AK9 – **Einzelstrecken unverändert.** Welten mit einer Region zeichnen wie vorher: gleiche Pläne, gleiche Farben, Testrunde höchstens 111 Draw Calls. Golden-Fahrten unverändert grün.
 - [x] AK10 – **Katalog.** Die Streckenwahl bietet „Voltonaut-Tour“ an. Unbekannte Wege lehnt der Server als `unknown_revision` ab.
 
@@ -34,7 +34,7 @@ Die erste zusammenhängende Welt `voltonaut`: Wald und See (Testrunde), Küste u
 | AK7, AK8  | Unit/E2E        | `region-visibility.test.ts`, `render-loop.test.ts`, `apps/web/e2e/routes.spec.ts`                                                |
 | AK9, AK10 | Unit/Golden/E2E | bestehende Suites, `routeCatalog.test.ts`, `routes.spec.ts`                                                                      |
 
-## Messungen (lokal, Sim, SwiftShader, ein Worker)
+## Messungen (manuell, lokal, Sim, SwiftShader, ein Worker; Messfahrt mit `clock=fast`)
 
 | Strecke        | „Sim connected“ → erster Frame | Draw Calls (Spitze über die Runde) | Dreiecke (Spitze) |
 | -------------- | ------------------------------ | ---------------------------------- | ----------------- |
