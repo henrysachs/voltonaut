@@ -108,10 +108,15 @@ it("hands the terrain every road of the world the ridden route belongs to", () =
   expect(resolveRenderWorld("test-loop").roads.map((road) => road.id)).toEqual(["test-loop"]);
   expect(resolveRenderWorld("kom-climb").roads.map((road) => road.lengthM)).toEqual([2500]);
   expect(resolveRenderWorld("voltonaut-coast").roads.map((road) => road.id)).toEqual([
-    "voltonaut-tour",
     "voltonaut-forest",
     "voltonaut-coast",
     "voltonaut-night-city",
+    "forest-coast:out",
+    "forest-coast:in",
+    "coast-night-city:out",
+    "coast-night-city:in",
+    "night-city-forest:out",
+    "night-city-forest:in",
   ]);
   expect(() => resolveRenderWorld("not-a-route")).toThrow("Unsupported render route");
 });

@@ -21,8 +21,13 @@ interface ShippedRoute {
 
 const worldViews: readonly RenderWorld[] = WORLDS.map((world) => renderWorldOf(world));
 
-const shipped: readonly ShippedRoute[] = worldViews.flatMap((view) =>
-  view.roads.map((route): ShippedRoute => ({ id: route.id, route, world: view })),
+/** Every route of every world, checked against the raster of its world as drawn. */
+const shipped: readonly ShippedRoute[] = WORLDS.flatMap((world, index) =>
+  world.routes.map((data): ShippedRoute => ({
+    id: data.id,
+    route: createRoute(data),
+    world: worldViews[index] ?? renderWorldOf(world),
+  })),
 );
 
 const terrainOfWorld = new Map<RenderWorld, Heightfield>();
@@ -143,7 +148,7 @@ describe.each(worldViews.map((view, index) => [WORLDS[index]?.id, view] as const
       drawnTerrain(view);
     });
 
-    it.each(view.roads.map((road) => road.id))(
+    it.each(shipped.flatMap((entry) => (entry.world === view ? [entry.id] : [])))(
       "keeps the terrain under every road band of %s",
       (id) => {
         expect(clearanceOfShipped(id)).toBeGreaterThanOrEqual(MIN_CLEARANCE_M);

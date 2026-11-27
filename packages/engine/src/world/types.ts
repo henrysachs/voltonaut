@@ -71,12 +71,15 @@ export interface WorldRegionView extends WorldRegion {
   readonly homePathId: string | undefined;
 }
 
-/** An edge as the renderer sees it: its chords and the biome of its region. */
+/** An edge as the renderer sees it: its road, the biome of its region and the paths using it. */
 export interface WorldEdgeView {
   readonly id: string;
   readonly regionId: string;
   readonly scenery: string;
   readonly centerline: readonly CenterlinePoint[];
+  readonly profileSamples: readonly ElevationSample[];
+  readonly lengthM: Meters;
+  readonly pathIds: readonly string[];
 }
 
 export interface World {

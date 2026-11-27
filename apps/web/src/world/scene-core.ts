@@ -56,7 +56,7 @@ class ThreeSceneCore implements SceneCore {
       [
         createEnvironmentSystem(),
         createLandscapeSystem(world),
-        createRoadSystem(),
+        createRoadSystem(world.sideRoads(route.id)),
         this.rider.system,
         this.rideCamera.system,
       ],

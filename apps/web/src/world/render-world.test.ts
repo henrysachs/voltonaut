@@ -11,6 +11,7 @@ it("draws a single-route world as one region dressed along its route", () => {
     ["coast-loop", "coast", "coast-loop"],
   ]);
   expect(world.regionRoads.map((road) => road.regionId)).toEqual(["coast-loop"]);
+  expect(world.sideRoads("coast-loop")).toEqual([]);
 });
 
 it("draws voltonaut with its three regions on their own loops", () => {
@@ -22,6 +23,12 @@ it("draws voltonaut with its three regions on their own loops", () => {
     ["night-city", "night-city", "voltonaut-night-city"],
   ]);
   expect(world.regionRoads).toHaveLength(12);
+  expect(world.sideRoads("voltonaut-tour").map((road) => road.id)).toEqual([
+    "forest:around",
+    "coast:around",
+    "night-city:around",
+  ]);
+  expect(world.sideRoads("voltonaut-coast")).toHaveLength(10);
   expect(resolveRenderWorld("voltonaut-coast").regions).toHaveLength(3);
 });
 

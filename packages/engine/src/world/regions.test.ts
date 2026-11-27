@@ -14,7 +14,15 @@ it("gives a single-route world one region whose home is the route", () => {
     { id: "test-loop", name: "Test Loop", scenery: "mixed", homePathId: "test-loop" },
   ]);
   expect(edgeViews(single)).toEqual([
-    { id: "test-loop", regionId: "test-loop", scenery: "mixed", centerline: TEST_LOOP.centerline },
+    {
+      id: "test-loop",
+      regionId: "test-loop",
+      scenery: "mixed",
+      centerline: TEST_LOOP.centerline,
+      profileSamples: TEST_LOOP.profileSamples,
+      lengthM: TEST_LOOP.lengthM,
+      pathIds: ["test-loop"],
+    },
   ]);
 });
 
@@ -26,6 +34,13 @@ it("homes every voltonaut region on its own loop, not on the tour", () => {
   ]);
   expect(VOLTONAUT.edges.map((edge) => edge.scenery)).toContain("coast");
   expect(VOLTONAUT.edges).toHaveLength(12);
+  expect(VOLTONAUT.edges.find((edge) => edge.id === "coast:through")?.pathIds).toEqual([
+    "voltonaut-tour",
+    "voltonaut-coast",
+  ]);
+  expect(VOLTONAUT.edges.find((edge) => edge.id === "coast:around")?.pathIds).toEqual([
+    "voltonaut-coast",
+  ]);
 });
 
 it("leaves a region without its own path homeless and an unknown region without scenery", () => {

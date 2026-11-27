@@ -56,8 +56,21 @@ it("gives a point beyond every blend zone to the nearest region alone", () => {
   expect(map.weightsAt(500, -REGION_BLEND_M - 300)).toEqual([0, 1, 0]);
 });
 
-it("reuses weights within a 16 m square", () => {
-  expect(map.weightsAt(-300, 1)).toBe(map.weightsAt(-290, 14));
+it("reuses weights within a 64 m square", () => {
+  expect(map.weightsAt(-300, 1)).toBe(map.weightsAt(-260, 60));
+  expect(map.weightsAt(-300, 1)).not.toBe(map.weightsAt(-300, 70));
+});
+
+it("finds the truly nearest far region, not the first one a widening ring touches", () => {
+  const roads: readonly RegionRoad[] = [
+    // Corner of ring 14, about 4180 m away.
+    { regionId: "a", centerline: [{ x: 2990, z: 2990 }] },
+    // Side of ring 15, about 2980 m away.
+    { regionId: "b", centerline: [{ x: 32, z: 3010 }] },
+  ];
+  const far = createRegionMap(roads, ["a", "b"]);
+
+  expect(far.weightsAt(32, 32)).toEqual([0, 1]);
 });
 
 it("names the region with the largest weight, the earlier one on a tie", () => {

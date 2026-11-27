@@ -9,6 +9,11 @@ export function edgeViews(data: WorldData): readonly WorldEdgeView[] {
     regionId: edge.regionId,
     scenery: scenery.get(edge.regionId) ?? "",
     centerline: edge.centerline,
+    profileSamples: edge.profileSamples,
+    lengthM: edge.lengthM,
+    pathIds: data.paths.flatMap((path) =>
+      path.steps.some((step) => step.edgeId === edge.id) ? [path.id] : [],
+    ),
   }));
 }
 
