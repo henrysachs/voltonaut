@@ -120,9 +120,9 @@ function everHidden(): number {
   return hidden.size;
 }
 
-it("never hides a part with anything within 200 m of the rider along the tour", () => {
+it("never hides a part with anything within 1400 m of the rider along the tour", () => {
   expect(everHidden()).toBeGreaterThan(10);
-  expect(hiddenNear(200)).toEqual([]);
+  expect(hiddenNear(1400)).toEqual([]);
 });
 
 /** Lights anywhere in the dressing groups. */

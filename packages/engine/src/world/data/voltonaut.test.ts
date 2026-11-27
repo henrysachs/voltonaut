@@ -125,10 +125,15 @@ it("borders regions in the middle of each transition road", () => {
   expect(Math.abs(out.lengthM - inbound.lengthM)).toBeLessThan(20);
 });
 
-/** FNV-1a over every edge's chords and profile, rounded to the millimetre. */
+/** FNV-1a over every path's steps and every edge's chords and profile, rounded to the millimetre. */
 function geometryFingerprint(): string {
-  const text = VOLTONAUT_WORLD.edges
-    .map((edge) =>
+  const paths = VOLTONAUT_WORLD.paths.map((path) =>
+    [path.id, path.loop, ...path.steps.map((step) => `${step.edgeId}/${step.direction}`)].join(";"),
+  );
+
+  const text = [
+    ...paths,
+    ...VOLTONAUT_WORLD.edges.map((edge) =>
       [
         edge.id,
         edge.regionId,
@@ -140,8 +145,8 @@ function geometryFingerprint(): string {
           (sample) => `${sample.distanceM.toFixed(3)}:${sample.elevationM.toFixed(3)}`,
         ),
       ].join(";"),
-    )
-    .join("|");
+    ),
+  ].join("|");
 
   let hash = 0x81_1c_9d_c5;
 
@@ -152,7 +157,7 @@ function geometryFingerprint(): string {
 
 it("pins the geometry of revision 1: any change needs a new revision (ADR-033 §8)", () => {
   expect(VOLTONAUT.revision).toBe("1");
-  expect(geometryFingerprint()).toBe("475a5d63:128381");
+  expect(geometryFingerprint()).toBe("9a7770e2:128848");
 });
 
 it("keeps the region loops at least 1.8 km apart", () => {

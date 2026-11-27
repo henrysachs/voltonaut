@@ -72,6 +72,9 @@ export function regionDressings(
       for (const light of lights) light.removeFromParent();
     }
 
+    // A single region is never culled, so it needs no ground areas (no extra start-up work).
+    if (!several) return { group, parts: [] };
+
     group.updateMatrixWorld(true);
 
     return {
