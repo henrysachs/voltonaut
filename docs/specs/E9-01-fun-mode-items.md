@@ -13,11 +13,11 @@ Neben dem normalen Modus gibt es einen wählbaren Spaß-Modus. Er ist einer von 
 
 ## Phasen
 
-| Phase | Inhalt                                              | Voraussetzung                   |
-| ----- | --------------------------------------------------- | ------------------------------- |
-| 1     | Moduswahl, Item-Boxen, Power-ups solo               | keine                           |
-| 2     | Malus gegen Bots, Schutzschild, Windschatten-Magnet | E8 Bots (#70), ADR-028 Freigabe |
-| 3     | Malus gegen Freunde                                 | E9 Live (#73, #74)              |
+| Phase | Inhalt                                              | Voraussetzung                               |
+| ----- | --------------------------------------------------- | ------------------------------------------- |
+| 1     | Moduswahl, Item-Boxen, Power-ups solo               | keine                                       |
+| 2     | Malus gegen Bots, Schutzschild, Windschatten-Magnet | E8 Bots (#70); ADR-028 Punkt 3 (angenommen) |
+| 3     | Malus gegen Freunde                                 | E9 Live (#73, #74)                          |
 
 ## Abnahmekriterien (Phase 1)
 

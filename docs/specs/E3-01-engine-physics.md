@@ -246,7 +246,7 @@ Overlap in `packages/engine`: E2 liefert `gears/` (24er-Preset, Shift-Intents) u
 
 ## Offene Fragen / Risiken
 
-- T1-Entscheidung (Engine im Worker) bestätigen? → ADR-011 liegt als Vorschlag vor (CODEOWNERS `docs/decisions/**` ⇒ Henrys Freigabe).
+- T1-Entscheidung (Engine im Worker): ADR-011 von Henry im Chat am 2026-11-27 angenommen.
 - CdA-Schätzfaktor: Anker-reproduzierend (0,32 bei 185 cm/75 kg) statt Literaturwert – ok?
 - Mutation-Scope um `elevation/`+`internal/` erweitern (Doku-Update §9, keine Lockerung)?
 - Strategie-B-Delta (2 W Vorschlag) und `gradeEff`-Clamp [−10, +20] aus `03` §4-Skizze vs. echtem FTMS-Bereich (±40 %) – E2-Messung klärt.
@@ -259,5 +259,5 @@ Overlap in `packages/engine`: E2 liefert `gears/` (24er-Preset, Shift-Intents) u
 - [ ] Roadmap-Checkboxen E3 abhaken; Abnahmezeile mit Sim-Ergebnis + Hardware-Vermerk füllen.
 - [x] `docs/03-engine-physics.md`: Worker, CdA-Schätzformel, `gradeAt` (25 m), Catch-up und `clockSkipped` dokumentiert. `mT = 83 kg` bleibt bis zur E2-Kalibrierung vorläufig.
 - [x] `docs/open-questions.md`: T1-Implementierung mit ausstehender ADR-Freigabe, T9-Laufzeit und manuelle Prüfungen dokumentiert.
-- [x] ADR-011 „Engine im Dedicated Web Worker" als Vorschlag angelegt; Henrys Freigabe ausstehend.
+- [x] ADR-011 „Engine im Dedicated Web Worker" als Vorschlag angelegt; von Henry im Chat am 2026-11-27 angenommen.
 - [x] `docs/10-testing.md` §9: Tatsächlichen Mutation-Scope einschließlich `elevation/`, Routendaten und `internal/` dokumentiert; Konfiguration unverändert.
